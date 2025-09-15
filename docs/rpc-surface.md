@@ -1,232 +1,134 @@
-# RPC Surface
+# RPC Surface (Final)
+**Version:** 1.0.0  
+**Last Updated:** 2025-09-16  
+**Status:** Production
 
-This document lists all **SECURITY DEFINER RPCs** used by the app and Edge Functions.  
-Model follows the stage flow: **Filling → Covering → Decorating → Packing → Complete**.  
-All writes go through RPCs — **no direct table writes**.
+All RPCs are **SECURITY DEFINER** and must include role validation, input guards, and **idempotency** where applicable.  
+**Standard return envelope:**
 
----
-
-## Conventions
-
-- **Order ID (`id`)**: human-readable, store-prefixed (e.g., `bannos-12345`, `flourlane-67890`).
-- **Auth**  
-  - App uses Supabase client (tokens signed by **anon** key).  
-  - Edge Functions (webhooks, reconciliation) use **service role** key.
-- **Idempotency**: write RPCs set timestamps only if `NULL`; repeat calls return `already_done=true`.
-- **Errors** (small, consistent set): `INVALID_STAGE`, `ALREADY_DONE`, `PERMISSION_DENIED`, `NOT_FOUND`, `BAD_INPUT`, `CONFLICT`.
-
-Return envelope:
 ```ts
-type Ok<T> = { ok: true; data: T }
-type Err   = { ok: false; code: string; message: string }
-type RpcResult<T> = Ok<T> | Err
-Index
-handle_print_barcode — start Filling (sets filling_start_ts)
+export interface RPCResponse<T = any> {
+  success: boolean;
+  message: string | null;
+  data: T | null;
+  error_code: string | null;
+}
+Conventions
+Roles: Admin | Supervisor | Staff (checked via check_user_role helper)
 
-complete_filling — end Filling → Covering
+Stores: 'Bannos' | 'Flourlane'
 
-complete_covering — end Covering → Decorating
+Stages: Filling → Covering → Decorating → Packing → Complete
 
-complete_decorating — end Decorating → Packing
+Filling starts at barcode print; scan completes Filling
 
-start_packing — set packing_start_ts
+No direct table writes; RLS everywhere. All mutations via RPCs
 
-complete_packing — end Packing → Complete
+Audit logging via audit_ok (critical ops)
 
-qc_return_to_decorating — QC fail back to Decorating
+Advisory locks for long jobs (e.g. sync_shopify_orders)
 
-assign_staff — optional assignee (no stage change)
+Idempotency: repeat calls return same state (use already_done in data if helpful)
 
-set_storage — update storage location
+Queues
+get_queue(p_store text, p_stage text default null, p_assignee_id uuid default null, p_storage text default null, p_search text default null, p_limit int default 100, p_offset int default 0)
+get_order(p_store text, p_order_id text)
+assign_staff(p_order_id text, p_staff uuid, p_note text default null)
+set_storage(p_store text, p_order_id text, p_storage text)
 
-get_order_for_scan — resolve scanned code → order
+Bulk assignment function lives in Cancel & Bulk Ops.
 
-get_queue — operational list (date window)
-
-get_orders_for_dashboard — dashboard query
-
-get_unassigned_counts — per-stage unassigned totals
-
-get_unassigned_list — list of unassigned orders for a stage
-
-deduct_on_order_create — inventory hold (Edge/Service role)
-
-handle_print_barcode
-Start of Filling (when barcode is printed).
-
-Signature
-
-sql
-Copy code
--- SECURITY DEFINER
+Scanner / Stage RPCs (stage-specific, safer)
 handle_print_barcode(id text, performed_by uuid, context jsonb default '{}'::jsonb)
-returns jsonb
-Behavior
-
-If filling_start_ts IS NULL → set to now(); append stage event.
-
-Else → idempotent; do not change value, return already_done=true.
-
-Result
-
-json
-Copy code
-{ "ok": true, "data": { "id": "bannos-12345", "filling_start_ts": "2025-09-15T07:20:11Z", "already_done": false } }
-Errors: NOT_FOUND, PERMISSION_DENIED
-
-complete_filling
-End Filling → Covering.
-
-sql
-Copy code
 complete_filling(id text, performed_by uuid)
-returns jsonb
-Rules
-
-Require stage = 'Filling'.
-
-Set filling_complete_ts if NULL; set stage = 'Covering'.
-
-If already completed, return ALREADY_DONE.
-
-complete_covering
-Covering → Decorating.
-
-sql
-Copy code
 complete_covering(id text, performed_by uuid)
-returns jsonb
-Rules: require stage='Covering'; set covering_complete_ts; set stage='Decorating'.
-
-complete_decorating
-Decorating → Packing.
-
-sql
-Copy code
 complete_decorating(id text, performed_by uuid)
-returns jsonb
-Rules: require stage='Decorating'; set decorating_complete_ts; set stage='Packing'.
-
-start_packing
-Set packing_start_ts (no stage change).
-
-sql
-Copy code
 start_packing(id text, performed_by uuid)
-returns jsonb
-Rules: require stage='Packing'; set packing_start_ts if NULL (idempotent).
-
-complete_packing
-Packing → Complete.
-
-sql
-Copy code
 complete_packing(id text, performed_by uuid)
-returns jsonb
-Rules: require stage='Packing'; set packing_complete_ts; set stage='Complete'.
-
-qc_return_to_decorating
-Explicit QC fail from Packing back to Decorating.
-
-sql
-Copy code
 qc_return_to_decorating(id text, performed_by uuid, reason text)
-returns jsonb
-Rules: allow from stage='Packing' (or admin from Complete if policy allows); log reason; set stage='Decorating'.
+get_order_for_scan(scan text) — normalizes bannos-#####, flour-lane-#####, QR payload; read-only
 
-assign_staff
-Optional assignee; stage does not change.
+Compatibility wrappers (optional)
+print_barcode(p_store text, p_order_id text) → calls handle_print_barcode
+complete_stage(p_store text, p_order_id text, p_stage text, p_staff uuid) → routes to the correct stage RPC
 
-sql
-Copy code
-assign_staff(id text, staff_id uuid, note text default null)
-returns jsonb
-Validation: staff exists, approved, active. Audit is appended.
+Edit
+update_order_core(p_store text, p_order_id text, p_patch jsonb) — Admin (Supervisor may have subset)
 
-set_storage
-Set/update storage location for the order.
+Staff / Time
+get_staff_me()
+start_shift(p_staff uuid)
+end_shift(p_staff uuid)
+start_break(p_staff uuid)
+end_break(p_staff uuid)
 
-sql
-Copy code
-set_storage(id text, storage text, performed_by uuid)
-returns jsonb
-Validation: against allowed list if configured.
+Complete Grid
+get_complete(p_store text, p_from date, p_to date, p_storage text default null, p_search text default null, p_limit int default 100, p_offset int default 0)
 
-get_order_for_scan
-Resolve scanned string → order.
+Settings
+get_settings_printing(p_store text)
+set_settings_printing(p_store text, p_cfg jsonb)
+get_flavours(p_store text)
+set_flavours(p_store text, p_list jsonb)
+get_storage_locations(p_store text)
+set_storage_locations(p_store text, p_list jsonb)
+get_monitor_density(p_store text)
+set_monitor_density(p_store text, p_value int)
 
-sql
-Copy code
-get_order_for_scan(scan text)
-returns jsonb
-Behavior: normalizes common inputs (bannos-#####, flour-lane-#####, QR payload), returns safe subset (id, stage, product, flavour, due_date, key timestamps). No writes.
+Admin role; Supervisor may read.
 
-get_queue
-Operational list (e.g., this week).
+Shopify / Ingest
+test_storefront_token(p_store text)
+connect_catalog(p_store text, p_payload jsonb)
+sync_shopify_orders(p_store text, p_since timestamptz default null) — Admin only; advisory lock to prevent concurrent runs
+Edge functions: orders_create_bannos / orders_create_flourlane → HMAC verify → ingest_order(p_store, payload)
+ingest_order(p_store text, p_payload jsonb) → inserts order, sets stage/priority, calls deduct_on_order_create
 
-sql
-Copy code
-get_queue(store text, date_from date, date_to date, limit int default 500)
-returns setof jsonb
-Filter: store + date window; exclude stage='Complete'.
-Sort (recommended): priority DESC, due_date ASC, size ASC, shopify_order_number ASC.
+Inventory / BOM
+create_component(p_payload jsonb)
+update_component(p_sku text, p_patch jsonb)
+adjust_stock(p_sku text, p_delta int, p_reason text, p_order_id text default null)
+create_bom(p_payload jsonb)
+update_bom_items(p_header_id uuid, p_items jsonb)
+map_keyword_to_component(p_keyword text, p_sku text)
+set_product_requirement(p_product_id text, p_requirements jsonb)
+deduct_on_order_create(p_order_id text) — atomic; enqueues work_queue
+restock_order(p_order_id text) — reverse of deduct
+get_inventory_status(p_sku text) — returns stock / reserved / buffer / ATS
+retry_failed_sync(p_id uuid) — Admin only; sets status='pending', increments retry_count
 
-get_orders_for_dashboard
-Dashboard query (sortable/filterable).
+Messaging (optional)
+start_direct_conversation(p_user uuid, p_other uuid)
+create_group_conversation(p_user uuid, p_members uuid[])
+post_message(p_conversation uuid, p_text text)
+mark_conversation_read(p_conversation uuid)
+add_participants(p_conversation uuid, p_members uuid[])
+remove_participant(p_conversation uuid, p_member uuid)
 
-sql
-Copy code
-get_orders_for_dashboard(store text, period text default 'week')
-returns setof jsonb
-get_unassigned_counts
-Per-stage totals of unassigned orders (assignee_id IS NULL) for a store.
+Time & Payroll (optional)
+get_staff_times(p_from date, p_to date, p_store text default null)
+get_staff_times_detail(p_staff uuid, p_from date, p_to date)
+update_time_entry(p_entry_id uuid, p_patch jsonb) — Admin only
 
-sql
-Copy code
-get_unassigned_counts(store text)
-returns jsonb
-Example
-
-json
-Copy code
-{ "ok": true, "data": { "filling": 3, "covering": 2, "decorating": 1, "packing": 4 } }
-get_unassigned_list
-Paginated list of unassigned orders for a stage.
-
-sql
-Copy code
-get_unassigned_list(store text, stage stage_type, limit int default 100, offset int default 0)
-returns setof jsonb
-Behavior: filter stage = $2 AND assignee_id IS NULL; sort as in get_queue; returns safe fields.
-
-deduct_on_order_create (Edge / Service role)
-Inventory hold on ingest.
-
-sql
-Copy code
-deduct_on_order_create(order_gid text, payload jsonb)
-returns jsonb
-Behavior: writes stock txns, enqueues work_queue (with dedupe_key) for ATS/OOS push.
+Cancel & Bulk Ops
+cancel_order(p_store text, p_order_id text) — Admin; cancels, releases holds, restocks, logs
+bulk_assign(p_store text, p_order_ids text[], p_staff uuid) — Supervisor/Admin
 
 Error & Audit Model
-Each write RPC appends an event (or in a consolidated logs) with:
-id, action, at, performed_by, source (app/edge), meta jsonb.
+Every write RPC logs: id, action, at, performed_by, source ('app'|'edge'), meta jsonb
 
-Standard error payload:
+Errors use the standard envelope with error_code (e.g., INVALID_STAGE, ALREADY_DONE, PERMISSION_DENIED, NOT_FOUND, BAD_INPUT, CONFLICT)
 
-json
-Copy code
-{ "ok": false, "code": "INVALID_STAGE", "message": "Expected stage=Packing" }
 Security Notes
-RLS on orders; selection scoped by store + role.
+RLS on orders; selection scoped by store + role
 
-All write RPCs are SECURITY DEFINER with explicit checks; avoid dynamic SQL on user input.
+All write RPCs are SECURITY DEFINER with explicit checks; avoid dynamic SQL on user input
 
-Service role reserved for webhooks/reconciliation.
+Service role reserved for webhooks/reconciliation
 
 Testing Notes
-Unit: idempotency (double print/scan), invalid-stage transitions, permission checks.
+Unit: idempotency (double print/scan), invalid-stage transitions, permission checks
 
-Integration: full lifecycle Filling → … → Complete, QC loop, inventory hold + reconciliation.
+Integration: full lifecycle Filling → … → Complete, QC loop, inventory hold + reconciliation
 
-E2E: print barcode → scan completes Filling; start/complete Packing; dashboard reflects timestamps.
+E2E: print barcode → scan completes Filling; start/complete Packing; dashboard reflects timestamps
