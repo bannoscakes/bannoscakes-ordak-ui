@@ -1,0 +1,9 @@
+flowchart LR
+  A[Frontend<br/>React + Vite + TS] --> B[Supabase<br/>RPC + RLS + DB]
+  A -->|Auth (anon key)| B
+  C[Edge Functions<br/>(Webhooks + Worker)] --> B
+  D[Shopify Stores<br/>(Bannos, Flourlane)] -->|orders/create webhook| C
+  C -->|Inventory ATS/OOS updates| D
+  C -->|Alerts| E[Slack]
+  A -->|Errors| F[Sentry]
+  A -->|Analytics| G[PostHog]
