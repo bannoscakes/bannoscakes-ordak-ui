@@ -1,143 +1,151 @@
-# Data Flows
+Data Flows (Final)
 
-This doc describes how data moves through Ordak: **order ingestion**, **stage actions**, **assignment**, **queues**, **inventory sync**, and **error handling**.
+Authoritative reference for end-to-end flows: **order ingestion**, **queues & workspaces**, **inventory sync**, **messaging**, **time tracking (optional)**, **order changes**, **cancellations**, **error recovery**, and **monitoring**.  
+Stage model: **Filling → Covering → Decorating → Packing → Complete**.  
+**No extra stage tables.** “Unassigned” = `assignee_id IS NULL` for the current stage.
 
 ---
 
-## 1) Order Ingestion (Shopify → Ordak)
+## 1) Orders Intake (Shopify → Ordak)
 
-**Source:** Shopify Admin Webhook `orders/create` (per store)  
-**Target:** `orders_bannos` or `orders_flourlane` (chosen by shop)
+**Source**: Shopify Admin webhook `orders/create` (per store)  
+**Target**: `orders_bannos` or `orders_flourlane`
 
-**Steps**
-1. **Edge Function (service role)** receives webhook and verifies HMAC using `SHOPIFY_WEBHOOK_SECRET`.
-2. Deduplicate:
-   - idempotency key = `order.id` or `order.admin_graphql_api_id`  
-   - skip if we’ve already processed this `order_gid` (log and return 200).
-3. Enrich/transform:
-   - pick the **store** from shop domain (`bannos…` or `flourlane…`).
-   - compute human **`id`**: `bannos-<order_number>` or `flourlane-<order_number>` (fallback to `id`).
-   - extract `customer_name`, `product_title`, `flavour`, `notes`, `currency`, `total_amount`.
-   - set `stage = 'Filling'`, derive **priority** from **due_date** (High/Medium/Low).
-4. **Insert** into the correct orders table (`orders_bannos` / `orders_flourlane`).
-5. **Inventory hold**: call RPC `deduct_on_order_create(order_gid, payload)` → writes stock txns + enqueues `work_queue`.
-6. **Log event** `order_ingested` with store, ids, timing.
-7. (Optional) **Slack** notify on ingest or if fields are missing.
+**Flow**
+1. **Edge (service role)** receives webhook → **HMAC verify** with `SHOPIFY_WEBHOOK_SECRET`.
+2. **Deduplicate** by GraphQL GID (`order.admin_graphql_api_id`) or numeric id.  
+   - Duplicate → **200 OK** (no-op) and log `dedupe=true`.
+3. **Validate / transform** (match **kitchen docket** logic):
+   - Required: `customer`, `product`, `due_date`.
+   - **Flavours/notes** from **line item properties** (case-insensitive): accept names containing “gelato flavour(s)”; **skip** `_origin`, `_raw`, `gwp`, `_LocalDeliveryID`, names starting with `_`; keep **value** only.
+   - Compute human `id` (`bannos-<order_number>` / `flourlane-<order_number>`; fallback to numeric id).
+4. **Schema checks**
+   - Product exists in **BOM** (`product_requirements`) if enabled.
+   - (Optional) **inventory preview**; if insufficient:
+     - keep stage **Filling** (no new stage), set `inventory_blocked = true` (flag/metadata),
+     - enqueue Shopify **OOS** update via `work_queue`,
+     - alert **Supervisor**.
+5. **Insert** row with `stage='Filling'`, `priority` derived from `due_date` (High/Medium/Low), plus monetary fields and `order_json` (raw payload).
+6. **Inventory hold**: call `deduct_on_order_create(order_gid, payload)` → write `inventory_txn`, update `inventory_items.ats`, enqueue `work_queue` (`topic='inventory_push'`, `dedupe_key`).
+7. (Optional) **Slack** notification on ingest/missing fields.
 
-**On failures**
-- Return 5xx to let Shopify retry (Shopify retries several times).  
-- Also enqueue a `work_queue` `topic=order_ingest_retry` with `dedupe_key=order_gid`.
+**Invalid payload**
+- Store raw payload in **dead_letter** (Edge-managed) with reason; return **2xx** if permanent validation error to avoid retry storms; otherwise 5xx so Shopify retries.
 
 ---
 
 ## 2) Stage Actions (4-stage model)
 
-**Enum:** `Filling → Covering → Decorating → Packing → Complete`  
-All stage changes happen via RPCs (idempotent, role-checked). There are **no extra “pending/in_progress” statuses**.
+All transitions by **RPC** (role-checked, **idempotent**). No `_pending` / `_in_progress` stages.
 
-### Filling
-- **Print barcode** → `handle_print_barcode(id, user, ctx)`  
-  - sets `filling_start_ts` **only if NULL**.
-- **Scan (complete)** → `complete_filling(id, user)`  
-  - sets `filling_complete_ts`; `stage → Covering`.
+- **Filling**  
+  - Print barcode → `handle_print_barcode` (sets `filling_start_ts` if `NULL`)  
+  - Scan complete → `complete_filling` (sets `filling_complete_ts`, **stage → Covering**)
 
-### Covering
-- **Scan complete** → `complete_covering(id, user)`  
-  - sets `covering_complete_ts`; `stage → Decorating`.
+- **Covering**  
+  - Scan complete → `complete_covering` (sets `covering_complete_ts`, **stage → Decorating**)
 
-### Decorating
-- **Scan complete** → `complete_decorating(id, user)`  
-  - sets `decorating_complete_ts`; `stage → Packing`.
+- **Decorating**  
+  - Scan complete → `complete_decorating` (sets `decorating_complete_ts`, **stage → Packing**)
 
-### Packing
-- **Scan start** → `start_packing(id, user)`  
-  - sets `packing_start_ts`.
-- **Scan complete** → `complete_packing(id, user)`  
-  - sets `packing_complete_ts`; `stage → Complete`.
-- **QC fail (optional)** → `qc_return_to_decorating(id, user, reason)`  
-  - `stage → Decorating` (events/audit record why).
+- **Packing**  
+  - Scan start → `start_packing` (sets `packing_start_ts`)  
+  - Scan complete → `complete_packing` (sets `packing_complete_ts`, **stage → Complete**)  
+  - **QC return** (admin/policy) → `qc_return_to_decorating` (**stage → Decorating**, reason logged)
 
 ---
 
-## 3) Assignment Flow (Unassigned is not a stage)
+## 3) Queues & Workspaces
 
-- An order is **unassigned** when **`assignee_id IS NULL`** for its current stage.  
-- **Assign** staff → `assign_staff(id, staff_id, note?)` (no stage change).  
-- **Storage** location update → `set_storage(id, storage, user)`.
-
-**Queries**
-- `get_unassigned_counts(store)` → `{ filling, covering, decorating, packing }`  
-- `get_unassigned_list(store, stage, limit, offset)` → paginated list
-
----
-
-## 4) Queues & Dashboard
-
-**Operational queue (this week)**
-- `get_queue(store, date_from, date_to, limit)`  
-  - filters on store + date window, excludes `stage='Complete'`  
-  - recommended sort: `priority DESC, due_date ASC, size ASC, shopify_order_number ASC`
-
-**Dashboard**
-- `get_orders_for_dashboard(store, period='week')`  
-  - aggregates/filters for kiosk/monitor views
-
-Indexes that power this are in **schema-and-rls.md** (queue + unassigned partial indexes).
+- **get_queue(store, date_from, date_to, limit)** → this-week operational list; excludes `stage='Complete'`.  
+  Sort: `priority DESC, due_date ASC, size ASC, shopify_order_number ASC`.
+- **Unassigned** lists/cards:
+  - **Counts** → `get_unassigned_counts(store)`  
+  - **List** → `get_unassigned_list(store, stage, limit, offset)`  
+  - “Unassigned” means `assignee_id IS NULL`.
+- **Assign** → `assign_staff(id, staff_id, note?)` (no stage change).
+- (Optional) **Shifts/Breaks**: if Time & Payroll is enabled, UI may require active shift to assign; RPCs enforce.
 
 ---
 
-## 5) Inventory Sync
+## 4) Inventory Feedback to Shopify
 
-**On ingest**
-- `deduct_on_order_create`:
-  - writes `inventory_txn` rows (negative qty for holds)
-  - updates `inventory_items.ats`
-  - enqueues `work_queue` item with `topic='inventory_push'`, `dedupe_key=sku+qty+order_gid`
-
-**Worker (Edge Function / CRON)**
-- Polls `work_queue WHERE status='pending' AND (next_retry_at IS NULL OR next_retry_at <= now())`
-- Locks one item (`locked_at`, `locked_by`), pushes **ATS/OOS** to Shopify Admin API
-- On success → `status='done'`
-- On error → set `status='error'`, increment `retry_count`, compute `next_retry_at` (exponential backoff); stop after `max_retries`
-
-**Nightly reconciliation**
-- Compares local `inventory_items.ats` vs Shopify; writes correction txns and pushes updates.
+- DB changes enqueue **`work_queue`**.  
+- Worker loop (Edge/CRON):
+  1) Pull `status='pending'` and eligible `next_retry_at`
+  2) **Lock** (`locked_at`, `locked_by`), push ATS/OOS to Shopify
+  3) Success → `status='done'`
+  4) Error → `status='error'`, increment `retry_count`, set `next_retry_at` (exponential backoff), stop after `max_retries`
+- **Batching & dedupe**: dedupe by `dedupe_key` (SKU+qty+order), optional short batch window (e.g., 5s).
+- **Nightly reconciliation** compares local `inventory_items.ats` vs Shopify, writes corrections.
 
 ---
 
-## 6) Error Handling & Idempotency
+## 5) Messaging & Media (optional)
 
-- All write RPCs treat “already complete” as **`ok: true, already_done: true`** (no-op).  
-- Webhooks use **order_gid** dedupe; `work_queue` uses **`dedupe_key`** per topic.  
-- Any unexpected state mismatch → return a structured error `{ ok:false, code, message }` and log an event.
-
----
-
-## 7) Barcode / Scan Formats
-
-**Accepted scan inputs** (normalized by `get_order_for_scan(scan)`):
-- `bannos-#####`, `flour-lane-#####` or QR payloads that include the id
-- Function returns safe subset: `id, stage, product_title, flavour, due_date, key timestamps`
+- **conversations / participants / messages** with RLS; unread counts by `(conversation_id, created_at desc)`.  
+- **order_photos** via signed URLs; some stage completions can require photos (QC rule).
 
 ---
 
-## 8) Monitoring
+## 6) Time & Payroll (optional)
 
-- **Sentry**: RPC/Edge exceptions, webhook failures.  
-- **Slack**: critical alerts (webhook failures, worker stuck).  
-- **PostHog**: feature usage (prints, scans, assignments).
-
----
-
-## 9) Security Notes
-
-- RLS enabled on all tables; clients read-only via policies.  
-- **Service role** used only in Edge Functions (webhooks, worker, reconciliation).  
-- All mutations go through **SECURITY DEFINER RPCs** that validate roles & inputs.
+- RPCs: `start_shift`, `end_shift`, `start_break`, `end_break`.  
+- Validations: no overlapping shifts; auto-end after policy windows (e.g., 12h), breaks limited (e.g., 2h).  
+- Reports: `get_staff_times`, `get_staff_times_detail`; manual admin adjustments via RPC.
 
 ---
 
-## 10) Health Checks
+## 7) Order Modifications
 
-- `/edge/health` returns `up` + DB ping latency.  
-- Worker exposes processed items/min, error rate, last run timestamps.
+1. Lock row (transaction) to avoid concurrent edits.  
+2. Validate changes (due_date, size, product).  
+3. Recompute `priority` if due_date changes.  
+4. Adjust inventory: release old holds, reserve new.  
+5. Log **stage_events** with reason; notify assignee if still assigned.
+
+---
+
+## 8) Order Cancellations
+
+1. Shopify cancellation webhook → HMAC verify.  
+2. Locate order; if not **Complete**:
+   - release inventory holds, write positive correction txns,
+   - clear assignee,
+   - mark cancellation (flag/metadata) and log event,
+   - enqueue **work_queue** to restore ATS in Shopify.
+
+---
+
+## 9) Error Recovery Flows
+
+- **Failed webhooks**: record raw payload in **dead_letter**, retry with backoff; alert after threshold.  
+- **Failed inventory sync**: `work_queue.status='error'` with reason; have `retry_failed_sync` RPC; daily report.  
+- **Orphaned orders**: job finds orders stuck in a stage > 24h; alert Supervisor; escalate > 48h.
+
+---
+
+## 10) Monitoring & Metrics
+
+Targets (see `performance-slas.md` for full table):
+- Webhook **p95 < 500ms**; success ≥ 99.5% after retries.  
+- Worker p95 < 2s; backlog < 500 or oldest pending < 15m.  
+- Unassigned > 2h → alert.  
+- Stage transition errors logged; concurrency/shift violations flagged.
+
+**Instrumentation**
+- Edge: structured timings `{route, t_ms, ok}`, error codes.  
+- Optional `api_logs` table for percentiles; Sentry for exceptions; Slack for alerts.
+
+---
+
+## 11) Security Notes
+
+- **RLS everywhere**; clients are **read-only**.  
+- Mutations via **SECURITY DEFINER RPCs** with strict role checks and idempotency.  
+- **Service role** only in Edge Functions (webhooks, worker, reconcile).
+
+---
+
+## References
+See `docs/references.md` for official docs (Node, React/Vite/TS, Supabase, Shopify, etc.).
