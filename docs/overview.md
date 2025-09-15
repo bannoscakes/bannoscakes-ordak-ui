@@ -87,6 +87,23 @@ Include (at minimum):
 > All transitions validated for **roles**, **idempotency**, and **timeline sanity**.  
 > **No `_pending`/`_in_progress` tables or statuses.**
 
+## Assignment Model & “Unassigned” Cards
+
+- **Unassigned is not a stage and not a separate table.**
+- An order is **unassigned** when its **`assignee_id IS NULL`** for the **current `stage`**.
+- The UI shows 4 cards per store: **Filling / Covering / Decorating / Packing Unassigned** (counts + quick lists).
+- Assignment is **optional**; assigning a staff member does **not** change stage.
+- Typical queries are provided via RPCs (see `rpc-surface.md`):
+  - `get_unassigned_counts(store)` → `{ filling: 3, covering: 2, decorating: 1, packing: 4 }`
+  - `get_unassigned_list(store, stage, limit, offset)` → list of orders awaiting assignment for that stage.
+
+### Suggested Indexes for Unassigned
+For each store table (e.g. `orders_bannos`, `orders_flourlane`):
+
+- Partial index to power counts/lists quickly:
+  - `(stage, due_date, priority)` **WHERE `assignee_id IS NULL AND stage <> 'Complete'`**
+- If you frequently filter by size or time window, add those columns to the index keys.
+
 ---
 
 ## Stage Transition Validation
