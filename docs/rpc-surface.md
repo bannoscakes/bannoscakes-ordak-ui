@@ -1,166 +1,232 @@
-# Ordak – System Overview
+# RPC Surface
 
-## Repos & Branches
-- Repo: `bannoscakes-ordak-ui`
-- Branch model: **dev (default)** ← active development with Cursor | **main** ← merge after review
-- Git rules: `dev` is open; `main` is protected (no force pushes)
-
-## Tech Stack
-- **Frontend**: React 18 + Vite + TypeScript  
-- **Styling**: Tailwind CSS v4 (configless, `@import "tailwindcss"`)  
-- **UI Components**: shadcn/ui, lucide-react, recharts  
-- **Backend**: Supabase (Postgres, Auth, RLS, Edge Functions)  
-- **Integrations**: Shopify Admin API (orders, products, inventory), Slack (alerts), Sentry, PostHog
-
-## Database Core Principles
-- All writes via **SECURITY DEFINER RPCs** (no direct table writes)  
-- **Row Level Security (RLS)** on all tables  
-- **Date-only `due_date`**; **priority** is derived: **High** (today/overdue), **Medium** (tomorrow), **Low** (later)  
-- **Stage is a single enum**; progress is captured by **timestamps + events** (no auxiliary status tables)
+This document lists all **SECURITY DEFINER RPCs** used by the app and Edge Functions.  
+Model follows the stage flow: **Filling → Covering → Decorating → Packing → Complete**.  
+All writes go through RPCs — **no direct table writes**.
 
 ---
 
-## Orders: ID Strategy & Core Columns
+## Conventions
 
-### ID Strategy
-- **Human ID** `id text` (store-prefixed, scanner-friendly), e.g. `bannos-12345`  
-- **Surrogate** `row_id uuid DEFAULT gen_random_uuid()` for FK safety  
-- Enforce **uniqueness on `id`**  
-- Store **Shopify identifiers** for reconciliation
+- **Order ID (`id`)**: human-readable, store-prefixed (e.g., `bannos-12345`, `flourlane-67890`).
+- **Auth**  
+  - App uses Supabase client (tokens signed by **anon** key).  
+  - Edge Functions (webhooks, reconciliation) use **service role** key.
+- **Idempotency**: write RPCs set timestamps only if `NULL`; repeat calls return `already_done=true`.
+- **Errors** (small, consistent set): `INVALID_STAGE`, `ALREADY_DONE`, `PERMISSION_DENIED`, `NOT_FOUND`, `BAD_INPUT`, `CONFLICT`.
 
-### Orders Tables (`orders_bannos`, `orders_flourlane`)
-Minimum columns:
+Return envelope:
+```ts
+type Ok<T> = { ok: true; data: T }
+type Err   = { ok: false; code: string; message: string }
+type RpcResult<T> = Ok<T> | Err
+Index
+handle_print_barcode — start Filling (sets filling_start_ts)
 
-- `row_id uuid`  
-- `id text` (human ID)  
-- `shopify_order_id bigint`  
-- `shopify_order_gid text`  
-- `shopify_order_number int`  
-- `customer_name text`  
-- `product_title text`  
-- `flavour text`  
-- `notes text`  
-- `currency char(3)`  
-- `total_amount numeric(12,2)`  
-- `order_json jsonb` (raw payload for audit/debug)  
-- `stage stage_type` (enum: **Filling → Covering → Decorating → Packing → Complete**)  
-- `priority smallint`  
-- `assignee_id uuid`  
-- `storage text`  
-- **Operational timestamps**  
-  - `filling_start_ts timestamptz` (**set on barcode print**)  
-  - `filling_complete_ts timestamptz` (**set on scan to end Filling**)  
-  - `covering_complete_ts timestamptz`  
-  - `decorating_complete_ts timestamptz`  
-  - `packing_start_ts timestamptz`  
-  - `packing_complete_ts timestamptz`  
-- `created_at timestamptz DEFAULT now()`  
-- `updated_at timestamptz DEFAULT now()` (**trigger** updates on any change)
+complete_filling — end Filling → Covering
 
----
+complete_covering — end Covering → Decorating
 
-## Stage Flow
+complete_decorating — end Decorating → Packing
 
-### Enum
-`stage_type` = **Filling | Covering | Decorating | Packing | Complete**
+start_packing — set packing_start_ts
 
-### Transitions (RPC-driven)
-- **Filling**
-  - (Assign staff optional)
-  - **Print barcode** → `handle_print_barcode` sets **`filling_start_ts`**
-  - **Scan barcode (complete)** → `complete_filling` sets **`filling_complete_ts`**, **stage → Covering**
+complete_packing — end Packing → Complete
 
-- **Covering**
-  - (Assign staff optional)
-  - **Scan complete** → `complete_covering` sets **`covering_complete_ts`**, **stage → Decorating**
+qc_return_to_decorating — QC fail back to Decorating
 
-- **Decorating**
-  - (Assign staff optional)
-  - **Scan complete** → `complete_decorating` sets **`decorating_complete_ts`**, **stage → Packing**
+assign_staff — optional assignee (no stage change)
 
-- **Packing**
-  - **Scan start** → `start_packing` sets **`packing_start_ts`**
-  - **Scan complete** → `complete_packing` sets **`packing_complete_ts`**, **stage → Complete**
-  - **QC fail** (optional) → `return_to_decorating` → **stage → Decorating** with reason logged
+set_storage — update storage location
 
-> Transitions validate **roles**, enforce **idempotency** (safe re-print/re-scan), and check **timeline sanity**.
+get_order_for_scan — resolve scanned code → order
 
----
+get_queue — operational list (date window)
 
-## Stage Transition Validation
-- Enforced inside **RPCs** (roles, timestamps, idempotency)  
-- Guards:  
-  - Allow **forward** progress and safe **repeats**  
-  - Allow admin **jump to `Complete`**  
-  - Block **invalid backward transitions** (except explicit QC path)
+get_orders_for_dashboard — dashboard query
 
----
+get_unassigned_counts — per-stage unassigned totals
 
-## Multi-Store Rules
-- Separate order tables per store: `orders_bannos`, `orders_flourlane`  
-- Shared **staff** and **inventory** across stores with audit separation  
-- Independent **webhook tokens/secrets** per store
+get_unassigned_list — list of unassigned orders for a stage
 
----
+deduct_on_order_create — inventory hold (Edge/Service role)
 
-## Inventory & Work Queue
-- On order create: `deduct_on_order_create` reserves components and writes stock txns  
-- Stock deltas enqueue **`work_queue`** for Shopify ATS/OOS updates
+handle_print_barcode
+Start of Filling (when barcode is printed).
 
-**`work_queue` fields (minimum):**
-- `priority int DEFAULT 5`  
-- `status text DEFAULT 'pending'` (pending / processing / done / error)  
-- `max_retries int DEFAULT 3`, `retry_count int DEFAULT 0`  
-- `next_retry_at timestamptz`, `locked_at timestamptz`, `locked_by text`  
-- `last_error text`, `dedupe_key text UNIQUE`
+Signature
 
-A worker processes `work_queue`; nightly reconciliation compares local ATS vs Shopify.
+sql
+Copy code
+-- SECURITY DEFINER
+handle_print_barcode(id text, performed_by uuid, context jsonb default '{}'::jsonb)
+returns jsonb
+Behavior
 
----
+If filling_start_ts IS NULL → set to now(); append stage event.
 
-## Messaging
-- Tables: `conversations`, `conversation_participants`, `messages`  
-- Index `(conversation_id, created_at DESC)` for unread lookups
+Else → idempotent; do not change value, return already_done=true.
 
----
+Result
 
-## Indexes & Performance
-- **Queues:** `(priority, due_date, size, order_number)` WHERE `stage <> 'Complete'`  
-- **Assignee:** `(assignee_id, stage, due_date)`  
-- **Stage timestamps:** `(row_id, stage, filling_start_ts / …, created_at DESC)`  
-- **Work Queue:** `(status, priority, next_retry_at)` partial index (pending/error)  
-- **Messages:** `(conversation_id, created_at DESC)`
+json
+Copy code
+{ "ok": true, "data": { "id": "bannos-12345", "filling_start_ts": "2025-09-15T07:20:11Z", "already_done": false } }
+Errors: NOT_FOUND, PERMISSION_DENIED
 
----
+complete_filling
+End Filling → Covering.
 
-## Migrations Roadmap
-- **M0 — Core**: order tables, stage enum, triggers, guards, indexes; `staff_shared`; (optional) `stage_events`  
-- **M1 — Settings**: printing, due_date defaults, flavours, storage  
-- **M2 — Shopify**: tokens, `sync_runs`, webhook skeletons  
-- **M3 — Inventory/BOM**: items, txns, holds, `work_queue`, BOM, product_requirements  
-- **M4 — Inventory Sync**: retries/locking/dedupe  
-- **M5 — Workflows**: RPCs (queue/assign/print/complete/get_order/set_storage)  
-- **M6 — Messaging**: conversations/messages, unread counters  
-- **M7 — Media/QC**: order_photos + signed-URL RPCs  
-- **M8 — Time & Payroll**: shifts, breaks, RPCs, reports
+sql
+Copy code
+complete_filling(id text, performed_by uuid)
+returns jsonb
+Rules
 
----
+Require stage = 'Filling'.
 
-## Security
-- RLS **everywhere**; client uses **anon** key; **service role** only in Edge Functions  
-- PII minimization in logs; operational events are structured, no customer payloads
+Set filling_complete_ts if NULL; set stage = 'Covering'.
 
----
+If already completed, return ALREADY_DONE.
 
-## Environments
-- **Local (dev)**: Vite dev server + a dev Supabase project  
-- **Staging**: schema matches prod; used for release verification  
-- **Production**: deploy from `main`; nightly backups with PITR (7 days)
+complete_covering
+Covering → Decorating.
 
----
+sql
+Copy code
+complete_covering(id text, performed_by uuid)
+returns jsonb
+Rules: require stage='Covering'; set covering_complete_ts; set stage='Decorating'.
 
-## How to Run Locally
-```bash
-npm install
-npm run dev
-# open the shown localhost URL (default http://localhost:3000)
+complete_decorating
+Decorating → Packing.
+
+sql
+Copy code
+complete_decorating(id text, performed_by uuid)
+returns jsonb
+Rules: require stage='Decorating'; set decorating_complete_ts; set stage='Packing'.
+
+start_packing
+Set packing_start_ts (no stage change).
+
+sql
+Copy code
+start_packing(id text, performed_by uuid)
+returns jsonb
+Rules: require stage='Packing'; set packing_start_ts if NULL (idempotent).
+
+complete_packing
+Packing → Complete.
+
+sql
+Copy code
+complete_packing(id text, performed_by uuid)
+returns jsonb
+Rules: require stage='Packing'; set packing_complete_ts; set stage='Complete'.
+
+qc_return_to_decorating
+Explicit QC fail from Packing back to Decorating.
+
+sql
+Copy code
+qc_return_to_decorating(id text, performed_by uuid, reason text)
+returns jsonb
+Rules: allow from stage='Packing' (or admin from Complete if policy allows); log reason; set stage='Decorating'.
+
+assign_staff
+Optional assignee; stage does not change.
+
+sql
+Copy code
+assign_staff(id text, staff_id uuid, note text default null)
+returns jsonb
+Validation: staff exists, approved, active. Audit is appended.
+
+set_storage
+Set/update storage location for the order.
+
+sql
+Copy code
+set_storage(id text, storage text, performed_by uuid)
+returns jsonb
+Validation: against allowed list if configured.
+
+get_order_for_scan
+Resolve scanned string → order.
+
+sql
+Copy code
+get_order_for_scan(scan text)
+returns jsonb
+Behavior: normalizes common inputs (bannos-#####, flour-lane-#####, QR payload), returns safe subset (id, stage, product, flavour, due_date, key timestamps). No writes.
+
+get_queue
+Operational list (e.g., this week).
+
+sql
+Copy code
+get_queue(store text, date_from date, date_to date, limit int default 500)
+returns setof jsonb
+Filter: store + date window; exclude stage='Complete'.
+Sort (recommended): priority DESC, due_date ASC, size ASC, shopify_order_number ASC.
+
+get_orders_for_dashboard
+Dashboard query (sortable/filterable).
+
+sql
+Copy code
+get_orders_for_dashboard(store text, period text default 'week')
+returns setof jsonb
+get_unassigned_counts
+Per-stage totals of unassigned orders (assignee_id IS NULL) for a store.
+
+sql
+Copy code
+get_unassigned_counts(store text)
+returns jsonb
+Example
+
+json
+Copy code
+{ "ok": true, "data": { "filling": 3, "covering": 2, "decorating": 1, "packing": 4 } }
+get_unassigned_list
+Paginated list of unassigned orders for a stage.
+
+sql
+Copy code
+get_unassigned_list(store text, stage stage_type, limit int default 100, offset int default 0)
+returns setof jsonb
+Behavior: filter stage = $2 AND assignee_id IS NULL; sort as in get_queue; returns safe fields.
+
+deduct_on_order_create (Edge / Service role)
+Inventory hold on ingest.
+
+sql
+Copy code
+deduct_on_order_create(order_gid text, payload jsonb)
+returns jsonb
+Behavior: writes stock txns, enqueues work_queue (with dedupe_key) for ATS/OOS push.
+
+Error & Audit Model
+Each write RPC appends an event (or in a consolidated logs) with:
+id, action, at, performed_by, source (app/edge), meta jsonb.
+
+Standard error payload:
+
+json
+Copy code
+{ "ok": false, "code": "INVALID_STAGE", "message": "Expected stage=Packing" }
+Security Notes
+RLS on orders; selection scoped by store + role.
+
+All write RPCs are SECURITY DEFINER with explicit checks; avoid dynamic SQL on user input.
+
+Service role reserved for webhooks/reconciliation.
+
+Testing Notes
+Unit: idempotency (double print/scan), invalid-stage transitions, permission checks.
+
+Integration: full lifecycle Filling → … → Complete, QC loop, inventory hold + reconciliation.
+
+E2E: print barcode → scan completes Filling; start/complete Packing; dashboard reflects timestamps.
