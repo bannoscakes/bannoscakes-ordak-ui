@@ -1,0 +1,17 @@
+flowchart TB
+  subgraph Orders
+    OB[orders_bannos]
+    OF[orders_flourlane]
+  end
+  SS[staff_shared]
+  II[inventory_items]
+  IT[inventory_txn]
+  WQ[work_queue]
+  SE[stage_events]
+
+  OB --> SS
+  OF --> SS
+  IT --> II
+  WQ --> II
+  SE --> OB
+  SE --> OF
