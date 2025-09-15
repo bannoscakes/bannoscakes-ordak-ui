@@ -22,7 +22,7 @@
 
 ## Orders: ID Strategy & Columns
 
-### ID Strategy
+### ID Strategy(
 - Keep **text `id`** (human-readable, store-prefixed; scanner-friendly), e.g. `bannos-12345`  
 - Add surrogate **`row_id uuid DEFAULT gen_random_uuid()`** for safe FK references  
 - Enforce **uniqueness on `id`**  
@@ -60,7 +60,7 @@ Include (at minimum):
 
 ---
 
-## Stage Flow (Simplified — No Pending Categories)
+## Stage Flow 
 
 ### Enum
 `stage_type` = **Filling | Covering | Decorating | Packing | Complete**
