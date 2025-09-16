@@ -1,0 +1,22 @@
+flowchart LR
+  Dev[Developer] --> PR[Open PR to dev]
+  PR --> Lint["CI lint and type check"]
+  Lint --> Tests["CI unit and integration tests"]
+  Tests --> MigDry["CI migrations dry run"]
+  MigDry --> Build["Build frontend"]
+  Build --> Staging["Deploy to staging"]
+  Staging --> Smoke["Smoke tests on staging"]
+  Smoke --> Approve{"Manual approval?"}
+  Approve -- "No" --> Back["Return to dev"]
+  Approve -- "Yes" --> Prod["Deploy to production"]
+  Prod --> DBMig["Run migrations in prod"]
+  DBMig --> Edge["Deploy Edge Functions"]
+  Edge --> FE["Deploy frontend"]
+  FE --> Checks["Post deploy checks"]
+  Checks --> Watch["Monitor Sentry and Slack"]
+
+  Checks --> RollQ{"Rollback needed?"}
+  RollQ -- "Yes" --> Revert["Git revert to previous tag"]
+  Revert --> Redeploy["Re-deploy previous release"]
+  Redeploy --> Watch
+  RollQ -- "No" --> Done[Done]
