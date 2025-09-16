@@ -8,6 +8,31 @@ Production management system for **Bannos** & **Flourlane** cake stores, built w
 ![License](https://img.shields.io/badge/license-private-red)
 
 ---
+# Ordak v2 – Production Management System
+...badges...
+
+---
+
+## 📚 Docs Index
+
+- [Overview](docs/overview.md)
+- [Schema & RLS](docs/schema-and-rls.md)
+- [RPC Surface](docs/rpc-surface.md)
+- [Data Flows](docs/data-flows.md)
+- [UI Site Map](docs/ui-site-map.md)
+- [Operations](docs/operations.md)
+- [Runbook (Incidents)](docs/runbook.md)
+- [Testing](docs/testing.md)
+- [Migration Order](docs/migration-order.md)
+- [Performance SLAs](docs/performance-slas.md)
+- [Checklists](docs/checklists.md)
+- [Onboarding](docs/onboarding.md)
+- [Backup & Recovery](docs/backup-recovery.md)
+- [References (Official Docs)](docs/references.md)
+- Diagrams: [`docs/diagrams/`](docs/diagrams/)
+
+## 📦 Project Status
+...
 
 ## 📦 Project Status
 
