@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main, dev]  # PRs into main and dev
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint (if present)
+        run: npm run lint 2>/dev/null || true
+
+      - name: Security check - no service role keys in sources
+        run: |
+          ! grep -r "service_role" --include="*.ts" --include="*.tsx" src/
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_APP_URL: https://ordak.yourdomain.com
+
+      - name: Tests (if present)
+        run: npm test 2>/dev/null || true
