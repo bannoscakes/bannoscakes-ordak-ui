@@ -1,0 +1,8 @@
+flowchart LR
+  subgraph Auth["Authentication"]
+    LOGIN[Login] --> JWT[JWT issued]
+    JWT --> ROLE[Role resolve from staff_shared]
+  end
+  ROLE --> UI[Frontend]
+  UI --> RPC[SECURITY DEFINER RPCs]
+  RPC --> DB[(Supabase)]
