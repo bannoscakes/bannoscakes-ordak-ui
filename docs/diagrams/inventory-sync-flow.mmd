@@ -1,0 +1,9 @@
+flowchart LR
+  INVCHG[(inventory_change_log)] --> ENQ[Enqueue work_queue]
+  ENQ --> WQ[(work_queue<br/>status • priority • retry • dedupe_key)]
+  WQ --> LOCK{Lock item?<br/>dedupe + row lock}
+  LOCK -- Yes --> BATCH[Batch within 5s window]
+  BATCH --> PUSH[Push ATS/OOS to Shopify Admin API]
+  PUSH --> OK[Mark done]
+  PUSH --> ERR[Record error + schedule retry]
+  ERR -->|>= 3 retries| DLQ[(dead_letter)]
