@@ -1,0 +1,23 @@
+sequenceDiagram
+  participant Shop as Shopify
+  participant Edge as Edge Function
+  participant Core as Core (ingest)
+  participant DB as Supabase DB
+  participant Wkr as Sync Worker
+
+  Shop->>Edge: orders/create + HMAC
+  Edge->>Edge: Verify HMAC
+  Edge->>Core: Process payload
+  Core->>Core: Validate required fields & BOM
+  Core->>Core: Check inventory availability
+
+  alt Stock available
+    Core->>DB: Insert orders_* (stage=Filling, priority)
+    Core->>DB: deduct_on_order_create (inv_txn, holds)
+  else Insufficient
+    Core->>DB: Set inventory_blocked flag & enqueue OOS update
+    DB->>Wkr: work_queue pending
+    Wkr->>Shopify: Flip OOS in Admin API
+  end
+
+  Note over Core,DB: stage_events recorded at each transitio
