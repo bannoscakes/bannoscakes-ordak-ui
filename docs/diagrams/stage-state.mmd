@@ -1,0 +1,18 @@
+stateDiagram-v2
+  [*] --> Filling
+
+  Filling --> Filling: handle_print_barcode\n(idempotent)
+  Filling --> Covering: complete_filling
+
+  Covering --> Decorating: complete_covering
+  Decorating --> Packing: complete_decorating
+
+  Packing --> Packing: start_packing\n(idempotent)
+  Packing --> Complete: complete_packing
+  Packing --> Decorating: qc_return_to_decorating
+
+  note right of Filling: Filling starts at barcode print\nscan completes Filling
+  note right of Packing: QC return is policy/role gated
+
+  Complete --> Complete: no-op (idempotent)
+  Complete --> [*]
