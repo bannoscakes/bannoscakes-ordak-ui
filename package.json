@@ -20,8 +20,7 @@
             "release:minor": "npm run pre-release && npm version minor -m \"chore(release): %s\" && npm run post-release",
             "release:major": "npm run pre-release && npm version major -m \"chore(release): %s\" && npm run post-release",
             "pre-release": "node -e \"console.log('Preparing release…')\" && npm run changelog",
-            "post-release": "git push && git push --tags && echo \"Tag pushed. GitHub Release will auto-publish if Actions is enabled.\"",
-            "prepare": "husky"
+            "post-release": "git push && git push --tags && echo \"Tag pushed. GitHub Release will auto-publish if Actions is enabled.\""
       },
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",
@@ -70,10 +69,11 @@
       "devDependencies": {
             "@mermaid-js/mermaid-cli": "^11.10.1",
             "@types/node": "^20.10.0",
+            "@types/react": "^18.3.24",
+            "@types/react-dom": "^18.3.7",
             "@vitejs/plugin-react-swc": "^3.10.2",
             "conventional-changelog-cli": "^3.0.0",
             "eslint": "^9.35.0",
-            "husky": "^9.1.7",
             "typescript": "^5.9.2",
             "vite": "6.3.5",
             "vitest": "^2.1.9"
