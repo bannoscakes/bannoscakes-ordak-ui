@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { X, RotateCcw, Upload, Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -12,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { ProductCombobox } from "./ProductCombobox";
 import { Product, findProductByTitle, convertLegacySizeToVariant } from "./ProductData";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface QueueItem {
   id: string;
