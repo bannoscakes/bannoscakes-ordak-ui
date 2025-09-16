@@ -3,3 +3,6 @@ dist/
 .DS_Store
 .env*
 .vscode/
+
+# local env
+.env.local
