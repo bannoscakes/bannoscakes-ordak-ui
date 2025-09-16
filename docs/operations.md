@@ -1,192 +1,231 @@
-# Operations
+# Operations & Production Docs (Final)
+**Version:** 1.0.0  
+**Last Updated:** 2025-01-16  
+**Status:** Production
 
-Practical runbook for daily ops: environments, secrets, deploys, webhooks, workers, monitoring, backups, and incident response.  
-Stage model: **Filling → Covering → Decorating → Packing → Complete**. All writes via **SECURITY DEFINER RPCs**.
-
----
-
-## Environments
-
-- **Local (dev)**: Vite dev server + a dev Supabase project.
-- **Staging**: mirrors prod schema; used for verification before releases.
-- **Production**: protected `main` branch deploys; backups with PITR (7 days).
-
-### Branch & CI
-- Work on `dev` → review → merge to `main`.
-- CI must pass tests & migrations before merge.
+Authoritative reference for configuration, deployment, testing, error handling, APIs, backups, performance targets, and onboarding.  
+This document is essential for production readiness and developer collaboration.
 
 ---
 
-## Secrets & Config
+## Environment Variables
 
-Keep secrets out of the client. Client uses **anon** key; Edge Functions use **service role**.
+### Development (`.env.local`)
+VITE_SUPABASE_URL=https://[PROJECT_ID].supabase.co
+VITE_SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
+VITE_APP_URL=http://localhost:5173
 
-**Required (examples, see `.env.example`):**
-- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` *(Edge only)*
-- `SHOPIFY_BANNOS_TOKEN`, `SHOPIFY_FLOURLANE_TOKEN`
-- `SHOPIFY_WEBHOOK_SECRET`
-- `SLACK_WEBHOOK_URL`
-- (optional) `SENTRY_DSN`, `POSTHOG_KEY`
-
-> Rotate secrets when staff leave or if leaked. Prefer environment-level config (Vercel project vars, Supabase secrets).
-
----
-
-## Deploy Playbooks
-
-### A) Database / RPCs (Supabase)
-```bash
-# Apply migrations
-npx supabase migration up
-
-# Create a new migration
-npx supabase migration new <name>
-
-# Local dev reset (never in prod)
-npx supabase db reset
-B) Edge Functions (webhooks, workers)
-Replace <func> with your function name, e.g. orders-webhook, inventory-worker.
-
-bash
+shell
 Copy code
-# Local serve a function (dev)
-npx supabase functions serve <func>
 
-# Deploy a function
-npx supabase functions deploy <func>
-C) Frontend
-bash
+### Production (provider env, e.g., Vercel)
+VITE_SUPABASE_URL=https://[PROJECT_ID].supabase.co
+VITE_SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
+VITE_APP_URL=https://ordak.example.com
+VITE_SENTRY_DSN=[YOUR_SENTRY_DSN]
+VITE_POSTHOG_KEY=[YOUR_POSTHOG_KEY]
+
+shell
 Copy code
-# Build locally
+
+### Edge Functions (Supabase secrets or local `.env`)
+SUPABASE_SERVICE_ROLE_KEY=[SERVICE_ROLE]
+SHOPIFY_BANNOS_TOKEN=[ADMIN_API_TOKEN]
+SHOPIFY_FLOURLANE_TOKEN=[ADMIN_API_TOKEN]
+SHOPIFY_WEBHOOK_SECRET=[WEBHOOK_HMAC_SECRET]
+SLACK_WEBHOOK_URL=[SLACK_WEBHOOK]
+
+markdown
+Copy code
+
+**Notes**
+- Frontend **only** uses the anon key.  
+- **Service role** must never ship in the client.  
+- Rotate keys if exposed or on staff change.
+
+---
+
+## Deployment Guide
+
+### Prerequisites
+- Node 18+  
+- Supabase projects for dev/staging/prod  
+- Hosting for frontend (Vercel/Netlify/etc.)  
+- Supabase Edge Functions (webhooks/worker)
+
+### Steps
+1. **Run migrations** on the target environment.  
+2. **Set environment variables** as above.  
+3. **Build frontend** and verify locally.  
+4. **Deploy Edge Functions** with secrets set.  
+5. **Configure Shopify webhooks** (orders/create, orders/cancel).  
+6. **Verify health checks** and **smoke tests**.
+
+### Post-Deploy Verification
+- Queue/dashboard loads; **p95** latency acceptable.  
+- Webhook end-to-end **< 500ms** p95.  
+- Inventory sync success rate **> 99%**.  
+- No **service role** key in frontend bundle.  
+- No red errors in browser console.
+
+---
+
+## Emergency Rollback
+1. **Revert** to previous deploy: `git revert HEAD` (or checkout the last tag) and redeploy the app.  
+2. **Restore previous Edge Function** version (Supabase Functions → History → Roll back).  
+3. If data is impacted, **point env** to the previous **DB backup/PITR** snapshot.  
+4. **Clear CDN cache** (Vercel/Netlify) to flush old assets.  
+5. **Notify** the team via Slack with status and next steps.
+
+---
+
+## Monitoring Dashboards
+- Supabase Dashboard: `<add-link>`  
+- Vercel Analytics: `<add-link>`  
+- Sentry Errors: `<add-link>`  
+- PostHog Analytics: `<add-link>`
+
+---
+
+## Shopify Webhook Setup
+- **Event**: `orders/create` (and `orders/cancel`)  
+- **URL**: `https://[your-domain]/api/v1/webhooks/shopify`  
+- **Format**: JSON  
+- **API Version**: `2024-01`  
+- **Verify**: HMAC with `SHOPIFY_WEBHOOK_SECRET` on every request
+
+---
+
+## Testing Strategy
+
+### Unit
+- RPC logic (roles, idempotency, stage validation)  
+- UI components in isolation  
+- Priority/due-date rules
+
+### Integration
+- DB transactions for orders/inventory flows  
+- Shopify webhook **HMAC verification** + **dedupe**  
+- `work_queue` enqueue and retry backoff
+
+### End-to-End
+- Order lifecycle: **Filling → … → Complete**  
+- Manual order create/edit  
+- Shifts/breaks (if enabled)  
+- Error handling/recovery paths
+
+### CI Gates
+- Run **unit + integration** on PRs  
+- **Block merges** on failing migrations  
+- Collect coverage for RPCs + UI core logic
+
+---
+
+## Error Codes & Handling (examples)
+
+**Application Errors**
+- ORD001 — Order not found  
+- ORD002 — Invalid stage transition  
+- INV001 — Insufficient stock  
+- INV002 — Component not found  
+- AUTH001 — Unauthorized access  
+- SYNC001 — Shopify sync failed
+
+**Recovery**
+- ORD001: verify order id/store; search by Shopify IDs; re-index if needed  
+- ORD002: confirm current stage; check trigger/RPC idempotency; fix client call  
+- INV001: set `inventory_blocked=true`, notify Supervisor, enqueue OOS update; restock then clear flag  
+- INV002: fix BOM/component mapping; re-run deduction  
+- AUTH001: re-authenticate; confirm roles in `staff_shared`; audit RPC checks  
+- SYNC001: inspect `work_queue`; `retry_failed_sync`; check Shopify Admin API status
+
+**Logging Rules**
+- No PII in logs  
+- Include correlation id, store, order number  
+- Record duration and outcome for each RPC
+
+---
+
+## API Reference (HTTP)
+
+### `POST /api/v1/orders`
+- **Purpose**: server-to-server create  
+- **Request**: `{ store, customer_name, products[], due_date }`  
+- **Response**: `{ order_id, status: 'created' | 'skipped', message }`  
+- **Notes**: token/HMAC required; **idempotent** on Shopify id/GID
+
+### `GET /api/health`
+- **Purpose**: health check  
+- **Response**: `{ ok: true, version: "x.y.z" }`
+
+### `POST /api/v1/webhooks/shopify`
+- **Purpose**: Shopify webhook receiver  
+- **Notes**: verify HMAC; **dedupe** on order id/GID
+
+### `GET /api/v1/inventory`
+- **Purpose**: read component/product inventory  
+- **Params**: `sku` or product id  
+- **Response**: `{ on_hand, reserved, buffer, ats }`
+
+### `POST /api/v1/sync`
+- **Purpose**: trigger inventory sync job  
+- **Notes**: Admin token required; dedupe enforced
+
+---
+
+## Backup & Recovery (summary)
+
+- **Backups**: daily; **PITR 7 days** (see `docs/backup-recovery.md`)  
+- **RTO**: ≤ 2–4h • **RPO**: ≤ 1–24h (env-dependent)
+
+**Restore (high-level)**
+1. Confirm incident and last good time  
+2. Pause writers (webhooks/worker)  
+3. Restore to a **new** project at PITR timestamp  
+4. Point **staging** to restored DB → smoke + RLS sanity  
+5. Cut over prod env vars; rotate secrets; redeploy  
+6. Reconcile deltas; replay Shopify deliveries
+
+---
+
+## Performance SLAs (summary)
+- Queue p95 **< 200ms**  
+- Order creation p95 **< 500ms**  
+- Inventory push p95 **< 2s**  
+- Availability **99.9%** / month  
+- Alert on error rate > 1% or queue depth spike  
+(Full details: `docs/performance-slas.md`)
+
+---
+
+## Onboarding (summary)
+
+**New Dev Setup**
+1. Clone repo & install deps  
+2. Copy `.env.example` → `.env.local` and fill  
+3. Run migrations (dev DB)  
+4. Seed minimal test data  
+5. Start dev server  
+6. Run tests
+
+**Must-Know**
+- No direct table writes from frontend  
+- All mutations via **SECURITY DEFINER** RPCs  
+- Work on feature branches; keep `main` clean  
+- Document changes (Dev Change Report)
+
+**Commands**
+npm install
+npm run dev
+npm test
 npm run build
 
-# Deploy (wire this to your target provider)
-npm run deploy:staging   # or
-npm run deploy:prod
-Post-deploy smoke (prod & staging):
-
-Open app → load queue/dashboard.
-
-Ingest a test order (staging) → barcode print → complete Filling → start/complete Packing.
-
-Check Sentry/Slack for errors.
-
-Webhooks (Shopify)
-Each store uses its own token + HMAC secret.
-
-Verify signatures in Edge using SHOPIFY_WEBHOOK_SECRET.
-
-Replay from Shopify Admin if an event fails (use dedupe by order_gid).
-
-If you must pause webhooks (maintenance), disable the route in Edge or in Shopify Admin, then re-enable and replay.
-
-Quick checks
-
-Verify latest delivery status in Shopify.
-
-Edge logs show 200 with timings; 5xx means Shopify will retry.
-
-Workers & Queues
-Table: work_queue (topics: inventory_push, reconcile, etc.)
-
-Worker (Edge/cron) loop:
-
-Select pending eligible items: status='pending' AND (next_retry_at IS NULL OR next_retry_at<=now())
-
-Lock one (locked_at, locked_by), process, push to Shopify
-
-On success → status='done'
-
-On error → status='error', increment retry_count, set next_retry_at (backoff)
-
-SQL snippets
-
-sql
+yaml
 Copy code
--- Backlog by status
-select status, count(*) from work_queue group by status;
 
--- Stuck locks (>15m)
-select * from work_queue
-where status='pending' and locked_at < now() - interval '15 minutes';
+---
 
--- Unlock everything for emergency (use with care)
-update work_queue set locked_at=null, locked_by=null where status='pending';
-Monitoring & Alerts
-Sentry: exceptions from Edge RPCs/webhooks/worker.
-
-Slack: critical alerts (webhook failures, worker backlog growth).
-
-PostHog: feature usage (prints, scans, assignments).
-
-Health checks
-
-/edge/health → up + DB ping latencies
-
-Worker heartbeat: last processed at, items/min, error rate
-
-Severity
-
-P1 (prod down): follow Incident Procedure (below).
-
-P2 (degraded): mitigate (scale backoff, pause a feature), fix within the day.
-
-P3 (minor): plan in next release.
-
-Backups & Recovery
-Daily backups + PITR (7 days) in Supabase.
-
-Restore plan (high level):
-
-Restore to a new project at timestamp.
-
-Point staging to the restored DB and verify.
-
-If needed, cut over app env to restored DB (update connection + rotate secrets).
-
-Announce read-only window while reconciling deltas.
-
-Incident Procedure (quick)
-Acknowledge: create incident thread (include timestamps, what changed).
-
-Stabilize:
-
-Roll back app: git revert last deploy → redeploy.
-
-If schema-breaking caused it, apply compensating migration (see migration-order.md).
-
-Pause webhooks if they amplify the incident; queue replays for after fix.
-
-Communicate: post updates in Slack every 15–30 min until resolved.
-
-Recover: re-enable webhooks; drain work_queue; verify orders can print/scan/complete.
-
-Postmortem: doc the timeline, root cause, follow-ups.
-
-Routine Ops
-Key rotation: service role, Shopify tokens, webhook secret (every 90 days or on staff change).
-
-Dependency updates: weekly in dev; deploy after passing tests.
-
-Log review: check Sentry errors & worker backlog daily.
-
-Release cadence: small, reversible changes; migrations minimal and idempotent.
-
-Troubleshooting (quick)
-Tailwind v4 build oddities → see checklists.md.
-
-Supabase auth/connection → re-check URL/keys; confirm RLS isn’t blocking expected reads.
-
-Webhook “invalid signature” → verify SHOPIFY_WEBHOOK_SECRET, shop domain mapping, replay.
-
-Stage errors (INVALID_STAGE) → confirm current stage and use the correct RPC (Filling must end before Covering starts).
-
-Inventory not syncing → see worker backlog; requeue stuck items.
-
-Contacts
-Primary on-call: [add name / email / phone]
-
-Escalation: [add backup contact or Slack channel]
-
-Runbook: see runbook.md for deep-dive emergency steps.
+## Day-to-day Ops (links)
+- Webhooks & workers: sections above  
+- Incident runbook: `docs/runbook.md`  
+- Backups & recovery: `docs/backup-recovery.md`
