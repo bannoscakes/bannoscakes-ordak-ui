@@ -2,7 +2,7 @@ flowchart TB
   subgraph Shopify["Shopify Stores"]
     B[Bannos Store]
     F[Flourlane Store]
-    W_ORD[Webhooks – Orders]
+    W_ORD[Webhooks / Orders]
   end
 
   subgraph EdgeFns["Edge Functions (Deno)"]
@@ -11,18 +11,18 @@ flowchart TB
     PROCESS[Process Payload]
   end
   W_ORD --> WH --> HMAC
-  HMAC -- "No" --> REJECT[401 Reject]
-  HMAC -- "Yes" --> PROCESS
+  HMAC -- No --> REJECT[401 Reject]
+  HMAC -- Yes --> PROCESS
 
   subgraph Core["Core Processing"]
     VALIDATE{Stock available?}
-    CREATE[Create Order (stage=Filling)]
+    CREATE[Create Order]
     DEDUCT[Deduct Inventory]
     OOSQ[Queue OOS Update]
   end
   PROCESS --> VALIDATE
-  VALIDATE -- "Yes" --> CREATE --> DEDUCT
-  VALIDATE -- "No" --> OOSQ
+  VALIDATE -- Yes --> CREATE --> DEDUCT
+  VALIDATE -- No --> OOSQ
 
   subgraph DB["Supabase (DB + RPC)"]
     subgraph ORD["Orders"]
@@ -56,8 +56,8 @@ flowchart TB
     CLEAN[Cleanup Jobs]
   end
   WQ --> SYNC
-  SYNC -- "Admin API" --> B
-  SYNC -- "Admin API" --> F
+  SYNC -- Admin API --> B
+  SYNC -- Admin API --> F
   RECON --> SYNC
   CLEAN --> DB
 
