@@ -1,0 +1,104 @@
+flowchart TB
+  subgraph Public
+    root["/"]
+    login["/login"]
+    logout["/logout"]
+    reset["/reset-password"]
+    setup["/setup"]
+    health["/health"]
+    e404["/404"]
+    e500["/500"]
+    maint["/maintenance"]
+    offline["/offline"]
+  end
+
+  subgraph Orders
+    orders["/orders"]
+    ordersCreate["/orders/create"]
+    orderId["/orders/:id"]
+    orderEdit["/orders/:id/edit"]
+    orderHist["/orders/:id/history"]
+    bulkAssign["/orders/bulk-assign"]
+    queues["/queues"]
+    scanner["/scanner"]
+    staff["/staff"]
+    supervisor["/supervisor"]
+    complete["/complete"]
+  end
+
+  subgraph Inventory
+    inv["/inventory"]
+    invComp["/inventory/components"]
+    invBom["/inventory/bom"]
+    invTxn["/inventory/transactions"]
+    invSync["/inventory/sync"]
+  end
+
+  subgraph Shopify
+    shop["/shopify"]
+    shopConn["/shopify/connect"]
+    shopSync["/shopify/sync"]
+    shopHooks["/shopify/webhooks"]
+  end
+
+  subgraph Settings
+    settings["/settings"]
+  end
+
+  subgraph Messaging
+    msg["/messaging"]
+  end
+
+  subgraph Admin
+    admin["/admin"]
+    adminStaff["/admin/staff"]
+    adminTime["/admin/time"]
+    adminReports["/admin/reports"]
+    adminErrors["/admin/errors"]
+    adminMonitor["/admin/monitor"]
+  end
+
+  subgraph Analytics
+    analytics["/analytics"]
+    prodAn["/analytics/production"]
+    invAn["/analytics/inventory"]
+  end
+
+  subgraph StoreSpecific
+    bannosDash["/bannos/dashboard"]
+    flourDash["/flourlane/dashboard"]
+    storeSwitch["/stores/switch"]
+  end
+
+  subgraph Mobile
+    mScan["/m/scanner"]
+    mQueue["/m/queue"]
+    mOrder["/m/orders/:id"]
+    mShift["/m/shift"]
+    mQuick["/m/quick-complete"]
+    mStop["/m/emergency-stop"]
+  end
+
+  subgraph API
+    apiHealth["/api/health"]
+    apiOrders["/api/v1/orders"]
+    apiInv["/api/v1/inventory"]
+    apiHooks["/api/v1/webhooks/shopify"]
+    apiSync["/api/v1/sync/*"]
+    publicHook["/webhooks/shopify"]
+    cron["/cron/status"]
+  end
+
+  subgraph DevOnly["Development (DEV_MODE)"]
+    rpcTest["/dev/rpc-tester"]
+    mockData["/dev/mock-data"]
+    resetDb["/dev/reset-db"]
+  end
+
+  %% simple nav relations
+  root --> login
+  login --> queues
+  queues --> scanner
+  orders --> orderId --> orderHist
+  admin --> adminMonitor
+  shop --> shopHooks
