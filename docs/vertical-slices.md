@@ -1,228 +1,195 @@
-# Vertical Slices (Implementation Order)
+# Vertical Slices (Final)
+**Version:** 1.0.0  
+**Last Updated:** 2025-01-16  
+**Status:** Production
 
-Deliver the product in small, shippable slices. Each slice includes **schema/RPCs + UI + tests + ops**.  
+Authoritative build order with clear acceptance criteria.  
+Each slice is independently testable, adds visible value, and enforces roles/security from the start.  
 Stage model: **Filling → Covering → Decorating → Packing → Complete** (single enum).  
-**Filling starts at barcode print**, **scan ends Filling**. “Unassigned” is **not a stage** (it’s `assignee_id IS NULL`).
+**Filling starts at barcode print**, **scan ends Filling**. “Unassigned” = `assignee_id IS NULL`.
 
 ---
 
-## VS0 — Project Skeleton & Guardrails (DONE / BASELINE)
-**Goal:** Dev env runs, docs in place, RPC-only writes enforced.
-
-- Repo & docs: README, overview, schema/RLS, RPC surface, flows, ops, testing, runbook.
-- Vite + React + TS; Tailwind v4; shadcn/ui.
-- Supabase project connected; RLS enabled; **no client direct writes**.
-- CI runs tests & migrations (green).
-- Healthcheck endpoint(s).
-
-**Definition of Done (DoD)**
-- `npm run dev` runs locally.
-- `npx supabase migration up` clean on dev.
-- A trivial RPC smoke test passes.
+## Slice 0 — Auth and Roles **[2–3 days]**
+**Done when**
+- Supabase Auth configured.
+- Role assignment works (**Admin**, **Supervisor**, **Staff**).
+- JWT includes `user_role` claim.
+- Users can log in and role appears in token (verified in app).
 
 ---
 
-## VS1 — Orders Core (Schema + RLS + Minimal UI)
-**Goal:** Orders tables per store with stage enum & timestamps; list visible in UI.
-
-- Schema: `orders_bannos`, `orders_flourlane`, enum `stage_type`, triggers `updated_at`.
-- Columns include human `id`, `row_id`, Shopify IDs, **operational timestamps**, `assignee_id`, `storage`.
-- RLS: `select` to authenticated; **no write policies**.
-- UI: minimal OrdersTable showing both stores (mock data ok until VS2).
-- Indexes: queue (incomplete) + unassigned partial indexes.
-
-**DoD**
-- Can insert a sample row and see it in UI (dev tooling/seed).
-- `get_orders_for_dashboard` returns data.
+## Slice 1 — Manual Order Creation **[2–4 days]**
+**Done when**
+- Can create **test orders via UI** (no Shopify yet).
+- Orders appear in queue with correct fields.
+- **Priority** derived from `due_date`.
+- Created order visible to staff with proper **RLS** (read-only; writes via RPCs).
 
 ---
 
-## VS2 — Webhook Ingest (Orders/Create)
-**Goal:** Create real orders from Shopify webhook; kitchen-docket–exact extraction.
-
-- Edge: `orders/create` receiver, HMAC verify.
-- Dedup by `order_gid`; return 200 on duplicate.
-- Extract fields:
-  - Human `id`: `bannos-<order_number>` / `flourlane-<order_number>` (fallback to numeric id).
-  - **Flavours/notes from line item properties** matching “gelato flavour(s)” (case-insensitive), **skip** `_origin`, `_raw`, `gwp`, `_LocalDeliveryID`, names starting `_`.
-- Set `stage='Filling'`, derive `priority` from `due_date`.
-- Save `order_json` raw payload.
-- Inventory hold: call `deduct_on_order_create`.
-
-**DoD**
-- One Bannos + one Flourlane order ingested end-to-end.
-- Duplicate replay returns 200/no-op.
-- Flavour extraction matches kitchen docket examples.
+## Slice 2 — Queues and All Stages **[4–6 days]**
+**Done when**
+- `get_queue` returns orders sorted **Priority → Due Date → Size → Order Number**.
+- Order flows through **Filling → Covering → Decorating → Packing → Complete**.
+- Every transition logs a **stage_event**.
+- Invalid transitions blocked (no backwards).
+- Transitions **idempotent** (cannot complete same stage twice).
+- UI updates without full refresh (subscription/poll).
+- **p95 < 200ms** for 100 visible orders.
 
 ---
 
-## VS3 — Filling Slice (Print & Complete + Scanner)
-**Goal:** Lock in the first stage with correct timestamps and idempotency.
-
-- RPCs: `handle_print_barcode` (sets `filling_start_ts` if NULL), `complete_filling` (sets `filling_complete_ts`, stage→Covering).
-- UI:
-  - OrdersTable row actions for Filling: **Print**, **Complete**.
-  - Scanner screen (resolves `bannos-#####` / `flour-lane-#####` / QR via `get_order_for_scan`).
-- Tests: idempotent re-print/re-scan; invalid stage protection.
-
-**DoD**
-- Print → start ts set once.
-- Scan complete → stage becomes Covering.
-- Scanner-only flow works on a test code.
+## Slice 3 — Scanner and Barcode **[2–4 days]**
+**Done when**
+- **Print barcode** works.
+- **Scanning** advances stage per rules.
+- First **Filling** print sets **start timestamp**.
+- Duplicate prints do **not** duplicate events.
 
 ---
 
-## VS4 — Covering & Decorating Slices
-**Goal:** Finish middle stages with minimal UX changes.
-
-- RPCs: `complete_covering`, `complete_decorating`.
-- UI: show only valid actions for current stage.
-- Tests: invalid stage attempts rejected; idempotency safe.
-
-**DoD**
-- End-to-end through Decorating with timestamps.
+## Slice 4 — Staff Workspace **[3–5 days]**
+**Done when**
+- Staff see only **their assigned** orders.
+- `start_shift`, `end_shift`, `start_break`, `end_break` RPCs work.
+- **No direct table writes** from UI.
+- Orders update live when assignment changes.
 
 ---
 
-## VS5 — Packing & QC Return
-**Goal:** Close the lifecycle with start/complete and optional QC return.
-
-- RPCs: `start_packing` (sets `packing_start_ts`), `complete_packing` (sets `packing_complete_ts`, stage→Complete), `qc_return_to_decorating` (admin/specific policy).
-- UI: Packing mode shortcut screen (start/complete only) + QC return (guarded).
-- Tests: idempotent start; complete marks `Complete`; QC path returns to Decorating with reason.
-
-**DoD**
-- Full flow: Ingest → Print → Complete Filling → … → Start/Complete Packing → **Complete**.
+## Slice 5 — Supervisor Workspace **[3–5 days]**
+**Done when**
+- Supervisor can **assign/unassign** orders.
+- Role enforcement prevents Staff from assigning.
+- Deep links to orders work.
+- Auto-unassign when **shift ends** (policy).
 
 ---
 
-## VS6 — Assignment & “Unassigned” Cards
-**Goal:** Assignment is first-class without new stages/tables.
-
-- RPCs: `assign_staff`, `get_unassigned_counts`, `get_unassigned_list`.
-- UI: Unassigned cards per stage per store; assign dialog; storage dialog.
-- Indexes confirm fast counts/lists: `WHERE assignee_id IS NULL AND stage <> 'Complete'`.
-
-**DoD**
-- Counts match SQL sanity; lists paginate; assignment updates UI without stage change.
+## Slice 6 — Settings **[2–4 days]**
+**Done when**
+- Printing, `due_date` defaults, **flavours**, **storage**, **monitor density** persist via RPCs.
+- Changes reflect immediately in UI.
+- Non-admins blocked from modifying.
 
 ---
 
-## VS7 — Queue & Dashboard (Operational Views)
-**Goal:** Shop-floor usability: this-week queue & high-level dashboard.
-
-- RPCs: `get_queue(store, date_from, date_to, limit)`, `get_orders_for_dashboard(store, period)`.
-- UI:
-  - Queue per store with quick filters (Unassigned/Today/Week).
-  - Dashboard: Unassigned metrics, worker backlog, today-by-stage.
-- Sorting: `priority DESC, due_date ASC, size ASC, order_number ASC`.
-
-**DoD**
-- Operators can run shift with Queue + Dashboard alone.
+## Slice 7 — Inventory and BOM Setup **[4–7 days]**
+**Done when**
+- Components and **BOMs** can be created and updated.
+- **Keywords** and **product requirements** link to BOM items.
+- Inventory adjusts with **reservations** and **releases**.
+- `get_inventory_status` returns correct stock/reserved/buffer/ATS.
 
 ---
 
-## VS8 — Inventory Worker & Reconciliation
-**Goal:** Keep ATS/OOS in sync with Shopify.
-
-- Tables: `inventory_items`, `inventory_txn`, `work_queue` (+ indexes).
-- RPC: `deduct_on_order_create` (service-role).
-- Worker (Edge/cron): lock → push → done/error with backoff; dedupe by key.
-- Nightly reconcile job (compare ats vs Shopify; push diffs).
-
-**DoD**
-- Ingest triggers hold; worker drains queue; simple reconcile succeeds.
-
----
-
-## VS9 — Monitoring & Alerts
-**Goal:** Visibility and early warnings.
-
-- Sentry wired; Slack alerts for thresholds (queue p95>300ms, webhook 5xx>1%, backlog>500).
-- Optional `api_logs` for p95 per route.
-- Dashboards (provider or SQL-driven).
-
-**DoD**
-- Synthetic test triggers alert; dashboards show data.
+## Slice 8 — Shopify Integration **[5–8 days]**
+**Requires:** Slices **0–2**, **7**  
+**Done when**
+- Store tokens saved (per store).
+- **Manual import** works for >50 orders.
+- **Webhook skeleton** verified with HMAC.
+- Duplicate orders skipped (idempotent).
+- Failed syncs logged with reason; **retry** mechanism works.
+- Sync status visible in UI.
 
 ---
 
-## VS10 — Admin Settings
-**Goal:** Editable flavours/storage/staff from UI (admin-only).
-
-- RPCs for CRUD or use keyed settings.
-- UI gated by role.
-- RLS policies remain read-only for clients; writes via RPC only.
-
-**DoD**
-- Admin can update options; UI reflects changes.
-
----
-
-## VS11 — Performance Pass
-**Goal:** Hit SLOs in `performance-slas.md`.
-
-- Verify partial indexes; add missing ones from real EXPLAIN plans.
-- Reduce over-fetching; cache safe GETs; virtualize large lists.
-- Front-end LCP/INP targets; bundle size check.
-
-**DoD**
-- Queue p95 < 200ms; Webhook p95 < 500ms; Worker p95 < 2s; LCP p75 < 2.5s.
+## Slice 9 — Inventory Sync **[4–7 days]**
+**Requires:** Slices **7**, **8**  
+**Done when**
+- Stock changes enqueue **`work_queue`**.
+- Worker **batches** and **deduplicates** updates.
+- **ATS/OOS** values pushed to Shopify.
+- Failed updates **retried up to 3** times.
+- Dead-letter queue holds persistent errors.
+- Nightly **reconciliation** matches Shopify counts.
 
 ---
 
-## VS12 — Messaging (Optional)
-**Goal:** Lightweight threads per order/shift.
-
-- Tables: `conversations`, `conversation_participants`, `messages` + RLS & indexes.
-- UI: per-order thread.
-- Ops: no PII in messages; retention policy if needed.
-
-**DoD**
-- Users in conversation can read/write; others cannot.
+## Slice 10 — Order Automation **[3–5 days]**
+**Requires:** Slices **2**, **8**, **9**  
+**Done when**
+- Shopify **webhooks** create orders automatically.
+- `check_inventory_availability` prevents overselling.
+- Orders with insufficient inventory set **`inventory_blocked = true`** (flag/metadata), **not a new stage**.
+- Supervisor notified of blocked orders.
 
 ---
 
-## VS13 — Media / QC (Optional)
-**Goal:** Attach photos for QC or reference.
-
-- Table: `order_photos` (order_id, url, taken_at, meta).
-- RPCs for signed upload/download; storage policies.
-- UI: photo widget on order detail.
-
-**DoD**
-- Upload/view within limits; links are signed & short-lived.
+## Slice 11 — Complete Grid and Storage **[2–3 days]**
+**Requires:** Slice **2**  
+**Done when**
+- Completed orders appear in **grid**.
+- Filters by **storage** and **search** work.
+- Pagination works for **>500** completed orders.
 
 ---
 
-## VS14 — Time & Payroll (Optional)
-**Goal:** Shifts, breaks, and basic reporting.
-
-- Tables: `shifts`, `breaks`; summaries.
-- RPCs to clock-in/out; report per staff/date.
-- UI: simple kiosk + admin report.
-
-**DoD**
-- Day-level report matches sample data.
+## Slice 12 — Messaging **[3–5 days]**
+**Requires:** Slice **0**  
+**Done when**
+- Staff can send/receive messages in **real time**.
+- **Unread counts** update live.
+- Admin **broadcast** appears to all staff.
+- Messages restricted by **RLS**.
 
 ---
 
-## Feature Flags / Safety
-- Keep new slices behind a local or env flag when risky.
-- For schema changes use **nullable → backfill → enforce** pattern.
+## Slice 13 — Media and QC Photos **[3–5 days]**
+**Requires:** Slice **2**  
+**Done when**
+- Photos uploaded with **signed URLs**.
+- Photos linked to orders and visible in UI.
+- Certain stage transitions **blocked until photo uploaded** (QC policy).
+
+---
+
+## Slice 14 — Time and Payroll **[4–6 days]**
+**Requires:** Slice **4**  
+**Done when**
+- Shifts and breaks tracked with validations.
+- Summaries report accurate totals.
+- CSV export works.
+- Entries immutable after **7 days**.
+
+---
+
+## Slice 15 — Monitoring and Error Handling **[2–4 days]**
+**Requires:** Slices **2**, **8**, **9**  
+**Done when**
+- Dead-letter queue visible in dashboard.
+- **Retry** buttons for failed operations.
+- Health dashboard shows webhook latency, inventory sync success, unassigned >2h, failed transitions.
+- Alerts on concurrent shift violations or orphaned orders >24h.
+
+---
+
+## Safety & Feature Flags
+- Use flags for risky slices; enable gradually.
+- Schema changes follow **nullable → backfill → enforce**.
 - Every slice adds **tests** and updates **docs**.
 
 ---
 
+## Success Metrics Per Slice (examples)
+- **Slice 2**: **100 orders processed** through all stages with **0 invalid transitions**; queue **p95 < 200ms**.  
+- **Slice 3**: **100% idempotent**: duplicate prints/scans produce **no duplicate events**.  
+- **Slice 8**: **500+ orders** imported successfully; duplicate replay rate recorded; **0 failed HMAC** in last 24h.  
+- **Slice 9**: **≥ 99%** inventory sync success over last 24h; backlog **< 500** and oldest pending **< 15 min**.  
+- **Slice 10**: New webhooks create orders with **p95 < 500ms** end-to-end.
+
+---
+
 ## Backout Plan (per slice)
-- App-only regression → `git revert` + redeploy.
-- Schema-linked regression → compensating forward migration (re-add dropped cols as nullable); avoid destructive down in prod.
-- Webhook blow-ups → pause route, fix, replay deliveries.
+- App regression → `git revert` + redeploy.  
+- Schema regression → **compensating forward migration** (re-add dropped cols as nullable); avoid destructive downs in prod.  
+- Webhook blow-ups → pause route, fix, **replay** deliveries.
 
 ---
 
 ## Acceptance Template (reuse per slice)
-
 - [ ] Schema created/updated with idempotent migrations  
 - [ ] RPCs added/updated with role checks & idempotency  
 - [ ] UI wired with only valid actions per stage  
