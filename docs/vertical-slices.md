@@ -8,6 +8,27 @@ Each slice is independently testable, adds visible value, and enforces roles/sec
 Stage model: **Filling → Covering → Decorating → Packing → Complete** (single enum).  
 **Filling starts at barcode print**, **scan ends Filling**. “Unassigned” = `assignee_id IS NULL`.
 
+## Summary (Slices, Estimates, Dependencies)
+
+| Slice | Name                          | Estimate     | Requires     |
+|:----:|--------------------------------|--------------|--------------|
+| 0    | Auth & Roles                   | 2-3 days     | –            |
+| 1    | Manual Order Creation          | 2-4 days     | 0            |
+| 2    | Queues & All Stages            | 4-6 days     | 0–1          |
+| 3    | Scanner & Barcode              | 2-4 days     | 2            |
+| 4    | Staff Workspace                | 3–5 days     | 0–2          |
+| 5    | Supervisor Workspace           | 3–5 days     | 2,4          |
+| 6    | Settings                       | 2–4 days     | 0            |
+| 7    | Inventory & BOM Setup          | 4–7 days     | 0–2          |
+| 8    | Shopify Integration            | 5–8 days     | 0–2,7        |
+| 9    | Inventory Sync (Worker)        | 4–7 days     | 7,8          |
+| 10   | Order Automation (Webhooks)    | 3–5 days     | 2,8,9        |
+| 11   | Complete Grid & Storage        | 2–3 days     | 2            |
+| 12   | Messaging                      | 3–5 days     | 0            |
+| 13   | Media & QC Photos              | 3–5 days     | 2            |
+| 14   | Time & Payroll                 | 4–6 days     | 4            |
+| 15   | Monitoring & Error Handling    | 2–4 days     | 2,8,9        |
+
 ---
 
 ## Slice 0 — Auth and Roles **[2–3 days]**
