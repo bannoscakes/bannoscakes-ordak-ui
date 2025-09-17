@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Separator } from "../ui/separator";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface BOMItem {
   id: string;

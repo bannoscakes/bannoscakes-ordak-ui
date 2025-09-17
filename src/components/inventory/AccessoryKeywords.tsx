@@ -8,7 +8,7 @@ import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface AccessoryKeyword {
   id: string;

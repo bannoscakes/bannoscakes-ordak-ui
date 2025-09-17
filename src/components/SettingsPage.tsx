@@ -10,7 +10,7 @@ import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface SettingsPageProps {
   store: "bannos" | "flourlane";

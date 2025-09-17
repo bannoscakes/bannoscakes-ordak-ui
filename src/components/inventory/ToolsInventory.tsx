@@ -7,7 +7,7 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { RotateCcw, Settings, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 const mockComponents = [
   { id: "C001", name: "6-inch Round Cake Base", sku: "CAKE-BASE-6IN", onHand: 45 },
