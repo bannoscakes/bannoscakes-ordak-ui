@@ -1,0 +1,40 @@
+flowchart TB
+  subgraph Clients["Clients"]
+    FE["Frontend - anon token"]
+    EDGE["Edge Functions - service role"]
+  end
+
+  subgraph DB["Supabase (RLS on all tables)"]
+    Orders["orders_* : SELECT only"]
+    Stage["stage_events : SELECT only"]
+    InvItems["inventory_items : SELECT only"]
+    InvTxn["inventory_txn : SELECT only"]
+    WQ["work_queue : SELECT only"]
+    Msgs["messages : participant-scoped SELECT"]
+  end
+
+  subgraph RPC["SECURITY DEFINER RPCs (writers)"]
+    Print["handle_print_barcode"]
+    Complete["complete_* (filling/covering/decorating/packing)"]
+    Assign["assign_staff / set_storage"]
+    Deduct["deduct_on_order_create"]
+    Retry["retry_failed_sync"]
+  end
+
+  %% Read paths (client → DB via RLS)
+  FE -->|SELECT| Orders
+  FE -->|SELECT| Stage
+  FE -->|SELECT| InvItems
+  FE -->|SELECT| InvTxn
+  FE -->|SELECT| WQ
+  FE -->|"SELECT scoped"| Msgs
+  FE -. "no direct writes" .-> DB
+
+  %% Write path (edge → RPC → DB)
+  EDGE -->|CALL| RPC
+  RPC -->|"UPDATE/INSERT via SECURITY DEFINER"| DB
+
+  classDef read fill:#e8f6ff,stroke:#2b6cb0,stroke-width:1px;
+  classDef write fill:#e8ffe8,stroke:#2b8c2b,stroke-width:1px;
+  class Orders,Stage,InvItems,InvTxn,WQ,Msgs read
+  class RPC write

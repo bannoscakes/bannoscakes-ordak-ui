@@ -1,0 +1,18 @@
+flowchart TB
+  subgraph Errors["Error Handling"]
+    DLQ[(dead_letter_queue)]
+    RETRY[retry_failed_sync RPC]
+    ALERT[Alerts / Notifications]
+  end
+  subgraph Mon["Monitoring"]
+    H95[p95 webhook latency]
+    SYNCOK[Sync success rate]
+    STUCK[Orders stuck >24h]
+    UNASSIGNED[Orders unassigned >2h]
+  end
+  DLQ --> RETRY
+  DLQ --> ALERT
+  H95 --> ALERT
+  SYNCOK --> ALERT
+  STUCK --> ALERT
+  UNASSIGNED --> ALERT

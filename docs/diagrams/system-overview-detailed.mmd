@@ -1,0 +1,92 @@
+flowchart TB
+  subgraph Shopify["Shopify Stores"]
+    B[Bannos Store]
+    F[Flourlane Store]
+    W_ORD[Webhooks / Orders]
+  end
+
+  subgraph EdgeFns["Edge Functions (Deno)"]
+    WH[Webhook Handler]
+    HMAC{HMAC valid?}
+    PROCESS[Process Payload]
+  end
+  W_ORD --> WH --> HMAC
+  HMAC -- No --> REJECT[401 Reject]
+  HMAC -- Yes --> PROCESS
+
+  subgraph Core["Core Processing"]
+    VALIDATE{Stock available?}
+    CREATE[Create Order]
+    DEDUCT[Deduct Inventory]
+    OOSQ[Queue OOS Update]
+  end
+  PROCESS --> VALIDATE
+  VALIDATE -- Yes --> CREATE --> DEDUCT
+  VALIDATE -- No --> OOSQ
+
+  subgraph DB["Supabase (DB + RPC)"]
+    subgraph ORD["Orders"]
+      OB[(orders_bannos)]
+      OF[(orders_flourlane)]
+      SE[(stage_events)]
+      PH[(order_photos)]
+    end
+    subgraph INV["Inventory"]
+      II[(inventory_items)]
+      IT[(inventory_txn)]
+      RH[(reservation_holds)]
+      WQ[(work_queue)]
+    end
+    subgraph CFG["Configuration"]
+      ST[(shopify_tokens)]
+      SR[(shopify_sync_runs)]
+      SS[(store_settings)]
+      SH[(shifts / breaks)]
+    end
+    MSG[(conversations / messages)]
+  end
+  CREATE --> OB
+  CREATE --> OF
+  DEDUCT --> IT
+  DEDUCT --> RH
+
+  subgraph Workers["Background Workers"]
+    SYNC[Inventory Sync Worker]
+    RECON[Daily Reconciliation]
+    CLEAN[Cleanup Jobs]
+  end
+  WQ --> SYNC
+  SYNC -- Admin API --> B
+  SYNC -- Admin API --> F
+  RECON --> SYNC
+  CLEAN --> DB
+
+  subgraph UI["Frontend (React + Vite + Tailwind v4)"]
+    AUTH[/login/]
+    QUEUES[/queues/]
+    SCAN[/scanner/]
+    STAFF[/staff/]
+    SUPV[/supervisor/]
+    COMPLETE[/complete/]
+    SETTINGS[/settings/]
+    MSGUI[/messaging/]
+    INVUI[/inventory/*/]
+    SHOPUI[/shopify/*/]
+    ADMIN[/admin/*/]
+  end
+
+  OB <--> QUEUES
+  OF <--> QUEUES
+  SE <--> QUEUES
+  SE <--> STAFF
+  PH <--> SCAN
+  SS <--> SETTINGS
+  MSG <--> MSGUI
+  ST <--> SHOPUI
+  SR <--> SHOPUI
+  II <--> INVUI
+  IT <--> INVUI
+
+  classDef error fill:#fee,stroke:#c33,stroke-width:1px;
+  classDef ok fill:#e8f6ff,stroke:#2b6cb0,stroke-width:1px;
+  class REJECT error
