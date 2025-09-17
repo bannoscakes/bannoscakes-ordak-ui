@@ -1,4 +1,3 @@
-cat > src/features/scanner/scan-handler.ts <<'TS'
 import { advance_stage, get_order_for_scan, handle_print_barcode } from "@/mocks/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 
@@ -25,4 +24,3 @@ export async function handleScanCommand(input: string): Promise<{ ok: boolean; m
   const res = await advance_stage(id);
   return { ok: res.ok, message: res.message, order: ord };
 }
-TS

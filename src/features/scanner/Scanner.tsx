@@ -1,26 +1,50 @@
-import { advance_stage, get_order_for_scan, handle_print_barcode } from "@/mocks/rpc";
-import type { MockOrder } from "@/mocks/mock-data";
+import { useState } from "react";
+import { handleScanCommand } from "./scan-handler";
+import { toast } from "sonner";
 
-/**
- * Supports two commands:
- *  - plain ID: "bannos-12345" → advance one stage based on current stage
- *  - print ID: "print bannos-12345" → set filling_start_ts (idempotent)
- */
-export async function handleScanCommand(input: string): Promise<{ ok: boolean; message: string; order?: MockOrder }> {
-  const trimmed = input.trim();
-  const [cmd, maybeId] = trimmed.split(/\s+/, 2);
+export default function Scanner() {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  if (cmd.toLowerCase() === "print" && maybeId) {
-    const ord = await get_order_for_scan(maybeId);
-    if (!ord) return { ok: false, message: `Order not found: ${maybeId}` };
-    await handle_print_barcode(maybeId);
-    return { ok: true, message: `Printed barcode (Filling start) for ${maybeId}`, order: ord };
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const input = value.trim();
+    if (!input) return;
+
+    setBusy(true);
+    const res = await handleScanCommand(input);
+    setBusy(false);
+
+    if (res.ok) toast.success(res.message);
+    else toast.error(res.message);
+
+    setValue("");
   }
 
-  const id = trimmed;
-  const ord = await get_order_for_scan(id);
-  if (!ord) return { ok: false, message: `Order not found: ${id}` };
+  return (
+    <div className="max-w-xl mx-auto p-4">
+      <h1 className="text-xl font-semibold mb-3">Scanner</h1>
+      <form onSubmit={onSubmit} className="flex gap-2">
+        <input
+          autoFocus
+          disabled={busy}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder='Scan or type: "bannos-12345" or "print bannos-12345"'
+          className="flex-1 rounded-md border px-3 py-2"
+        />
+        <button
+          type="submit"
+          disabled={busy || !value.trim()}
+          className="rounded-md bg-black text-white px-4 py-2 disabled:opacity-50"
+        >
+          {busy ? "Working…" : "Go"}
+        </button>
+      </form>
 
-  const res = await advance_stage(id);
-  return { ok: res.ok, message: res.message, order: ord };
+      <p className="text-sm text-muted-foreground mt-3">
+        Use <code>print [id]</code> to set Filling start. Otherwise the scan advances one stage.
+      </p>
+    </div>
+  );
 }
