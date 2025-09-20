@@ -3,15 +3,25 @@
 Production management system for **Bannos** & **Flourlane** cake stores, built with **React + Vite + TypeScript** frontend and **Supabase** backend.
 
 ![Build Status](https://img.shields.io/badge/build-passing-green)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.0--alpha-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D18-green)
 ![License](https://img.shields.io/badge/license-private-red)
 
 ---
 
+## 📋 Project Documentation
+
+- **[Implementation Plan](./docs/IMPLEMENTATION_PLAN.md)** - Complete development roadmap and setup guide
+- **[Architecture](./docs/architecture.md)** - System design and data flows  
+- **[Dev Kickoff](./DEV_KICKOFF.md)** - Quick start guide for developers
+
+**Current Version:** v0.1.0-alpha (mock implementation)
+
+---
+
 ## 📦 Project Status
 
-- **Version:** 0.1.0  
+- **Version:** 0.1.0-alpha  
 - **Node:** >=18  
 - **Framework:** React + Vite + TypeScript  
 - **Backend:** Supabase (DB + RPC + Edge Functions)  
@@ -36,13 +46,13 @@ npm run dev
 Local server runs at: http://localhost:5173
 ⚙️ Environment Setup
 Copy .env.example to .env.local and set values.
-Required variables
+Required variables:
 
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 VITE_APP_URL
 
-Server-only (Edge Functions)
+Server-only (Edge Functions):
 
 SUPABASE_SERVICE_ROLE_KEY
 SHOPIFY_BANNOS_TOKEN
@@ -82,7 +92,7 @@ npm run deploy:prod – Deploy to production
 🛠️ Development Workflow
 We use Cursor as the IDE.
 Always add /docs as Context so development aligns with business rules.
-Branch Strategy
+Branch Strategy:
 
 main – Production only (protected)
 dev – Integration branch (default for Cursor)
@@ -179,4 +189,3 @@ Type Safety: TypeScript strict mode enabled
 📜 License
 Private repository for Ordak project.
 Not for external use.
-
