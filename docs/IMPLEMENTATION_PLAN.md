@@ -110,17 +110,17 @@ Periodically PR dev → main with release notes when staging is green
 
 Environment Configuration
 Development (.env.local)
-envVITE_SUPABASE_URL=
+VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_APP_URL=http://localhost:5173
 Production (.env.production)
-envVITE_SUPABASE_URL=
+VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_APP_URL=https://ordak.yourdomain.com
 VITE_SENTRY_DSN=
 VITE_POSTHOG_KEY=
 Edge Functions (.env)
-envSUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 SHOPIFY_BANNOS_TOKEN=
 SHOPIFY_FLOURLANE_TOKEN=
 SHOPIFY_WEBHOOK_SECRET=
@@ -196,5 +196,5 @@ Verify in staging before merging to main
 
 
 Document Version: 1.0.0
-Last Updated: Semptember 2025
+Last Updated: January 2025
 Status: Ready for Implementation
