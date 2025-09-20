@@ -1,61 +1,19 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
+import { useEffect, useState } from "react";
+import { get_queue } from "@/mocks/rpc";
+import type { MockOrder } from "@/mocks/mock-data";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
 }
 
-const storeUnassignedData = {
-  bannos: {
-    stations: [
-      {
-        name: "Filling Unassigned",
-        count: 3,
-        color: "blue"
-      },
-      {
-        name: "Covering Unassigned", 
-        count: 2,
-        color: "purple"
-      },
-      {
-        name: "Decoration Unassigned",
-        count: 1,
-        color: "pink"
-      },
-      {
-        name: "Packing Unassigned",
-        count: 4,
-        color: "orange"
-      }
-    ]
-  },
-  flourlane: {
-    stations: [
-      {
-        name: "Filling Unassigned",
-        count: 2,
-        color: "blue"
-      },
-      {
-        name: "Covering Unassigned", 
-        count: 3,
-        color: "purple"
-      },
-      {
-        name: "Decoration Unassigned",
-        count: 1,
-        color: "pink"
-      },
-      {
-        name: "Packing Unassigned",
-        count: 2,
-        color: "orange"
-      }
-    ]
-  }
-};
+interface Station {
+  name: string;
+  count: number;
+  color: string;
+}
 
 const getColorClasses = (color: string) => {
   const colorMap = {
@@ -88,7 +46,92 @@ const getColorClasses = (color: string) => {
 };
 
 export function UnassignedStations({ store }: UnassignedStationsProps) {
-  const storeData = storeUnassignedData[store];
+  const [stations, setStations] = useState<Station[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalUnassigned, setTotalUnassigned] = useState(0);
+
+  useEffect(() => {
+    async function loadUnassignedCounts() {
+      setLoading(true);
+      try {
+        const orders = await get_queue();
+        
+        // Filter orders for this store that are unassigned
+        const storeOrders = orders.filter((order: MockOrder) => 
+          (store === 'bannos' ? order.id.startsWith('bannos') : order.id.startsWith('flourlane')) &&
+          order.assignee_id === null &&
+          order.stage !== 'Complete'
+        );
+        
+        // Count by stage
+        const counts = {
+          filling: storeOrders.filter(o => o.stage === 'Filling').length,
+          covering: storeOrders.filter(o => o.stage === 'Covering').length,
+          decorating: storeOrders.filter(o => o.stage === 'Decorating').length,
+          packing: storeOrders.filter(o => o.stage === 'Packing').length
+        };
+        
+        const stationData: Station[] = [
+          {
+            name: "Filling Unassigned",
+            count: counts.filling,
+            color: "blue"
+          },
+          {
+            name: "Covering Unassigned", 
+            count: counts.covering,
+            color: "purple"
+          },
+          {
+            name: "Decoration Unassigned",
+            count: counts.decorating,
+            color: "pink"
+          },
+          {
+            name: "Packing Unassigned",
+            count: counts.packing,
+            color: "orange"
+          }
+        ];
+        
+        setStations(stationData);
+        setTotalUnassigned(stationData.reduce((total, station) => total + station.count, 0));
+      } catch (error) {
+        console.error("Failed to load unassigned counts:", error);
+        // Set default empty stations on error
+        setStations([
+          { name: "Filling Unassigned", count: 0, color: "blue" },
+          { name: "Covering Unassigned", count: 0, color: "purple" },
+          { name: "Decoration Unassigned", count: 0, color: "pink" },
+          { name: "Packing Unassigned", count: 0, color: "orange" }
+        ]);
+        setTotalUnassigned(0);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadUnassignedCounts();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(loadUnassignedCounts, 30000);
+    return () => clearInterval(interval);
+  }, [store]);
+
+  if (loading) {
+    return (
+      <Card className="p-4">
+        <div className="animate-pulse">
+          <div className="h-4 bg-muted rounded w-48 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-muted rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4">
@@ -100,12 +143,12 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
           <p className="text-sm text-muted-foreground">Tasks waiting for staff assignment</p>
         </div>
         <Badge variant="secondary" className="text-xs">
-          {storeData.stations.reduce((total, station) => total + station.count, 0)} total
+          {totalUnassigned} total
         </Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {storeData.stations.map((station, index) => {
+        {stations.map((station, index) => {
           const colors = getColorClasses(station.color);
           
           return (
@@ -116,7 +159,9 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
               </div>
               <div>
                 <h4 className={`text-sm font-medium ${colors.text}`}>{station.name}</h4>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting assignment</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {station.count > 0 ? "Awaiting assignment" : "All assigned"}
+                </p>
               </div>
             </div>
           );
