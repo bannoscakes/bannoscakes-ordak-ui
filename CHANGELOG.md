@@ -13,17 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Placeholder for upcoming features and fixes  
 - docs: `docs/CURSOR_RULES.md` — Cursor project guardrails for safe, incremental changes.
 - docs: `docs/RULES_SANITY_TEST.md` — sanity test confirming rules are active (no code changes).
-- feat: `src/lib/config.ts` — central VITE_* env config helper.
-- feat: `src/lib/rpc.ts` — neutral RPC facade delegating to mocks.
-- chore(env): add `VITE_USE_MOCKS=true` to `.env.local` (toggle for RPC facade; default on)
-- docs(env): add `.env.example` (commit-safe template for local setup)
-
-### Changed
-- refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(orders): route `UnassignedStations` to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(components): route `StaffWorkspacePage` to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(components): route `Dashboard` to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(rpc): enable `config.useMocks` switching in facade (no behavior change; real RPCs TBD)  
+- refactor(components): route one more component to `src/lib/rpc` (neutral facade, no behavior change).
 
 ---
 
