@@ -1,4 +1,4 @@
-import { advance_stage, get_order_for_scan, handle_print_barcode } from "@/mocks/rpc";
+import { advance_stage, get_order_for_scan, handle_print_barcode } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 
 /**
