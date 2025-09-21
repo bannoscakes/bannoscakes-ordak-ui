@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial CHANGELOG.md file  
 - Release process documented in [README.md](README.md)  
 - Placeholder for upcoming features and fixes  
+- docs: `docs/CURSOR_RULES.md` — Cursor project guardrails for safe, incremental changes.
+- docs: `docs/RULES_SANITY_TEST.md` — sanity test confirming rules are active (no code changes).  
 
 ---
 
