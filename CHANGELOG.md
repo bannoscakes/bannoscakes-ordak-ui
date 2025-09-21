@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: `docs/RULES_SANITY_TEST.md` — sanity test confirming rules are active (no code changes).
 - feat: `src/lib/config.ts` — central VITE_* env config helper.
 - feat: `src/lib/rpc.ts` — neutral RPC facade delegating to mocks.
+- chore(env): add `VITE_USE_MOCKS=true` to `.env.local` (toggle for RPC facade; default on)
 
 ### Changed
 - refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
