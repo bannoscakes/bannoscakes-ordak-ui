@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- chore(guard): add `guard:rpc` script to block direct `@/mocks/rpc` imports
 - Initial CHANGELOG.md file  
 - Release process documented in [README.md](README.md)  
 - Placeholder for upcoming features and fixes  
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2025-09-14
 ### Added
+- chore(guard): add `guard:rpc` script to block direct `@/mocks/rpc` imports
 - Complete production-ready `README.md` with:
   - Quick Start, Environment Setup, Emergency Procedures
   - Database management and migration steps
@@ -50,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.1] - 2025-09-01
 ### Added
+- chore(guard): add `guard:rpc` script to block direct `@/mocks/rpc` imports
 - Repository initialized  
 - Basic project scaffolding  
 - `.env.example` created  
