@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat: `src/lib/config.ts` — central VITE_* env config helper.
 - feat: `src/lib/rpc.ts` — neutral RPC facade delegating to mocks.
 - chore(env): add `VITE_USE_MOCKS=true` to `.env.local` (toggle for RPC facade; default on)
+- docs(env): add `.env.example` (commit-safe template for local setup)
 
 ### Changed
 - refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
