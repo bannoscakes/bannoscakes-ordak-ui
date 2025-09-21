@@ -21,13 +21,16 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 
+type Stage = "total" | "filling" | "covering" | "decorating" | "packing" | "complete" | "unassigned";
+type StoreKey = "bannos" | "flourlane";
+
 export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
   const [dashboardStats, setDashboardStats] = useState<{
-    bannos: { [key: string]: number };
-    flourlane: { [key: string]: number };
+    bannos: Record<Stage, number>;
+    flourlane: Record<Stage, number>;
   }>({
     bannos: {},
     flourlane: {}
@@ -49,35 +52,20 @@ export function Dashboard() {
       const orders = await get_queue();
       
       // Count orders by store and stage
-      const stats = {
-        bannos: {
-          total: 0,
-          filling: 0,
-          covering: 0,
-          decorating: 0,
-          packing: 0,
-          complete: 0,
-          unassigned: 0
-        },
-        flourlane: {
-          total: 0,
-          filling: 0,
-          covering: 0,
-          decorating: 0,
-          packing: 0,
-          complete: 0,
-          unassigned: 0
-        }
+      const emptyCounts: Record<Stage, number> = { total:0, filling:0, covering:0, decorating:0, packing:0, complete:0, unassigned:0 };
+      const stats: Record<StoreKey, Record<Stage, number>> = {
+        bannos: { ...emptyCounts },
+        flourlane: { ...emptyCounts },
       };
       
       orders.forEach((order: MockOrder) => {
-        const store = order.id.startsWith('bannos') ? 'bannos' : 'flourlane';
+        const store: StoreKey = order.id.startsWith('bannos') ? 'bannos' : 'flourlane';
         stats[store].total++;
         
         // Count by stage
         const stageLower = order.stage.toLowerCase();
-        if (stats[store][stageLower] !== undefined) {
-          stats[store][stageLower]++;
+        if (isStage(stageLower)) {
+          stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
         }
         
         // Count unassigned
@@ -91,6 +79,10 @@ export function Dashboard() {
       console.error('Failed to load dashboard stats:', error);
     }
   }
+
+  // Type guard for stage keys
+  const isStage = (s: string): s is Stage =>
+    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
   
   // Load stats on mount and when view changes
   useEffect(() => {
