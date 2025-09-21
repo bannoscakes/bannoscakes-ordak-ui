@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat: `src/lib/config.ts` — central VITE_* env config helper.
 - feat: `src/lib/rpc.ts` — neutral RPC facade delegating to mocks.
 - refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(orders): route one orders file to `src/lib/rpc` (neutral facade, no behavior change).  
+- refactor(orders): route one orders file to `src/lib/rpc` (neutral facade, no behavior change).
+- refactor(components): route one component to `src/lib/rpc` (neutral facade, no behavior change).  
 
 ---
 

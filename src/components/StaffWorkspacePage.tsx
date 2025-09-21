@@ -27,7 +27,7 @@ import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
 
 // Import mock RPCs
-import { get_queue } from "@/mocks/rpc";
+import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 
 interface QueueItem {
