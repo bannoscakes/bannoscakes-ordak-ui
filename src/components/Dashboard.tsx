@@ -18,7 +18,7 @@ import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 // Import mock data for dashboard stats
-import { get_queue } from "@/mocks/rpc";
+import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 
 export function Dashboard() {

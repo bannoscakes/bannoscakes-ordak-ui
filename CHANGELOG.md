@@ -15,9 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: `docs/RULES_SANITY_TEST.md` — sanity test confirming rules are active (no code changes).
 - feat: `src/lib/config.ts` — central VITE_* env config helper.
 - feat: `src/lib/rpc.ts` — neutral RPC facade delegating to mocks.
+
+### Changed
 - refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(orders): route one orders file to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(components): route one component to `src/lib/rpc` (neutral facade, no behavior change).  
+- refactor(orders): route `UnassignedStations` to `src/lib/rpc` (neutral facade, no behavior change).
+- refactor(components): route `StaffWorkspacePage` to `src/lib/rpc` (neutral facade, no behavior change).
+- refactor(components): route `Dashboard` to `src/lib/rpc` (neutral facade, no behavior change).  
 
 ---
 
