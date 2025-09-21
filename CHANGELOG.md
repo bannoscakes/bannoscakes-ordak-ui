@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- docs: `docs/DEPLOY_STAGING.md` — staging deployment checklist for Vercel + Railway
 - chore(husky): add pre-commit guard to prevent direct `@/mocks/rpc` imports
 - chore(ci): enforce `guard:rpc` in PR checks
 - chore(guard): add `guard:rpc` script to block direct `@/mocks/rpc` imports
