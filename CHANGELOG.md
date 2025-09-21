@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(orders): route `UnassignedStations` to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(components): route `StaffWorkspacePage` to `src/lib/rpc` (neutral facade, no behavior change).
-- refactor(components): route `Dashboard` to `src/lib/rpc` (neutral facade, no behavior change).  
+- refactor(components): route `Dashboard` to `src/lib/rpc` (neutral facade, no behavior change).
+- refactor(rpc): enable `config.useMocks` switching in facade (no behavior change; real RPCs TBD)  
 
 ---
 
