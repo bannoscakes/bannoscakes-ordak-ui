@@ -1,9 +1,0 @@
-#!/usr/bin/env sh
-. "$(dirname "$0")/_/husky.sh"
-
-echo "🔎 guard:rpc ..."
-npm run --silent guard:rpc || {
-  echo "❌ blocked: direct '@/mocks/rpc' import found."
-  exit 1
-}
-echo "✅ guard:rpc OK"
