@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -32,8 +31,8 @@ export function Dashboard() {
     bannos: Record<Stage, number>;
     flourlane: Record<Stage, number>;
   }>({
-    bannos: {},
-    flourlane: {}
+    bannos: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 },
+    flourlane: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 }
   });
   
   // Parse URL parameters once and cache them
@@ -245,7 +244,6 @@ export function Dashboard() {
           onCollapse={setSidebarCollapsed}
           activeView={activeView}
           onViewChange={setActiveView}
-          stats={dashboardStats}
         />
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
