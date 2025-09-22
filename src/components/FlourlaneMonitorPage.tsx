@@ -204,7 +204,11 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-export function FlourlaneMonitorPage() {
+interface FlourlaneMonitorPageProps {
+  stats?: Record<string, number>;
+}
+
+export function FlourlaneMonitorPage({ stats }: FlourlaneMonitorPageProps) {
   return (
     <div className="p-6">
       <Card className="h-full">
