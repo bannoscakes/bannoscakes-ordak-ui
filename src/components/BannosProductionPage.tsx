@@ -4,10 +4,11 @@ import { QueueTable } from "./QueueTable";
 import { MetricCards } from "./MetricCards";
 import { ProductionTimeline } from "./ProductionTimeline";
 import { StaffOverview } from "./StaffOverview";
+import type { Stage } from "@/types/stage";
 
 interface BannosProductionPageProps {
   initialFilter?: string | null;
-  stats?: Record<string, number>;
+  stats?: Record<Stage, number>;
   onRefresh?: () => Promise<void>;
 }
 
