@@ -37,7 +37,7 @@ interface QueueItem {
   product: string;
   size: "S" | "M" | "L";
   quantity: number;
-  deliveryTime: string;
+  deliveryTime?: string;
   priority: "High" | "Medium" | "Low";
   status:
     | "In Production"
@@ -70,7 +70,7 @@ function mapMockOrderToQueueItem(order: MockOrder): QueueItem {
     product: order.product_title,
     size: 'M' as const,
     quantity: 1,
-    deliveryTime: order.due_date,
+    // deliveryTime: undefined, // time window not used in this system
     priority: order.priority,
     status: mapStageToStatus(order.stage),
     flavor: "Chocolate",

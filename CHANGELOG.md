@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(types): make queue item deliveryTime optional (date-only system; no behavior change)
 - chore(types): re-enable TS on Dashboard (remove nocheck; begin incremental fixes)
 - chore(types): type Dashboard stage counters (guarded string index; no behavior change)
 - chore(types): add optional `onRefresh` to Header props (no behavior change)
