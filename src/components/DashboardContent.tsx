@@ -7,9 +7,10 @@ import { RecentOrders } from "./RecentOrders";
 import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
 import { EquipmentStatus } from "./EquipmentStatus";
+import type { StatsByStore } from "@/types/stage";
 
 interface DashboardContentProps {
-  stats?: { bannos: Record<string, number>; flourlane: Record<string, number> };
+  stats?: StatsByStore;
   onRefresh?: () => Promise<void>;
 }
 
