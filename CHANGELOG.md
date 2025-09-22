@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - chore(types): FlourlaneProductionPage stats = Record<Stage, number> (no behavior change)
 - chore(types): DashboardContent stats = StatsByStore (Record<Stage, number> per store)
 - chore(types): Dashboard uses shared `StatsByStore` helper (no behavior change)
+- chore(types): Dashboard uses makeEmptyCounts() helper for zeroed stage counters
 - chore(types): narrow stats type for FlourlaneMonitorPage
 - chore(types): narrow stats type for BannosMonitorPage
 - chore(types): Dashboard uses shared Stage/StoreKey types

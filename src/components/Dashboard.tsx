@@ -20,14 +20,15 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
+import { makeEmptyCounts } from "@/types/stage";
 
 export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
   const [dashboardStats, setDashboardStats] = useState<StatsByStore>({
-    bannos: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 },
-    flourlane: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 }
+    bannos: makeEmptyCounts(),
+    flourlane: makeEmptyCounts(),
   });
   
   // Parse URL parameters once and cache them
@@ -46,12 +47,9 @@ export function Dashboard() {
       const orders = await get_queue();
       
       // Count orders by store and stage
-      const emptyCounts: Record<Stage, number> = {
-        total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0
-      };
       const stats: StatsByStore = {
-        bannos: { ...emptyCounts },
-        flourlane: { ...emptyCounts }
+        bannos: makeEmptyCounts(),
+        flourlane: makeEmptyCounts(),
       };
       
       orders.forEach((order: MockOrder) => {
