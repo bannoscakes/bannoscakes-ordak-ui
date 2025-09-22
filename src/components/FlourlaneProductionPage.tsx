@@ -7,9 +7,11 @@ import { StaffOverview } from "./StaffOverview";
 
 interface FlourlaneProductionPageProps {
   initialFilter?: string | null;
+  stats?: Record<string, number>;
+  onRefresh?: () => Promise<void>;
 }
 
-export function FlourlaneProductionPage({ initialFilter }: FlourlaneProductionPageProps) {
+export function FlourlaneProductionPage({ initialFilter, stats, onRefresh }: FlourlaneProductionPageProps) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
