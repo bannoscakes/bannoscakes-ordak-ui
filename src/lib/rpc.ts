@@ -10,15 +10,15 @@ import * as mockRpc from "../mocks/rpc";
 // import * as realRpc from "./rpc.real";
 const realRpc = mockRpc; // placeholder: no behavior change
 
-// Forwarders. Keep names stable so feature code imports stay identical.
-export const get_queue = (...args: any[]) =>
+// Forwarders with correct parameter typing (preserve names/signatures)
+export const get_queue = (...args: Parameters<typeof mockRpc.get_queue>) =>
   (config.useMocks ? mockRpc : realRpc).get_queue(...args);
 
-export const get_order_for_scan = (...args: any[]) =>
+export const get_order_for_scan = (...args: Parameters<typeof mockRpc.get_order_for_scan>) =>
   (config.useMocks ? mockRpc : realRpc).get_order_for_scan(...args);
 
-export const advance_stage = (...args: any[]) =>
+export const advance_stage = (...args: Parameters<typeof mockRpc.advance_stage>) =>
   (config.useMocks ? mockRpc : realRpc).advance_stage(...args);
 
-export const handle_print_barcode = (...args: any[]) =>
+export const handle_print_barcode = (...args: Parameters<typeof mockRpc.handle_print_barcode>) =>
   (config.useMocks ? mockRpc : realRpc).handle_print_barcode(...args);
