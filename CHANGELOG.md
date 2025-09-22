@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - chore(types): BannosProductionPage stats = Record<Stage, number> (no behavior change)
+- chore(types): FlourlaneProductionPage stats = Record<Stage, number> (no behavior change)
 - chore(types): narrow stats type for FlourlaneMonitorPage
 - chore(types): narrow stats type for BannosMonitorPage
 - chore(types): Dashboard uses shared Stage/StoreKey types
