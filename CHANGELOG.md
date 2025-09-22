@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(types): add optional `stats` (and `initialFilter`/`onRefresh`) to BannosProductionPage props (no behavior change)
 - chore(types): type Dashboard stage counters (fix string-index error; no behavior change)
 - refactor(scanner): route one scanner file to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(orders): route `UnassignedStations` to `src/lib/rpc` (neutral facade, no behavior change).

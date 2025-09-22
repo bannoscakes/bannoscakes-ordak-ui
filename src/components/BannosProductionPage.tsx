@@ -7,9 +7,11 @@ import { StaffOverview } from "./StaffOverview";
 
 interface BannosProductionPageProps {
   initialFilter?: string | null;
+  stats?: Record<string, number>;
+  onRefresh?: () => Promise<void>;
 }
 
-export function BannosProductionPage({ initialFilter }: BannosProductionPageProps) {
+export function BannosProductionPage({ initialFilter, stats, onRefresh }: BannosProductionPageProps) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
