@@ -8,7 +8,12 @@ import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
 import { EquipmentStatus } from "./EquipmentStatus";
 
-export function DashboardContent() {
+interface DashboardContentProps {
+  stats?: { bannos: Record<string, number>; flourlane: Record<string, number> };
+  onRefresh?: () => Promise<void>;
+}
+
+export function DashboardContent({ stats, onRefresh }: DashboardContentProps) {
   const [activeStore, setActiveStore] = useState("bannos");
 
   return (

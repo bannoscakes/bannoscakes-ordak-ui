@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(types): add optional `stats`/`onRefresh` to DashboardContent props (no behavior change)
 - chore(types): allow optional `stats` on FlourlaneMonitorPage props (no behavior change)
 - chore(types): allow optional `stats` on BannosMonitorPage props (no behavior change)
 - chore(types): allow stats/initialFilter/onRefresh on FlourlaneProductionPage props (no behavior change)
