@@ -186,6 +186,12 @@ Security: RLS enforced on all tables, all writes via RPC only
 Linting: ESLint + Prettier enforced on commit
 Type Safety: TypeScript strict mode enabled
 
+## Staging
+
+- URL: <STAGING_URL>
+- Deploy guide: See [`docs/DEPLOY_STAGING.md`](docs/DEPLOY_STAGING.md)
+- Env (Preview on Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_USE_MOCKS=true`, `VITE_APP_URL=<STAGING_URL>`
+
 📜 License
 Private repository for Ordak project.
 Not for external use.
