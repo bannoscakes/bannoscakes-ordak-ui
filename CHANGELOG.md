@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- chore(rpc): add scaffolded real RPC module (same signatures; throws until implemented)
 - chore(types): add STAGES, STAGE_ORDER, makeEmptyCounts to shared stage helpers (no behavior change)
 - test(guard): vitest to block direct `@/mocks/rpc` imports
 - chore(types): add shared `src/types/stage.ts` (no behavior change)
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(rpc): facade now imports real RPC; behavior unchanged while VITE_USE_MOCKS=true
 - chore(types): BannosProductionPage stats = Record<Stage, number> (no behavior change)
 - chore(types): FlourlaneProductionPage stats = Record<Stage, number> (no behavior change)
 - chore(types): DashboardContent stats = StatsByStore (Record<Stage, number> per store)

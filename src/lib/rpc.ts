@@ -5,10 +5,7 @@
  */
 import { config } from "./config";
 import * as mockRpc from "../mocks/rpc";
-
-// TODO: replace with actual real RPC module when ready.
-// import * as realRpc from "./rpc.real";
-const realRpc = mockRpc; // placeholder: no behavior change
+import * as realRpc from "./rpc.real";
 
 // Forwarders with correct parameter typing (preserve names/signatures)
 export const get_queue = (...args: Parameters<typeof mockRpc.get_queue>) =>
