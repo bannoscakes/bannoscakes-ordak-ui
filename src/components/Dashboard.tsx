@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
@@ -52,14 +51,16 @@ export function Dashboard() {
       const orders = await get_queue();
       
       // Count orders by store and stage
-      const emptyCounts: Record<Stage, number> = { total:0, filling:0, covering:0, decorating:0, packing:0, complete:0, unassigned:0 };
+      const emptyCounts: Record<Stage, number> = {
+        total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0
+      };
       const stats: Record<StoreKey, Record<Stage, number>> = {
         bannos: { ...emptyCounts },
-        flourlane: { ...emptyCounts },
+        flourlane: { ...emptyCounts }
       };
       
       orders.forEach((order: MockOrder) => {
-        const store: StoreKey = order.id.startsWith('bannos') ? 'bannos' : 'flourlane';
+        const store = order.id.startsWith('bannos') ? 'bannos' : 'flourlane';
         stats[store].total++;
         
         // Count by stage
