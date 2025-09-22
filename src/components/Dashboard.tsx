@@ -16,10 +16,24 @@ import { TimePayrollPage } from "./TimePayrollPage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
+// Import mock data for dashboard stats
+import { get_queue } from "@/lib/rpc";
+import type { MockOrder } from "@/mocks/mock-data";
+
+type Stage = "total" | "filling" | "covering" | "decorating" | "packing" | "complete" | "unassigned";
+type StoreKey = "bannos" | "flourlane";
+
 export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<{
+    bannos: Record<Stage, number>;
+    flourlane: Record<Stage, number>;
+  }>({
+    bannos: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 },
+    flourlane: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 }
+  });
   
   // Parse URL parameters once and cache them
   const { viewFilter, staffFilter } = useMemo(() => {
@@ -30,6 +44,55 @@ export function Dashboard() {
       staffFilter: urlParams.get('staff')
     };
   }, [urlParams]);
+  
+  // Load dashboard stats from mock data
+  async function loadDashboardStats() {
+    try {
+      const orders = await get_queue();
+      
+      // Count orders by store and stage
+      const emptyCounts: Record<Stage, number> = {
+        total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0
+      };
+      const stats: Record<StoreKey, Record<Stage, number>> = {
+        bannos: { ...emptyCounts },
+        flourlane: { ...emptyCounts }
+      };
+      
+      orders.forEach((order: MockOrder) => {
+        const store = order.id.startsWith('bannos') ? 'bannos' : 'flourlane';
+        stats[store].total++;
+        
+        // Count by stage
+        const stageLower = order.stage.toLowerCase();
+        if (isStage(stageLower)) {
+          stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
+        }
+        
+        // Count unassigned
+        if (order.assignee_id === null && order.stage !== 'Complete') {
+          stats[store].unassigned++;
+        }
+      });
+      
+      setDashboardStats(stats);
+    } catch (error) {
+      console.error('Failed to load dashboard stats:', error);
+    }
+  }
+
+  // Type guard for stage keys
+  const isStage = (s: string): s is Stage =>
+    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
+  
+  // Load stats on mount and when view changes
+  useEffect(() => {
+    loadDashboardStats();
+    
+    // Refresh stats every 30 seconds
+    const interval = setInterval(loadDashboardStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
   
   // Check URL parameters to determine initial view
   useEffect(() => {
@@ -66,25 +129,33 @@ export function Dashboard() {
         case "bannos-production":
           return (
             <ErrorBoundary>
-              <BannosProductionPage initialFilter={viewFilter} />
+              <BannosProductionPage 
+                initialFilter={viewFilter}
+                stats={dashboardStats.bannos}
+                onRefresh={loadDashboardStats}
+              />
             </ErrorBoundary>
           );
         case "flourlane-production":
           return (
             <ErrorBoundary>
-              <FlourlaneProductionPage initialFilter={viewFilter} />
+              <FlourlaneProductionPage 
+                initialFilter={viewFilter}
+                stats={dashboardStats.flourlane}
+                onRefresh={loadDashboardStats}
+              />
             </ErrorBoundary>
           );
         case "bannos-monitor":
           return (
             <ErrorBoundary>
-              <BannosMonitorPage />
+              <BannosMonitorPage stats={dashboardStats.bannos} />
             </ErrorBoundary>
           );
         case "flourlane-monitor":
           return (
             <ErrorBoundary>
-              <FlourlaneMonitorPage />
+              <FlourlaneMonitorPage stats={dashboardStats.flourlane} />
             </ErrorBoundary>
           );
         case "bannos-analytics":
@@ -151,7 +222,7 @@ export function Dashboard() {
         default:
           return (
             <ErrorBoundary>
-              <DashboardContent />
+              <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
             </ErrorBoundary>
           );
       }
@@ -159,7 +230,7 @@ export function Dashboard() {
       console.error('Error rendering dashboard content:', error);
       return (
         <ErrorBoundary>
-          <DashboardContent />
+          <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
         </ErrorBoundary>
       );
     }
@@ -177,7 +248,7 @@ export function Dashboard() {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <ErrorBoundary>
-          <Header />
+          <Header onRefresh={loadDashboardStats} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
           {renderContent()}

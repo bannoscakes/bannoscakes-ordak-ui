@@ -212,7 +212,11 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-export function BannosMonitorPage() {
+interface BannosMonitorPageProps {
+  stats?: Record<string, number>;
+}
+
+export function BannosMonitorPage({ stats }: BannosMonitorPageProps) {
   return (
     <div className="p-6">
       <Card className="h-full">

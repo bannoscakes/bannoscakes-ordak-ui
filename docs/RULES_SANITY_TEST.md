@@ -1,0 +1,1 @@
+Cursor rules are active.

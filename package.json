@@ -20,7 +20,8 @@
             "release:minor": "npm run pre-release && npm version minor -m \"chore(release): %s\" && npm run post-release",
             "release:major": "npm run pre-release && npm version major -m \"chore(release): %s\" && npm run post-release",
             "pre-release": "node -e \"console.log('Preparing release…')\" && npm run changelog",
-            "post-release": "git push && git push --tags && echo \"Tag pushed. GitHub Release will auto-publish if Actions is enabled.\""
+            "post-release": "git push && git push --tags && echo \"Tag pushed. GitHub Release will auto-publish if Actions is enabled.\"",
+            "guard:rpc": "bash scripts/guard-rpc.sh"
       },
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",

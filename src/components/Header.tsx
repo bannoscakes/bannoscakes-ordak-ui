@@ -3,7 +3,11 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 
-export function Header() {
+interface HeaderProps {
+  onRefresh?: () => Promise<void>;
+}
+
+export function Header({ onRefresh }: HeaderProps) {
   return (
     <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">

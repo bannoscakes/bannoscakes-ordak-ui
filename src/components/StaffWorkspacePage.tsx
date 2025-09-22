@@ -26,6 +26,10 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
 
+// Import mock RPCs
+import { get_queue } from "@/lib/rpc";
+import type { MockOrder } from "@/mocks/mock-data";
+
 interface QueueItem {
   id: string;
   orderNumber: string;
@@ -33,7 +37,7 @@ interface QueueItem {
   product: string;
   size: "S" | "M" | "L";
   quantity: number;
-  deliveryTime: string;
+  deliveryTime?: string;
   priority: "High" | "Medium" | "Low";
   status:
     | "In Production"
@@ -56,90 +60,42 @@ interface StaffWorkspacePageProps {
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
 
-// Mock assigned orders data
-const getAssignedOrders = (): QueueItem[] => [
-  {
-    id: "BAN-Q01",
-    orderNumber: "BAN-001",
-    customerName: "Sweet Delights Co.",
-    product: "Chocolate Cupcakes",
-    size: "M",
-    quantity: 150,
-    deliveryTime: "09:30",
-    priority: "High",
-    status: "In Production",
+// Convert MockOrder to QueueItem
+function mapMockOrderToQueueItem(order: MockOrder): QueueItem {
+  const store = order.id.startsWith("bannos") ? "bannos" : "flourlane";
+  return {
+    id: order.id,
+    orderNumber: order.id,
+    customerName: `Customer ${order.id.split('-')[1]}`,
+    product: order.product_title,
+    size: 'M' as const,
+    quantity: 1,
+    // deliveryTime: undefined, // time window not used in this system
+    priority: order.priority,
+    status: mapStageToStatus(order.stage),
     flavor: "Chocolate",
     dueTime: "10:00 AM",
-    method: "Delivery",
-    store: "bannos",
-    stage: "filling",
-  },
-  {
-    id: "FLR-Q03",
-    orderNumber: "FLR-003",
-    customerName: "Chocolate Dreams Café",
-    product: "Cocoa Swirl Bread",
-    size: "M",
-    quantity: 60,
-    deliveryTime: "10:00",
-    priority: "High",
-    status: "Pending",
-    flavor: "Chocolate",
-    dueTime: "11:15 AM",
-    method: "Delivery",
-    store: "flourlane",
-    stage: "covering",
-  },
-  {
-    id: "BAN-Q04",
-    orderNumber: "BAN-004",
-    customerName: "Birthday Bash",
-    product: "Caramel Cake",
-    size: "M",
-    quantity: 60,
-    deliveryTime: "09:45",
-    priority: "High",
-    status: "Pending",
-    flavor: "Caramel",
-    dueTime: "10:30 AM",
-    method: "Delivery",
-    store: "bannos",
-    stage: "decorating",
-  },
-  {
-    id: "FLR-Q07",
-    orderNumber: "FLR-007",
-    customerName: "Sweet Bakery Outlet",
-    product: "Glazed Honey Donuts",
-    size: "M",
-    quantity: 100,
-    deliveryTime: "08:00",
-    priority: "High",
-    status: "Pending",
-    flavor: "Vanilla",
-    dueTime: "09:00 AM",
-    method: "Delivery",
-    store: "flourlane",
-    stage: "packing",
-    storage: "Kitchen Coolroom",
-  },
-  {
-    id: "BAN-Q08",
-    orderNumber: "BAN-008",
-    customerName: "School Event",
-    product: "Mini Cupcakes",
-    size: "S",
-    quantity: 150,
-    deliveryTime: "12:00",
-    priority: "Medium",
-    status: "Pending",
-    flavor: "Strawberry",
-    dueTime: "01:00 PM",
-    method: "Delivery",
-    store: "bannos",
-    stage: "filling",
-  },
-];
+    method: 'Delivery' as const,
+    storage: order.storage || undefined,
+    store: store,
+    stage: order.stage.toLowerCase(),
+  };
+}
+
+function mapStageToStatus(stage: MockOrder["stage"]): QueueItem["status"] {
+  switch(stage) {
+    case "Filling": 
+    case "Covering": 
+    case "Decorating": 
+      return "In Production";
+    case "Packing": 
+      return "Quality Check";
+    case "Complete": 
+      return "Completed";
+    default: 
+      return "Pending";
+  }
+}
 
 // Convert legacy size to realistic display
 const getRealisticSize = (
@@ -186,9 +142,8 @@ export function StaffWorkspacePage({
   staffName,
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const [orders, setOrders] = useState<QueueItem[]>(
-    getAssignedOrders(),
-  );
+  const [orders, setOrders] = useState<QueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] =
     useState<ShiftStatus>("not-started");
@@ -205,6 +160,34 @@ export function StaffWorkspacePage({
 
   // Mock unread message count
   const unreadMessageCount = 3;
+
+  // Load orders from mock
+  async function loadStaffOrders() {
+    setLoading(true);
+    try {
+      const mockOrders = await get_queue();
+      // Filter for assigned orders (simulate staff assignment)
+      // For now, let's show orders that have assignee_id not null OR the first 3 orders
+      const assignedOrders = mockOrders.filter(o => o.assignee_id !== null);
+      
+      // If no assigned orders, simulate by assigning the first few
+      if (assignedOrders.length === 0) {
+        assignedOrders.push(...mockOrders.slice(0, 3));
+      }
+      
+      const mappedOrders = assignedOrders.map(mapMockOrderToQueueItem);
+      setOrders(mappedOrders);
+    } catch (error) {
+      toast.error("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Load orders on mount
+  useEffect(() => {
+    loadStaffOrders();
+  }, []);
 
   // Update elapsed time
   useEffect(() => {
@@ -269,7 +252,6 @@ export function StaffWorkspacePage({
   const handleEndBreak = () => {
     setShiftStatus("on-shift");
     setBreakStartTime(null);
-    // Resume shift time calculation
     toast.success("Break ended");
   };
 
@@ -287,10 +269,18 @@ export function StaffWorkspacePage({
     setScannerOpen(true);
   };
 
-  const handleOrderCompleted = (orderId: string) => {
+  const handleOrderCompleted = async (orderId: string) => {
+    // Remove from local state
     setOrders(orders.filter((order) => order.id !== orderId));
     setScannerOpen(false);
     setSelectedOrder(null);
+    
+    // Reload orders to get updated state
+    await loadStaffOrders();
+  };
+
+  const handleRefresh = () => {
+    loadStaffOrders();
   };
 
   const getStoreColor = (store: string) => {
@@ -315,6 +305,17 @@ export function StaffWorkspacePage({
     return "bg-purple-100 text-purple-700 border-purple-200";
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="animate-pulse">
+          <div className="w-12 h-12 bg-muted rounded-lg mb-4 mx-auto"></div>
+          <div className="h-4 bg-muted rounded w-32"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
@@ -328,6 +329,13 @@ export function StaffWorkspacePage({
               <span className="text-sm text-foreground font-medium">
                 {staffName}
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+              >
+                Refresh
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -395,43 +403,6 @@ export function StaffWorkspacePage({
           </div>
         </Card>
 
-        {/* Packing Queue Shortcuts */}
-        <Card className="p-4">
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground">
-              Quick Access
-            </h3>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() =>
-                  window.open(
-                    "/?page=bannos-production&tab=packing",
-                    "_blank",
-                  )
-                }
-              >
-                Open Packing Queue — Bannos
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() =>
-                  window.open(
-                    "/?page=flourlane-production&tab=packing",
-                    "_blank",
-                  )
-                }
-              >
-                Open Packing Queue — Flourlane
-              </Button>
-            </div>
-          </div>
-        </Card>
-
         {/* Tabs */}
         <Tabs
           value={activeTab}
@@ -444,7 +415,7 @@ export function StaffWorkspacePage({
               className="flex items-center gap-2"
             >
               <Briefcase className="h-4 w-4" />
-              My Orders
+              My Orders ({orders.length})
             </TabsTrigger>
             <TabsTrigger
               value="messages"
@@ -512,8 +483,8 @@ export function StaffWorkspacePage({
                           onOpenOrder={() =>
                             handleOpenOrder(order)
                           }
-                          onEditOrder={undefined} // No edit in staff workspace
-                          onAssignToStaff={undefined} // No assign in staff workspace
+                          onEditOrder={undefined}
+                          onAssignToStaff={undefined}
                           onViewDetails={() =>
                             window.open(
                               `https://admin.shopify.com/orders/${order.orderNumber}`,

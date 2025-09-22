@@ -6,3 +6,9 @@ dist/
 
 # local env
 .env.local
+
+# Build output
+/build/
+.env
+.env.*
+!.env.example
