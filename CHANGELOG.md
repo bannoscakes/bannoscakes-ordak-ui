@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [v0.1.0-alpha] - 2025-09-22
 ### Added
 - chore(types): add STAGES, STAGE_ORDER, makeEmptyCounts to shared stage helpers (no behavior change)
 - test(guard): vitest to block direct `@/mocks/rpc` imports
@@ -48,6 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(orders): route `UnassignedStations` to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(components): route `StaffWorkspacePage` to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(components): route `Dashboard` to `src/lib/rpc` (neutral facade, no behavior change).
+
+---
+
+## [Unreleased]
+### Added
+### Changed
+### Fixed
 
 ---
 
