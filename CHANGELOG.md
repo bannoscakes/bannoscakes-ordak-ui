@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(types): narrow stats type for FlourlaneMonitorPage
 - chore(types): narrow stats type for BannosMonitorPage
 - chore(types): Dashboard uses shared Stage/StoreKey types
 - chore(types): make queue item deliveryTime optional (date-only system; no behavior change)

@@ -11,6 +11,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { TallCakeIcon } from "./TallCakeIcon";
+import { Stage } from "@/types/stage";
 
 interface OrderItem {
   id: string;
@@ -205,7 +206,7 @@ const getStatusIcon = (status: string) => {
 };
 
 interface FlourlaneMonitorPageProps {
-  stats?: Record<string, number>;
+  stats?: Record<Stage, number>;
 }
 
 export function FlourlaneMonitorPage({ stats }: FlourlaneMonitorPageProps) {
