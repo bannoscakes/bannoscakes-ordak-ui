@@ -19,16 +19,13 @@ import { ErrorBoundary } from "./ErrorBoundary";
 // Import mock data for dashboard stats
 import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
-import { Stage, StoreKey } from "@/types/stage";
+import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
 
 export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<{
-    bannos: Record<Stage, number>;
-    flourlane: Record<Stage, number>;
-  }>({
+  const [dashboardStats, setDashboardStats] = useState<StatsByStore>({
     bannos: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 },
     flourlane: { total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0 }
   });
@@ -52,7 +49,7 @@ export function Dashboard() {
       const emptyCounts: Record<Stage, number> = {
         total: 0, filling: 0, covering: 0, decorating: 0, packing: 0, complete: 0, unassigned: 0
       };
-      const stats: Record<StoreKey, Record<Stage, number>> = {
+      const stats: StatsByStore = {
         bannos: { ...emptyCounts },
         flourlane: { ...emptyCounts }
       };
