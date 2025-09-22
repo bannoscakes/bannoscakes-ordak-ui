@@ -192,6 +192,12 @@ Type Safety: TypeScript strict mode enabled
 - Deploy guide: See [`docs/DEPLOY_STAGING.md`](docs/DEPLOY_STAGING.md)
 - Env (Preview on Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_USE_MOCKS=true`, `VITE_APP_URL=<STAGING_URL>`
 
+## Production
+
+- Deploy guide: See [`docs/DEPLOY_PRODUCTION.md`](docs/DEPLOY_PRODUCTION.md)
+- Branch: `main` (protected)
+- Environment: Production on Vercel
+
 📜 License
 Private repository for Ordak project.
 Not for external use.

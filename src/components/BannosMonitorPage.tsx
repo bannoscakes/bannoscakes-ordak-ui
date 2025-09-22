@@ -10,6 +10,7 @@ import {
   AlertCircle,
   CheckCircle2
 } from "lucide-react";
+import { Stage } from "@/types/stage";
 
 interface OrderItem {
   id: string;
@@ -213,7 +214,7 @@ const getStatusIcon = (status: string) => {
 };
 
 interface BannosMonitorPageProps {
-  stats?: Record<string, number>;
+  stats?: Record<Stage, number>;
 }
 
 export function BannosMonitorPage({ stats }: BannosMonitorPageProps) {

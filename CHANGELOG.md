@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- chore(types): add shared `src/types/stage.ts` (no behavior change)
 - docs: `docs/DEPLOY_STAGING.md` — staging deployment checklist for Vercel + Railway
 - chore(husky): add pre-commit guard to prevent direct `@/mocks/rpc` imports
 - chore(ci): enforce `guard:rpc` in PR checks
@@ -23,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(types): narrow stats type for FlourlaneMonitorPage
+- chore(types): narrow stats type for BannosMonitorPage
+- chore(types): Dashboard uses shared Stage/StoreKey types
 - chore(types): make queue item deliveryTime optional (date-only system; no behavior change)
 - chore(types): re-enable TS on Dashboard (remove nocheck; begin incremental fixes)
 - chore(types): type Dashboard stage counters (guarded string index; no behavior change)

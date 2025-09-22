@@ -19,9 +19,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 // Import mock data for dashboard stats
 import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
-
-type Stage = "total" | "filling" | "covering" | "decorating" | "packing" | "complete" | "unassigned";
-type StoreKey = "bannos" | "flourlane";
+import { Stage, StoreKey } from "@/types/stage";
 
 export function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
