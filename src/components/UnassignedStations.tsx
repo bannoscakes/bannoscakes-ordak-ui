@@ -2,7 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { get_queue } from "@/mocks/rpc";
+import { get_queue } from "@/lib/rpc";
 import type { MockOrder } from "@/mocks/mock-data";
 
 interface UnassignedStationsProps {
