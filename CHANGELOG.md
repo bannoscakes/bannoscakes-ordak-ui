@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(rpc): real get_queue returns [] placeholder (prevents crash on preview flip)
 - chore(rpc): facade now imports real RPC; behavior unchanged while VITE_USE_MOCKS=true
 - chore(types): BannosProductionPage stats = Record<Stage, number> (no behavior change)
 - chore(types): FlourlaneProductionPage stats = Record<Stage, number> (no behavior change)
