@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(rpc): make real get_queue use env `VITE_QUEUE_SOURCE` (default "queue_view")
+
+### Fixed
+- fix(rpc): robust env fallback for QUEUE_SOURCE (empty/whitespace → "queue_view")
 - chore(rpc): real `get_queue` queries Supabase or returns [] (no crash; mocks remain default)
 - chore(rpc): real get_queue returns [] placeholder (prevents crash on preview flip)
 - chore(rpc): facade now imports real RPC; behavior unchanged while VITE_USE_MOCKS=true
