@@ -3,8 +3,8 @@ import * as mockRpc from "../mocks/rpc";
 // import { supabase } from "@/lib/supabase";
 
 export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
-  // TODO: implement using real backend (e.g., Supabase)
-  throw new Error("rpc.real:get_queue not wired; leave VITE_USE_MOCKS=true until implemented");
+  // TODO: implement real query (e.g., Supabase)
+  return []; // safe placeholder so a preview flip won't crash the app
 };
 
 export const get_order_for_scan: typeof mockRpc.get_order_for_scan = async (..._args) => {
