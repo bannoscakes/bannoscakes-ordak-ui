@@ -1,7 +1,8 @@
 import * as mockRpc from "../mocks/rpc";
 import { supabase } from "./supabase";
 
-const QUEUE_SOURCE = (import.meta.env.VITE_QUEUE_SOURCE as string | undefined) ?? "queue_view";
+const QUEUE_SOURCE =
+  String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "queue_view";
 
 export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
   try {
