@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- docs: add `docs/DB_CONTRACT.md` (single source of truth for UI ↔ DB)
 - chore(supabase): add minimal client in `src/lib/supabase.ts`
 - chore(rpc): add scaffolded real RPC module (same signatures; throws until implemented)
 - chore(types): add STAGES, STAGE_ORDER, makeEmptyCounts to shared stage helpers (no behavior change)
