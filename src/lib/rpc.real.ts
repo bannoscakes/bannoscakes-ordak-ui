@@ -4,6 +4,9 @@ import { supabase } from "./supabase";
 const QUEUE_SOURCE =
   String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "queue_view";
 
+const ORDERS_SOURCE =
+  String(import.meta.env.VITE_ORDERS_SOURCE ?? "").trim() || "orders_view";
+
 export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
   try {
     if (!supabase) return []; // no envs set → safe fallback
@@ -31,9 +34,35 @@ export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
   }
 };
 
-// keep these throwing until implemented
-export const get_order_for_scan = async (..._args: Parameters<typeof mockRpc.get_order_for_scan>) => {
-  throw new Error("rpc.real:get_order_for_scan not wired; leave VITE_USE_MOCKS=true");
+export const get_order_for_scan: typeof mockRpc.get_order_for_scan = async (barcode) => {
+  try {
+    if (!supabase) return null;  // envs not set → safe null
+    if (!barcode) return null;
+
+    // Adjust selected columns to your schema; ORDERS_SOURCE is the env-driven table/view.
+    const { data, error } = await supabase
+      .from(ORDERS_SOURCE)
+      .select("id, store, stage, title, barcode")
+      .eq("barcode", barcode)
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      store: data.store ?? "bannos",
+      stage: data.stage ?? "filling",
+      title: data.title ?? "",
+      assignee_id: null,
+      product_title: data.title ?? "",
+      due_date: "",
+      priority: "Medium" as const,
+      storage: "",
+    } as Awaited<ReturnType<typeof mockRpc.get_order_for_scan>>;
+  } catch {
+    return null; // never throw; scanner remains stable
+  }
 };
 export const advance_stage = async (..._args: Parameters<typeof mockRpc.advance_stage>) => {
   throw new Error("rpc.real:advance_stage not wired; leave VITE_USE_MOCKS=true");
