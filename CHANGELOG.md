@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.1.0-alpha] - 2025-09-22
 ### Added
+- docs: add `docs/DB_CONTRACT.md` (single source of truth for UI ↔ DB)
 - chore(supabase): add minimal client in `src/lib/supabase.ts`
 - chore(rpc): add scaffolded real RPC module (same signatures; throws until implemented)
 - chore(types): add STAGES, STAGE_ORDER, makeEmptyCounts to shared stage helpers (no behavior change)
@@ -32,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - chore(rpc): make real get_queue use env `VITE_QUEUE_SOURCE` (default "queue_view")
 
 ### Fixed
+- fix(rpc): robust env fallbacks (empty/whitespace → defaults) for queue/orders source
 - fix(rpc): robust env fallback for QUEUE_SOURCE (empty/whitespace → "queue_view")
 - chore(rpc): real `get_queue` queries Supabase or returns [] (no crash; mocks remain default)
 - chore(rpc): real get_queue returns [] placeholder (prevents crash on preview flip)
