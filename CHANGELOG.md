@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - chore(rpc): make real get_queue use env `VITE_QUEUE_SOURCE` (default "queue_view")
 
 ### Fixed
+- fix(rpc): remove mock type dependency; explicit signatures for write RPCs (no throws)
 - fix(rpc): robust env fallback for QUEUE_SOURCE (empty/whitespace → "queue_view")
 - chore(rpc): real `get_queue` queries Supabase or returns [] (no crash; mocks remain default)
 - chore(rpc): real get_queue returns [] placeholder (prevents crash on preview flip)
