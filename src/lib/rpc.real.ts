@@ -32,12 +32,12 @@ export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
 };
 
 // keep these throwing until implemented
-export const get_order_for_scan = async (..._args: Parameters<typeof mockRpc.get_order_for_scan>) => {
+export const get_order_for_scan: typeof mockRpc.get_order_for_scan = async (..._args) => {
   throw new Error("rpc.real:get_order_for_scan not wired; leave VITE_USE_MOCKS=true");
 };
-export const advance_stage = async (..._args: Parameters<typeof mockRpc.advance_stage>) => {
+export const advance_stage: typeof mockRpc.advance_stage = async (..._args) => {
   throw new Error("rpc.real:advance_stage not wired; leave VITE_USE_MOCKS=true");
 };
-export const handle_print_barcode = async (..._args: Parameters<typeof mockRpc.handle_print_barcode>) => {
+export const handle_print_barcode: typeof mockRpc.handle_print_barcode = async (..._args) => {
   throw new Error("rpc.real:handle_print_barcode not wired; leave VITE_USE_MOCKS=true");
 };
