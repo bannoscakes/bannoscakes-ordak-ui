@@ -1,12 +1,15 @@
 import * as mockRpc from "../mocks/rpc";
 import { supabase } from "./supabase";
 
+const QUEUE_SOURCE =
+  String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "queue_view";
+
 export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
   try {
     if (!supabase) return []; // no envs set → safe fallback
     // Adjust the view/columns to your schema; this is a conservative example.
     const { data, error } = await supabase
-      .from("queue_view")
+      .from(QUEUE_SOURCE)
       .select("id, store, stage, title, priority, due_date")
       .limit(200);
 
