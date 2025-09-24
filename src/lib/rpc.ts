@@ -7,6 +7,10 @@ import { config } from "./config";
 import * as mockRpc from "../mocks/rpc";
 import * as realRpc from "./rpc.real";
 
+if (typeof window !== "undefined") {
+  console.info("[rpc] using", (config.useMocks ? "mocks" : "real"), "via facade");
+}
+
 // Forwarders with correct parameter typing (preserve names/signatures)
 export const get_queue = (...args: Parameters<typeof mockRpc.get_queue>) =>
   (config.useMocks ? mockRpc : realRpc).get_queue(...args);
