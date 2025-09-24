@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(rpc): real get_order_for_scan uses Supabase (env `VITE_ORDERS_SOURCE`, safe fallback to null)
 - chore(rpc): make real get_queue use env `VITE_QUEUE_SOURCE` (default "queue_view")
 
 ### Fixed
