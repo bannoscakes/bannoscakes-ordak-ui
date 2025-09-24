@@ -78,6 +78,8 @@ npx supabase migration new <name>
 # Reset dev database
 npx supabase db reset
 See migration-order.md for sequence.
+
+**Initial Schema**: [`supabase/sql/001_initial_schema.sql`](supabase/sql/001_initial_schema.sql)
 📜 Scripts
 
 npm run dev – Start development server

@@ -71,6 +71,7 @@ cleanup/remove-mocks
 
 ## [Unreleased]
 ### Added
+- sql: add `supabase/sql/001_initial_schema.sql` (orders, views, RLS) and Supabase README
 ### Changed
 ### Fixed
 
