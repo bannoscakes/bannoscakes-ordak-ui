@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.1.0-alpha] - 2025-09-22
 ### Added
+- chore(rpc): one-line runtime log (mocks vs real; no behavior change)
 - docs: add `docs/DB_CONTRACT.md` (single source of truth for UI ↔ DB)
 - chore(supabase): add minimal client in `src/lib/supabase.ts`
 - chore(rpc): add scaffolded real RPC module (same signatures; throws until implemented)
