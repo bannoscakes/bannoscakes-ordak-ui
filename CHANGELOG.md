@@ -6,8 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [v0.1.0-alpha] - 2025-09-22
 ### Added
+- chore(rpc): one-line runtime log (mocks vs real; no behavior change)
+- docs: add `docs/DB_CONTRACT.md` (single source of truth for UI ↔ DB)
 - chore(supabase): add minimal client in `src/lib/supabase.ts`
 - chore(rpc): add scaffolded real RPC module (same signatures; throws until implemented)
 - chore(types): add STAGES, STAGE_ORDER, makeEmptyCounts to shared stage helpers (no behavior change)
@@ -28,13 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+cleanup/remove-mocks
 - chore(rpc): switch facade to real-only (remove mock path)
 - chore(guard): block src/mocks/ and '@/mocks/rpc' imports
+hotfix/remove-mocks-on-main
 - sql: add supabase/sql initial schema + Supabase README
+- chore(sql): add supabase/sql placeholders for Phase 2
 - chore(rpc): real get_order_for_scan uses Supabase (env `VITE_ORDERS_SOURCE`, safe fallback to null)
 - chore(rpc): make real get_queue use env `VITE_QUEUE_SOURCE` (default "queue_view")
 
 ### Fixed
+- fix(rpc): remove mock type dependency; explicit signatures for write RPCs (no throws)
+- fix(rpc): robust env fallbacks (empty/whitespace → defaults) for queue/orders source
 - fix(rpc): robust env fallback for QUEUE_SOURCE (empty/whitespace → "queue_view")
 - chore(rpc): real `get_queue` queries Supabase or returns [] (no crash; mocks remain default)
 - chore(rpc): real get_queue returns [] placeholder (prevents crash on preview flip)
@@ -61,6 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor(orders): route `UnassignedStations` to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(components): route `StaffWorkspacePage` to `src/lib/rpc` (neutral facade, no behavior change).
 - refactor(components): route `Dashboard` to `src/lib/rpc` (neutral facade, no behavior change).
+
+---
+
+## [Unreleased]
+### Added
+### Changed
+### Fixed
 
 ---
 

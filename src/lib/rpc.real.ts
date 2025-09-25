@@ -6,6 +6,7 @@ const QUEUE_SOURCE =
 const ORDERS_SOURCE =
   String(import.meta.env.VITE_ORDERS_SOURCE ?? "").trim() || "orders_view";
 
+ hotfix/remove-mocks-on-main
 type QueueRow = {
   id: string;
   store: "bannos" | "flourlane";
@@ -16,6 +17,7 @@ type QueueRow = {
 };
 
 export const get_queue = async (..._args: any[]): Promise<QueueRow[]> => {
+export const get_queue = async (..._args: any[]): Promise<any[]> => {
   try {
     if (!supabase) return [];
     const { data, error } = await supabase
