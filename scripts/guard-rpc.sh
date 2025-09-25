@@ -9,6 +9,6 @@ if grep -R "from\s*['\"]@/mocks/rpc['\"]" src >/dev/null 2>&1; then
   grep -R "from\s*['\"]@/mocks/rpc['\"]" -n src
   exit 1
 fi
-clean-main-v2
+
 echo "✅ Guard OK."
 

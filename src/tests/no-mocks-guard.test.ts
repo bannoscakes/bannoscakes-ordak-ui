@@ -8,7 +8,7 @@ describe("repo has no mocks", () => {
   });
   it("no '@/mocks/rpc' imports in src/", () => {
     try {
-clean-main-v2
+
       execSync(`grep -R "@/mocks/rpc" -n src`, { stdio: "pipe" });
       throw new Error("Found '@/mocks/rpc' import");
     } catch (err: any) {
