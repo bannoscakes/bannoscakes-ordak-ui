@@ -33,6 +33,7 @@ export const get_queue = async (..._args: any[]): Promise<any[]> => {
   }
 };
 
+sql/001-initial-schema
 export const get_order_for_scan = async (barcode: string): Promise<any> => {
   try {
     if (!supabase) return null;  // envs not set → safe null
@@ -68,6 +69,15 @@ export const get_order_for_scan = async (barcode: string): Promise<any> => {
 export const advance_stage = async (..._args: any[]): Promise<{ ok: true }> => {
   // TODO: replace with real server function
   return { ok: true } as const;
+// keep these throwing until implemented
+export const get_order_for_scan: typeof mockRpc.get_order_for_scan = async (..._args) => {
+  throw new Error("rpc.real:get_order_for_scan not wired; leave VITE_USE_MOCKS=true");
+};
+export const advance_stage: typeof mockRpc.advance_stage = async (..._args) => {
+  throw new Error("rpc.real:advance_stage not wired; leave VITE_USE_MOCKS=true");
+};
+export const handle_print_barcode: typeof mockRpc.handle_print_barcode = async (..._args) => {
+  throw new Error("rpc.real:handle_print_barcode not wired; leave VITE_USE_MOCKS=true");
 };
 
 // handle_print_barcode: safe no-op (never throws)

@@ -9,4 +9,7 @@ if grep -R "from\s*['\"]@/mocks/rpc['\"]" src >/dev/null 2>&1; then
   grep -R "from\s*['\"]@/mocks/rpc['\"]" -n src
   exit 1
 fi
+sql/001-initial-schema
 echo "✅ Guard OK."
+echo "✅ Guard OK."
+

@@ -1,3 +1,4 @@
+ sql/001-initial-schema
 # Main Audit Report — 2025-09-24T11:40:07Z
 
 ## HEAD
@@ -5,6 +6,12 @@ c425fe8
 
 ## Recent commits (last 30)
 c425fe8 chore: remove src/mocks; real-only facade; harden guard; add guard test
+# Main Audit Report — 2025-09-24T09:26:21Z
+
+## HEAD
+1b5b32b
+
+## Recent commits (last 30)
 1b5b32b Merge pull request #22 from bannoscakes/fix/queue-source-fallback
 8c3b38f fix(rpc): robust fallback for QUEUE_SOURCE (empty → 'queue_view')
 31bb002 chore(rpc): get_queue reads source from VITE_QUEUE_SOURCE (default 'queue_view')
@@ -34,6 +41,7 @@ c4df000 chore(types): FlourlaneMonitorPage stats = Record<Stage, number>
 183556e chore(types): Dashboard uses shared Stage/StoreKey types (no behavior change)
 753a027 Merge pull request #6 from bannoscakes/chore/shared-stage-type
 f92c3ff chore(types): add shared Stage/StoreKey in src/types/stage.ts
+sql/001-initial-schema
 
 ## Mocks directory
 NOT PRESENT
@@ -45,6 +53,20 @@ src/tests/no-mocks-guard.test.ts:12:      throw new Error("Found '@/mocks/rpc' i
 
 ## RPC facade files (recent changes)
 c425fe8 chore: remove src/mocks; real-only facade; harden guard; add guard test
+
+a11ce71 Merge pull request #5 from bannoscakes/docs/prod-deploy
+
+## Mocks directory
+FOUND: src/mocks
+ - src/mocks/rpc.ts
+ - src/mocks/mock-data.ts
+
+## References to '@/mocks/rpc' in src/
+src/tests/no-mock-imports.test.ts:14:// Match ONLY actual import statements like: import ... from "@/mocks/rpc"
+src/tests/no-mock-imports.test.ts:18:  it("should not import from '@/mocks/rpc' anywhere in src", () => {
+src/tests/no-mock-imports.test.ts:27:    expect(offenders, `Forbidden '@/mocks/rpc' found in:\n${offenders.join("\n")}`).toEqual([]);
+
+## RPC facade files (recent changes) main
 8c3b38f fix(rpc): robust fallback for QUEUE_SOURCE (empty → 'queue_view')
 31bb002 chore(rpc): get_queue reads source from VITE_QUEUE_SOURCE (default 'queue_view')
 8281a73 feat(rpc): real get_queue uses Supabase (safe fallback to []); chore(supabase): add minimal client
@@ -61,6 +83,7 @@ e9bb79c refactor(rpc): switchable facade via config.useMocks; docs(changelog): d
 -rw-r--r--@ 1 panospanayi  staff  421 Sep 24 08:19 src/lib/supabase.ts
 
 ### Supabase SQL
+sql/001-initial-schema
 total 8
 drwxr-xr-x@ 3 panospanayi  staff   96 Sep 24 20:02 .
 drwxr-xr-x@ 4 panospanayi  staff  128 Sep 24 20:02 ..
@@ -72,12 +95,21 @@ drwxr-xr-x@ 4 panospanayi  staff  128 Sep 24 20:02 ..
  - drwxr-xr-x@  3 panospanayi  staff   96 Sep 24 20:05 .
  - drwxr-xr-x@ 17 panospanayi  staff  544 Sep 24 20:05 ..
  - -rw-r--r--@  1 panospanayi  staff  609 Sep 24 20:29 no-mocks-guard.test.ts
+supabase/sql: missing
+
+## Guard scripts & tests
+-rwxr-xr-x@ 1 panospanayi  staff  207 Sep 22 17:23 scripts/guard-rpc.sh
+ - total 8
+ - drwxr-xr-x@  3 panospanayi  staff    96 Sep 24 08:19 .
+ - drwxr-xr-x@ 18 panospanayi  staff   576 Sep 24 08:19 ..
+ - -rw-r--r--@  1 panospanayi  staff  1055 Sep 24 08:19 no-mock-imports.test.ts
 
 ## Vercel config
 vercel.json: missing
 
 ## Docs changed in last 30 commits
   M	CHANGELOG.md
+ sql/001-initial-schema
   A	audits/AUDIT_MAIN.md
   A	docs/FLIP_TO_REAL_RPC.md
   M	scripts/guard-rpc.sh
