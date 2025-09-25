@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs(env): add `.env.example` (commit-safe template for local setup).
 
 ### Changed
+- chore(rpc): switch facade to real-only (remove mock path)
+- chore(guard): block src/mocks/ and '@/mocks/rpc' imports
+- chore(sql): add supabase/sql placeholders for Phase 2
 - chore(rpc): make real get_queue use env `VITE_QUEUE_SOURCE` (default "queue_view")
 
 ### Fixed
