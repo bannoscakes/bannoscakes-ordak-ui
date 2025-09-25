@@ -1,3 +1,27 @@
+## [v0.1.0-alpha] - 2025-01-15 - Clean Implementation
+
+### BREAKING CHANGES
+- **Removed entire mock system** - Application now uses real Supabase backend only
+- **Removed VITE_USE_MOCKS** environment variable and all mock toggle functionality
+- **Cleaned documentation** of all mock references and implementation details
+
+### Added
+- Real-time Supabase integration for all data operations
+- Production-ready RPC facade without mock fallbacks
+- Guard tests to prevent mock reintroduction
+
+### Removed
+- `src/mocks/` directory and all mock implementations
+- Mock-related configuration options and environment variables
+- Switchable facade system for development/production
+
+### Fixed
+- Simplified development workflow with single data source
+- Eliminated confusion between mock and real data states
+- Streamlined deployment process
+
+---
+
 # Changelog
 All notable changes to this project will be documented in this file.
 
