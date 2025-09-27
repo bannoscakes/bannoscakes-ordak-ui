@@ -22,18 +22,18 @@ begin
     end if;
   end if;
 
-  -- Exact barcode match first (case-sensitive user entry)
+  -- Exact barcode match first (case-sensitive entry)
   select * into v_row from public.orders where barcode = p_code limit 1;
   if found then return v_row; end if;
 
   -- bannos-##### / flourlane-##### / plain number
   if s like 'bannos-%' then
     v_store := 'bannos';
-    begin v_num := substring(s from 'bannos-(\\d+)')::bigint; exception when others then v_num := null; end;
+    begin v_num := substring(s from 'bannos-(\d+)')::bigint; exception when others then v_num := null; end;
   elsif s like 'flourlane-%' then
     v_store := 'flourlane';
-    begin v_num := substring(s from 'flourlane-(\\d+)')::bigint; exception when others then v_num := null; end;
-  elsif s ~ '^\\d+$' then
+    begin v_num := substring(s from 'flourlane-(\d+)')::bigint; exception when others then v_num := null; end;
+  elsif s ~ '^\d+$' then
     v_num := s::bigint;
   end if;
 
