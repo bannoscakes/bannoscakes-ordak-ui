@@ -5,8 +5,6 @@ import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
 import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import DevErrorBoundary from './components/DevErrorBoundary';
-import DebugOverlay from './components/DebugOverlay';
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -21,17 +19,10 @@ interface SupervisorSession {
 }
 
 export default function App() {
-  // Smoke test fallback
-  if (new URLSearchParams(window.location.search).has('smoke')) {
-    return <div style={{ padding: '20px', fontSize: '24px', fontWeight: 'bold' }}>SMOKE OK</div>;
-  }
-
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
   const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const showDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug');
 
   // Check URL on mount and set initial view
   useEffect(() => {
@@ -194,9 +185,6 @@ export default function App() {
   return (
     <ErrorBoundary>
       {renderMainContent()}
-      <DevErrorBoundary>{/* your existing routed UI stays here */}</DevErrorBoundary>
-      {/* Overlay appears on any page when debug is on */}
-      {showDebug && <DebugOverlay />}
     </ErrorBoundary>
   );
 }
