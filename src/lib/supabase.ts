@@ -13,3 +13,6 @@ export function getSupabase(): SupabaseClient {
   }
   return client;
 }
+
+// Named export for compatibility
+export const supabase = getSupabase();
