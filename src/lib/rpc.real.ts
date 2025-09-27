@@ -2,7 +2,7 @@ import * as mockRpc from "../mocks/rpc";
 import { supabase } from "./supabase";
 
 const QUEUE_SOURCE =
-  String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "queue_view";
+  String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "vw_queue_minimal";
 
 export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
   try {
