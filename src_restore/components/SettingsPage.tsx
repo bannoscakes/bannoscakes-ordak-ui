@@ -101,11 +101,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setHasUnsavedChanges(true);
   };
 
-
-  const handleTestConnection = async (): Promise<boolean> => {
-    if (!settings.shopifyToken.trim()) {
-      toast.error("Please enter a Storefront Access Token");
-      return false;
   const handleTestConnection = async () => {
     if (!settings.shopifyToken.trim()) {
       toast.error("Please enter a Storefront Access Token");
@@ -116,23 +111,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setConnectionStatus('idle');
     
     // Simulate API call
-    await new Promise<void>((resolve) => setTimeout(resolve, 2000));
-    const success = settings.shopifyToken.length > 10; // Mock validation
-    setConnectionStatus(success ? 'success' : 'error');
-    setIsConnecting(false);
-    
-    if (success) {
-      toast.success("Connected successfully");
-      setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
-    } else {
-      toast.error("Connection failed. Check token and permissions.");
-    }
-    return success;
-  };
-
-  const handleConnectAndSync = async () => {
-    const success = await handleTestConnection();
-    if (success) {
     setTimeout(() => {
       const success = settings.shopifyToken.length > 10; // Mock validation
       setConnectionStatus(success ? 'success' : 'error');
