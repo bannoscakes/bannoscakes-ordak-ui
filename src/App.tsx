@@ -5,8 +5,8 @@ import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
 import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import QueueDebug from './features/queue/QueueDebug';
 import DevErrorBoundary from './components/DevErrorBoundary';
+import DebugOverlay from './components/DebugOverlay';
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -194,9 +194,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       {renderMainContent()}
-      <DevErrorBoundary>
-        {showDebug && <QueueDebug />}
-      </DevErrorBoundary>
+      <DevErrorBoundary>{/* your existing routed UI stays here */}</DevErrorBoundary>
+      {/* Overlay appears on any page when debug is on */}
+      {showDebug && <DebugOverlay />}
     </ErrorBoundary>
   );
 }
