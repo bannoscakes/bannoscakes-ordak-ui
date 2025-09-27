@@ -1,10 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+let client: SupabaseClient | null = null;
 
-/**
- * Returns a configured client when envs exist; otherwise a dummy value.
- * Call sites must handle the client possibly being undefined.
- */
-export const supabase = (url && anon) ? createClient(url, anon) : undefined;
+export function getSupabase(): SupabaseClient {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+  if (!url || !anonKey) {
+    throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env.local');
+  }
+  if (!client) {
+    client = createClient(url, anonKey, { auth: { persistSession: false } });
+  }
+  return client;
+}

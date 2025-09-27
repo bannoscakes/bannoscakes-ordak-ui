@@ -6,6 +6,7 @@ import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import QueueDebug from './features/queue/QueueDebug';
+import DevErrorBoundary from './components/DevErrorBoundary';
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -24,6 +25,8 @@ export default function App() {
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
   const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const showDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).has('debug');
 
   // Check URL on mount and set initial view
   useEffect(() => {
@@ -186,7 +189,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       {renderMainContent()}
-      {import.meta.env.DEV && <QueueDebug />}
+      <DevErrorBoundary>
+        {showDebug && <QueueDebug />}
+      </DevErrorBoundary>
     </ErrorBoundary>
   );
 }
