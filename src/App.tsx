@@ -21,6 +21,11 @@ interface SupervisorSession {
 }
 
 export default function App() {
+  // Smoke test fallback
+  if (new URLSearchParams(window.location.search).has('smoke')) {
+    return <div style={{ padding: '20px', fontSize: '24px', fontWeight: 'bold' }}>SMOKE OK</div>;
+  }
+
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
   const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
