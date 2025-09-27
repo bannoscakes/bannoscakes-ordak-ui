@@ -5,6 +5,7 @@ import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
 import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import QueueDebug from './features/queue/QueueDebug';
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -185,6 +186,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       {renderMainContent()}
+      {import.meta.env.DEV && <QueueDebug />}
     </ErrorBoundary>
   );
 }
