@@ -21,6 +21,7 @@ serve(async (req) => {
     return new Response("ok", { status: 200 });
   }
 
+fix/webhook-hmac-raw
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
@@ -42,6 +43,16 @@ serve(async (req) => {
       status: 422,
       headers: { "content-type": "application/json" },
     });
+  const raw = await req.text();
+  const hmac = req.headers.get("x-shopify-hmac-sha256");
+
+  const ok = await verifyShopifyHmac(SECRET, raw, hmac);
+  if (!ok) return new Response("invalid hmac", { status: 401 });
+
+  let payload: any;
+  try { payload = JSON.parse(raw); }
+  catch {
+    return new Response(JSON.stringify({ ok: false, errors: [{ path: 'json', message: 'invalid' }] }), { status: 422, headers: { "content-type": "application/json" } });
   }
 
   const result = normalizeShopifyOrder(payload, 'flourlane');
