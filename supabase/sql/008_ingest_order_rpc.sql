@@ -1,6 +1,7 @@
 begin;
 
 -- Helper: read boolean feature flags from `settings` table
+-- Read feature flags from settings
 create or replace function public.settings_get_bool(scope text, k text, default_value boolean)
 returns boolean
 language sql
@@ -10,6 +11,10 @@ as $$
     select case lower(value)
            when '1' then true when 'true' then true when 'yes' then true when 'on' then true
            else false end
+    select case
+             when lower(value) in ('1','true','yes','on') then true
+             else false
+           end
     from public.settings s
     where s.scope = scope and s.key = k
     limit 1
@@ -20,6 +25,10 @@ $$;
 create unique index if not exists orders_shopify_gid_uidx on public.orders (shopify_order_gid);
 
 -- Ingest RPC (SECURITY DEFINER; executes even with RLS later)
+-- Idempotency support (no error if it already exists)
+create unique index if not exists orders_shopify_gid_uidx on public.orders (shopify_order_gid);
+
+-- Ingest RPC (SECURITY DEFINER; idempotent by shopify_order_gid)
 create or replace function public.ingest_order(normalized jsonb)
 returns table(id text, dedup boolean)
 language plpgsql
@@ -43,6 +52,10 @@ begin
   end if;
 
   -- Dedup
+  if coalesce(v_gid,'') = '' then
+    raise exception 'missing shopify_order_gid';
+  end if;
+
   select o.id into v_exists from public.orders o where o.shopify_order_gid = v_gid limit 1;
   if found then
     return query select v_exists, true;
@@ -73,6 +86,7 @@ begin
   returning id into v_id;
 
   -- Best-effort logs (ignore if tables/cols differ)
+  -- best-effort logs (ignore if tables/cols differ)
   begin
     insert into public.api_logs(source, topic, ref, payload)
     values ('shopify','orders/create', v_gid, normalized)
@@ -80,6 +94,8 @@ begin
   exception when others then
     -- ignore
   end;
+  exception when others then end;
+
 
   begin
     insert into public.audit_log(kind, ref, detail)
@@ -96,6 +112,12 @@ begin
   exception when others then
     -- ignore
   end;
+  exception when others then end;
+
+  begin
+    insert into public.stage_events(order_id, stage, event, at)
+    values (v_id, 'Filling', 'pending', now());
+  exception when others then end;
 
   return query select v_id, false;
 end;
@@ -103,4 +125,3 @@ $$;
 
 grant execute on function public.ingest_order(jsonb) to authenticated;
 
-commit;
