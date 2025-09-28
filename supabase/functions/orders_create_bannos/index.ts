@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { verifyShopifyHmac } from "../_shared/hmac.ts";
+import { verifyHmac } from "../_shared/hmac.ts";
 import { normalizeShopifyOrder } from "../_shared/order_transform.ts";
 
 async function tryIngest(normalized: unknown) {
@@ -25,14 +25,17 @@ serve(async (req: Request) => {
 
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
-  const raw = await req.text();
-  const hmac = req.headers.get("x-shopify-hmac-sha256");
+  // Read raw bytes for HMAC verification
+  const raw = new Uint8Array(await req.arrayBuffer());
+  const ok = await verifyHmac(req.headers, raw);
+  if (!ok) return new Response("unauthorized", { status: 401 });
 
-  const ok = await verifyShopifyHmac(SECRET, raw, hmac);
-  if (!ok) return new Response("invalid hmac", { status: 401 });
-
+  // Decode the same raw bytes to JSON text AFTER verifying
   let payload: any;
-  try { payload = JSON.parse(raw); }
+  try {
+    const bodyText = new TextDecoder("utf-8").decode(raw);
+    payload = JSON.parse(bodyText);
+  }
   catch {
     return new Response(JSON.stringify({ ok: false, errors: [{ path: 'json', message: 'invalid' }] }), { status: 422, headers: { "content-type": "application/json" } });
   }
