@@ -60,7 +60,8 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
           filling: data.find(d => d.stage === 'Filling_pending')?.count || 0,
           covering: data.find(d => d.stage === 'Covering_pending')?.count || 0,
           decorating: data.find(d => d.stage === 'Decorating_pending')?.count || 0,
-          packing: data.find(d => d.stage === 'Packing_in_progress')?.count || 0
+          // Packing should reflect UNASSIGNED work → use pending (or normalized "packing")
+          packing: data.find(d => d.stage === 'Packing_pending')?.count || 0
         };
         
         const stationData: Station[] = [
