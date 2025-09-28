@@ -1,4 +1,31 @@
+
+printf "\n- feat(ui): default queue source → vw_queue_minimal (legacy alias remains)\n" >> CHANGELOG.md
+git add CHANGELOG.md
+git commit -m "chore(changelog): note default queue source update"
+git push
+
+- feat(ui): QueueDebug uses RPC-first data module (queue.data.ts)
+- functions(webhooks): HMAC-only skeleton for orders_create (bannos/flourlane)
+- sql(007): read-only scan lookup RPC (get_order_for_scan) — installed and verified
+-feat(ui): switch reads from views to read-only RPCs (get_queue_minimal / get_unassigned_counts / get_complete_minimal)
+
+## [Unreleased]
+- sql(001): initial base schema
+- sql(001a): add settings table for RLS flag
+- sql(002): RLS scaffolding + minimal views
+- chore(repo): preflight no-dupes; env clean (mocks off; APP_URL=3000)
+- feat(ui): Supabase client + typed API; hooks; DEV QueueDebug
+- fix(ui): lazy client + ErrorBoundary; ?debug toggle
+- docs/sql(004): UI↔DB contract checks (no data) + docs/db-contract.md
+- sql(005): read-only RPCs wrapping minimal views (queue, counts, complete)
+
+
 ## [v0.1.0-alpha] - 2025-01-15 - Clean Implementation
+## [Unreleased]
+- sql(001): initial base schema (orders, stage_events, work_queue, dead_letter, components/BOM, logs)
+- sql(002): RLS scaffolding (feature-flag) + minimal views (vw_queue_minimal, vw_unassigned_counts, vw_complete_minimal)
+- chore(repo): removed nested duplicate folder; canonical supabase/sql kept
+- feat(ui): supabase client + typed API wrappers for queue/unassigned/complete views
 
 ### BREAKING CHANGES
 - **Removed entire mock system** - Application now uses real Supabase backend only
