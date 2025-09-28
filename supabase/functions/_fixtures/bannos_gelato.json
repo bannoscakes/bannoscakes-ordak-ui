@@ -1,0 +1,24 @@
+{
+  "admin_graphql_api_id": "gid://shopify/Order/1234567890",
+  "id": 1234567890,
+  "order_number": 1001,
+  "shop_domain": "bannos.com.au",
+  "note": "Happy Birthday",
+  "line_items": [
+    {
+      "title": "Gelato Cake",
+      "quantity": 1,
+      "properties": [
+        { "name": "Gelato Flavours", "value": "Vanilla / Pistachio" },
+        { "name": "_LocalDeliveryID", "value": "ignore-me" }
+      ]
+    }
+  ],
+  "note_attributes": [
+    { "name": "Local Delivery Date and Time", "value": "2025-10-02 between 10:00 and 14:00" },
+    { "name": "Delivery Method", "value": "Delivery" },
+    { "name": "Delivery Instructions", "value": "Leave at door" }
+  ],
+  "presentment_currency": "AUD",
+  "current_total_price": "89.00"
+}
