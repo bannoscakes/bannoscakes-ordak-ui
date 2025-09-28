@@ -11,14 +11,26 @@ function timingSafeEqual(a: string, b: string): boolean {
   return res === 0;
 }
 
-/** Verify Shopify HMAC over the **raw** request body bytes. */
-export async function verifyHmac(headers: Headers, rawBody: ArrayBuffer | Uint8Array): Promise<boolean> {
-  const secret = Deno.env.get("SHOPIFY_WEBHOOK_SECRET") || "";
-  const sig = headers.get("X-Shopify-Hmac-Sha256") || headers.get("x-shopify-hmac-sha256") || "";
+/** Verify Shopify HMAC over the **raw** request body bytes using the provided secret. */
+export async function verifyShopifyHmac(
+  headers: Headers,
+  rawBody: ArrayBuffer | Uint8Array,
+  secret: string,
+): Promise<boolean> {
+  const sig =
+    headers.get("X-Shopify-Hmac-Sha256") ||
+    headers.get("x-shopify-hmac-sha256") ||
+    "";
   if (!secret || !sig) return false;
 
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
   const bytes = rawBody instanceof Uint8Array ? rawBody : new Uint8Array(rawBody);
   const mac = await crypto.subtle.sign("HMAC", key, bytes);
   const expected = toBase64(new Uint8Array(mac));
