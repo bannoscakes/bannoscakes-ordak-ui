@@ -17,26 +17,14 @@ async function tryIngest(normalized: unknown) {
 
 serve(async (req) => {
   const url = new URL(req.url);
-feat/functions-orders-transform
-  if (req.method === "GET" && url.pathname.endsWith("/health")) {
-    return new Response("ok", { status: 200 });
-  }
-
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
-
-  const raw = new Uint8Array(await req.arrayBuffer());
-  const secret =
-    Deno.env.get("SHOPIFY_WEBHOOK_SECRET_BANNOS") ||
-    Deno.env.get("SHOPIFY_WEBHOOK_SECRET") ||
-    "";
   if (req.method === "GET" && url.pathname.endsWith("/health")) return new Response("ok", { status: 200 });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
-  // raw bytes once → HMAC
+  // raw once → HMAC on exact bytes
   const raw = new Uint8Array(await req.arrayBuffer());
-  const secret = Deno.env.get("SHOPIFY_WEBHOOK_SECRET_BANNOS") || Deno.env.get("SHOPIFY_WEBHOOK_SECRET") || "";
+  const secret =
+    Deno.env.get("SHOPIFY_WEBHOOK_SECRET_BANNOS") ||
+    Deno.env.get("SHOPIFY_WEBHOOK_SECRET") || "";
   const ok = await verifyShopifyHmac(req.headers, raw, secret);
   if (!ok) return new Response("unauthorized", { status: 401 });
 
@@ -47,14 +35,6 @@ feat/functions-orders-transform
     payload = JSON.parse(bodyText);
   } catch {
     return new Response(JSON.stringify({ ok: false, errors: [{ path: "json", message: "invalid" }] }), {
-feat/functions-orders-transform
-      status: 422,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
-  const result = normalizeShopifyOrder(payload, 'bannos');
-  if ((result as any).ok) { await tryIngest((result as any).normalized); }
       status: 422, headers: { "content-type": "application/json" }
     });
   }
