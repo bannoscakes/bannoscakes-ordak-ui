@@ -10,14 +10,14 @@ serve(async (req: Request) => {
 
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
-  const raw = await req.text();
+  const bodyBytes = new Uint8Array(await req.arrayBuffer());
   const hmac = req.headers.get("x-shopify-hmac-sha256");
 
-  const ok = await verifyShopifyHmac(SECRET, raw, hmac);
+  const ok = await verifyShopifyHmac(SECRET, bodyBytes, hmac);
   if (!ok) return new Response("invalid hmac", { status: 401 });
 
   let payload: any;
-  try { payload = JSON.parse(raw); }
+  try { payload = JSON.parse(new TextDecoder().decode(bodyBytes)); }
   catch {
     return new Response(JSON.stringify({ ok: false, errors: [{ path: 'json', message: 'invalid' }] }), { status: 422, headers: { "content-type": "application/json" } });
   }
