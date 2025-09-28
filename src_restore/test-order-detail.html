@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Order Detail Sizes</title>
+</head>
+<body>
+    <h1>Testing Order Detail Size Display</h1>
+    
+    <h2>Test Cases:</h2>
+    
+    <h3>1. Chocolate Cupcakes (M) → Should show "Standard"</h3>
+    <p>Original: M</p>
+    <p>Product: Chocolate Cupcakes</p>
+    <p>Expected: Standard</p>
+    
+    <h3>2. Custom Wedding Cake (L) → Should show "10-inch Round"</h3>
+    <p>Original: L</p>
+    <p>Product: Custom Wedding Cake</p>
+    <p>Expected: 10-inch Round</p>
+    
+    <h3>3. Chocolate Birthday Cake (M) → Should show "Medium Tall"</h3>
+    <p>Original: M</p>
+    <p>Product: Chocolate Birthday Cake</p>
+    <p>Expected: Medium Tall</p>
+    
+    <h3>4. Flourlane - Fresh Dinner Rolls (M) → Should show "Standard"</h3>
+    <p>Original: M</p>
+    <p>Product: Fresh Dinner Rolls</p>
+    <p>Store: Flourlane</p>
+    <p>Expected: Standard</p>
+    
+    <script>
+        // Test the getRealisticSize function logic
+        function getRealisticSize(originalSize, product, store = "bannos") {
+            if (product.toLowerCase().includes("cupcake")) {
+                return originalSize === 'S' ? 'Mini' : originalSize === 'M' ? 'Standard' : 'Jumbo';
+            } else if (product.toLowerCase().includes("wedding")) {
+                return originalSize === 'S' ? '6-inch Round' : originalSize === 'M' ? '8-inch Round' : '10-inch Round';
+            } else if (product.toLowerCase().includes("birthday") || product.toLowerCase().includes("cake")) {
+                return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium Tall' : '8-inch Round';
+            } else if (store === "flourlane") {
+                // Bread/bakery items
+                return originalSize === 'S' ? 'Small Loaf' : originalSize === 'M' ? 'Standard' : 'Large Batch';
+            }
+            // Default fallback
+            return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium' : 'Large';
+        }
+        
+        // Test cases
+        console.log("Test 1:", getRealisticSize('M', 'Chocolate Cupcakes'));
+        console.log("Test 2:", getRealisticSize('L', 'Custom Wedding Cake'));
+        console.log("Test 3:", getRealisticSize('M', 'Chocolate Birthday Cake'));
+        console.log("Test 4:", getRealisticSize('M', 'Fresh Dinner Rolls', 'flourlane'));
+        
+        // Display results
+        document.body.innerHTML += `
+            <h2>Test Results:</h2>
+            <p>Test 1 Result: ${getRealisticSize('M', 'Chocolate Cupcakes')}</p>
+            <p>Test 2 Result: ${getRealisticSize('L', 'Custom Wedding Cake')}</p>
+            <p>Test 3 Result: ${getRealisticSize('M', 'Chocolate Birthday Cake')}</p>
+            <p>Test 4 Result: ${getRealisticSize('M', 'Fresh Dinner Rolls', 'flourlane')}</p>
+        `;
+    </script>
+</body>
+</html>
