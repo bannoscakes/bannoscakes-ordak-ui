@@ -86,7 +86,6 @@ begin
   returning id into v_id;
 
   -- Best-effort logs (ignore if tables/cols differ)
-  -- best-effort logs (ignore if tables/cols differ)
   begin
     insert into public.api_logs(source, topic, ref, payload)
     values ('shopify','orders/create', v_gid, normalized)
