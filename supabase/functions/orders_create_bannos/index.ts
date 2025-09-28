@@ -20,7 +20,6 @@ serve(async (req) => {
   if (req.method === "GET" && url.pathname.endsWith("/health")) {
     return new Response("ok", { status: 200 });
   }
-
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
@@ -33,6 +32,10 @@ serve(async (req) => {
     "";
   const ok = await verifyShopifyHmac(req.headers, raw, secret);
   if (!ok) return new Response("unauthorized", { status: 401 });
+  const raw = await req.text();
+  const hmac = req.headers.get("x-shopify-hmac-sha256");
+  const ok = await verifyShopifyHmac(SECRET, raw, hmac);
+  if (!ok) return new Response("invalid hmac", { status: 401 });
 
   // Decode the same raw bytes exactly once
   let payload: any;
@@ -44,9 +47,12 @@ serve(async (req) => {
       status: 422,
       headers: { "content-type": "application/json" },
     });
+  try { payload = JSON.parse(raw); }
+  catch {
+    return new Response(JSON.stringify({ ok: false, errors: [{ path: 'json', message: 'invalid' }] }), { status: 422, headers: { "content-type": "application/json" } });
   }
 
-  const result = normalizeShopifyOrder(payload, 'bannos');
+ const result = normalizeShopifyOrder(payload, 'bannos');
   if ((result as any).ok) { await tryIngest((result as any).normalized); }
   const status = (result as any).ok ? 200 : 422;
   return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
