@@ -35,7 +35,9 @@ feat/functions-orders-transform
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
   const raw = new Uint8Array(await req.arrayBuffer());
-  const secret = Deno.env.get("SHOPIFY_WEBHOOK_SECRET_FLOURLANE") || Deno.env.get("SHOPIFY_WEBHOOK_SECRET") || "";
+  const secret =
+    Deno.env.get("SHOPIFY_WEBHOOK_SECRET_FLOURLANE") ||
+    Deno.env.get("SHOPIFY_WEBHOOK_SECRET") || "";
   const ok = await verifyShopifyHmac(req.headers, raw, secret);
   if (!ok) return new Response("unauthorized", { status: 401 });
 

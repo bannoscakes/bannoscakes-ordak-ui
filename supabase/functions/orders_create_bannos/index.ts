@@ -20,7 +20,9 @@ serve(async (req) => {
   if (req.method === "GET" && url.pathname.endsWith("/health")) return new Response("ok", { status: 200 });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
+feat/functions-orders-transform
   // raw once → HMAC on exact bytes
+
   const raw = new Uint8Array(await req.arrayBuffer());
   const secret =
     Deno.env.get("SHOPIFY_WEBHOOK_SECRET_BANNOS") ||
@@ -28,7 +30,6 @@ serve(async (req) => {
   const ok = await verifyShopifyHmac(req.headers, raw, secret);
   if (!ok) return new Response("unauthorized", { status: 401 });
 
-  // decode same bytes once → JSON
   let payload: any;
   try {
     const bodyText = new TextDecoder("utf-8").decode(raw);
@@ -44,3 +45,4 @@ serve(async (req) => {
   const status = (result as any).ok ? 200 : 422;
   return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
 });
+  

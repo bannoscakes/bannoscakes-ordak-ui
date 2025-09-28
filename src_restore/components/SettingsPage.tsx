@@ -101,16 +101,23 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setHasUnsavedChanges(true);
   };
 
+feat/functions-orders-transform
   const handleTestConnection = async () => {
     if (!settings.shopifyToken.trim()) {
       toast.error("Please enter a Storefront Access Token");
       return;
+
+  const handleTestConnection = async (): Promise<boolean> => {
+    if (!settings.shopifyToken.trim()) {
+      toast.error("Please enter a Storefront Access Token");
+      return false;
     }
 
     setIsConnecting(true);
     setConnectionStatus('idle');
     
     // Simulate API call
+feat/functions-orders-transform
     setTimeout(() => {
       const success = settings.shopifyToken.length > 10; // Mock validation
       setConnectionStatus(success ? 'success' : 'error');
@@ -123,6 +130,18 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         toast.error("Connection failed. Check token and permissions.");
       }
     }, 2000);
+    await new Promise<void>((resolve) => setTimeout(resolve, 2000));
+    const success = settings.shopifyToken.length > 10; // Mock validation
+    setConnectionStatus(success ? 'success' : 'error');
+    setIsConnecting(false);
+    
+    if (success) {
+      toast.success("Connected successfully");
+      setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
+    } else {
+      toast.error("Connection failed. Check token and permissions.");
+    }
+    return success;
   };
 
   const handleConnectAndSync = async () => {
