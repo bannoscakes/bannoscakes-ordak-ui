@@ -2,8 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { get_queue } from "@/lib/rpc";
-import type { MockOrder } from "@/mocks/mock-data";
+import { fetchUnassignedCounts } from "@/lib/queue.data";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
@@ -54,21 +53,14 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
     async function loadUnassignedCounts() {
       setLoading(true);
       try {
-        const orders = await get_queue();
+        const data = await fetchUnassignedCounts(store);
         
-        // Filter orders for this store that are unassigned
-        const storeOrders = orders.filter((order: MockOrder) => 
-          (store === 'bannos' ? order.id.startsWith('bannos') : order.id.startsWith('flourlane')) &&
-          order.assignee_id === null &&
-          order.stage !== 'Complete'
-        );
-        
-        // Count by stage
+        // Transform the RPC data to our expected format
         const counts = {
-          filling: storeOrders.filter(o => o.stage === 'Filling').length,
-          covering: storeOrders.filter(o => o.stage === 'Covering').length,
-          decorating: storeOrders.filter(o => o.stage === 'Decorating').length,
-          packing: storeOrders.filter(o => o.stage === 'Packing').length
+          filling: data.find(d => d.stage === 'Filling_pending')?.count || 0,
+          covering: data.find(d => d.stage === 'Covering_pending')?.count || 0,
+          decorating: data.find(d => d.stage === 'Decorating_pending')?.count || 0,
+          packing: data.find(d => d.stage === 'Packing_in_progress')?.count || 0
         };
         
         const stationData: Station[] = [
