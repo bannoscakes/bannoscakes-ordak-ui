@@ -17,20 +17,11 @@ async function tryIngest(normalized: unknown) {
 
 serve(async (req) => {
   const url = new URL(req.url);
-  if (req.method === "GET" && url.pathname.endsWith("/health")) {
-    return new Response("ok", { status: 200 });
-  }
-
-fix/webhook-hmac-raw
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
+  if (req.method === "GET" && url.pathname.endsWith("/health")) return new Response("ok", { status: 200 });
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
   const raw = new Uint8Array(await req.arrayBuffer());
-  const secret =
-    Deno.env.get("SHOPIFY_WEBHOOK_SECRET_FLOURLANE") ||
-    Deno.env.get("SHOPIFY_WEBHOOK_SECRET") ||
-    "";
+  const secret = Deno.env.get("SHOPIFY_WEBHOOK_SECRET_FLOURLANE") || Deno.env.get("SHOPIFY_WEBHOOK_SECRET") || "";
   const ok = await verifyShopifyHmac(req.headers, raw, secret);
   if (!ok) return new Response("unauthorized", { status: 401 });
 
@@ -40,23 +31,13 @@ fix/webhook-hmac-raw
     payload = JSON.parse(bodyText);
   } catch {
     return new Response(JSON.stringify({ ok: false, errors: [{ path: "json", message: "invalid" }] }), {
-      status: 422,
-      headers: { "content-type": "application/json" },
+      status: 422, headers: { "content-type": "application/json" }
     });
-  const raw = await req.text();
-  const hmac = req.headers.get("x-shopify-hmac-sha256");
-
-  const ok = await verifyShopifyHmac(SECRET, raw, hmac);
-  if (!ok) return new Response("invalid hmac", { status: 401 });
-
-  let payload: any;
-  try { payload = JSON.parse(raw); }
-  catch {
-    return new Response(JSON.stringify({ ok: false, errors: [{ path: 'json', message: 'invalid' }] }), { status: 422, headers: { "content-type": "application/json" } });
   }
 
-  const result = normalizeShopifyOrder(payload, 'flourlane');
-  if ((result as any).ok) { await tryIngest((result as any).normalized); }
+  const result = normalizeShopifyOrder(payload, "flourlane");
+  if ((result as any).ok) await tryIngest((result as any).normalized);
+
   const status = (result as any).ok ? 200 : 422;
   return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
 });
