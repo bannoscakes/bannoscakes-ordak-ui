@@ -61,4 +61,3 @@ feat/functions-orders-transform
   if ((result as any).ok) await tryIngest((result as any).normalized);
   const status = (result as any).ok ? 200 : 422;
   return new Response(JSON.stringify(result), { status, headers: { "content-type": "application/json" } });
-});
