@@ -1,34 +1,37 @@
 -- 008_ingest_order_rpc.sql
 -- NOTE: Do NOT redefine settings_get_bool here. We already installed the robust jsonb/store version.
 
+-- Drop any older/conflicting signatures first (idempotent)
+drop function if exists public.ingest_order(text, jsonb, jsonb);
+drop function if exists public.ingest_order(jsonb, jsonb);
+
 ---------------------------------------
--- Main function: ingest_order(payload)
+-- MAIN: accepts payload or normalized via optional args
 ---------------------------------------
-create or replace function public.ingest_order(payload jsonb)
+create function public.ingest_order(payload jsonb default null,
+                                   normalized jsonb default null)
 returns void
 language plpgsql
 security definer
+set search_path = pg_temp, public
 as $$
 declare
   v_enabled boolean := public.settings_get_bool('global','ingest', false);
+  v_work_payload jsonb;
 
   -- route
-  v_shop_domain text := coalesce(payload->>'shop_domain', payload->>'domain', payload->'shop'->>'domain');
+  v_shop_domain text;
   v_store       text;
 
   -- ids
-  v_gid             text := payload->>'admin_graphql_api_id';
-  v_shopify_id      text := payload->>'id';
-  v_order_number    text := coalesce(payload->>'order_number', payload->>'name');
+  v_gid             text;
+  v_shopify_id      text;
+  v_order_number    text;
   v_human_id        text;
 
   -- customer / notes
-  v_customer_name   text := coalesce(
-                          payload->'shipping_address'->>'name',
-                          payload->'customer'->>'name',
-                          trim(concat_ws(' ', payload->'customer'->>'first_name', payload->'customer'->>'last_name'))
-                        );
-  v_notes           text := coalesce(payload->>'note','');
+  v_customer_name   text;
+  v_notes           text;
   v_delivery_instr  text;
 
   -- delivery
@@ -39,9 +42,8 @@ declare
   v_delivery_date   date;
 
   -- money
-  v_currency        text := coalesce(payload->>'presentment_currency', payload->>'currency');
-  v_total_amount    numeric(12,2) := coalesce(nullif(payload->>'current_total_price','')::numeric,
-                                             nullif(payload->>'total_price','')::numeric, 0);
+  v_currency        text;
+  v_total_amount    numeric(12,2);
 
   -- primary line item (non-gift, qty>0)
   v_line            jsonb;
@@ -51,6 +53,29 @@ declare
 begin
   -- feature flag
   if not v_enabled then return; end if;
+
+  -- Use normalized if provided, otherwise use payload
+  v_work_payload := coalesce(normalized, payload);
+  if v_work_payload is null then
+    raise exception 'Either payload or normalized must be provided';
+  end if;
+
+  -- Extract values from working payload
+  v_shop_domain := coalesce(v_work_payload->>'shop_domain', v_work_payload->>'domain', v_work_payload->'shop'->>'domain');
+  v_gid := v_work_payload->>'admin_graphql_api_id';
+  v_shopify_id := v_work_payload->>'id';
+  v_order_number := coalesce(v_work_payload->>'order_number', v_work_payload->>'name');
+  
+  v_customer_name := coalesce(
+    v_work_payload->'shipping_address'->>'name',
+    v_work_payload->'customer'->>'name',
+    trim(concat_ws(' ', v_work_payload->'customer'->>'first_name', v_work_payload->'customer'->>'last_name'))
+  );
+  v_notes := coalesce(v_work_payload->>'note','');
+  
+  v_currency := coalesce(v_work_payload->>'presentment_currency', v_work_payload->>'currency');
+  v_total_amount := coalesce(nullif(v_work_payload->>'current_total_price','')::numeric,
+                            nullif(v_work_payload->>'total_price','')::numeric, 0);
 
   -- store routing
   v_store := case
@@ -73,7 +98,7 @@ begin
   -- primary line item: first non-gift with qty > 0
   select li
   into v_line
-  from jsonb_array_elements(coalesce(payload->'line_items','[]'::jsonb)) li
+  from jsonb_array_elements(coalesce(v_work_payload->'line_items','[]'::jsonb)) li
   where coalesce((li->>'gift_card')::boolean, false) = false
     and coalesce((li->>'quantity')::int, 0) > 0
   limit 1;
@@ -116,7 +141,7 @@ begin
 
   -- delivery method (attributes first)
   select na->>'value' into v_method_raw
-  from jsonb_path_query(payload, '$.note_attributes[*] ? (@.name != null)') as na
+  from jsonb_path_query(v_work_payload, '$.note_attributes[*] ? (@.name != null)') as na
   where lower(na->>'name') in ('delivery method','pickup or delivery')
   limit 1;
 
@@ -129,7 +154,7 @@ begin
 
   -- due date: part before "between"
   select na->>'value' into v_due_raw
-  from jsonb_path_query(payload, '$.note_attributes[*] ? (@.name != null)') as na
+  from jsonb_path_query(v_work_payload, '$.note_attributes[*] ? (@.name != null)') as na
   where lower(na->>'name') in ('local delivery date and time','delivery date','pickup date')
   limit 1;
 
@@ -148,7 +173,7 @@ begin
 
   -- notes aggregation: note + delivery instructions (joined with " • ")
   select na->>'value' into v_delivery_instr
-  from jsonb_path_query(payload, '$.note_attributes[*] ? (@.name != null)') as na
+  from jsonb_path_query(v_work_payload, '$.note_attributes[*] ? (@.name != null)') as na
   where lower(na->>'name') = 'delivery instructions'
   limit 1;
 
@@ -189,21 +214,25 @@ begin
     v_notes,
     v_currency,
     v_total_amount,
-    payload
+    v_work_payload
   )
   on conflict (shopify_order_gid) do nothing;
 end
 $$;
 
 -------------------------------------------------------------
--- Wrapper overload for legacy callers: ingest_order(text, jsonb)
+-- LEGACY WRAPPER: p_shop_domain + body
 -------------------------------------------------------------
-create or replace function public.ingest_order(p_shop_domain text, p_payload jsonb)
+create or replace function public.ingest_order(p_shop_domain text,
+                                              payload jsonb default null,
+                                              normalized jsonb default null)
 returns void
 language sql
 security definer
+set search_path = pg_temp, public
 as $$
   select public.ingest_order(
-    coalesce(p_payload, '{}'::jsonb) || jsonb_build_object('shop_domain', p_shop_domain)
+    coalesce(payload, normalized) || jsonb_build_object('shop_domain', p_shop_domain),
+    null
   );
 $$;
