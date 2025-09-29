@@ -1,7 +1,5 @@
 -- 008_ingest_order_rpc.sql
 -- NOTE: Do NOT redefine settings_get_bool here. We already installed the robust jsonb/store version.
-
-feat/sql-011-unified-rpc
 -- Drop any older/conflicting signatures first (idempotent)
 drop function if exists public.ingest_order(text, jsonb, jsonb);
 drop function if exists public.ingest_order(jsonb, jsonb);
@@ -84,7 +82,6 @@ declare
   v_item_qty        integer;
   v_flavour         text;
 begin
-feat/sql-011-unified-rpc
   -- feature flag
   if not v_enabled then return; end if;
 
@@ -202,8 +199,6 @@ feat/sql-011-unified-rpc
       else 'delivery'
     end;
   end if;
-
- feat/sql-011-unified-rpc
   -- due date: part before "between"
   select na->>'value' into v_due_raw
   from jsonb_path_query(v_work_payload, '$.note_attributes[*] ? (@.name != null)') as na
@@ -328,8 +323,6 @@ feat/sql-011-unified-rpc
   )
   on conflict (shopify_order_gid) do nothing;
   get diagnostics v_rows = row_count;
-
-feat/sql-011-unified-rpc
   return query
   select
     v_human_id::text as id,
