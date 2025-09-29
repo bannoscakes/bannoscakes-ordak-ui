@@ -1,9 +1,41 @@
 -- 008_ingest_order_rpc.sql
 -- NOTE: Do NOT redefine settings_get_bool here. We already installed the robust jsonb/store version.
 
+feat/sql-011-unified-rpc
 -- Drop any older/conflicting signatures first (idempotent)
 drop function if exists public.ingest_order(text, jsonb, jsonb);
 drop function if exists public.ingest_order(jsonb, jsonb);
+
+-- Helper: read boolean feature flags from `settings` table
+-- Read feature flags from settings
+-- Helper: read boolean feature flags from settings
+create or replace function public.settings_get_bool(scope text, k text, default_value boolean)
+returns boolean
+language sql
+stable
+as $$
+  select coalesce((
+    select case lower(value)
+           when '1' then true when 'true' then true when 'yes' then true when 'on' then true
+           else false end
+    select case
+             when lower(value) in ('1','true','yes','on') then true
+             else false
+           end
+    from public.settings s
+    where s.scope = scope and s.key = k
+    limit 1
+  ), default_value);
+$$;
+
+-- Idempotency support (won't error if already there)
+create unique index if not exists orders_shopify_gid_uidx on public.orders (shopify_order_gid);
+
+-- Ingest RPC (SECURITY DEFINER; executes even with RLS later)
+-- Idempotency support (no error if it already exists)
+-- Idempotency support (no error if already present)
+create unique index if not exists orders_shopify_gid_uidx on public.orders (shopify_order_gid);
+
 
 ---------------------------------------
 -- MAIN: accepts payload or normalized via optional args
@@ -52,6 +84,7 @@ declare
   v_item_qty        integer;
   v_flavour         text;
 begin
+feat/sql-011-unified-rpc
   -- feature flag
   if not v_enabled then return; end if;
 
@@ -138,6 +171,23 @@ begin
     if position('/' in v_flavour) > 0 then
       v_flavour := split_part(v_flavour, '/', 1);
     end if;
+
+  -- Feature gate: do nothing if switched off
+  -- Feature gate: do nothing if disabled
+  if not v_enabled then
+    return;
+  end if;
+
+  if coalesce(v_gid, '') = '' then
+    raise exception 'missing shopify_order_gid';
+  end if;
+
+  -- Dedup
+  if coalesce(v_gid,'') = '' then
+  -- Single validation (remove duplicates)
+  if v_gid is null or v_gid = '' then
+    raise exception 'missing shopify_order_gid';
+
   end if;
 
   -- delivery method (attributes first)
@@ -153,6 +203,7 @@ begin
     end;
   end if;
 
+ feat/sql-011-unified-rpc
   -- due date: part before "between"
   select na->>'value' into v_due_raw
   from jsonb_path_query(v_work_payload, '$.note_attributes[*] ? (@.name != null)') as na
@@ -171,6 +222,64 @@ begin
       end;
     end;
   end if;
+
+  -- Insert minimal, safe set of fields (match your schema)
+  -- Insert minimal, schema-safe fields
+  insert into public.orders
+    (id, store, shopify_order_id, shopify_order_gid, shopify_order_number,
+     customer_name, product_title, flavour, notes, currency, total_amount,
+     order_json, due_date, delivery_method, stage, priority)
+  values
+    (v_id,
+     v_store,
+     nullif(normalized->>'shopify_order_id','')::bigint,
+     v_gid,
+     nullif(normalized->>'shopify_order_number',''),
+     nullif(normalized->>'customer_name',''),
+     nullif(normalized->>'product_title',''),
+     coalesce(normalized->>'flavour',''),
+     coalesce(normalized->>'notes',''),
+     coalesce(normalized->>'currency',''),
+     coalesce((normalized->>'total_amount')::numeric, 0),
+     normalized,
+     nullif(normalized->>'due_date','')::date,
+     nullif(normalized->>'delivery_method',''),
+     'Filling_pending',
+     nullif(normalized->>'priority',''))
+  returning id into v_id;
+
+  -- Best-effort logs (ignore if tables/cols differ)
+  -- Best-effort logs (tables/cols may not exist → swallow)
+  begin
+    insert into public.api_logs(source, topic, ref, payload)
+    values ('shopify','orders/create', v_gid, normalized)
+    on conflict do nothing;
+  exception when others then
+    -- ignore
+  end;
+  exception when others then end;
+    null;
+  end;
+
+  begin
+    insert into public.audit_log(kind, ref, detail)
+    values ('ingest_order', v_id, jsonb_build_object('gid', v_gid))
+    on conflict do nothing;
+  exception when others then
+    -- ignore
+  end;
+
+  -- Initial stage_event (optional, ignore if table/cols differ)
+  begin
+    insert into public.stage_events(order_id, stage, event, at)
+    values (v_id, 'Filling', 'pending', now());
+  exception when others then
+    -- ignore
+  end;
+  exception when others then end;
+    null;
+  end;
+
 
   -- notes aggregation: note + delivery instructions (joined with " • ")
   select na->>'value' into v_delivery_instr
@@ -220,6 +329,7 @@ begin
   on conflict (shopify_order_gid) do nothing;
   get diagnostics v_rows = row_count;
 
+feat/sql-011-unified-rpc
   return query
   select
     v_human_id::text as id,
@@ -243,3 +353,4 @@ as $$
     null
   );
 $$;
+
