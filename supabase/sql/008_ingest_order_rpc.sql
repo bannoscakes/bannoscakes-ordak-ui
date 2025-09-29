@@ -10,14 +10,15 @@ drop function if exists public.ingest_order(jsonb, jsonb);
 ---------------------------------------
 create function public.ingest_order(payload jsonb default null,
                                    normalized jsonb default null)
-returns void
+returns table(id text, dedup boolean)
 language plpgsql
 security definer
-set search_path = pg_temp, public
+set search_path = public
 as $$
 declare
   v_enabled boolean := public.settings_get_bool('global','ingest', false);
   v_work_payload jsonb;
+  v_rows integer;
 
   -- route
   v_shop_domain text;
@@ -217,6 +218,12 @@ begin
     v_work_payload
   )
   on conflict (shopify_order_gid) do nothing;
+  get diagnostics v_rows = row_count;
+
+  return query
+  select
+    v_human_id::text as id,
+    (v_rows = 0) as dedup;
 end
 $$;
 
@@ -226,12 +233,12 @@ $$;
 create or replace function public.ingest_order(p_shop_domain text,
                                               payload jsonb default null,
                                               normalized jsonb default null)
-returns void
+returns table(id text, dedup boolean)
 language sql
 security definer
-set search_path = pg_temp, public
+set search_path = public
 as $$
-  select public.ingest_order(
+  select * from public.ingest_order(
     coalesce(payload, normalized) || jsonb_build_object('shop_domain', p_shop_domain),
     null
   );
