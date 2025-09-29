@@ -13,7 +13,11 @@ end$$;
 -- Backfill existing rows (safe if table empty)
 update public.orders
 set human_id = store::text || '-' ||
-               coalesce(order_number::text, shopify_order_number::text, shopify_order_id::text)
+               coalesce(
+                 nullif(order_number::text, ''),
+                 nullif(shopify_order_number::text, ''),
+                 shopify_order_id::text
+               )
 where human_id is null or human_id = '';
 
 -- Trigger function to keep human_id correct on insert/update
@@ -23,7 +27,11 @@ language plpgsql
 as $$
 begin
   new.human_id := new.store::text || '-' ||
-                  coalesce(new.order_number::text, new.shopify_order_number::text, new.shopify_order_id::text);
+                  coalesce(
+                    nullif(new.order_number::text, ''),
+                    nullif(new.shopify_order_number::text, ''),
+                    new.shopify_order_id::text
+                  );
   return new;
 end
 $$;
