@@ -1,2 +1,2 @@
 export { getSupabase, supabase } from './supabase';
-export default supabase;
+export { supabase as default } from './supabase';

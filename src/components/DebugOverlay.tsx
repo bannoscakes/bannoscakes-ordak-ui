@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import QueueDebug from '../features/queue/QueueDebug';
-import EnvBadge from './EnvBadge.tsx';
+import EnvBadge from './EnvBadge';
 
 export default function DebugOverlay() {
   const el = (
