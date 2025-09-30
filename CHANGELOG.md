@@ -58,6 +58,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [v0.2.0-beta] - 2025-01-30 - Complete Database & UI Integration
+
+### 🎉 Major Features Added
+- **Complete Database Schema**: Separate `orders_bannos` and `orders_flourlane` tables with proper relationships
+- **Production RPC Functions**: `get_queue_minimal`, `get_unassigned_counts`, `get_complete_minimal` with full pagination support
+- **Shopify Webhook Integration**: `ingest_order` RPC function with deduplication and store routing
+- **Real-time UI Integration**: All components now use live Supabase data instead of mocks
+- **Human ID Generation**: Automatic `bannos-12345` and `flourlane-67890` ID generation via triggers
+- **Priority System**: Enum-based priority levels (High, Medium, Low) with proper database constraints
+
+### 🗄️ Database Changes
+- **New Tables**: `orders_bannos`, `orders_flourlane`, `staff_shared` with complete field mapping
+- **New Enums**: `stage_type` (Filling, Covering, Decorating, Packing, Complete), `priority_level` (High, Medium, Low)
+- **New Views**: `vw_queue_minimal`, `vw_unassigned_counts`, `vw_complete_minimal` for UI data access
+- **New Triggers**: Human ID generation and `updated_at` timestamp management
+- **New Indexes**: Performance-optimized indexes for queue ordering, unassigned counts, and date queries
+
+### 🔧 RPC Functions
+- **`get_queue_minimal(p_store, p_stage, p_limit, p_offset)`**: Paginated queue data with filtering
+- **`get_unassigned_counts(p_store)`**: Unassigned order counts by store and stage
+- **`get_complete_minimal(p_store, p_limit)`**: Completed orders with pagination
+- **`ingest_order(normalized)`**: Shopify webhook order ingestion with deduplication
+
+### 💻 UI Improvements
+- **Type Safety**: Updated TypeScript types to match database schema exactly
+- **Real Data**: Removed all mock data dependencies, using live Supabase RPCs
+- **Performance**: Optimized data fetching with proper pagination and filtering
+- **Error Handling**: Robust error handling for all RPC calls
+
+### 🧪 Testing & Verification
+- **End-to-End Testing**: Complete verification of data flow from webhook to UI
+- **Sample Data**: Test orders for both Bannos and Flourlane stores
+- **Schema Validation**: All database constraints and relationships verified
+- **RPC Testing**: All functions tested with various parameters and edge cases
+
+### 📁 New Files
+- `supabase/sql/001_orders_core.sql` - Core database schema
+- `supabase/sql/002_orders_human_id_trigger.sql` - Human ID generation
+- `supabase/sql/003_orders_views.sql` - UI data views
+- `supabase/sql/004_rpc_functions.sql` - Production RPC functions
+- `supabase/sql/test_schema.sql` - Test data and verification scripts
+
+### 🔄 Breaking Changes
+- **Removed Mock System**: All mock data and RPC implementations removed
+- **Updated Types**: `Stage` type simplified from `Filling_pending` to `Filling`
+- **Database Schema**: Single `orders` table replaced with separate store tables
+- **RPC Signatures**: Updated function parameters to match database schema
+
+### ✅ Completed PRs
+- **PR #1**: Database Foundation - Separate store tables and core schema
+- **PR #2**: RPC Functions - Data access layer with pagination
+- **PR #3**: Ingest RPC - Shopify webhook integration
+- **PR #4**: UI Integration - Connect components to real data
+- **PR #5**: Testing - End-to-end verification and validation
+
+### 🚀 Production Ready
+- **Webhook Integration**: Ready to receive real Shopify orders
+- **Data Flow**: Complete order lifecycle from creation to completion
+- **Performance**: Optimized queries and proper indexing
+- **Security**: All database operations through SECURITY DEFINER RPCs
+- **Monitoring**: Comprehensive error handling and logging
+
+---
+
+## [v0.1.0-alpha] - 2025-01-15 - Clean Implementation
+
 ### Added
 - chore(supabase): add minimal client in `src/lib/supabase.ts`
 - chore(rpc): add scaffolded real RPC module (same signatures; throws until implemented)
