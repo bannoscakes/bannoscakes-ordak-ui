@@ -116,24 +116,24 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 3: Scanner & Stage Management RPCs
+## 🗂️ Phase 3: Scanner & Stage Management RPCs ✅
 
 ### Branch: `feat/scanner-stage-rpcs`
 **Priority:** Critical  
-**Estimate:** 3-4 days
+**Estimate:** 3-4 days  
+**Status:** ✅ COMPLETED
 
 #### Tasks:
-- [ ] `handle_print_barcode` - Print barcode and start filling stage
-- [ ] `complete_filling` - Complete filling stage
-- [ ] `complete_covering` - Complete covering stage
-- [ ] `complete_decorating` - Complete decorating stage
-- [ ] `start_packing` - Start packing stage
-- [ ] `complete_packing` - Complete packing stage
-- [ ] `qc_return_to_decorating` - QC return to decorating
-- [ ] `get_order_for_scan` - Lookup order by barcode/scan
-- [ ] Compatibility wrappers (`print_barcode`, `complete_stage`)
-- [ ] Test all stage transitions
-- [ ] Update ScannerOverlay component
+- [x] `handle_print_barcode` - Print barcode and start filling stage
+- [x] `complete_filling` - Complete filling stage
+- [x] `complete_covering` - Complete covering stage
+- [x] `complete_decorating` - Complete decorating stage
+- [x] `start_packing` - Start packing stage
+- [x] `complete_packing` - Complete packing stage
+- [x] `qc_return_to_decorating` - QC return to decorating
+- [x] `get_order_for_scan` - Lookup order by barcode/scan
+- [x] Compatibility wrappers (`print_barcode`, `complete_stage`)
+- [x] Test all stage transitions
 
 #### Acceptance Criteria:
 - All stage transitions working correctly
