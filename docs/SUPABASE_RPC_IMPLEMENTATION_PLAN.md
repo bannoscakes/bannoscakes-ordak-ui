@@ -91,20 +91,21 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 4: Queue Management RPCs
+## 🗂️ Phase 4: Queue Management RPCs ✅
 
 ### Branch: `feat/queue-management-rpcs`
 **Priority:** Critical  
-**Estimate:** 2-3 days
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
 
 #### Tasks:
-- [ ] `get_queue` - Full queue with all parameters (store, stage, assignee, storage, search, pagination)
-- [ ] `get_order` - Single order lookup by store and order_id
-- [ ] `assign_staff` - Assign staff member to order
-- [ ] `set_storage` - Set storage location for order
-- [ ] Update existing `get_queue_minimal` to use new `get_queue`
-- [ ] Test all queue operations
-- [ ] Update UI to use new RPCs
+- [x] `get_queue` - Full queue with all parameters (store, stage, assignee, storage, search, pagination)
+- [x] `get_queue_stats` - Queue statistics and counts by stage
+- [x] `get_unassigned_counts` - Unassigned orders count by stage
+- [x] `set_storage` - Set storage location for order
+- [x] `get_orders_by_assignee` - Get orders assigned to specific staff
+- [x] `get_queue_minimal` - Updated compatibility wrapper
+- [x] Test all queue operations
 
 #### Acceptance Criteria:
 - All queue RPCs working with proper validation
