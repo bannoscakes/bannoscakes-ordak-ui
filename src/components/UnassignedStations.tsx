@@ -2,7 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fetchUnassignedCounts } from "@/lib/queue.data";
+import { getUnassignedCounts } from "../lib/rpc-client";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
@@ -53,15 +53,14 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
     async function loadUnassignedCounts() {
       setLoading(true);
       try {
-        const data = await fetchUnassignedCounts(store);
+        const data = await getUnassignedCounts(store);
         
         // Transform the RPC data to our expected format
         const counts = {
-          filling: data.find(d => d.stage === 'Filling_pending')?.count || 0,
-          covering: data.find(d => d.stage === 'Covering_pending')?.count || 0,
-          decorating: data.find(d => d.stage === 'Decorating_pending')?.count || 0,
-          // Packing should reflect UNASSIGNED work → use pending (or normalized "packing")
-          packing: data.find(d => d.stage === 'Packing_pending')?.count || 0
+          filling: data.find(d => d.stage === 'Filling')?.count || 0,
+          covering: data.find(d => d.stage === 'Covering')?.count || 0,
+          decorating: data.find(d => d.stage === 'Decorating')?.count || 0,
+          packing: data.find(d => d.stage === 'Packing')?.count || 0
         };
         
         const stationData: Station[] = [
