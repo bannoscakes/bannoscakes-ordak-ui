@@ -1,6 +1,7 @@
 import { TrendingUp, CheckCircle, Clock, Zap } from "lucide-react";
 import { Card } from "./ui/card";
 import { useEffect, useState } from "react";
+import { getQueueStats } from "../lib/rpc-client";
 
 interface MetricCardsProps {
   store: "bannos" | "flourlane";
@@ -21,10 +22,61 @@ export function MetricCards({ store }: MetricCardsProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Implement real data fetching
-    // fetchStoreMetrics(store).then(setMetrics);
-    setLoading(false);
+    fetchMetrics();
   }, [store]);
+
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch real stats from Supabase
+      const stats = await getQueueStats(store);
+      
+      if (stats) {
+        const metricsData: Metric[] = [
+          {
+            title: "Total Orders",
+            value: stats.total_orders?.toString() || "0",
+            subtitle: `${stats.unassigned_count || 0} unassigned`,
+            icon: TrendingUp,
+            bg: "bg-blue-50",
+            iconColor: "text-blue-600"
+          },
+          {
+            title: "Completed",
+            value: stats.complete_count?.toString() || "0",
+            subtitle: `${stats.high_priority_count || 0} high priority`,
+            icon: CheckCircle,
+            bg: "bg-green-50",
+            iconColor: "text-green-600"
+          },
+          {
+            title: "In Production",
+            value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
+            subtitle: `${stats.overdue_count || 0} overdue`,
+            icon: Clock,
+            bg: "bg-orange-50",
+            iconColor: "text-orange-600"
+          },
+          {
+            title: "By Stage",
+            value: `${stats.filling_count || 0}/${stats.decorating_count || 0}`,
+            subtitle: "Filling/Decorating",
+            icon: Zap,
+            bg: "bg-purple-50",
+            iconColor: "text-purple-600"
+          }
+        ];
+        
+        setMetrics(metricsData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+      setMetrics([]); // Will show default metrics
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Default metric structure for when no data is available
   const defaultMetrics: Metric[] = [
