@@ -1,13 +1,165 @@
+## [v0.3.0-beta] - 2025-10-01 - Complete RPC Implementation
 
-printf "\n- feat(ui): default queue source → vw_queue_minimal (legacy alias remains)\n" >> CHANGELOG.md
-git add CHANGELOG.md
-git commit -m "chore(changelog): note default queue source update"
-git push
+### 🎯 Overview
+Complete implementation of all critical RPC functions across 9 phases, providing a comprehensive backend API for the production management system. This release includes 50+ RPC functions covering queue management, order lifecycle, staff management, inventory tracking, and settings.
 
-- feat(ui): QueueDebug uses RPC-first data module (queue.data.ts)
-- functions(webhooks): HMAC-only skeleton for orders_create (bannos/flourlane)
-- sql(007): read-only scan lookup RPC (get_order_for_scan) — installed and verified
--feat(ui): switch reads from views to read-only RPCs (get_queue_minimal / get_unassigned_counts / get_complete_minimal)
+### ✅ Phase 1: Database Infrastructure
+- **New Tables**: `staff_shifts`, `settings`, `components`, `stage_events`, `audit_log`
+- **Helper Functions**: `check_user_role()`, `get_user_role()`, `settings_get_bool()`
+- **RLS Policies**: Row-level security on all tables
+- **Indexes**: Optimized for performance
+- **File**: `supabase/sql/005_database_infrastructure.sql`
+
+### ✅ Phase 2: Staff Management RPCs  
+- `get_staff_list()` - Get all staff with filtering
+- `get_staff_member()` - Get individual staff details
+- `upsert_staff_member()` - Create/update staff
+- `deactivate_staff_member()` - Soft delete staff
+- `start_shift()` / `end_shift()` - Shift management
+- `get_current_shift()` / `get_shift_history()` - Shift tracking
+- `start_break()` / `end_break()` - Break management
+- **File**: `supabase/sql/006_staff_management_rpcs.sql`
+
+### ✅ Phase 3: Order Management RPCs
+- `assign_staff()` / `unassign_staff()` - Staff assignment
+- `move_to_next_stage()` / `move_to_stage()` - Stage progression
+- `update_order_notes()` - Update order notes
+- `update_order_priority()` - Change priority level
+- `update_order_due_date()` - Update due date
+- `get_order()` - Get single order with assignee details
+- **File**: `supabase/sql/007_order_management_rpcs.sql`
+
+### ✅ Phase 4: Queue Management RPCs
+- `get_queue()` - Enhanced queue with filtering, pagination, search, sorting (10 parameters)
+- `get_queue_stats()` - Queue statistics and counts by stage
+- `get_unassigned_counts()` - Unassigned orders count by stage
+- `set_storage()` - Set storage location
+- `get_orders_by_assignee()` - Get orders assigned to specific staff
+- `get_queue_minimal()` - Updated compatibility wrapper
+- **Multi-store support** for both Bannos and Flourlane
+- **File**: `supabase/sql/008_queue_management_rpcs.sql`
+
+### ✅ Phase 5: Scanner & Stage Management RPCs
+- `handle_print_barcode()` - Print barcode and start filling stage
+- `complete_filling()` / `complete_covering()` / `complete_decorating()` - Stage completion
+- `start_packing()` / `complete_packing()` - Packing workflow
+- `qc_return_to_decorating()` - QC return workflow (Supervisor only)
+- `get_order_for_scan()` - Lookup order by barcode
+- `print_barcode()` / `complete_stage()` - Compatibility wrappers
+- **Barcode format**: `STORE-HUMAN_ID` (e.g., `BANNOS-00001`)
+- **File**: `supabase/sql/009_scanner_stage_rpcs.sql`
+
+### ✅ Phase 6: Inventory Management RPCs
+- `get_components()` - Get all components with filtering
+- `get_component()` - Get single component by ID or SKU
+- `upsert_component()` - Create/update components
+- `update_component_stock()` - Update stock levels with audit trail
+- `get_low_stock_components()` - Get components below minimum stock
+- `get_inventory_value()` - Total inventory value and category summary
+- `bulk_update_component_stock()` - Update multiple components
+- `deactivate_component()` - Soft delete components
+- **File**: `supabase/sql/010_inventory_management_rpcs.sql`
+
+### ✅ Phase 7: Settings Management RPCs
+- `get_settings()` / `get_setting()` - Get store settings
+- `set_setting()` / `delete_setting()` - Manage settings
+- `get_flavours()` / `set_flavours()` - Manage available flavours
+- `get_storage_locations()` / `set_storage_locations()` - Manage storage locations
+- `get_monitor_density()` / `set_monitor_density()` - Monitor settings
+- `get_settings_printing()` / `set_settings_printing()` - Printing configuration
+- **Store-specific** or global settings with JSON values
+- **File**: `supabase/sql/011_settings_management_rpcs.sql`
+
+### ✅ Phase 8: Complete Grid & Order Management RPCs
+- `get_complete()` - Get completed orders with filtering, date range, search, sorting
+- `update_order_core()` - Update order core fields (customer, product, flavour, notes, etc.)
+- `get_complete_minimal()` - Simplified complete orders view
+- **Multi-store support** verified with both Bannos and Flourlane
+- **File**: `supabase/sql/012_complete_grid_order_rpcs.sql`
+
+### ✅ Phase 9: Final RPCs (Analytics, Shopify & Bulk Operations)
+- `get_staff_me()` - Get current authenticated staff member
+- `get_inventory_status()` - Get detailed stock status
+- `cancel_order()` - Cancel an order (Admin only)
+- `bulk_assign()` - Assign multiple orders to staff
+- `test_storefront_token()` / `connect_catalog()` / `sync_shopify_orders()` - Shopify integration placeholders
+- `get_staff_times()` / `get_staff_times_detail()` - Time and payroll reporting
+- **File**: `supabase/sql/013_final_rpcs.sql`
+
+### 🔐 Security Features
+- **Role-based Access Control**: Staff, Supervisor, Admin roles enforced on all RPCs
+- **Row Level Security (RLS)**: Enabled on all tables with proper policies
+- **Audit Logging**: Complete trail in `audit_log` table for all critical operations
+- **Stage Events**: Detailed tracking in `stage_events` table
+- **Input Validation**: Store, stage, priority, and parameter validation
+- **Foreign Key Constraints**: Data integrity enforced
+
+### 🏗️ Architecture
+- **Separate Tables**: `orders_bannos` and `orders_flourlane` for data isolation
+- **Multi-Store Support**: All RPCs support single-store or multi-store queries
+- **UNION ALL**: Efficient cross-store queries when needed
+- **Dynamic SQL**: Safe parameterized queries with proper escaping
+- **SECURITY DEFINER**: All RPCs run with elevated privileges with explicit role checks
+
+### 📊 Testing & Validation
+- **Complete Order Lifecycle**: Tested Filling → Covering → Decorating → Packing → Complete
+- **Multi-Store**: Verified with orders in both Bannos and Flourlane
+- **Barcode Scanning**: Tested with format `BANNOS-12345`, `FLOURLANE-67890`
+- **Inventory**: Tested component creation, stock updates, low stock alerts
+- **Settings**: Tested flavours, storage locations, monitor density
+- **Stage Events**: Verified audit trail for all stage transitions
+
+### 📝 Database Changes
+- **New SQL Files**: 9 new migration files (005-013)
+- **Total Functions**: 50+ RPC functions implemented
+- **New Tables**: 5 new infrastructure tables
+- **Indexes**: Performance optimized for all queries
+- **Views**: Updated compatibility views
+
+### 🎨 Data Type Fixes
+- Fixed `currency` type: `character(3)` in database
+- Fixed `priority` type: `priority_level` enum
+- Fixed `stage` type: `stage_type` enum
+- Proper handling of `NULL` values in audit logging
+- Correct column naming: `actor_id`, `order_id`, `store` in `audit_log`
+
+### 🔧 Key Improvements
+- **Idempotency**: Safe to call functions multiple times
+- **Error Handling**: Proper validation and error messages
+- **Performance**: Optimized queries with proper indexing
+- **Scalability**: Ready for production load
+- **Maintainability**: Clean, well-documented code
+
+### 📦 Files Added
+- `supabase/sql/005_database_infrastructure.sql` - Core infrastructure
+- `supabase/sql/006_staff_management_rpcs.sql` - Staff & shift management
+- `supabase/sql/007_order_management_rpcs.sql` - Order operations
+- `supabase/sql/008_queue_management_rpcs.sql` - Queue functions
+- `supabase/sql/009_scanner_stage_rpcs.sql` - Scanner & stage lifecycle
+- `supabase/sql/010_inventory_management_rpcs.sql` - Inventory tracking
+- `supabase/sql/011_settings_management_rpcs.sql` - Settings management
+- `supabase/sql/012_complete_grid_order_rpcs.sql` - Complete orders grid
+- `supabase/sql/013_final_rpcs.sql` - Final RPCs and placeholders
+- `docs/SUPABASE_RPC_IMPLEMENTATION_PLAN.md` - Complete implementation plan
+
+### 🚀 Production Readiness
+- ✅ All critical RPC functions implemented
+- ✅ Complete order lifecycle working
+- ✅ Multi-store architecture validated
+- ✅ Role-based security enforced
+- ✅ Audit logging complete
+- ✅ Ready for UI integration
+- ⚠️ Shopify integration functions are placeholders (to be implemented)
+- ⚠️ Staff authentication to be configured
+
+### 🔄 Migration Path
+1. Apply SQL files in order: 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012 → 013
+2. Verify all functions created successfully
+3. Test with sample data
+4. Configure authentication
+5. Connect UI to new RPCs
+
+---
 
 ## [Unreleased]
 - sql(001): initial base schema
