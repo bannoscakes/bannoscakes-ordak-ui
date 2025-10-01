@@ -220,19 +220,20 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 6: Complete Grid & Order Management RPCs
+## 🗂️ Phase 8: Complete Grid & Order Management RPCs ✅
 
 ### Branch: `feat/complete-grid-rpcs`
 **Priority:** High  
-**Estimate:** 2-3 days
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
 
 #### Tasks:
-- [ ] `get_complete` - Get completed orders with filtering
-- [ ] `update_order_core` - Update order core fields
-- [ ] Order editing validation and business rules
-- [ ] Test all order management operations
-- [ ] Update OrderDetailDrawer component
-- [ ] Update complete orders views
+- [x] `get_complete` - Get completed orders with filtering (date range, search, sorting)
+- [x] `update_order_core` - Update order core fields (flavour, notes, etc.)
+- [x] `get_complete_minimal` - Simplified complete orders view
+- [x] Multi-store support (both Bannos and Flourlane)
+- [x] Order editing validation and business rules
+- [x] Test all order management operations
 
 #### Acceptance Criteria:
 - Complete orders filtering working
