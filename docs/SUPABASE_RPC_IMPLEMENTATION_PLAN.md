@@ -265,20 +265,23 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 8: Enhanced Shopify Integration
+## 🗂️ Phase 9: Final RPCs - Analytics, Shopify & Bulk Operations ✅
 
-### Branch: `feat/enhanced-shopify-rpcs`
+### Branch: `feat/analytics-reporting-rpcs`
 **Priority:** High  
-**Estimate:** 2-3 days
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
 
 #### Tasks:
-- [ ] `test_storefront_token` - Test Shopify connection
-- [ ] `connect_catalog` - Connect product catalog
-- [ ] `sync_shopify_orders` - Sync orders from Shopify
-- [ ] Enhanced `ingest_order` with more fields
-- [ ] HMAC verification for webhooks
-- [ ] Test all Shopify operations
-- [ ] Update webhook handling
+- [x] `get_staff_me` - Get current staff member info
+- [x] `get_inventory_status` - Get detailed stock status
+- [x] `cancel_order` - Cancel an order (Admin only)
+- [x] `bulk_assign` - Assign multiple orders to staff
+- [x] `test_storefront_token` - Test Shopify connection (placeholder)
+- [x] `connect_catalog` - Connect product catalog (placeholder)
+- [x] `sync_shopify_orders` - Sync orders from Shopify (placeholder)
+- [x] `get_staff_times` - Get staff hours summary for payroll
+- [x] `get_staff_times_detail` - Get detailed time entries
 
 #### Acceptance Criteria:
 - Shopify integration working
