@@ -189,24 +189,28 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 5: Settings Management RPCs
+## 🗂️ Phase 7: Settings Management RPCs ✅
 
-### Branch: `feat/settings-rpcs`
+### Branch: `feat/settings-management-rpcs`
 **Priority:** Medium  
-**Estimate:** 2-3 days
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
 
 #### Tasks:
-- [ ] `get_settings_printing` - Get printing configuration
-- [ ] `set_settings_printing` - Set printing configuration
-- [ ] `get_flavours` - Get available flavors
-- [ ] `set_flavours` - Set available flavors
-- [ ] `get_storage_locations` - Get storage locations
-- [ ] `set_storage_locations` - Set storage locations
-- [ ] `get_monitor_density` - Get monitor density setting
-- [ ] `set_monitor_density` - Set monitor density setting
-- [ ] Role-based access control (Admin/Supervisor)
-- [ ] Test all settings operations
-- [ ] Update SettingsPage component
+- [x] `get_settings` - Get all settings for a store
+- [x] `get_setting` - Get single setting by key
+- [x] `set_setting` - Set/update any setting
+- [x] `get_settings_printing` - Get printing configuration
+- [x] `set_settings_printing` - Set printing configuration
+- [x] `get_flavours` - Get available flavors
+- [x] `set_flavours` - Set available flavors
+- [x] `get_storage_locations` - Get storage locations
+- [x] `set_storage_locations` - Set storage locations
+- [x] `get_monitor_density` - Get monitor density setting
+- [x] `set_monitor_density` - Set monitor density setting
+- [x] `delete_setting` - Deactivate a setting
+- [x] Role-based access control (Admin/Supervisor)
+- [x] Test all settings operations
 
 #### Acceptance Criteria:
 - All settings RPCs working
