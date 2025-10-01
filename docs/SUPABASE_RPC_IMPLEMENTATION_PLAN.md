@@ -39,7 +39,59 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 2: Queue Management RPCs
+## 🗂️ Phase 2: Staff Management RPCs ✅
+
+### Branch: `feat/staff-management-rpcs`
+**Priority:** High  
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
+
+#### Tasks:
+- [x] `get_staff_list` - Get all staff with filtering
+- [x] `get_staff_member` - Get individual staff details  
+- [x] `upsert_staff_member` - Create/update staff members
+- [x] `deactivate_staff_member` - Soft delete staff
+- [x] `start_shift/end_shift` - Shift management
+- [x] `get_current_shift` - Get active shift details
+- [x] `get_shift_history` - Get shift history with filtering
+- [x] `start_break/end_break` - Break management
+- [x] Role-based access control and audit logging
+
+#### Acceptance Criteria:
+- All staff management RPCs working with proper validation
+- Shift tracking and break management working
+- Role-based permissions enforced
+- Audit logging for all staff changes
+
+---
+
+## 🗂️ Phase 3: Order Management RPCs ✅
+
+### Branch: `feat/order-management-rpcs`
+**Priority:** High  
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
+
+#### Tasks:
+- [x] `assign_staff` - Assign staff member to order
+- [x] `unassign_staff` - Remove staff assignment
+- [x] `move_to_next_stage` - Move to next stage automatically
+- [x] `move_to_stage` - Move to specific stage
+- [x] `update_order_notes` - Update order notes
+- [x] `update_order_priority` - Change priority level
+- [x] `update_order_due_date` - Update due date
+- [x] `get_order` - Get single order with assignee details
+- [x] Test all order management operations
+
+#### Acceptance Criteria:
+- All order management RPCs working with proper validation
+- Stage progression working correctly
+- Order updates with audit logging
+- Staff assignment working
+
+---
+
+## 🗂️ Phase 4: Queue Management RPCs
 
 ### Branch: `feat/queue-management-rpcs`
 **Priority:** Critical  
