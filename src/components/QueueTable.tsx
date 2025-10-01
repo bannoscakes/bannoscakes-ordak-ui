@@ -17,6 +17,8 @@ import { Clock, Users, Search, X } from "lucide-react";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
+import { getQueue, getUnassignedCounts } from "../lib/rpc-client";
+import type { Stage } from "../types/db";
 
 interface QueueItem {
   id: string;
@@ -40,7 +42,6 @@ interface QueueTableProps {
 }
 
 export function QueueTable({ store, initialFilter }: QueueTableProps) {
-  // TODO: Replace with real queue data from API
   const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -52,12 +53,69 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  // TODO: Implement real data fetching
+  // Fetch real queue data from Supabase
   useEffect(() => {
-    // This will be replaced with actual API calls
-    // fetchQueueData(store).then(setQueueData);
-    setLoading(false);
+    fetchQueueData();
   }, [store]);
+
+  const fetchQueueData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch queue data using the new RPC
+      const orders = await getQueue({
+        store,
+        limit: 200,
+      });
+      
+      // Group orders by stage
+      const grouped: { [key: string]: QueueItem[] } = {
+        unassigned: [],
+        filling: [],
+        covering: [],
+        decorating: [],
+        packaging: [],
+        quality: [],
+        ready: [],
+      };
+      
+      orders.forEach((order: any) => {
+        const item: QueueItem = {
+          id: order.id,
+          orderNumber: order.human_id || order.id,
+          customerName: order.customer_name || 'Unknown',
+          product: order.product_title || 'Unknown',
+          size: order.size || 'M',
+          quantity: order.item_qty || 1,
+          deliveryTime: order.due_date || '',
+          priority: order.priority || 'Medium',
+          status: order.assignee_id ? 'In Production' : 'Pending',
+          flavor: order.flavour || '',
+          dueTime: order.due_date || '',
+          method: order.delivery_method === 'delivery' ? 'Delivery' : 'Pickup',
+          storage: order.storage || '',
+        };
+        
+        // Group by stage
+        const stageKey = order.stage?.toLowerCase() || 'unassigned';
+        if (!order.assignee_id && stageKey === 'filling') {
+          grouped.unassigned.push(item);
+        } else if (stageKey === 'packing') {
+          grouped.packaging.push(item);
+        } else if (stageKey === 'complete') {
+          grouped.ready.push(item);
+        } else if (grouped[stageKey]) {
+          grouped[stageKey].push(item);
+        }
+      });
+      
+      setQueueData(grouped);
+    } catch (error) {
+      console.error('Failed to fetch queue:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Set initial filter if provided
   useEffect(() => {
