@@ -144,7 +144,27 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 4: Staff & Time Management RPCs
+## 🗂️ Phase 4: Inventory Management RPCs ✅
+
+### Branch: `feat/inventory-management-rpcs`
+**Priority:** High  
+**Estimate:** 2-3 days  
+**Status:** ✅ COMPLETED
+
+#### Tasks:
+- [x] `get_components` - Get all components with filtering
+- [x] `get_component` - Get single component by ID or SKU
+- [x] `upsert_component` - Create or update components
+- [x] `update_component_stock` - Update stock levels with audit trail
+- [x] `get_low_stock_components` - Get components below minimum stock
+- [x] `get_inventory_value` - Get total inventory value and summary
+- [x] `bulk_update_component_stock` - Update multiple components at once
+- [x] `deactivate_component` - Soft delete components
+- [x] Test all inventory management operations
+
+---
+
+## 🗂️ Phase 5: Staff & Time Management RPCs
 
 ### Branch: `feat/staff-time-rpcs`
 **Priority:** High  
@@ -152,10 +172,10 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 #### Tasks:
 - [ ] `get_staff_me` - Get current staff member info
-- [ ] `start_shift` - Start work shift
-- [ ] `end_shift` - End work shift
-- [ ] `start_break` - Start break
-- [ ] `end_break` - End break
+- [ ] `start_shift` - Start work shift (Already done in Phase 2!)
+- [ ] `end_shift` - End work shift (Already done in Phase 2!)
+- [ ] `start_break` - Start break (Already done in Phase 2!)
+- [ ] `end_break` - End break (Already done in Phase 2!)
 - [ ] Time tracking validation and business rules
 - [ ] Test all time tracking operations
 - [ ] Update StaffWorkspacePage component
