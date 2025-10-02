@@ -7,6 +7,7 @@ import {
   Package,
   Settings,
   Clock,
+  QrCode,
   ChevronLeft,
   ChevronRight,
   Cake,
@@ -36,6 +37,7 @@ const navigationItems = [
   { icon: Users, label: "Supervisor Workspace", id: "supervisor-workspace", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
   { icon: Package, label: "Inventory", id: "inventory", badge: "3" },
+  { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
   { icon: Settings, label: "Flourlane Settings", id: "flourlane-settings", isSettings: true },
 ];
@@ -68,7 +70,7 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
       <nav className="p-4 space-y-2">
         {navigationItems.filter(item => !item.adminOnly || isAdmin).map((item, index) => {
           const isActive = activeView === item.id;
-          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "staff-workspace" || item.id === "supervisor-workspace" || item.id === "time-payroll" || item.id === "inventory" || item.id === "bannos-settings" || item.id === "flourlane-settings";
+          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "staff-workspace" || item.id === "supervisor-workspace" || item.id === "time-payroll" || item.id === "inventory" || item.id === "barcode-test" || item.id === "bannos-settings" || item.id === "flourlane-settings";
           
           return (
             <div key={index} className="relative">
