@@ -100,7 +100,7 @@ export function CameraScanner({ onScan, onError, isActive, className = '' }: Cam
     setSelectedDeviceId(deviceId);
     if (isScanning) {
       stopScanning();
-      setTimeout(() => startScanning(), 100);
+      // Let the useEffect handle restarting when device changes
     }
   };
 
@@ -111,7 +111,7 @@ export function CameraScanner({ onScan, onError, isActive, className = '' }: Cam
     } else if (!isActive && isScanning) {
       stopScanning();
     }
-  }, [isActive, selectedDeviceId]);
+  }, [isActive, selectedDeviceId, isScanning]);
 
   if (!isActive) {
     return null;

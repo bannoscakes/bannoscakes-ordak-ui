@@ -101,13 +101,29 @@ export function BarcodeGenerator({
               </head>
               <body>
                 <div class="barcode-container">
-                  <img src="${barcodeDataUrl}" alt="Barcode" onload="window.print()" />
+                  <img src="${barcodeDataUrl}" alt="Barcode" />
                   <div class="order-info">
                     <div class="order-id">${orderId}</div>
                     <div class="product">${productTitle}</div>
                     <div class="due-date">Due: ${new Date(dueDate).toLocaleDateString()}</div>
                   </div>
                 </div>
+                <script>
+                  // Ensure the window is fully loaded before printing
+                  window.addEventListener('load', function() {
+                    // Small delay to ensure all content is rendered
+                    setTimeout(function() {
+                      window.print();
+                    }, 100);
+                  });
+                  
+                  // Fallback: if load event already fired, print immediately
+                  if (document.readyState === 'complete') {
+                    setTimeout(function() {
+                      window.print();
+                    }, 100);
+                  }
+                </script>
               </body>
             </html>
           `);
