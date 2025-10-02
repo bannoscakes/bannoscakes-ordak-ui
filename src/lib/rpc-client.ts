@@ -215,75 +215,83 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
 // SCANNER & STAGE MANAGEMENT
 // =============================================
 
-export async function handlePrintBarcode(orderId: string, store: Store) {
+export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, any>) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('handle_print_barcode', {
+    p_barcode: barcode,
     p_order_id: orderId,
-    p_store: store,
+    p_performed_by: performedBy || null,
+    p_context: context || {}
   });
   if (error) throw error;
-  return data?.[0] || null;
+  return data;
 }
 
-export async function getOrderForScan(barcodeData: string) {
+export async function getOrderForScan(scan: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_order_for_scan', {
-    p_barcode_data: barcodeData,
+    p_scan: scan,
   });
   if (error) throw error;
   return data?.[0] || null;
 }
 
-export async function completeFilling(orderId: string, store: Store, notes?: string) {
+export async function completeFilling(orderId: string, performedBy?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_filling', {
     p_order_id: orderId,
-    p_store: store,
-    p_notes: notes || null,
+    p_performed_by: performedBy || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function completeCovering(orderId: string, store: Store, notes?: string) {
+export async function completeCovering(orderId: string, performedBy?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_covering', {
     p_order_id: orderId,
-    p_store: store,
-    p_notes: notes || null,
+    p_performed_by: performedBy || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function completeDecorating(orderId: string, store: Store, notes?: string) {
+export async function completeDecorating(orderId: string, performedBy?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_decorating', {
     p_order_id: orderId,
-    p_store: store,
-    p_notes: notes || null,
+    p_performed_by: performedBy || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function completePacking(orderId: string, store: Store, notes?: string) {
+export async function startPacking(orderId: string, performedBy?: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_packing', {
+    p_order_id: orderId,
+    p_performed_by: performedBy || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function completePacking(orderId: string, performedBy?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_packing', {
     p_order_id: orderId,
-    p_store: store,
-    p_notes: notes || null,
+    p_performed_by: performedBy || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function qcReturnToDecorating(orderId: string, store: Store, notes?: string) {
+export async function qcReturnToDecorating(orderId: string, performedBy?: string, reason?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('qc_return_to_decorating', {
     p_order_id: orderId,
-    p_store: store,
-    p_notes: notes || null,
+    p_performed_by: performedBy || null,
+    p_reason: reason || null,
   });
   if (error) throw error;
   return data;

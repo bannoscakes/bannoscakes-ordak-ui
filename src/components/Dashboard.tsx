@@ -15,6 +15,7 @@ import { SettingsPage } from "./SettingsPage";
 import { TimePayrollPage } from "./TimePayrollPage";
 import { StaffWorkspacePage } from "./StaffWorkspacePage";
 import { SupervisorWorkspacePage } from "./SupervisorWorkspacePage";
+import { BarcodeTest } from "./BarcodeTest";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
@@ -226,6 +227,12 @@ export function Dashboard() {
                 window.history.pushState({}, '', '/');
                 setActiveView("dashboard");
               }} />
+            </ErrorBoundary>
+          );
+        case "barcode-test":
+          return (
+            <ErrorBoundary>
+              <BarcodeTest />
             </ErrorBoundary>
           );
         case "time-payroll":
