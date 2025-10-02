@@ -1,5 +1,7 @@
 // Database types for the application
 export type Store = 'bannos' | 'flourlane';
+export type Stage = 'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete';
+export type Priority = 'High' | 'Medium' | 'Low';
 
 export interface QueueMinimalRow {
   id: number;

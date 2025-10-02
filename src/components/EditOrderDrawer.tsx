@@ -14,6 +14,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { ProductCombobox } from "./ProductCombobox";
 import { Product, findProductByTitle, convertLegacySizeToVariant } from "./ProductData";
 import { toast } from "sonner";
+import { getQueue, updateOrderCore } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -129,6 +130,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [sizeRequiresConfirmation, setSizeRequiresConfirmation] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // Calculate hasChanges from dirtyFields
   const hasChanges = Object.values(dirtyFields).some(Boolean);
@@ -198,7 +200,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     setDirtyFields(prev => ({ ...prev, [field]: false }));
   }, [originalData]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!formData.dueDate) {
       toast.error("Due Date is required");
       return;
@@ -206,21 +208,49 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
 
     if (!extendedOrder) return;
 
-    // Simulate saving changes
-    const updatedOrder = {
-      ...extendedOrder,
-      product: formData.product,
-      size: formData.size,
-      priority: formData.priority,
-      method: formData.method,
-      flavor: formData.flavor || "Other",
-      storage: formData.storage,
-      deliveryDate: formData.dueDate,
-    };
+    try {
+      setSaving(true);
+      
+      // Map priority to database format
+      const priorityMap = { "High": 1, "Medium": 0, "Low": -1 };
+      
+      // Update order in database
+      await updateOrderCore({
+        order_id: extendedOrder.id,
+        store: store,
+        updates: {
+          product_title: formData.product,
+          size: formData.size,
+          priority: priorityMap[formData.priority],
+          delivery_method: formData.method.toLowerCase(),
+          flavour: formData.flavor || "Other",
+          storage: formData.storage,
+          due_date: formData.dueDate,
+          notes: formData.writingOnCake || null,
+        }
+      });
 
-    toast.success("Changes saved");
-    onSaved(updatedOrder);
-  }, [formData, extendedOrder, onSaved]);
+      // Create updated order for UI
+      const updatedOrder = {
+        ...extendedOrder,
+        product: formData.product,
+        size: formData.size,
+        priority: formData.priority,
+        method: formData.method,
+        flavor: formData.flavor || "Other",
+        storage: formData.storage,
+        deliveryDate: formData.dueDate,
+      };
+
+      toast.success("Changes saved successfully");
+      onSaved(updatedOrder);
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  }, [formData, extendedOrder, onSaved, store]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -765,10 +795,10 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             <div className="flex gap-2">
               <Button
                 onClick={handleSave}
-                disabled={!hasChanges || !formData.dueDate || !formData.product || !formData.size || sizeRequiresConfirmation}
+                disabled={!hasChanges || !formData.dueDate || !formData.product || !formData.size || sizeRequiresConfirmation || saving}
                 className="flex-1"
               >
-                Save Changes
+                {saving ? "Saving..." : "Save Changes"}
               </Button>
               <Button
                 variant="outline"

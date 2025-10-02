@@ -49,14 +49,6 @@ const qualityMetrics = [
   { month: "Aug", score: 98.7, defects: 3, rework: 2 }
 ];
 
-const topCustomers = [
-  { name: "Green Valley Cafe", orders: 65, revenue: 12400, growth: 18.5 },
-  { name: "Downtown Deli", orders: 52, revenue: 9800, growth: 12.3 },
-  { name: "Morning Bistro", orders: 48, revenue: 8600, growth: -2.1 },
-  { name: "City Market", orders: 42, revenue: 7200, growth: 25.4 },
-  { name: "Corner Bakery", orders: 38, revenue: 6800, growth: 6.7 }
-];
-
 const productionEfficiency = [
   { station: "Filling", efficiency: 96.2, target: 92, output: 2150 },
   { station: "Covering", efficiency: 91.5, target: 88, output: 1850 },
@@ -219,48 +211,6 @@ export function FlourlaneAnalyticsPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Top Customers */}
-          <Card className="p-6">
-            <CardHeader className="p-0 pb-6">
-              <CardTitle>Top Customers</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left font-medium text-muted-foreground pb-3">Customer</th>
-                      <th className="text-left font-medium text-muted-foreground pb-3">Orders</th>
-                      <th className="text-left font-medium text-muted-foreground pb-3">Revenue</th>
-                      <th className="text-left font-medium text-muted-foreground pb-3">Growth</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topCustomers.map((customer, index) => (
-                      <tr key={index} className="border-b border-border hover:bg-muted/30 transition-colors">
-                        <td className="py-4 font-medium text-foreground">{customer.name}</td>
-                        <td className="py-4 text-foreground">{customer.orders}</td>
-                        <td className="py-4 text-foreground">${customer.revenue.toLocaleString()}</td>
-                        <td className="py-4">
-                          <div className="flex items-center gap-1">
-                            {customer.growth > 0 ? (
-                              <TrendingUp className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <TrendingDown className="h-4 w-4 text-red-600" />
-                            )}
-                            <span className={customer.growth > 0 ? "text-green-600" : "text-red-600"}>
-                              {customer.growth > 0 ? '+' : ''}{customer.growth}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="products" className="space-y-6">

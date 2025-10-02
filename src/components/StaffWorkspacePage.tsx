@@ -26,9 +26,8 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
 
-// Import mock RPCs
-import { get_queue } from "@/lib/rpc";
-import type { MockOrder } from "@/mocks/mock-data";
+// Import real RPCs
+import { getQueue } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -60,42 +59,6 @@ interface StaffWorkspacePageProps {
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
 
-// Convert MockOrder to QueueItem
-function mapMockOrderToQueueItem(order: MockOrder): QueueItem {
-  const store = order.id.startsWith("bannos") ? "bannos" : "flourlane";
-  return {
-    id: order.id,
-    orderNumber: order.id,
-    customerName: `Customer ${order.id.split('-')[1]}`,
-    product: order.product_title,
-    size: 'M' as const,
-    quantity: 1,
-    // deliveryTime: undefined, // time window not used in this system
-    priority: order.priority,
-    status: mapStageToStatus(order.stage),
-    flavor: "Chocolate",
-    dueTime: "10:00 AM",
-    method: 'Delivery' as const,
-    storage: order.storage || undefined,
-    store: store,
-    stage: order.stage.toLowerCase(),
-  };
-}
-
-function mapStageToStatus(stage: MockOrder["stage"]): QueueItem["status"] {
-  switch(stage) {
-    case "Filling": 
-    case "Covering": 
-    case "Decorating": 
-      return "In Production";
-    case "Packing": 
-      return "Quality Check";
-    case "Complete": 
-      return "Completed";
-    default: 
-      return "Pending";
-  }
-}
 
 // Convert legacy size to realistic display
 const getRealisticSize = (
@@ -165,24 +128,59 @@ export function StaffWorkspacePage({
   async function loadStaffOrders() {
     setLoading(true);
     try {
-      const mockOrders = await get_queue();
-      // Filter for assigned orders (simulate staff assignment)
-      // For now, let's show orders that have assignee_id not null OR the first 3 orders
-      const assignedOrders = mockOrders.filter(o => o.assignee_id !== null);
+      // Fetch orders from both stores
+      const [bannosOrders, flourlaneOrders] = await Promise.all([
+        getQueue({ store: "bannos", limit: 100 }),
+        getQueue({ store: "flourlane", limit: 100 })
+      ]);
       
-      // If no assigned orders, simulate by assigning the first few
-      if (assignedOrders.length === 0) {
-        assignedOrders.push(...mockOrders.slice(0, 3));
-      }
+      // Combine all orders
+      const allOrders = [...bannosOrders, ...flourlaneOrders];
       
-      const mappedOrders = assignedOrders.map(mapMockOrderToQueueItem);
+      // Filter for assigned orders (orders with assignee_id not null)
+      const assignedOrders = allOrders.filter(o => o.assignee_id !== null);
+      
+      // If no assigned orders, show unassigned orders for staff to pick up
+      const ordersToShow = assignedOrders.length > 0 ? assignedOrders : allOrders.slice(0, 5);
+      
+      // Map database orders to UI format
+      const mappedOrders = ordersToShow.map((order: any) => ({
+        id: order.id,
+        orderNumber: order.human_id || order.shopify_order_number || order.id,
+        customerName: order.customer_name || "Unknown Customer",
+        product: order.product_title || "Unknown Product",
+        size: order.size || "M",
+        quantity: order.item_qty || 1,
+        deliveryTime: order.due_date || new Date().toISOString(),
+        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
+        status: mapStageToStatus(order.stage),
+        flavor: order.flavour || "Unknown",
+        dueTime: order.due_date || new Date().toISOString(),
+        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
+        storage: order.storage || "Default",
+        store: order.store || "bannos",
+        stage: order.stage || "Filling"
+      }));
+      
       setOrders(mappedOrders);
     } catch (error) {
+      console.error("Error loading staff orders:", error);
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
     }
   }
+
+  const mapStageToStatus = (stage: string) => {
+    switch (stage) {
+      case "Filling": return "In Production";
+      case "Covering": return "In Production";
+      case "Decorating": return "In Production";
+      case "Packing": return "Quality Check";
+      case "Complete": return "Completed";
+      default: return "Pending";
+    }
+  };
 
   // Load orders on mount
   useEffect(() => {

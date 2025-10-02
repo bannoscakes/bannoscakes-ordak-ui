@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -9,42 +9,38 @@ import { Search, Calendar, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
+import { getStockTransactions, getComponents, type StockTransaction } from "../../lib/rpc-client";
+import { toast } from "sonner";
 
-interface Transaction {
-  id: string;
-  timestamp: string;
-  orderNumber?: string;
-  componentId: string;
-  componentName: string;
-  componentSku: string;
-  delta: number;
-  source: "Webhook" | "Restock" | "Manual";
-  note?: string;
-  performedBy?: string;
-}
+// =============================================================================
+// MOCK DATA - TODO: Replace with real data from database when features are implemented
+// - Stock Transactions management (add/remove transactions)
+// =============================================================================
 
-const mockTransactions: Transaction[] = [
+const mockTransactions: StockTransaction[] = [
   {
     id: "T001",
-    timestamp: "2024-12-03T14:30:00Z",
-    orderNumber: "BAN-001",
-    componentId: "C001",
-    componentName: "6-inch Round Cake Base",
-    componentSku: "CAKE-BASE-6IN",
+    component_id: "C001",
+    component_name: "6-inch Round Cake Base",
+    component_sku: "CAKE-BASE-6IN",
     delta: -2,
-    source: "Webhook",
-    note: "Order production completed"
+    reason: "Order production completed",
+    order_id: "BAN-001",
+    performed_by: "system",
+    created_at: "2024-12-03T14:30:00Z",
+    updated_at: "2024-12-03T14:30:00Z"
   },
   {
     id: "T002",
-    timestamp: "2024-12-03T14:28:00Z",
-    orderNumber: "BAN-001",
-    componentId: "C002",
-    componentName: "6-inch White Cake Box",
-    componentSku: "CAKE-BOX-6IN",
+    component_id: "C002",
+    component_name: "6-inch White Cake Box",
+    component_sku: "CAKE-BOX-6IN",
     delta: -2,
-    source: "Webhook",
-    note: "Order production completed"
+    reason: "Order production completed",
+    order_id: "BAN-001",
+    performed_by: "system",
+    created_at: "2024-12-03T14:28:00Z",
+    updated_at: "2024-12-03T14:28:00Z"
   },
   {
     id: "T003",
@@ -137,32 +133,36 @@ const mockTransactions: Transaction[] = [
 ];
 
 export function TransactionsInventory() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<StockTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("7"); // Days
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<StockTransaction | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = searchQuery === "" || 
-      (transaction.orderNumber && transaction.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      transaction.componentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.componentSku.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = typeFilter === "All" || transaction.source === typeFilter;
-    
-    // Simple date filtering (in real app, would be more sophisticated)
-    const transactionDate = new Date(transaction.timestamp);
-    const daysAgo = parseInt(dateFilter);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-    const matchesDate = transactionDate >= cutoffDate;
-    
-    return matchesSearch && matchesType && matchesDate;
-  });
+  // Fetch transactions from Supabase
+  useEffect(() => {
+    async function fetchTransactions() {
+      try {
+        const transactionsData = await getStockTransactions(null, null, null);
+        console.log('Fetched transactions:', transactionsData); // Debug log
+        
+        setTransactions(transactionsData);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        toast.error('Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTransactions();
+  }, []);
 
-  const handleViewDetail = (transaction: Transaction) => {
+  // Filtering is now handled by the RPC call, so we can use transactions directly
+  const filteredTransactions = transactions;
+
+  const handleViewDetail = (transaction: StockTransaction) => {
     setSelectedTransaction(transaction);
     setIsDetailDialogOpen(true);
   };
@@ -274,63 +274,74 @@ export function TransactionsInventory() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-mono text-xs">
-                  {formatDateTime(transaction.timestamp)}
-                </TableCell>
-                <TableCell>
-                  {transaction.orderNumber ? (
-                    <Button 
-                      variant="link" 
-                      className="h-auto p-0 font-mono text-xs"
-                      onClick={() => {/* Would open order details */}}
-                    >
-                      {transaction.orderNumber}
-                    </Button>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="font-medium text-sm">{transaction.componentName}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{transaction.componentSku}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className={`font-medium ${getDeltaColor(transaction.delta)}`}>
-                    {transaction.delta > 0 ? '+' : ''}{transaction.delta}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Badge className={`text-xs ${getSourceColor(transaction.source)}`}>
-                    {transaction.source}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {transaction.note ? 
-                      (transaction.note.length > 40 ? `${transaction.note.substring(0, 40)}...` : transaction.note) 
-                      : '—'
-                    }
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewDetail(transaction)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  Loading transactions...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : transactions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No transactions found
+                </TableCell>
+              </TableRow>
+            ) : (
+              transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-mono text-xs">
+                    {formatDateTime(transaction.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.order_id ? (
+                      <Button 
+                        variant="link" 
+                        className="h-auto p-0 font-mono text-xs"
+                        onClick={() => {/* Would open order details */}}
+                      >
+                        {transaction.order_id}
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium text-sm">{transaction.component_name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{transaction.component_sku}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`font-medium ${getDeltaColor(transaction.delta)}`}>
+                      {transaction.delta > 0 ? '+' : ''}{transaction.delta}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`text-xs ${getSourceColor(transaction.reason)}`}>
+                      {transaction.reason}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {transaction.performed_by || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDetail(transaction)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
-        {filteredTransactions.length === 0 && (
+        {!loading && transactions.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             No transactions found matching your filters
           </div>

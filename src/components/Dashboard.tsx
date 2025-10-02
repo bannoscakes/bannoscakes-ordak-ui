@@ -13,12 +13,13 @@ import { FlourlaneAnalyticsPage } from "./FlourlaneAnalyticsPage";
 import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
 import { SettingsPage } from "./SettingsPage";
 import { TimePayrollPage } from "./TimePayrollPage";
+import { StaffWorkspacePage } from "./StaffWorkspacePage";
+import { SupervisorWorkspacePage } from "./SupervisorWorkspacePage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-// Import mock data for dashboard stats
-import { get_queue } from "@/lib/rpc";
-import type { MockOrder } from "@/mocks/mock-data";
+// Import real RPCs for dashboard stats
+import { getQueue } from "../lib/rpc-client";
 import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
 import { makeEmptyCounts } from "@/types/stage";
 
@@ -41,10 +42,16 @@ export function Dashboard() {
     };
   }, [urlParams]);
   
-  // Load dashboard stats from mock data
+  // Load dashboard stats from real data
   async function loadDashboardStats() {
     try {
-      const orders = await get_queue();
+      // Fetch orders from both stores
+      const [bannosOrders, flourlaneOrders] = await Promise.all([
+        getQueue({ store: "bannos", limit: 1000 }),
+        getQueue({ store: "flourlane", limit: 1000 })
+      ]);
+      
+      const orders = [...bannosOrders, ...flourlaneOrders];
       
       // Count orders by store and stage
       const stats: StatsByStore = {
@@ -52,19 +59,21 @@ export function Dashboard() {
         flourlane: makeEmptyCounts(),
       };
       
-      orders.forEach((order: MockOrder) => {
-        const store = order.id.startsWith('bannos') ? 'bannos' : 'flourlane';
-        stats[store].total++;
-        
-        // Count by stage
-        const stageLower = order.stage.toLowerCase();
-        if (isStage(stageLower)) {
-          stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
-        }
-        
-        // Count unassigned
-        if (order.assignee_id === null && order.stage !== 'Complete') {
-          stats[store].unassigned++;
+      orders.forEach((order: any) => {
+        const store = (order.store || (order.id.startsWith('bannos') ? 'bannos' : 'flourlane')) as StoreKey;
+        if (store in stats) {
+          stats[store].total++;
+          
+          // Count by stage
+          const stageLower = order.stage?.toLowerCase() || 'filling';
+          if (isStage(stageLower)) {
+            stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
+          }
+          
+          // Count unassigned
+          if (order.assignee_id === null && order.stage !== 'Complete') {
+            stats[store].unassigned++;
+          }
         }
       });
       
@@ -173,6 +182,26 @@ export function Dashboard() {
           return (
             <ErrorBoundary>
               <StaffPage />
+            </ErrorBoundary>
+          );
+        case "staff-workspace":
+          return (
+            <ErrorBoundary>
+              <StaffWorkspacePage 
+                staffName="John Doe"
+                onSignOut={() => setActiveView('dashboard')}
+              />
+            </ErrorBoundary>
+          );
+        case "supervisor-workspace":
+          return (
+            <ErrorBoundary>
+              <SupervisorWorkspacePage 
+                supervisorName="Jane Supervisor"
+                onSignOut={() => setActiveView('dashboard')}
+                onNavigateToBannosQueue={() => setActiveView('bannos-production')}
+                onNavigateToFlourlaneQueue={() => setActiveView('flourlane-production')}
+              />
             </ErrorBoundary>
           );
         case "inventory":

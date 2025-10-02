@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Bot, Printer, QrCode } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -8,6 +8,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
+import { getQueue } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -99,7 +100,78 @@ const getStorageColor = () => {
 export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetailDrawerProps) {
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
-  const extendedOrder = getExtendedOrderData(order, store);
+  const [loading, setLoading] = useState(false);
+  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
+  
+  // Fetch real order data when drawer opens
+  useEffect(() => {
+    if (isOpen && order) {
+      fetchRealOrderData();
+    }
+  }, [isOpen, order, store]);
+
+  const fetchRealOrderData = async () => {
+    if (!order) return;
+    
+    try {
+      setLoading(true);
+      
+      // Fetch all orders and find the specific one
+      const orders = await getQueue({
+        store,
+        limit: 1000, // Get all orders to find the specific one
+      });
+      
+      // Find the specific order by ID
+      const foundOrder = orders.find((o: any) => o.id === order.id);
+      
+      if (foundOrder) {
+        // Map database order to UI format
+        const mappedOrder: QueueItem = {
+          id: foundOrder.id,
+          orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+          customerName: foundOrder.customer_name || "Unknown Customer",
+          product: foundOrder.product_title || "Unknown Product",
+          size: foundOrder.size || "M",
+          quantity: foundOrder.item_qty || 1,
+          deliveryTime: foundOrder.due_date || new Date().toISOString(),
+          priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
+          status: mapStageToStatus(foundOrder.stage),
+          flavor: foundOrder.flavour || "Unknown",
+          dueTime: foundOrder.due_date || new Date().toISOString(),
+          method: foundOrder.delivery_method === "delivery" ? "Delivery" : "Pickup",
+          storage: foundOrder.storage || "Default",
+          store: foundOrder.store || store,
+          stage: foundOrder.stage || "Filling"
+        };
+        
+        setRealOrder(mappedOrder);
+      } else {
+        // Fallback to original order if not found in database
+        setRealOrder(order);
+      }
+    } catch (error) {
+      console.error('Error fetching order data:', error);
+      toast.error('Failed to load order details');
+      // Fallback to original order
+      setRealOrder(order);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapStageToStatus = (stage: string) => {
+    switch (stage) {
+      case "Filling": return "In Production";
+      case "Covering": return "In Production";
+      case "Decorating": return "In Production";
+      case "Packing": return "Quality Check";
+      case "Complete": return "Completed";
+      default: return "Pending";
+    }
+  };
+
+  const extendedOrder = getExtendedOrderData(realOrder || order, store);
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   if (!extendedOrder) return null;
@@ -141,23 +213,33 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
             </SheetDescription>
           </SheetHeader>
 
+          {/* Loading State */}
+          {loading && (
+            <div className="px-6 py-8 text-center">
+              <div className="text-sm text-muted-foreground">Loading order details...</div>
+            </div>
+          )}
+
           {/* Subheader */}
-          <div className="px-6 pt-4 pb-6 space-y-1">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Customer:</span> {extendedOrder.customerName}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Store:</span> {storeName}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Order #:</span> {extendedOrder.orderNumber}
-            </p>
-          </div>
+          {!loading && (
+            <div className="px-6 pt-4 pb-6 space-y-1">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium">Customer:</span> {extendedOrder.customerName}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium">Store:</span> {storeName}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium">Order #:</span> {extendedOrder.orderNumber}
+              </p>
+            </div>
+          )}
 
           <Separator />
 
           {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {!loading && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Product */}
             <div>
               <label className="text-sm font-medium text-foreground block mb-2">
@@ -343,6 +425,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </div>
             )}
           </div>
+          )}
 
           <Separator />
 

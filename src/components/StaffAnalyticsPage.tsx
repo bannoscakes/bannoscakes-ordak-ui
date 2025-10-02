@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -18,8 +19,17 @@ import {
   Activity
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
+import { getStaffList } from "../lib/rpc-client";
+import { toast } from "sonner";
 
-// Mock data for Staff Analytics
+// =============================================================================
+// MOCK DATA - TODO: Replace with real data from database when features are implemented
+// - Productivity tracking
+// - Attendance system
+// - Skills/Training management
+// - Shift scheduling
+// =============================================================================
+
 const staffProductivity = [
   { month: "Jan", productivity: 92.3, hours: 1580, overtime: 120 },
   { month: "Feb", productivity: 94.1, hours: 1620, overtime: 95 },
@@ -39,6 +49,7 @@ const departmentPerformance = [
   { department: "Maintenance", members: 2, efficiency: 89.3, satisfaction: 82, color: "#8b5cf6" }
 ];
 
+// TODO: Replace with real staff from database and actual performance metrics
 const topPerformers = [
   { 
     name: "Sarah Johnson", 
@@ -157,6 +168,41 @@ const kpiMetrics = [
 ];
 
 export function StaffAnalyticsPage() {
+  const [loading, setLoading] = useState(true);
+  const [totalStaff, setTotalStaff] = useState(0);
+  const [activeStaff, setActiveStaff] = useState(0);
+  
+  // Fetch real staff data
+  useEffect(() => {
+    async function fetchStaffStats() {
+      try {
+        const staffList = await getStaffList(null, true); // Get all active staff
+        setTotalStaff(staffList.length);
+        setActiveStaff(staffList.filter(s => s.is_active).length);
+      } catch (error) {
+        console.error('Error fetching staff stats:', error);
+        toast.error('Failed to load staff analytics');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStaffStats();
+  }, []);
+  
+  // Update KPI metrics with real data
+  const kpiMetricsWithRealData = [
+    {
+      title: "Total Staff",
+      value: loading ? "..." : totalStaff.toString(),
+      change: "+2",
+      trend: "up",
+      icon: Users,
+      color: "text-blue-600",
+      bg: "bg-blue-50"
+    },
+    ...kpiMetrics.slice(1) // Keep other mock metrics for now
+  ];
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -183,7 +229,7 @@ export function StaffAnalyticsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiMetrics.map((metric, index) => (
+        {kpiMetricsWithRealData.map((metric, index) => (
           <Card key={index} className="p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start justify-between">
               <div className="space-y-2">

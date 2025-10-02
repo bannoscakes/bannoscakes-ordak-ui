@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -11,6 +11,18 @@ import { Separator } from "./ui/separator";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { toast } from "sonner";
+import { 
+  getSettings, 
+  setSetting, 
+  getFlavours, 
+  setFlavours, 
+  getStorageLocations, 
+  setStorageLocations, 
+  getPrintingSettings, 
+  setPrintingSettings, 
+  getMonitorDensity, 
+  setMonitorDensity 
+} from "../lib/rpc-client";
 
 interface SettingsPageProps {
   store: "bannos" | "flourlane";
@@ -83,6 +95,48 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  // Fetch settings from database
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        setLoading(true);
+        
+        // Fetch all settings for this store
+        const [flavours, storage, printing, monitor] = await Promise.all([
+          getFlavours(store),
+          getStorageLocations(store),
+          getPrintingSettings(store),
+          getMonitorDensity(store)
+        ]);
+
+        console.log('Fetched settings:', { flavours, storage, printing, monitor });
+
+        // Update settings with real data
+        setSettings(prev => ({
+          ...prev,
+          flavours: flavours || prev.flavours,
+          storage: storage || prev.storage,
+          printing: {
+            ...prev.printing,
+            ...printing
+          },
+          monitor: {
+            ...prev.monitor,
+            ...monitor
+          }
+        }));
+
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+        toast.error('Failed to load settings');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSettings();
+  }, [store]);
 
   const handleSettingsChange = (path: string, value: any) => {
     setSettings(prev => {
@@ -182,9 +236,26 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     handleSettingsChange('dueDates.blackoutDates', newDates);
   };
 
-  const handleSave = () => {
-    setHasUnsavedChanges(false);
-    toast.success("Settings saved successfully");
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      // Save all settings to database
+      await Promise.all([
+        setFlavours(store, settings.flavours),
+        setStorageLocations(store, settings.storage),
+        setPrintingSettings(store, settings.printing),
+        setMonitorDensity(store, settings.monitor.density)
+      ]);
+
+      setHasUnsavedChanges(false);
+      toast.success("Settings saved successfully");
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -213,6 +284,11 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-6 pb-32 space-y-6">
+        {loading && (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading settings...
+          </div>
+        )}
         
         {/* Shopify Integration Section */}
         <div className="space-y-4">
@@ -607,8 +683,8 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              Save
+            <Button onClick={handleSave} disabled={loading}>
+              {loading ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

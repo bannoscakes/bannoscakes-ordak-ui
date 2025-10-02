@@ -10,6 +10,7 @@ import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
+import { getQueue } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -94,7 +95,8 @@ export function SupervisorWorkspacePage({
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
-  const [orders, setOrders] = useState<QueueItem[]>(getSupervisorAssignedOrders());
+  const [orders, setOrders] = useState<QueueItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] = useState<ShiftStatus>('not-started');
   const [shiftStartTime, setShiftStartTime] = useState<Date | null>(null);
@@ -126,11 +128,67 @@ export function SupervisorWorkspacePage({
     return () => clearInterval(interval);
   }, [shiftStatus, shiftStartTime, breakStartTime]);
 
-  const filteredOrders = orders.filter(order => 
+  const filteredOrders = orders.filter(order =>
     order.orderNumber.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.customerName.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.product.toLowerCase().includes(searchValue.toLowerCase())
   );
+
+  // Load orders from database
+  useEffect(() => {
+    loadSupervisorOrders();
+  }, []);
+
+  const loadSupervisorOrders = async () => {
+    setLoading(true);
+    try {
+      // Fetch orders from both stores
+      const [bannosOrders, flourlaneOrders] = await Promise.all([
+        getQueue({ store: "bannos", limit: 100 }),
+        getQueue({ store: "flourlane", limit: 100 })
+      ]);
+      
+      // Combine all orders
+      const allOrders = [...bannosOrders, ...flourlaneOrders];
+      
+      // Map database orders to UI format
+      const mappedOrders = allOrders.map((order: any) => ({
+        id: order.id,
+        orderNumber: order.human_id || order.shopify_order_number || order.id,
+        customerName: order.customer_name || "Unknown Customer",
+        product: order.product_title || "Unknown Product",
+        size: order.size || "M",
+        quantity: order.item_qty || 1,
+        deliveryTime: order.due_date || new Date().toISOString(),
+        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
+        status: mapStageToStatus(order.stage),
+        flavor: order.flavour || "Unknown",
+        dueTime: order.due_date || new Date().toISOString(),
+        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
+        storage: order.storage || "Default",
+        store: order.store || "bannos",
+        stage: order.stage || "Filling"
+      }));
+      
+      setOrders(mappedOrders);
+    } catch (error) {
+      console.error("Error loading supervisor orders:", error);
+      toast.error("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapStageToStatus = (stage: string) => {
+    switch (stage) {
+      case "Filling": return "In Production";
+      case "Covering": return "In Production";
+      case "Decorating": return "In Production";
+      case "Packing": return "Quality Check";
+      case "Complete": return "Completed";
+      default: return "Pending";
+    }
+  };
 
   const handleStartShift = () => {
     setShiftStatus('on-shift');
@@ -331,8 +389,13 @@ export function SupervisorWorkspacePage({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredOrders.map((order) => (
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading orders...
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredOrders.map((order) => (
                   <Card key={order.id} className="p-4 hover:bg-muted/30 transition-colors">
                     <div className="space-y-3">
                       {/* Header with Store and Overflow Menu */}
@@ -409,9 +472,10 @@ export function SupervisorWorkspacePage({
                     </div>
                   </Card>
                 ))}
-              </div>
+                </div>
+              )}
 
-              {filteredOrders.length === 0 && (
+              {!loading && filteredOrders.length === 0 && (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">No assigned orders found</p>
                 </Card>

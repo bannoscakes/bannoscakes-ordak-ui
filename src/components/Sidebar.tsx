@@ -32,6 +32,8 @@ const navigationItems = [
   { icon: TallCakeIcon, label: "Flourlane Analytics", id: "flourlane-analytics", isAnalytics: true },
   { icon: Users, label: "Staff Analytics", id: "staff-analytics", isAnalytics: true },
   { icon: Users, label: "Staff", id: "staff", badge: "6", isStaff: true },
+  { icon: Users, label: "Staff Workspace", id: "staff-workspace", isStaff: true },
+  { icon: Users, label: "Supervisor Workspace", id: "supervisor-workspace", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
   { icon: Package, label: "Inventory", id: "inventory", badge: "3" },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
@@ -66,7 +68,7 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
       <nav className="p-4 space-y-2">
         {navigationItems.filter(item => !item.adminOnly || isAdmin).map((item, index) => {
           const isActive = activeView === item.id;
-          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "time-payroll" || item.id === "inventory" || item.id === "bannos-settings" || item.id === "flourlane-settings";
+          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "staff-workspace" || item.id === "supervisor-workspace" || item.id === "time-payroll" || item.id === "inventory" || item.id === "bannos-settings" || item.id === "flourlane-settings";
           
           return (
             <div key={index} className="relative">
@@ -104,6 +106,10 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
                   if (isClickable) {
                     if (item.id === "staff") {
                       window.history.pushState({}, '', '/staff');
+                    } else if (item.id === "staff-workspace") {
+                      window.history.pushState({}, '', '/workspace/staff');
+                    } else if (item.id === "supervisor-workspace") {
+                      window.history.pushState({}, '', '/workspace/supervisor');
                     } else if (item.id === "time-payroll") {
                       window.history.pushState({}, '', '/admin/time');
                     } else if (item.id === "bannos-settings") {

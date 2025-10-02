@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card } from "../ui/card";
@@ -9,14 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
+import { getAccessoryKeywords, upsertAccessoryKeyword, getComponents, type AccessoryKeyword } from "../../lib/rpc-client";
 
-interface AccessoryKeyword {
-  id: string;
-  keyword: string;
-  componentId: string;
-  componentName: string;
-  notes?: string;
-}
+// =============================================================================
+// MOCK DATA - TODO: Replace with real data from database when features are implemented
+// - Component selection for keywords
+// =============================================================================
 
 const mockComponents = [
   { id: "C003", name: "Spiderman Cake Topper" },
@@ -27,77 +25,39 @@ const mockComponents = [
   { id: "C012", name: "Birthday Banner" }
 ];
 
-const mockKeywords: AccessoryKeyword[] = [
-  {
-    id: "AK001",
-    keyword: "Spiderman",
-    componentId: "C003",
-    componentName: "Spiderman Cake Topper",
-    notes: "Official Marvel character"
-  },
-  {
-    id: "AK002",
-    keyword: "Spider-Man",
-    componentId: "C003",
-    componentName: "Spiderman Cake Topper",
-    notes: "Alternative spelling with hyphen"
-  },
-  {
-    id: "AK003",
-    keyword: "Marvel Spidey",
-    componentId: "C003",
-    componentName: "Spiderman Cake Topper"
-  },
-  {
-    id: "AK004",
-    keyword: "Web Slinger",
-    componentId: "C003",
-    componentName: "Spiderman Cake Topper"
-  },
-  {
-    id: "AK005",
-    keyword: "Number candles",
-    componentId: "C005",
-    componentName: "Number Candles Set"
-  },
-  {
-    id: "AK006",
-    keyword: "Age candles",
-    componentId: "C005",
-    componentName: "Number Candles Set"
-  },
-  {
-    id: "AK007",
-    keyword: "Batman",
-    componentId: "C009",
-    componentName: "Batman Cake Topper",
-    notes: "DC Comics character"
-  },
-  {
-    id: "AK008",
-    keyword: "Dark Knight",
-    componentId: "C009",
-    componentName: "Batman Cake Topper"
-  },
-  {
-    id: "AK009",
-    keyword: "Princess",
-    componentId: "C010",
-    componentName: "Princess Crown Topper"
-  },
-  {
-    id: "AK010",
-    keyword: "Crown",
-    componentId: "C010",
-    componentName: "Princess Crown Topper"
-  }
-];
+// =============================================================================
+// MOCK DATA - TODO: Replace with real data from database when features are implemented
+// - Accessory Keywords management (add/remove keywords)
+// =============================================================================
+
+const mockKeywords: AccessoryKeyword[] = []; // Using real data from database
 
 export function AccessoryKeywords() {
-  const [keywords, setKeywords] = useState<AccessoryKeyword[]>(mockKeywords);
+  const [keywords, setKeywords] = useState<AccessoryKeyword[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [componentFilter, setComponentFilter] = useState("All");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Fetch keywords from Supabase
+  useEffect(() => {
+    async function fetchKeywords() {
+      try {
+        const searchValue = searchQuery.trim() || null;
+        
+        const keywordsData = await getAccessoryKeywords(searchValue, true);
+        console.log('Fetched keywords:', keywordsData); // Debug log
+        
+        setKeywords(keywordsData);
+      } catch (error) {
+        console.error('Error fetching keywords:', error);
+        toast.error('Failed to load keywords');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchKeywords();
+  }, [componentFilter, searchQuery]);
   const [editingKeyword, setEditingKeyword] = useState<AccessoryKeyword | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
@@ -109,9 +69,9 @@ export function AccessoryKeywords() {
   const filteredKeywords = keywords.filter(keyword => {
     const matchesSearch = searchQuery === "" || 
       keyword.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      keyword.componentName.toLowerCase().includes(searchQuery.toLowerCase());
+      keyword.component_name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesComponent = componentFilter === "All" || keyword.componentId === componentFilter;
+    const matchesComponent = componentFilter === "All" || keyword.component_id === componentFilter;
     
     return matchesSearch && matchesComponent;
   });
@@ -128,8 +88,8 @@ export function AccessoryKeywords() {
     const keyword: AccessoryKeyword = {
       id: `AK${Date.now()}`,
       keyword: newKeyword,
-      componentId: newComponentId,
-      componentName: component.name,
+      component_id: newComponentId,
+      component_name: component.name,
       notes: newNotes || undefined
     };
 
@@ -217,40 +177,54 @@ export function AccessoryKeywords() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredKeywords.map((keyword) => (
-              <TableRow key={keyword.id}>
-                <TableCell className="font-medium">{keyword.keyword}</TableCell>
-                <TableCell>{keyword.componentName}</TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {keyword.notes || "—"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditKeyword(keyword)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteKeyword(keyword.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  Loading keywords...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : keywords.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No keywords found matching your filters
+                </TableCell>
+              </TableRow>
+            ) : (
+              keywords.map((keyword) => (
+                <TableRow key={keyword.id}>
+                  <TableCell className="font-medium">{keyword.keyword}</TableCell>
+                  <TableCell>{keyword.component_name}</TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {keyword.match_type} (Priority: {keyword.priority})
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditKeyword(keyword)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteKeyword(keyword.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
-        {filteredKeywords.length === 0 && (
+        {!loading && keywords.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             No keywords found matching your filters
           </div>
@@ -343,13 +317,13 @@ export function AccessoryKeywords() {
               <div className="space-y-2">
                 <Label htmlFor="edit-component">Component</Label>
                 <Select 
-                  value={editingKeyword.componentId} 
+                  value={editingKeyword.component_id} 
                   onValueChange={(value) => {
                     const component = mockComponents.find(c => c.id === value);
                     setEditingKeyword({
                       ...editingKeyword,
-                      componentId: value,
-                      componentName: component?.name || ""
+                      component_id: value,
+                      component_name: component?.name || ""
                     });
                   }}
                 >

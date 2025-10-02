@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card } from "../ui/card";
@@ -8,6 +8,12 @@ import { Textarea } from "../ui/textarea";
 import { RotateCcw, Settings, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
+import { restockOrder, updateComponentStock, getComponents, type Component } from "../../lib/rpc-client";
+
+// =============================================================================
+// MOCK DATA - TODO: Replace with real data from database when features are implemented
+// - Component selection for manual adjustments
+// =============================================================================
 
 const mockComponents = [
   { id: "C001", name: "6-inch Round Cake Base", sku: "CAKE-BASE-6IN", onHand: 45 },
@@ -28,6 +34,27 @@ export function ToolsInventory() {
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustLoading, setAdjustLoading] = useState(false);
 
+  // Real components from database
+  const [components, setComponents] = useState<Component[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch components from Supabase
+  useEffect(() => {
+    async function fetchComponents() {
+      try {
+        const componentsData = await getComponents({});
+        console.log('Fetched components for tools:', componentsData); // Debug log
+        setComponents(componentsData);
+      } catch (error) {
+        console.error('Error fetching components:', error);
+        toast.error('Failed to load components');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchComponents();
+  }, []);
+
   const handleRestockOrder = async () => {
     if (!restockOrderNumber.trim()) {
       toast.error("Please enter an order number");
@@ -40,12 +67,16 @@ export function ToolsInventory() {
 
     setRestockLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setRestockLoading(false);
-    setRestockOrderNumber("");
-    toast.success("Restocked");
+    try {
+      await restockOrder(restockOrderNumber);
+      setRestockOrderNumber("");
+      toast.success("Order restocked successfully");
+    } catch (error) {
+      console.error('Error restocking order:', error);
+      toast.error('Failed to restock order');
+    } finally {
+      setRestockLoading(false);
+    }
   };
 
   const handleManualAdjust = async () => {
@@ -60,10 +91,10 @@ export function ToolsInventory() {
       return;
     }
 
-    const component = mockComponents.find(c => c.id === adjustComponentId);
+    const component = components.find(c => c.id === adjustComponentId);
     if (!component) return;
 
-    const newStock = component.onHand + delta;
+    const newStock = component.current_stock + delta;
     if (newStock < 0) {
       toast.error("Adjustment would result in negative stock");
       return;
@@ -71,18 +102,27 @@ export function ToolsInventory() {
 
     setAdjustLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setAdjustLoading(false);
-    setAdjustComponentId("");
-    setAdjustDelta("");
-    setAdjustReason("");
-    toast.success("Stock updated");
+    try {
+      await updateComponentStock({
+        component_id: adjustComponentId,
+        delta: delta,
+        reason: adjustReason,
+      });
+      
+      setAdjustComponentId("");
+      setAdjustDelta("");
+      setAdjustReason("");
+      toast.success("Stock updated successfully");
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+      toast.error('Failed to adjust stock');
+    } finally {
+      setAdjustLoading(false);
+    }
   };
 
   const getSelectedComponent = () => {
-    return mockComponents.find(c => c.id === adjustComponentId);
+    return components.find(c => c.id === adjustComponentId);
   };
 
   const calculateNewStock = () => {
@@ -92,7 +132,7 @@ export function ToolsInventory() {
     const delta = parseInt(adjustDelta);
     if (isNaN(delta)) return null;
     
-    return component.onHand + delta;
+    return component.current_stock + delta;
   };
 
   return (
@@ -180,16 +220,22 @@ export function ToolsInventory() {
                     <SelectValue placeholder="Select component to adjust" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockComponents.map(component => (
-                      <SelectItem key={component.id} value={component.id}>
-                        <div className="flex flex-col items-start">
-                          <span>{component.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {component.sku} • Current: {component.onHand}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {loading ? (
+                      <SelectItem value="loading" disabled>Loading components...</SelectItem>
+                    ) : components.length === 0 ? (
+                      <SelectItem value="no-components" disabled>No components found</SelectItem>
+                    ) : (
+                      components.map(component => (
+                        <SelectItem key={component.id} value={component.id}>
+                          <div className="flex flex-col items-start">
+                            <span>{component.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {component.sku} • Current: {component.current_stock}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
