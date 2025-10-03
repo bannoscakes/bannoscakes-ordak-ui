@@ -10,19 +10,6 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
 import { restockOrder, updateComponentStock, getComponents, type Component } from "../../lib/rpc-client";
 
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Component selection for manual adjustments
-// =============================================================================
-
-const mockComponents = [
-  { id: "C001", name: "6-inch Round Cake Base", sku: "CAKE-BASE-6IN", onHand: 45 },
-  { id: "C002", name: "6-inch White Cake Box", sku: "CAKE-BOX-6IN", onHand: 8 },
-  { id: "C003", name: "Spiderman Cake Topper", sku: "TOPPER-SPIDER", onHand: 2 },
-  { id: "C004", name: "8-inch Round Cake Board", sku: "BOARD-ROUND-8IN", onHand: 67 },
-  { id: "C005", name: "Number Candles Set", sku: "ACC-CANDLE-NUM", onHand: 24 }
-];
-
 export function ToolsInventory() {
   // Restock Order states
   const [restockOrderNumber, setRestockOrderNumber] = useState("");

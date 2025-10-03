@@ -9,35 +9,33 @@ import { Switch } from "../ui/switch";
 import { Search, Plus, Edit, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
-import { getBoms, upsertBom, getComponents, type BOM, type BOMItem } from "../../lib/rpc-client";
-
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - BOM Items management (add/remove items from BOMs)
-// - Component selection for BOM items
-// =============================================================================
-
-const mockComponents = [
-  { id: "C001", name: "6-inch Round Cake Base" },
-  { id: "C002", name: "6-inch White Cake Box" },
-  { id: "C003", name: "Spiderman Cake Topper" },
-  { id: "C004", name: "8-inch Round Cake Board" },
-  { id: "C005", name: "Number Candles Set" },
-  { id: "C006", name: "Chocolate Filling" },
-  { id: "C007", name: "Vanilla Buttercream" },
-  { id: "C008", name: "Food Coloring - Blue" }
-];
+import { getBoms, upsertBom, getComponents, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
 
 export function BOMsInventory() {
   const [boms, setBOMs] = useState<BOM[]>([]);
+  const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("All");
   const [editingBOM, setEditingBOM] = useState<BOM | null>(null);
   const [isBOMEditorOpen, setIsBOMEditorOpen] = useState(false);
+
+  // Fetch components from Supabase
+  useEffect(() => {
+    async function fetchComponents() {
+      try {
+        const componentsData = await getComponents();
+        console.log('Fetched Components:', componentsData); // Debug log
+        setComponents(componentsData);
+      } catch (error) {
+        console.error('Error fetching components:', error);
+        toast.error('Failed to load components');
+      }
+    }
+    fetchComponents();
+  }, []);
 
   // Fetch BOMs from Supabase
   useEffect(() => {
@@ -68,16 +66,76 @@ export function BOMsInventory() {
     setIsBOMEditorOpen(true);
   };
 
-  const handleSaveBOM = () => {
+  const handleCreateNewBOM = () => {
+    const newBOM: BOM = {
+      id: `bom-${Date.now()}`, // Temporary ID for new BOM
+      product_title: "",
+      description: "",
+      store: "bannos",
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      items: []
+    };
+    console.log('Creating new BOM:', newBOM);
+    setEditingBOM(newBOM);
+    setIsBOMEditorOpen(true);
+  };
+
+  const handleSaveBOM = async () => {
     if (!editingBOM) return;
     
-    setBOMs(prev => prev.map(b => 
-      b.id === editingBOM.id ? editingBOM : b
-    ));
-    
-    setIsBOMEditorOpen(false);
-    setEditingBOM(null);
-    toast.success("BOM saved successfully");
+    try {
+      // Validate required fields
+      if (!editingBOM.product_title.trim()) {
+        toast.error("Please enter a BOM product title");
+        return;
+      }
+      
+      if (!editingBOM.description.trim()) {
+        toast.error("Please enter a BOM description");
+        return;
+      }
+      
+      if (editingBOM.items.length === 0) {
+        toast.error("Please add at least one component to the BOM");
+        return;
+      }
+      
+      // Save to database using RPC
+      const bomId = await upsertBom({
+        product_title: editingBOM.product_title,
+        store: editingBOM.store,
+        bom_id: editingBOM.id.startsWith('bom-') ? undefined : editingBOM.id, // Only pass ID if it's not a temporary one
+        description: editingBOM.description,
+        shopify_product_id: editingBOM.shopify_product_id
+      });
+      console.log('Saved BOM ID:', bomId);
+      
+      // Update the BOM with the real ID from database
+      const updatedBOM = { ...editingBOM, id: bomId };
+      
+      // Update local state
+      setBOMs(prev => {
+        const existingIndex = prev.findIndex(b => b.id === editingBOM.id);
+        if (existingIndex >= 0) {
+          // Update existing BOM
+          const updated = [...prev];
+          updated[existingIndex] = updatedBOM;
+          return updated;
+        } else {
+          // Add new BOM
+          return [...prev, updatedBOM];
+        }
+      });
+      
+      setIsBOMEditorOpen(false);
+      setEditingBOM(null);
+      toast.success("BOM saved successfully");
+    } catch (error) {
+      console.error('Error saving BOM:', error);
+      toast.error("Failed to save BOM");
+    }
   };
 
   const handleAddBOMItem = () => {
@@ -94,6 +152,9 @@ export function BOMsInventory() {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+    
+    console.log('Adding BOM item:', newItem);
+    console.log('Current BOM items before:', editingBOM.items);
     
     setEditingBOM({
       ...editingBOM,
@@ -162,7 +223,7 @@ export function BOMsInventory() {
             />
           </div>
 
-          <Button>
+          <Button onClick={handleCreateNewBOM}>
             <Plus className="mr-2 h-4 w-4" />
             Add BOM
           </Button>
@@ -237,28 +298,27 @@ export function BOMsInventory() {
         )}
       </Card>
 
-      {/* BOM Editor Sheet */}
-      <Sheet open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <SheetContent className="w-[600px] sm:w-[800px]">
-          <SheetHeader>
-            <SheetTitle>BOM Editor</SheetTitle>
-          </SheetHeader>
+      {/* BOM Editor Dialog */}
+      <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>BOM Editor</DialogTitle>
+          </DialogHeader>
 
           {editingBOM && (
-            <div className="space-y-6 mt-6">
+            <div className="space-y-4">
               {/* Product Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="product-title">Product Title</Label>
                   <Input
                     id="product-title"
+                    placeholder="e.g., Spiderman Theme Cake"
                     value={editingBOM.product_title}
                     onChange={(e) => setEditingBOM({
                       ...editingBOM,
                       product_title: e.target.value
                     })}
-                    readOnly
-                    className="bg-muted/30"
                   />
                 </div>
 
@@ -301,18 +361,21 @@ export function BOMsInventory() {
                 </div>
 
                 <div className="space-y-3">
-                  {editingBOM.items?.map((item) => (
+                  {editingBOM.items?.map((item) => {
+                    console.log('Rendering BOM item:', item);
+                    return (
                     <Card key={item.id} className="p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                        <div className="sm:col-span-1">
                           <Label className="text-xs text-muted-foreground">Component</Label>
                           <Select
                             value={item.component_id}
                             onValueChange={(value) => {
-                              const component = mockComponents.find(c => c.id === value);
+                              const component = components.find(c => c.id === value);
                               handleUpdateBOMItem(item.id, {
                                 component_id: value,
-                                component_name: component?.name || ""
+                                component_name: component?.name || "",
+                                component_sku: component?.sku || ""
                               });
                             }}
                           >
@@ -320,16 +383,25 @@ export function BOMsInventory() {
                               <SelectValue placeholder="Select component" />
                             </SelectTrigger>
                             <SelectContent>
-                              {mockComponents.map(component => (
-                                <SelectItem key={component.id} value={component.id}>
-                                  {component.name}
-                                </SelectItem>
-                              ))}
+                              {(() => {
+                                console.log('Components for dropdown:', components);
+                                return components.length === 0 ? (
+                                  <SelectItem value="no-components" disabled>
+                                    No components available
+                                  </SelectItem>
+                                ) : (
+                                  components.map(component => (
+                                    <SelectItem key={component.id} value={component.id}>
+                                      {component.name} ({component.sku})
+                                    </SelectItem>
+                                  ))
+                                );
+                              })()}
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div className="w-24">
+                        <div>
                           <Label className="text-xs text-muted-foreground">Qty per</Label>
                           <Input
                             type="number"
@@ -343,7 +415,7 @@ export function BOMsInventory() {
                           />
                         </div>
 
-                        <div className="w-32">
+                        <div>
                           <Label className="text-xs text-muted-foreground">Stage (optional)</Label>
                           <Select
                             value={item.stage || ""}
@@ -363,14 +435,16 @@ export function BOMsInventory() {
                           </Select>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveBOMItem(item.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveBOMItem(item.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
 
                       {item.stage && (
@@ -381,7 +455,8 @@ export function BOMsInventory() {
                         </div>
                       )}
                     </Card>
-                  ))}
+                    );
+                  })}
 
                   {(editingBOM.items?.length || 0) === 0 && (
                     <div className="p-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
@@ -408,8 +483,8 @@ export function BOMsInventory() {
               </div>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -9,86 +9,11 @@ import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
-import { getProductRequirements, upsertProductRequirement, getComponents, type ProductRequirement } from "../../lib/rpc-client";
-
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Component selection for requirements
-// - Shopify product integration
-// =============================================================================
-
-const mockComponents = [
-  { id: "C003", name: "Spiderman Cake Topper" },
-  { id: "C009", name: "Batman Cake Topper" },
-  { id: "C010", name: "Princess Crown Topper" },
-  { id: "C011", name: "Wedding Cake Flowers" },
-  { id: "C012", name: "Birthday Banner" },
-  { id: "C013", name: "Chocolate Drip" },
-  { id: "C014", name: "Gold Leaf Decoration" }
-];
-
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Product Requirements management (add/remove requirements)
-// =============================================================================
-
-const mockRequirements: ProductRequirement[] = [
-  {
-    id: "PR001",
-    shopify_product_id: "shopify-12345",
-    shopify_variant_id: "variant-001",
-    product_title: "Spiderman Theme Cake",
-    component_id: "C003",
-    component_name: "Spiderman Cake Topper",
-    component_sku: "SPIDER-001",
-    quantity_per_unit: 1,
-    is_optional: false,
-    auto_deduct: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: "PR002",
-    shopify_product_id: "shopify-12346",
-    shopify_variant_id: "variant-002",
-    product_title: "Batman Birthday Cake",
-    component_id: "C009",
-    component_name: "Batman Cake Topper",
-    component_sku: "BATMAN-001",
-    quantity_per_unit: 1,
-    is_optional: false,
-    auto_deduct: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: "PR003",
-    shopify_product_id: "shopify-12347",
-    shopify_variant_id: "variant-003",
-    product_title: "Princess Castle Cake",
-    store: "bannos",
-    requiredComponentId: "C010",
-    requiredComponentName: "Princess Crown Topper"
-  },
-  {
-    id: "PR004",
-    productTitle: "Elegant Wedding Cake",
-    variant: "3-Tier",
-    store: "bannos",
-    requiredComponentId: "C011",
-    requiredComponentName: "Wedding Cake Flowers"
-  },
-  {
-    id: "PR005",
-    productTitle: "Premium Birthday Celebration",
-    store: "flourlane",
-    requiredComponentId: "C014",
-    requiredComponentName: "Gold Leaf Decoration"
-  }
-];
+import { getProductRequirements, upsertProductRequirement, getComponents, type ProductRequirement, type Component } from "../../lib/rpc-client";
 
 export function ProductRequirements() {
   const [requirements, setRequirements] = useState<ProductRequirement[]>([]);
+  const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("All");
@@ -102,6 +27,21 @@ export function ProductRequirements() {
   const [newVariant, setNewVariant] = useState("");
   const [newStore, setNewStore] = useState<"bannos" | "flourlane">("bannos");
   const [newRequiredComponentId, setNewRequiredComponentId] = useState("");
+
+  // Fetch components from Supabase
+  useEffect(() => {
+    async function fetchComponents() {
+      try {
+        const componentsData = await getComponents();
+        console.log('Fetched Components:', componentsData); // Debug log
+        setComponents(componentsData);
+      } catch (error) {
+        console.error('Error fetching components:', error);
+        toast.error('Failed to load components');
+      }
+    }
+    fetchComponents();
+  }, []);
 
   // Fetch requirements from Supabase
   useEffect(() => {
@@ -132,7 +72,7 @@ export function ProductRequirements() {
       return;
     }
 
-    const component = mockComponents.find(c => c.id === newRequiredComponentId);
+    const component = components.find(c => c.id === newRequiredComponentId);
     if (!component) return;
 
     const requirement: ProductRequirement = {
@@ -219,9 +159,9 @@ export function ProductRequirements() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Components</SelectItem>
-              {mockComponents.map(component => (
+              {components.map(component => (
                 <SelectItem key={component.id} value={component.id}>
-                  {component.name}
+                  {component.name} ({component.sku})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -356,9 +296,9 @@ export function ProductRequirements() {
                   <SelectValue placeholder="Select required component" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockComponents.map(component => (
+                  {components.map(component => (
                     <SelectItem key={component.id} value={component.id}>
-                      {component.name}
+                      {component.name} ({component.sku})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -440,7 +380,7 @@ export function ProductRequirements() {
                 <Select 
                   value={editingRequirement.requiredComponentId} 
                   onValueChange={(value) => {
-                    const component = mockComponents.find(c => c.id === value);
+                    const component = components.find(c => c.id === value);
                     setEditingRequirement({
                       ...editingRequirement,
                       requiredComponentId: value,
@@ -452,9 +392,9 @@ export function ProductRequirements() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockComponents.map(component => (
+                    {components.map(component => (
                       <SelectItem key={component.id} value={component.id}>
-                        {component.name}
+                        {component.name} ({component.sku})
                       </SelectItem>
                     ))}
                   </SelectContent>

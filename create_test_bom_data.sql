@@ -1,8 +1,5 @@
--- Test BOM Data for BOMsInventory Component
--- Run this in Supabase SQL Editor
-
--- First, let's see what components we have
-SELECT id, sku, name FROM public.components ORDER BY name LIMIT 10;
+-- Create test BOM data
+-- First, let's create some sample BOMs
 
 -- Insert sample BOMs
 INSERT INTO public.boms (product_title, store, description, is_active) VALUES
@@ -10,14 +7,16 @@ INSERT INTO public.boms (product_title, store, description, is_active) VALUES
 ('Vanilla Wedding Cake', 'bannos', '8-inch round vanilla cake with white buttercream', true),
 ('Red Velvet Cupcakes', 'flourlane', '12-pack red velvet cupcakes with cream cheese frosting', true),
 ('Spiderman Cake', 'bannos', '6-inch round cake with Spiderman decoration', true),
-('Custom Birthday Cake', 'both', 'Customizable birthday cake for any occasion', true)
-ON CONFLICT (product_title, store) DO NOTHING;
+('Custom Birthday Cake', 'both', 'Customizable birthday cake for any occasion', true);
 
--- Get the BOM IDs and component IDs for adding BOM items
--- We'll add BOM items for the first BOM (Chocolate Birthday Cake)
--- This assumes we have components with names like 'Flour', 'Sugar', etc.
+-- Get the BOM IDs for adding components
+-- We'll need to get the component IDs from the existing components table
+-- Let's add some BOM items for the first BOM (Chocolate Birthday Cake)
+-- First, let's see what components we have
+SELECT id, sku, name FROM public.components LIMIT 10;
 
 -- Add BOM items for Chocolate Birthday Cake
+-- (We'll need to replace the component IDs with actual ones from the database)
 INSERT INTO public.bom_items (bom_id, component_id, quantity_required, unit, is_optional, notes)
 SELECT 
   b.id as bom_id,
@@ -39,7 +38,7 @@ FROM public.boms b
 CROSS JOIN public.components c
 WHERE b.product_title = 'Chocolate Birthday Cake'
   AND c.name IN ('Flour', 'Sugar', 'Eggs', 'Butter', 'Cocoa Powder', '6-inch Round Cake Base', '6-inch White Cake Box')
-ON CONFLICT (bom_id, component_id) DO NOTHING;
+LIMIT 7;
 
 -- Add BOM items for Vanilla Wedding Cake
 INSERT INTO public.bom_items (bom_id, component_id, quantity_required, unit, is_optional, notes)
@@ -63,7 +62,7 @@ FROM public.boms b
 CROSS JOIN public.components c
 WHERE b.product_title = 'Vanilla Wedding Cake'
   AND c.name IN ('Flour', 'Sugar', 'Eggs', 'Butter', 'Vanilla Extract', '8-inch Round Cake Base', '8-inch White Cake Box')
-ON CONFLICT (bom_id, component_id) DO NOTHING;
+LIMIT 7;
 
 -- Add BOM items for Red Velvet Cupcakes
 INSERT INTO public.bom_items (bom_id, component_id, quantity_required, unit, is_optional, notes)
@@ -86,7 +85,7 @@ FROM public.boms b
 CROSS JOIN public.components c
 WHERE b.product_title = 'Red Velvet Cupcakes'
   AND c.name IN ('Flour', 'Sugar', 'Eggs', 'Butter', 'Red Food Coloring', 'Cupcake Liners')
-ON CONFLICT (bom_id, component_id) DO NOTHING;
+LIMIT 6;
 
 -- Add BOM items for Spiderman Cake
 INSERT INTO public.bom_items (bom_id, component_id, quantity_required, unit, is_optional, notes)
@@ -110,7 +109,7 @@ FROM public.boms b
 CROSS JOIN public.components c
 WHERE b.product_title = 'Spiderman Cake'
   AND c.name IN ('Flour', 'Sugar', 'Eggs', 'Butter', 'Spiderman Cake Topper', '6-inch Round Cake Base', '6-inch White Cake Box')
-ON CONFLICT (bom_id, component_id) DO NOTHING;
+LIMIT 7;
 
 -- Add BOM items for Custom Birthday Cake
 INSERT INTO public.bom_items (bom_id, component_id, quantity_required, unit, is_optional, notes)
@@ -134,7 +133,7 @@ FROM public.boms b
 CROSS JOIN public.components c
 WHERE b.product_title = 'Custom Birthday Cake'
   AND c.name IN ('Flour', 'Sugar', 'Eggs', 'Butter', '6-inch Round Cake Base', '6-inch White Cake Box', 'Number Candles Set')
-ON CONFLICT (bom_id, component_id) DO NOTHING;
+LIMIT 7;
 
 -- Verify the data was created
 SELECT 

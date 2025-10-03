@@ -9,21 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getAccessoryKeywords, upsertAccessoryKeyword, getComponents, type AccessoryKeyword } from "../../lib/rpc-client";
-
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Component selection for keywords
-// =============================================================================
-
-const mockComponents = [
-  { id: "C003", name: "Spiderman Cake Topper" },
-  { id: "C005", name: "Number Candles Set" },
-  { id: "C009", name: "Batman Cake Topper" },
-  { id: "C010", name: "Princess Crown Topper" },
-  { id: "C011", name: "Wedding Cake Flowers" },
-  { id: "C012", name: "Birthday Banner" }
-];
+import { getAccessoryKeywords, upsertAccessoryKeyword, getComponents, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
 
 // =============================================================================
 // MOCK DATA - TODO: Replace with real data from database when features are implemented
@@ -34,10 +20,26 @@ const mockKeywords: AccessoryKeyword[] = []; // Using real data from database
 
 export function AccessoryKeywords() {
   const [keywords, setKeywords] = useState<AccessoryKeyword[]>([]);
+  const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [componentFilter, setComponentFilter] = useState("All");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Fetch components from Supabase
+  useEffect(() => {
+    async function fetchComponents() {
+      try {
+        const componentsData = await getComponents();
+        console.log('Fetched Components:', componentsData); // Debug log
+        setComponents(componentsData);
+      } catch (error) {
+        console.error('Error fetching components:', error);
+        toast.error('Failed to load components');
+      }
+    }
+    fetchComponents();
+  }, []);
 
   // Fetch keywords from Supabase
   useEffect(() => {
@@ -82,7 +84,7 @@ export function AccessoryKeywords() {
       return;
     }
 
-    const component = mockComponents.find(c => c.id === newComponentId);
+    const component = components.find(c => c.id === newComponentId);
     if (!component) return;
 
     const keyword: AccessoryKeyword = {
@@ -150,9 +152,9 @@ export function AccessoryKeywords() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Components</SelectItem>
-              {mockComponents.map(component => (
+              {components.map(component => (
                 <SelectItem key={component.id} value={component.id}>
-                  {component.name}
+                  {component.name} ({component.sku})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -255,9 +257,9 @@ export function AccessoryKeywords() {
                   <SelectValue placeholder="Select component" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockComponents.map(component => (
+                  {components.map(component => (
                     <SelectItem key={component.id} value={component.id}>
-                      {component.name}
+                      {component.name} ({component.sku})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -319,7 +321,7 @@ export function AccessoryKeywords() {
                 <Select 
                   value={editingKeyword.component_id} 
                   onValueChange={(value) => {
-                    const component = mockComponents.find(c => c.id === value);
+                    const component = components.find(c => c.id === value);
                     setEditingKeyword({
                       ...editingKeyword,
                       component_id: value,
@@ -331,9 +333,9 @@ export function AccessoryKeywords() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockComponents.map(component => (
+                    {components.map(component => (
                       <SelectItem key={component.id} value={component.id}>
-                        {component.name}
+                        {component.name} ({component.sku})
                       </SelectItem>
                     ))}
                   </SelectContent>
