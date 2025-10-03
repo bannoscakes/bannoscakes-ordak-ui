@@ -203,7 +203,7 @@ export function TransactionsInventory() {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {transaction.performed_by || "—"}
+                      {transaction.reason || "—"}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -279,18 +279,18 @@ export function TransactionsInventory() {
                 </div>
               </div>
 
-              {selectedTransaction.performed_by && (
+              {selectedTransaction.performer_name && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Performed By</Label>
-                  <p className="text-sm">{selectedTransaction.performed_by}</p>
+                  <p className="text-sm">{selectedTransaction.performer_name}</p>
                 </div>
               )}
 
-              {selectedTransaction.performed_by && (
+              {selectedTransaction.reason && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Note</Label>
                   <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm">{selectedTransaction.performed_by}</p>
+                    <p className="text-sm">{selectedTransaction.reason}</p>
                   </div>
                 </div>
               )}

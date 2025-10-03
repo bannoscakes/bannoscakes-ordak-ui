@@ -616,6 +616,7 @@ export interface StockTransaction {
   reason: string;
   order_id?: string;
   performed_by?: string;
+  performer_name?: string;
   created_at: string;
   updated_at: string;
 }
