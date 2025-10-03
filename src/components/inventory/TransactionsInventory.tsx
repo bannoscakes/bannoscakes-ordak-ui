@@ -128,13 +128,13 @@ export function TransactionsInventory() {
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Restocks</div>
           <div className="text-2xl font-semibold text-green-600">
-            {filteredTransactions.filter(t => t.delta > 0 && t.source === 'Restock').length}
+            {filteredTransactions.filter(t => t.delta > 0 && t.reason === 'Restock').length}
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Adjustments</div>
           <div className="text-2xl font-semibold text-orange-600">
-            {filteredTransactions.filter(t => t.source === 'Manual').length}
+            {filteredTransactions.filter(t => t.reason === 'Manual').length}
           </div>
         </Card>
       </div>
@@ -243,14 +243,14 @@ export function TransactionsInventory() {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Timestamp</Label>
-                  <p className="font-mono text-sm">{formatDateTime(selectedTransaction.timestamp)}</p>
+                  <p className="font-mono text-sm">{formatDateTime(selectedTransaction.created_at)}</p>
                 </div>
               </div>
 
-              {selectedTransaction.orderNumber && (
+              {selectedTransaction.order_id && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Order Number</Label>
-                  <p className="font-mono text-sm">{selectedTransaction.orderNumber}</p>
+                  <p className="font-mono text-sm">{selectedTransaction.order_id}</p>
                 </div>
               )}
 
@@ -259,8 +259,8 @@ export function TransactionsInventory() {
               <div>
                 <Label className="text-xs text-muted-foreground">Component</Label>
                 <div className="space-y-1">
-                  <p className="font-medium">{selectedTransaction.componentName}</p>
-                  <p className="font-mono text-sm text-muted-foreground">{selectedTransaction.componentSku}</p>
+                  <p className="font-medium">{selectedTransaction.component_name}</p>
+                  <p className="font-mono text-sm text-muted-foreground">{selectedTransaction.component_sku}</p>
                 </div>
               </div>
 
@@ -273,24 +273,24 @@ export function TransactionsInventory() {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Source</Label>
-                  <Badge className={`text-xs ${getSourceColor(selectedTransaction.source)} mt-1`}>
-                    {selectedTransaction.source}
+                  <Badge className={`text-xs ${getSourceColor(selectedTransaction.reason)} mt-1`}>
+                    {selectedTransaction.reason}
                   </Badge>
                 </div>
               </div>
 
-              {selectedTransaction.performedBy && (
+              {selectedTransaction.performed_by && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Performed By</Label>
-                  <p className="text-sm">{selectedTransaction.performedBy}</p>
+                  <p className="text-sm">{selectedTransaction.performed_by}</p>
                 </div>
               )}
 
-              {selectedTransaction.note && (
+              {selectedTransaction.performed_by && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Note</Label>
                   <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm">{selectedTransaction.note}</p>
+                    <p className="text-sm">{selectedTransaction.performed_by}</p>
                   </div>
                 </div>
               )}
