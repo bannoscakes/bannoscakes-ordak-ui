@@ -97,7 +97,7 @@ export function AccessoryKeywords() {
         is_active: true
       });
 
-      const newKeyword: AccessoryKeyword = {
+      const newAccessoryKeyword: AccessoryKeyword = {
         id: keywordId,
         keyword: newKeyword,
         component_id: newComponentId,
@@ -110,7 +110,7 @@ export function AccessoryKeywords() {
         updated_at: new Date().toISOString()
       };
 
-      setKeywords(prev => [...prev, newKeyword]);
+      setKeywords(prev => [...prev, newAccessoryKeyword]);
       setIsAddDialogOpen(false);
       resetForm();
       toast.success("Keyword added successfully");
