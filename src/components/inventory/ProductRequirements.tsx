@@ -66,7 +66,7 @@ export function ProductRequirements() {
   // Filtering is now handled by the RPC call, so we can use requirements directly
   const filteredRequirements = requirements;
 
-  const handleAddRequirement = () => {
+  const handleAddRequirement = async () => {
     if (!newProductTitle || !newRequiredComponentId) {
       toast.error("Please fill in all required fields");
       return;
@@ -75,25 +75,40 @@ export function ProductRequirements() {
     const component = components.find(c => c.id === newRequiredComponentId);
     if (!component) return;
 
-    const requirement: ProductRequirement = {
-      id: `PR${Date.now()}`,
-      shopify_product_id: `${newStore}-${newProductTitle.toLowerCase().replace(/\s+/g, '-')}`,
-      shopify_variant_id: newVariant || "",
-      product_title: newProductTitle,
-      component_id: newRequiredComponentId,
-      component_name: component.name,
-      component_sku: component.sku,
-      quantity_per_unit: 1,
-      is_optional: false,
-      auto_deduct: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const requirementId = await upsertProductRequirement({
+        shopify_product_id: `${newStore}-${newProductTitle.toLowerCase().replace(/\s+/g, '-')}`,
+        shopify_variant_id: newVariant || "",
+        product_title: newProductTitle,
+        component_id: newRequiredComponentId,
+        quantity_per_unit: 1,
+        is_optional: false,
+        auto_deduct: true
+      });
 
-    setRequirements(prev => [...prev, requirement]);
-    setIsAddDialogOpen(false);
-    resetForm();
-    toast.success("Product requirement added successfully");
+      const requirement: ProductRequirement = {
+        id: requirementId,
+        shopify_product_id: `${newStore}-${newProductTitle.toLowerCase().replace(/\s+/g, '-')}`,
+        shopify_variant_id: newVariant || "",
+        product_title: newProductTitle,
+        component_id: newRequiredComponentId,
+        component_name: component.name,
+        component_sku: component.sku,
+        quantity_per_unit: 1,
+        is_optional: false,
+        auto_deduct: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setRequirements(prev => [...prev, requirement]);
+      setIsAddDialogOpen(false);
+      resetForm();
+      toast.success("Product requirement added successfully");
+    } catch (error) {
+      console.error('Error adding requirement:', error);
+      toast.error('Failed to add requirement');
+    }
   };
 
   const handleEditRequirement = (requirement: ProductRequirement) => {
@@ -101,22 +116,46 @@ export function ProductRequirements() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateRequirement = () => {
+  const handleUpdateRequirement = async () => {
     if (!editingRequirement) return;
 
-    setRequirements(prev => prev.map(r => 
-      r.id === editingRequirement.id ? editingRequirement : r
-    ));
-    
-    setIsEditDialogOpen(false);
-    setEditingRequirement(null);
-    toast.success("Product requirement updated successfully");
+    try {
+      await upsertProductRequirement({
+        id: editingRequirement.id,
+        shopify_product_id: editingRequirement.shopify_product_id,
+        shopify_variant_id: editingRequirement.shopify_variant_id,
+        product_title: editingRequirement.product_title,
+        component_id: editingRequirement.component_id,
+        quantity_per_unit: editingRequirement.quantity_per_unit,
+        is_optional: editingRequirement.is_optional,
+        auto_deduct: editingRequirement.auto_deduct
+      });
+
+      setRequirements(prev => prev.map(r => 
+        r.id === editingRequirement.id ? editingRequirement : r
+      ));
+      
+      setIsEditDialogOpen(false);
+      setEditingRequirement(null);
+      toast.success("Product requirement updated successfully");
+    } catch (error) {
+      console.error('Error updating requirement:', error);
+      toast.error('Failed to update requirement');
+    }
   };
 
-  const handleDeleteRequirement = (id: string) => {
+  const handleDeleteRequirement = async (id: string) => {
     if (confirm("Are you sure you want to delete this product requirement?")) {
-      setRequirements(prev => prev.filter(r => r.id !== id));
-      toast.success("Product requirement deleted");
+      try {
+        // TODO: Implement actual delete RPC when available
+        // For now, we'll just remove from local state
+        // This should be replaced with a proper delete RPC call
+        setRequirements(prev => prev.filter(r => r.id !== id));
+        toast.success("Product requirement deleted");
+      } catch (error) {
+        console.error('Error deleting requirement:', error);
+        toast.error('Failed to delete requirement');
+      }
     }
   };
 
