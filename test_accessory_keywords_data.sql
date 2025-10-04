@@ -1,142 +1,43 @@
--- Test Accessory Keywords Data for AccessoryKeywords Component
--- Run this in Supabase SQL Editor
-
--- First, let's see what components we have
-SELECT id, sku, name FROM public.components ORDER BY name LIMIT 10;
+-- Test Accessory Keywords Data
+-- This script creates sample accessory keywords for testing the UI
 
 -- Insert sample accessory keywords
--- These will help with automatic component matching based on keywords in order notes
+INSERT INTO accessory_keywords (keyword, component_id, priority, match_type, is_active, created_at, updated_at)
+VALUES 
+  -- Spiderman related keywords
+  ('spiderman', (SELECT id FROM components WHERE sku = 'SPIDER-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('spidey', (SELECT id FROM components WHERE sku = 'SPIDER-001' LIMIT 1), 8, 'contains', true, NOW(), NOW()),
+  ('marvel', (SELECT id FROM components WHERE sku = 'SPIDER-001' LIMIT 1), 5, 'contains', true, NOW(), NOW()),
+  
+  -- Batman related keywords
+  ('batman', (SELECT id FROM components WHERE sku = 'BAT-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('bat', (SELECT id FROM components WHERE sku = 'BAT-001' LIMIT 1), 7, 'contains', true, NOW(), NOW()),
+  ('dc', (SELECT id FROM components WHERE sku = 'BAT-001' LIMIT 1), 5, 'contains', true, NOW(), NOW()),
+  
+  -- Princess related keywords
+  ('princess', (SELECT id FROM components WHERE sku = 'PRINCESS-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('castle', (SELECT id FROM components WHERE sku = 'PRINCESS-001' LIMIT 1), 8, 'contains', true, NOW(), NOW()),
+  ('crown', (SELECT id FROM components WHERE sku = 'PRINCESS-001' LIMIT 1), 6, 'contains', true, NOW(), NOW()),
+  
+  -- Wedding related keywords
+  ('wedding', (SELECT id FROM components WHERE sku = 'WEDDING-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('elegant', (SELECT id FROM components WHERE sku = 'WEDDING-001' LIMIT 1), 7, 'contains', true, NOW(), NOW()),
+  ('white', (SELECT id FROM components WHERE sku = 'WEDDING-001' LIMIT 1), 5, 'contains', true, NOW(), NOW()),
+  
+  -- Birthday related keywords
+  ('birthday', (SELECT id FROM components WHERE sku = 'BIRTHDAY-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('celebration', (SELECT id FROM components WHERE sku = 'BIRTHDAY-001' LIMIT 1), 8, 'contains', true, NOW(), NOW()),
+  ('party', (SELECT id FROM components WHERE sku = 'BIRTHDAY-001' LIMIT 1), 6, 'contains', true, NOW(), NOW());
 
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
+-- Verify the data was inserted
 SELECT 
-  'spiderman' as keyword,
-  c.id as component_id,
-  10 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%spiderman%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'batman' as keyword,
-  c.id as component_id,
-  10 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%batman%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'princess' as keyword,
-  c.id as component_id,
-  10 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%princess%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'wedding' as keyword,
-  c.id as component_id,
-  10 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%wedding%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'birthday' as keyword,
-  c.id as component_id,
-  10 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%birthday%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'candles' as keyword,
-  c.id as component_id,
-  10 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%candles%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'topper' as keyword,
-  c.id as component_id,
-  5 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%topper%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'flowers' as keyword,
-  c.id as component_id,
-  5 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%flowers%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'banner' as keyword,
-  c.id as component_id,
-  5 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%banner%'
-LIMIT 1;
-
--- Add some generic keywords for common components
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'cake base' as keyword,
-  c.id as component_id,
-  8 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%cake base%'
-LIMIT 1;
-
-INSERT INTO public.accessory_keywords (keyword, component_id, priority, match_type, is_active) 
-SELECT 
-  'cake box' as keyword,
-  c.id as component_id,
-  8 as priority,
-  'contains' as match_type,
-  true as is_active
-FROM public.components c
-WHERE c.name ILIKE '%cake box%'
-LIMIT 1;
-
--- Verify the data was created
-SELECT 
+  ak.id,
   ak.keyword,
   ak.priority,
   ak.match_type,
   ak.is_active,
   c.name as component_name,
   c.sku as component_sku
-FROM public.accessory_keywords ak
-JOIN public.components c ON ak.component_id = c.id
+FROM accessory_keywords ak
+JOIN components c ON ak.component_id = c.id
 ORDER BY ak.priority DESC, ak.keyword;

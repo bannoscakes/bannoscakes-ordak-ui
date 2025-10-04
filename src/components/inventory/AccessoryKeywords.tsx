@@ -66,7 +66,8 @@ export function AccessoryKeywords() {
   // Form states
   const [newKeyword, setNewKeyword] = useState("");
   const [newComponentId, setNewComponentId] = useState("");
-  const [newNotes, setNewNotes] = useState("");
+  const [newPriority, setNewPriority] = useState(0);
+  const [newMatchType, setNewMatchType] = useState<'contains' | 'exact' | 'starts_with' | 'ends_with'>('contains');
 
   const filteredKeywords = keywords.filter(keyword => {
     const matchesSearch = searchQuery === "" || 
@@ -78,7 +79,7 @@ export function AccessoryKeywords() {
     return matchesSearch && matchesComponent;
   });
 
-  const handleAddKeyword = () => {
+  const handleAddKeyword = async () => {
     if (!newKeyword || !newComponentId) {
       toast.error("Please fill in all required fields");
       return;
@@ -87,18 +88,36 @@ export function AccessoryKeywords() {
     const component = components.find(c => c.id === newComponentId);
     if (!component) return;
 
-    const keyword: AccessoryKeyword = {
-      id: `AK${Date.now()}`,
-      keyword: newKeyword,
-      component_id: newComponentId,
-      component_name: component.name,
-      notes: newNotes || undefined
-    };
+    try {
+      const keywordId = await upsertAccessoryKeyword({
+        keyword: newKeyword,
+        component_id: newComponentId,
+        priority: newPriority,
+        match_type: newMatchType,
+        is_active: true
+      });
 
-    setKeywords(prev => [...prev, keyword]);
-    setIsAddDialogOpen(false);
-    resetForm();
-    toast.success("Keyword added successfully");
+      const newAccessoryKeyword: AccessoryKeyword = {
+        id: keywordId,
+        keyword: newKeyword,
+        component_id: newComponentId,
+        component_name: component.name,
+        component_sku: component.sku,
+        priority: newPriority,
+        match_type: newMatchType,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setKeywords(prev => [...prev, newAccessoryKeyword]);
+      setIsAddDialogOpen(false);
+      resetForm();
+      toast.success("Keyword added successfully");
+    } catch (error) {
+      console.error('Error adding keyword:', error);
+      toast.error('Failed to add keyword');
+    }
   };
 
   const handleEditKeyword = (keyword: AccessoryKeyword) => {
@@ -106,29 +125,58 @@ export function AccessoryKeywords() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateKeyword = () => {
+  const handleUpdateKeyword = async () => {
     if (!editingKeyword) return;
 
-    setKeywords(prev => prev.map(k => 
-      k.id === editingKeyword.id ? editingKeyword : k
-    ));
-    
-    setIsEditDialogOpen(false);
-    setEditingKeyword(null);
-    toast.success("Keyword updated successfully");
+    try {
+      await upsertAccessoryKeyword({
+        id: editingKeyword.id,
+        keyword: editingKeyword.keyword,
+        component_id: editingKeyword.component_id,
+        priority: editingKeyword.priority,
+        match_type: editingKeyword.match_type,
+        is_active: editingKeyword.is_active
+      });
+
+      setKeywords(prev => prev.map(k => 
+        k.id === editingKeyword.id ? editingKeyword : k
+      ));
+      
+      setIsEditDialogOpen(false);
+      setEditingKeyword(null);
+      toast.success("Keyword updated successfully");
+    } catch (error) {
+      console.error('Error updating keyword:', error);
+      toast.error('Failed to update keyword');
+    }
   };
 
-  const handleDeleteKeyword = (id: string) => {
+  const handleDeleteKeyword = async (id: string) => {
     if (confirm("Are you sure you want to delete this keyword?")) {
-      setKeywords(prev => prev.filter(k => k.id !== id));
-      toast.success("Keyword deleted");
+      try {
+        // For now, we'll deactivate the keyword instead of deleting
+        // TODO: Implement actual delete RPC when available
+        await upsertAccessoryKeyword({
+          id: id,
+          keyword: '', // Required field, but not used for deactivation
+          component_id: '', // Required field, but not used for deactivation
+          is_active: false
+        });
+
+        setKeywords(prev => prev.filter(k => k.id !== id));
+        toast.success("Keyword deleted");
+      } catch (error) {
+        console.error('Error deleting keyword:', error);
+        toast.error('Failed to delete keyword');
+      }
     }
   };
 
   const resetForm = () => {
     setNewKeyword("");
     setNewComponentId("");
-    setNewNotes("");
+    setNewPriority(0);
+    setNewMatchType('contains');
   };
 
   return (
@@ -197,9 +245,11 @@ export function AccessoryKeywords() {
                   <TableCell className="font-medium">{keyword.keyword}</TableCell>
                   <TableCell>{keyword.component_name}</TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {keyword.match_type} (Priority: {keyword.priority})
-                    </span>
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">{keyword.match_type}</div>
+                      <div className="text-xs text-muted-foreground">Priority: {keyword.priority}</div>
+                      <div className="text-xs text-muted-foreground">SKU: {keyword.component_sku}</div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -266,15 +316,33 @@ export function AccessoryKeywords() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Additional context or notes..."
-                value={newNotes}
-                onChange={(e) => setNewNotes(e.target.value)}
-                className="min-h-20"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newPriority}
+                  onChange={(e) => setNewPriority(parseInt(e.target.value) || 0)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="match-type">Match Type</Label>
+                <Select value={newMatchType} onValueChange={(value: any) => setNewMatchType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contains">Contains</SelectItem>
+                    <SelectItem value="exact">Exact</SelectItem>
+                    <SelectItem value="starts_with">Starts With</SelectItem>
+                    <SelectItem value="ends_with">Ends With</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-4">
@@ -342,17 +410,42 @@ export function AccessoryKeywords() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes (optional)</Label>
-                <Textarea
-                  id="edit-notes"
-                  value={editingKeyword.notes || ""}
-                  onChange={(e) => setEditingKeyword({
-                    ...editingKeyword,
-                    notes: e.target.value || undefined
-                  })}
-                  className="min-h-20"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-priority">Priority</Label>
+                  <Input
+                    id="edit-priority"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editingKeyword.priority}
+                    onChange={(e) => setEditingKeyword({
+                      ...editingKeyword,
+                      priority: parseInt(e.target.value) || 0
+                    })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-match-type">Match Type</Label>
+                  <Select 
+                    value={editingKeyword.match_type} 
+                    onValueChange={(value: any) => setEditingKeyword({
+                      ...editingKeyword,
+                      match_type: value
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="contains">Contains</SelectItem>
+                      <SelectItem value="exact">Exact</SelectItem>
+                      <SelectItem value="starts_with">Starts With</SelectItem>
+                      <SelectItem value="ends_with">Ends With</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-4">
