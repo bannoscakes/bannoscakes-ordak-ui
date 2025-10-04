@@ -2,32 +2,32 @@
 -- This script creates sample accessory keywords for testing the UI
 
 -- Insert sample accessory keywords
-INSERT INTO accessory_keywords (id, keyword, component_id, priority, match_type, is_active, created_at, updated_at)
+INSERT INTO accessory_keywords (keyword, component_id, priority, match_type, is_active, created_at, updated_at)
 VALUES 
   -- Spiderman related keywords
-  ('ak_001', 'spiderman', 'comp_001', 10, 'contains', true, NOW(), NOW()),
-  ('ak_002', 'spidey', 'comp_001', 8, 'contains', true, NOW(), NOW()),
-  ('ak_003', 'marvel', 'comp_001', 5, 'contains', true, NOW(), NOW()),
+  ('spiderman', (SELECT id FROM components WHERE sku = 'SPIDER-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('spidey', (SELECT id FROM components WHERE sku = 'SPIDER-001' LIMIT 1), 8, 'contains', true, NOW(), NOW()),
+  ('marvel', (SELECT id FROM components WHERE sku = 'SPIDER-001' LIMIT 1), 5, 'contains', true, NOW(), NOW()),
   
   -- Batman related keywords
-  ('ak_004', 'batman', 'comp_002', 10, 'contains', true, NOW(), NOW()),
-  ('ak_005', 'bat', 'comp_002', 7, 'contains', true, NOW(), NOW()),
-  ('ak_006', 'dc', 'comp_002', 5, 'contains', true, NOW(), NOW()),
+  ('batman', (SELECT id FROM components WHERE sku = 'BAT-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('bat', (SELECT id FROM components WHERE sku = 'BAT-001' LIMIT 1), 7, 'contains', true, NOW(), NOW()),
+  ('dc', (SELECT id FROM components WHERE sku = 'BAT-001' LIMIT 1), 5, 'contains', true, NOW(), NOW()),
   
   -- Princess related keywords
-  ('ak_007', 'princess', 'comp_003', 10, 'contains', true, NOW(), NOW()),
-  ('ak_008', 'castle', 'comp_003', 8, 'contains', true, NOW(), NOW()),
-  ('ak_009', 'crown', 'comp_003', 6, 'contains', true, NOW(), NOW()),
+  ('princess', (SELECT id FROM components WHERE sku = 'PRINCESS-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('castle', (SELECT id FROM components WHERE sku = 'PRINCESS-001' LIMIT 1), 8, 'contains', true, NOW(), NOW()),
+  ('crown', (SELECT id FROM components WHERE sku = 'PRINCESS-001' LIMIT 1), 6, 'contains', true, NOW(), NOW()),
   
   -- Wedding related keywords
-  ('ak_010', 'wedding', 'comp_004', 10, 'contains', true, NOW(), NOW()),
-  ('ak_011', 'elegant', 'comp_004', 7, 'contains', true, NOW(), NOW()),
-  ('ak_012', 'white', 'comp_004', 5, 'contains', true, NOW(), NOW()),
+  ('wedding', (SELECT id FROM components WHERE sku = 'WEDDING-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('elegant', (SELECT id FROM components WHERE sku = 'WEDDING-001' LIMIT 1), 7, 'contains', true, NOW(), NOW()),
+  ('white', (SELECT id FROM components WHERE sku = 'WEDDING-001' LIMIT 1), 5, 'contains', true, NOW(), NOW()),
   
   -- Birthday related keywords
-  ('ak_013', 'birthday', 'comp_005', 10, 'contains', true, NOW(), NOW()),
-  ('ak_014', 'celebration', 'comp_005', 8, 'contains', true, NOW(), NOW()),
-  ('ak_015', 'party', 'comp_005', 6, 'contains', true, NOW(), NOW());
+  ('birthday', (SELECT id FROM components WHERE sku = 'BIRTHDAY-001' LIMIT 1), 10, 'contains', true, NOW(), NOW()),
+  ('celebration', (SELECT id FROM components WHERE sku = 'BIRTHDAY-001' LIMIT 1), 8, 'contains', true, NOW(), NOW()),
+  ('party', (SELECT id FROM components WHERE sku = 'BIRTHDAY-001' LIMIT 1), 6, 'contains', true, NOW(), NOW());
 
 -- Verify the data was inserted
 SELECT 
