@@ -383,20 +383,17 @@ export function BOMsInventory() {
                               <SelectValue placeholder="Select component" />
                             </SelectTrigger>
                             <SelectContent>
-                              {(() => {
-                                console.log('Components for dropdown:', components);
-                                return components.length === 0 ? (
-                                  <SelectItem value="no-components" disabled>
-                                    No components available
+                              {components.length === 0 ? (
+                                <SelectItem value="no-components" disabled>
+                                  No components available
+                                </SelectItem>
+                              ) : (
+                                components.map(component => (
+                                  <SelectItem key={component.id} value={component.id}>
+                                    {component.name} ({component.sku})
                                   </SelectItem>
-                                ) : (
-                                  components.map(component => (
-                                    <SelectItem key={component.id} value={component.id}>
-                                      {component.name} ({component.sku})
-                                    </SelectItem>
-                                  ))
-                                );
-                              })()}
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </div>

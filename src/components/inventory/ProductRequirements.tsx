@@ -77,11 +77,17 @@ export function ProductRequirements() {
 
     const requirement: ProductRequirement = {
       id: `PR${Date.now()}`,
-      productTitle: newProductTitle,
-      variant: newVariant || undefined,
-      store: newStore,
-      requiredComponentId: newRequiredComponentId,
-      requiredComponentName: component.name
+      shopify_product_id: `${newStore}-${newProductTitle.toLowerCase().replace(/\s+/g, '-')}`,
+      shopify_variant_id: newVariant || "",
+      product_title: newProductTitle,
+      component_id: newRequiredComponentId,
+      component_name: component.name,
+      component_sku: component.sku,
+      quantity_per_unit: 1,
+      is_optional: false,
+      auto_deduct: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     setRequirements(prev => [...prev, requirement]);
@@ -336,10 +342,10 @@ export function ProductRequirements() {
                 <Label htmlFor="edit-product-title">Product Title</Label>
                 <Input
                   id="edit-product-title"
-                  value={editingRequirement.productTitle}
+                  value={editingRequirement.product_title}
                   onChange={(e) => setEditingRequirement({
                     ...editingRequirement,
-                    productTitle: e.target.value
+                    product_title: e.target.value
                   })}
                 />
               </div>
@@ -348,10 +354,10 @@ export function ProductRequirements() {
                 <Label htmlFor="edit-variant">Variant (optional)</Label>
                 <Input
                   id="edit-variant"
-                  value={editingRequirement.variant || ""}
+                  value={editingRequirement.shopify_variant_id || ""}
                   onChange={(e) => setEditingRequirement({
                     ...editingRequirement,
-                    variant: e.target.value || undefined
+                    shopify_variant_id: e.target.value
                   })}
                 />
               </div>
@@ -359,10 +365,10 @@ export function ProductRequirements() {
               <div className="space-y-2">
                 <Label htmlFor="edit-store">Store</Label>
                 <Select 
-                  value={editingRequirement.store} 
+                  value={editingRequirement.shopify_product_id.includes('bannos') ? 'bannos' : 'flourlane'} 
                   onValueChange={(value: any) => setEditingRequirement({
                     ...editingRequirement,
-                    store: value
+                    shopify_product_id: `${value}-${editingRequirement.product_title.toLowerCase().replace(/\s+/g, '-')}`
                   })}
                 >
                   <SelectTrigger>
@@ -378,13 +384,14 @@ export function ProductRequirements() {
               <div className="space-y-2">
                 <Label htmlFor="edit-required-component">Required Component</Label>
                 <Select 
-                  value={editingRequirement.requiredComponentId} 
+                  value={editingRequirement.component_id} 
                   onValueChange={(value) => {
                     const component = components.find(c => c.id === value);
                     setEditingRequirement({
                       ...editingRequirement,
-                      requiredComponentId: value,
-                      requiredComponentName: component?.name || ""
+                      component_id: value,
+                      component_name: component?.name || "",
+                      component_sku: component?.sku || ""
                     });
                   }}
                 >

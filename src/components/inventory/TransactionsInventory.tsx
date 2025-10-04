@@ -203,7 +203,7 @@ export function TransactionsInventory() {
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">
-                      {transaction.reason || "—"}
+                      {transaction.performer_name || "—"}
                     </span>
                   </TableCell>
                   <TableCell>
