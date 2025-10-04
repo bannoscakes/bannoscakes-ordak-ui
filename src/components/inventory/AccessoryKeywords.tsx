@@ -79,7 +79,7 @@ export function AccessoryKeywords() {
     return matchesSearch && matchesComponent;
   });
 
-  const handleAddKeyword = () => {
+  const handleAddKeyword = async () => {
     if (!newKeyword || !newComponentId) {
       toast.error("Please fill in all required fields");
       return;
