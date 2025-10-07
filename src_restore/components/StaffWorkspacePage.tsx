@@ -17,13 +17,11 @@ import {
   Square,
   Coffee,
   Clock,
-  MessageSquare,
   Briefcase,
 } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
-import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
 
 // Import mock RPCs
@@ -159,7 +157,6 @@ export function StaffWorkspacePage({
   const [activeTab, setActiveTab] = useState("orders");
 
   // Mock unread message count
-  const unreadMessageCount = 3;
 
   // Load orders from mock
   async function loadStaffOrders() {
@@ -409,25 +406,13 @@ export function StaffWorkspacePage({
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-1 max-w-md">
             <TabsTrigger
               value="orders"
               className="flex items-center gap-2"
             >
               <Briefcase className="h-4 w-4" />
               My Orders ({orders.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="messages"
-              className="flex items-center gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Messages
-              {unreadMessageCount > 0 && (
-                <Badge className="bg-red-500 text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center ml-1">
-                  {unreadMessageCount}
-                </Badge>
-              )}
             </TabsTrigger>
           </TabsList>
 
@@ -576,11 +561,6 @@ export function StaffWorkspacePage({
             </div>
           </TabsContent>
 
-          <TabsContent value="messages" className="mt-6">
-            <Card className="h-[600px]">
-              <MessagesPage staffName={staffName} />
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
 
