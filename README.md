@@ -1,203 +1,183 @@
-# Ordak v2 - Production Management System
+# Supabase CLI
 
-Production management system for **Bannos** & **Flourlane** cake stores, built with **React + Vite + TypeScript** frontend and **Supabase** backend.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-![Build Status](https://img.shields.io/badge/build-passing-green)
-![Version](https://img.shields.io/badge/version-0.1.0--alpha-blue)
-![Node](https://img.shields.io/badge/node-%3E%3D18-green)
-![License](https://img.shields.io/badge/license-private-red)
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
----
+This repository contains all the functionality for Supabase CLI.
 
-## 📋 Project Documentation
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-- **[Implementation Plan](./docs/IMPLEMENTATION_PLAN.md)** - Complete development roadmap and setup guide
-- **[Architecture](./docs/architecture.md)** - System design and data flows  
-- **[Dev Kickoff](./DEV_KICKOFF.md)** - Quick start guide for developers
+## Getting started
 
-**Current Version:** v0.1.0-alpha (mock implementation)
+### Install the CLI
 
----
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
-## 📦 Project Status
-
-- **Version:** 0.1.0-alpha  
-- **Node:** >=18  
-- **Framework:** React + Vite + TypeScript  
-- **Backend:** Supabase (DB + RPC + Edge Functions)  
-- **Docs:** `/docs` contains full specs & runbooks  
-- **CI/CD:** GitHub Actions (tests + migrations must pass before merge)  
-- **Hosting:** Vercel (frontend) + Supabase (backend + database)  
-
----
-
-## 🚀 Quick Start
 ```bash
-# Clone and setup
-git clone <repo-url>
-cd ordak-v2
-npm install
-cp .env.example .env.local
+npm i supabase --save-dev
+```
 
-# Configure .env.local with Supabase credentials
+To install the beta release channel:
 
-# Start development
-npm run dev
-Local server runs at: http://localhost:5173
-⚙️ Environment Setup
-Copy .env.example to .env.local and set values.
-Required variables:
+```bash
+npm i supabase@beta --save-dev
+```
 
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-VITE_APP_URL
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-Server-only (Edge Functions):
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-SUPABASE_SERVICE_ROLE_KEY
-SHOPIFY_BANNOS_TOKEN
-SHOPIFY_FLOURLANE_TOKEN
-SHOPIFY_WEBHOOK_SECRET
-SLACK_WEBHOOK_URL
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-See environment.md for details.
-🚨 Emergency Procedures
+<details>
+  <summary><b>macOS</b></summary>
 
-Production down: Check /docs/runbook.md
-Rollback: git revert HEAD && npm run deploy:prod
-Contact: [Your emergency contact]
-Backups: Daily PITR snapshots (7 days). See /docs/backup-recovery.md
+  Available via [Homebrew](https://brew.sh). To install:
 
-🗄️ Database Management
-bash# Run migrations
-npx supabase migration up
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-# Create new migration
-npx supabase migration new <name>
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
-# Reset dev database
-npx supabase db reset
-See migration-order.md for sequence.
-📜 Scripts
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
 
-npm run dev – Start development server
-npm run build – Production build
-npm run test – Run test suite
-npm run lint – Code quality check
-npm run type-check – TypeScript validation
-npm run migrate – Run database migrations
-npm run deploy:staging – Deploy to staging
-npm run deploy:prod – Deploy to production
+<details>
+  <summary><b>Windows</b></summary>
 
-🛠️ Development Workflow
-We use Cursor as the IDE.
-Always add /docs as Context so development aligns with business rules.
-Branch Strategy:
+  Available via [Scoop](https://scoop.sh). To install:
 
-main – Production only (protected)
-dev – Integration branch (default for Cursor)
-feature/* – Short-lived, merged into dev via PR
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
 
-mermaidgitGraph
-  commit id: "init"
-  branch dev
-  commit id: "dev work"
-  branch feature/xyz
-  commit id: "feature"
-  checkout dev
-  merge feature/xyz
-  commit id: "tested"
-  checkout main
-  merge dev
-📖 Documentation
-Complete specs live in /docs/:
+  To upgrade:
 
-overview.md – High-level description
-schema-and-rls.md – Database schema + RLS
-rpc-surface.md – API functions
-migration-order.md – Build sequence
-ui-site-map.md – Route map
-operations.md – Deployment & runbooks
-testing.md – Testing levels & flows
-backup-recovery.md – Disaster recovery
-performance-slas.md – SLAs & metrics
-onboarding.md – New developer guide
-checklists.md – QA, release, and Tailwind upgrade guides
-diagrams/ – PNG + Mermaid diagrams
+  ```powershell
+  scoop update supabase
+  ```
+</details>
 
-🚢 Deployment
-See deployment.md for full process.
-Quick deploy:
-bashnpm run build
-npm run deploy:prod
-✅ Testing
-bashnpm test          # All tests
-npm run test:unit # Unit only
-npm run test:e2e  # End-to-end
-CI blocks merges if migrations or tests fail.
-📋 Release Process
+<details>
+  <summary><b>Linux</b></summary>
 
-Update version in package.json
-Tag release: git tag v0.1.0 && git push origin v0.1.0
-Generate changelog: npm run changelog
-Deploy to staging first
-After 24h stable, deploy to production
+  Available via [Homebrew](https://brew.sh) and Linux packages.
 
-📊 Performance Targets
+  #### via Homebrew
 
-Queue load: <200ms
-Order creation: <500ms
-Inventory sync: <2s
-Uptime: 99.9%
+  To install:
 
-🔧 Common Issues
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-Tailwind v4 issues → See /docs/checklists.md
-Supabase connection fails → Verify anon and service_role keys
-Build fails → Clear node_modules and reinstall
-Webhooks not firing → Confirm Shopify tokens + webhook secret match
+  To upgrade:
 
-👨‍💻 Onboarding Developers
-See onboarding.md.
-Quick start:
-bashgit clone <repo-url>
-cd ordak-v2
-npm install
-cp .env.example .env.local
-npm run dev
-🖼️ Screenshots & Diagrams
-For visual reference, static diagrams are included in /docs/diagrams/:
+  ```sh
+  brew upgrade supabase
+  ```
 
-Branch Flow
-System Overview
-Table Site Map
+  #### via Linux packages
 
-See diagrams/README.md for details on updating diagrams.
-🔍 Monitoring & Alerts
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
 
-Error Tracking: Sentry (DSN in .env)
-Analytics: PostHog (key in .env)
-Alerts: Slack via webhook
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
 
-🧪 Quality & Security
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
 
-Code Reviews: All PRs must be approved before merging to main
-Security: RLS enforced on all tables, all writes via RPC only
-Linting: ESLint + Prettier enforced on commit
-Type Safety: TypeScript strict mode enabled
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
 
-## Staging
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
 
-- URL: <STAGING_URL>
-- Deploy guide: See [`docs/DEPLOY_STAGING.md`](docs/DEPLOY_STAGING.md)
-- Env (Preview on Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_USE_MOCKS=true`, `VITE_APP_URL=<STAGING_URL>`
+<details>
+  <summary><b>Other Platforms</b></summary>
 
-## Production
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
 
-- Deploy guide: See [`docs/DEPLOY_PRODUCTION.md`](docs/DEPLOY_PRODUCTION.md)
-- Branch: `main` (protected)
-- Environment: Production on Vercel
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
 
-📜 License
-Private repository for Ordak project.
-Not for external use.
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
+```bash
+supabase bootstrap
+```
+
+Or using npx:
+
+```bash
+npx supabase bootstrap
+```
+
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+
+## Docs
+
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```

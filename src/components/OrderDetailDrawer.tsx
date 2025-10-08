@@ -8,7 +8,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { getQueue } from "../lib/rpc-client";
+import { getOrder } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -71,7 +71,7 @@ const getExtendedOrderData = (order: QueueItem | null, store: "bannos" | "flourl
       : order.product.toLowerCase().includes("cupcake")
       ? ["Cupcake Liners", "Decorative Picks"]
       : [],
-    deliveryDate: "2024-12-03",
+    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
     notes: order.priority === "High" 
       ? "Customer requested early morning pickup. Handle with extra care - VIP client."
       : order.method === "Delivery"
@@ -116,14 +116,8 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
     try {
       setLoading(true);
       
-      // Fetch all orders and find the specific one
-      const orders = await getQueue({
-        store,
-        limit: 1000, // Get all orders to find the specific one
-      });
-      
-      // Find the specific order by ID
-      const foundOrder = orders.find((o: any) => o.id === order.id);
+      // Fetch the specific order using getOrder RPC
+      const foundOrder = await getOrder(order.id, store);
       
       if (foundOrder) {
         // Map database order to UI format

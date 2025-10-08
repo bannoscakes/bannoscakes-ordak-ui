@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
+import { useAuthContext } from "../contexts/AuthContext";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -18,10 +18,12 @@ import {
   Coffee,
   Clock,
   Briefcase,
+  MessageSquare,
 } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
+import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
 
 // Import real RPCs
@@ -34,7 +36,7 @@ interface QueueItem {
   product: string;
   size: "S" | "M" | "L";
   quantity: number;
-  deliveryTime?: string;
+  deliveryTime: string;
   priority: "High" | "Medium" | "Low";
   status:
     | "In Production"
@@ -51,8 +53,7 @@ interface QueueItem {
 }
 
 interface StaffWorkspacePageProps {
-  staffName: string;
-  onSignOut: () => void;
+  // No props needed - auth context provides user info
 }
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
@@ -99,10 +100,8 @@ const getRealisticSize = (
       : "Large";
 };
 
-export function StaffWorkspacePage({
-  staffName,
-  onSignOut,
-}: StaffWorkspacePageProps) {
+export function StaffWorkspacePage({}: StaffWorkspacePageProps) {
+  const { user, signOut } = useAuthContext();
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -149,11 +148,11 @@ export function StaffWorkspacePage({
         size: order.size || "M",
         quantity: order.item_qty || 1,
         deliveryTime: order.due_date || new Date().toISOString(),
-        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
-        status: mapStageToStatus(order.stage),
+          priority: (order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low") as "High" | "Medium" | "Low",
+        status: mapStageToStatus(order.stage) as "In Production" | "Pending" | "Quality Check" | "Completed" | "Scheduled",
         flavor: order.flavour || "Unknown",
         dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
+        method: (order.delivery_method === "delivery" ? "Delivery" : "Pickup") as "Delivery" | "Pickup",
         storage: order.storage || "Default",
         store: order.store || "bannos",
         stage: order.stage || "Filling"
@@ -322,7 +321,7 @@ export function StaffWorkspacePage({
             </h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-foreground font-medium">
-                {staffName}
+                {user?.fullName || 'Staff Member'}
               </span>
               <Button
                 variant="outline"
@@ -334,7 +333,7 @@ export function StaffWorkspacePage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onSignOut}
+                onClick={signOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
@@ -404,13 +403,20 @@ export function StaffWorkspacePage({
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-1 max-w-md">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger
               value="orders"
               className="flex items-center gap-2"
             >
               <Briefcase className="h-4 w-4" />
               My Orders ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="messages"
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Messages
             </TabsTrigger>
           </TabsList>
 
@@ -463,9 +469,9 @@ export function StaffWorkspacePage({
                             : "Flourlane"}
                         </Badge>
                         <OrderOverflowMenu
-                          onOpenOrder={() =>
-                            handleOpenOrder(order)
-                          }
+                          item={order}
+                          variant="queue"
+                          onOpenOrder={handleOpenOrder}
                           onEditOrder={undefined}
                           onAssignToStaff={undefined}
                           onViewDetails={() =>
@@ -474,7 +480,6 @@ export function StaffWorkspacePage({
                               "_blank",
                             )
                           }
-                          isCompleteTab={false}
                         />
                       </div>
 
@@ -559,6 +564,11 @@ export function StaffWorkspacePage({
             </div>
           </TabsContent>
 
+          <TabsContent value="messages" className="mt-6">
+            <Card className="h-[600px]">
+              <MessagesPage />
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
 

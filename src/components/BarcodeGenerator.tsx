@@ -169,23 +169,23 @@ export function BarcodeGenerator({
 
   return (
     <div className={`barcode-generator ${className}`}>
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm w-full">
         
         {/* Barcode Canvas */}
         <div className="flex flex-col items-center mb-4">
           <canvas 
             ref={canvasRef} 
-            className="border border-gray-300"
-            width={300}
-            height={100}
+            className="border border-gray-300 max-w-full"
+            width={280}
+            height={80}
             style={{ backgroundColor: '#f0f0f0' }}
           />
         </div>
         
         {/* Order Information */}
         <div className="text-center mb-4">
-          <div className="font-bold text-lg text-gray-900">{orderId}</div>
-          <div className="text-sm text-gray-600 mt-1">{productTitle}</div>
+          <div className="font-bold text-base text-gray-900 truncate">{orderId}</div>
+          <div className="text-sm text-gray-600 mt-1 truncate">{productTitle}</div>
           <div className="text-xs text-gray-500 mt-1">
             Due: {new Date(dueDate).toLocaleDateString()}
           </div>
@@ -196,7 +196,7 @@ export function BarcodeGenerator({
           <Button
             onClick={handlePrint}
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 flex-1"
           >
             <Printer className="h-4 w-4" />
             Print
@@ -205,7 +205,7 @@ export function BarcodeGenerator({
             onClick={handleDownload}
             variant="outline"
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 flex-1"
           >
             <Download className="h-4 w-4" />
             Download

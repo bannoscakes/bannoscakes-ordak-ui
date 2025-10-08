@@ -1,16 +1,19 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
+import { useAuthContext } from "../contexts/AuthContext";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
+import { EditOrderDrawer } from "./EditOrderDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
+import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
-import { getQueue } from "../lib/rpc-client";
+import { getQueue, getUnreadCount } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -31,8 +34,6 @@ interface QueueItem {
 }
 
 interface SupervisorWorkspacePageProps {
-  supervisorName: string;
-  onSignOut: () => void;
   onNavigateToBannosQueue: () => void;
   onNavigateToFlourlaneQueue: () => void;
 }
@@ -90,11 +91,10 @@ const getRealisticSize = (originalSize: string, product: string, store: string) 
 };
 
 export function SupervisorWorkspacePage({ 
-  supervisorName, 
-  onSignOut, 
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
+  const { user, signOut } = useAuthContext();
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -104,8 +104,10 @@ export function SupervisorWorkspacePage({
   const [elapsedTime, setElapsedTime] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(true);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Update elapsed time
   useEffect(() => {
@@ -137,7 +139,17 @@ export function SupervisorWorkspacePage({
   // Load orders from database
   useEffect(() => {
     loadSupervisorOrders();
+    loadUnreadCount();
   }, []);
+
+  const loadUnreadCount = async () => {
+    try {
+      const count = await getUnreadCount();
+      setUnreadMessageCount(count);
+    } catch (error) {
+      console.error('Failed to load unread count:', error);
+    }
+  };
 
   const loadSupervisorOrders = async () => {
     setLoading(true);
@@ -160,11 +172,11 @@ export function SupervisorWorkspacePage({
         size: order.size || "M",
         quantity: order.item_qty || 1,
         deliveryTime: order.due_date || new Date().toISOString(),
-        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
-        status: mapStageToStatus(order.stage),
+        priority: (order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low") as 'High' | 'Medium' | 'Low',
+        status: mapStageToStatus(order.stage) as 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled',
         flavor: order.flavour || "Unknown",
         dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
+        method: (order.delivery_method === "delivery" ? "Delivery" : "Pickup") as 'Delivery' | 'Pickup',
         storage: order.storage || "Default",
         store: order.store || "bannos",
         stage: order.stage || "Filling"
@@ -223,6 +235,11 @@ export function SupervisorWorkspacePage({
     setOrderDetailOpen(true);
   };
 
+  const handleEditOrder = (order: QueueItem) => {
+    setSelectedOrder(order);
+    setIsEditingOrder(true);
+  };
+
   const handleScanOrder = (order: QueueItem) => {
     if (shiftStatus === 'on-break') {
       toast.error("Cannot scan orders while on break");
@@ -269,7 +286,7 @@ export function SupervisorWorkspacePage({
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-medium text-foreground">Supervisor Workspace</h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-foreground font-medium">{supervisorName}</span>
+              <span className="text-sm text-foreground font-medium">{user?.fullName || 'Supervisor'}</span>
               
               {/* Shift Controls */}
               {shiftStatus === 'not-started' ? (
@@ -305,7 +322,7 @@ export function SupervisorWorkspacePage({
                 </div>
               )}
               
-              <Button variant="outline" size="sm" onClick={onSignOut}>
+              <Button variant="outline" size="sm" onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </Button>
@@ -314,9 +331,24 @@ export function SupervisorWorkspacePage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Queue Shortcuts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="max-w-7xl mx-auto p-6">
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="messages" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Messages
+              {unreadMessageCount > 0 && (
+                <Badge className="bg-red-500 text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center ml-1">
+                  {unreadMessageCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* Queue Shortcuts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Bannos Queue Shortcut */}
           <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={onNavigateToBannosQueue}>
             <div className="flex items-center justify-between">
@@ -404,11 +436,12 @@ export function SupervisorWorkspacePage({
                           {order.store === 'bannos' ? 'Bannos' : 'Flourlane'}
                         </Badge>
                         <OrderOverflowMenu
-                          onOpenOrder={() => handleOpenOrder(order)}
-                          onEditOrder={undefined}
+                          item={order}
+                          variant="queue"
+                          onOpenOrder={handleOpenOrder}
+                          onEditOrder={handleEditOrder}
                           onAssignToStaff={undefined}
                           onViewDetails={() => window.open(`https://admin.shopify.com/orders/${order.orderNumber}`, '_blank')}
-                          isCompleteTab={false}
                         />
                       </div>
 
@@ -484,29 +517,64 @@ export function SupervisorWorkspacePage({
           </div>
         )}
 
-        {/* Show My Tasks Button (if hidden) */}
-        {!showMyTasks && (
-          <Card className="p-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowMyTasks(true)}
-              className="w-full"
-            >
-              Show My Tasks
-            </Button>
-          </Card>
-        )}
+            {/* Show My Tasks Button (if hidden) */}
+            {!showMyTasks && (
+              <Card className="p-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowMyTasks(true)}
+                  className="w-full"
+                >
+                  Show My Tasks
+                </Button>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="messages" className="mt-6">
+            <Card className="h-[600px]">
+              <MessagesPage />
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Order Detail Drawer */}
       <StaffOrderDetailDrawer
-        isOpen={orderDetailOpen}
+        isOpen={orderDetailOpen && !isEditingOrder}
         onClose={() => setOrderDetailOpen(false)}
         order={selectedOrder}
         onScanBarcode={() => {
           setOrderDetailOpen(false);
           setScannerOpen(true);
         }}
+      />
+
+      {/* Edit Order Drawer */}
+      <EditOrderDrawer
+        order={selectedOrder}
+        isOpen={isEditingOrder}
+        onClose={() => {
+          setIsEditingOrder(false);
+          setSelectedOrder(null);
+        }}
+        onSaved={(updatedOrder) => {
+          // Update the order in the list
+          setOrders(prev => prev.map(order => 
+            order.id === updatedOrder.id ? {
+              ...order,
+              product: updatedOrder.product,
+              size: updatedOrder.size as 'S' | 'M' | 'L',
+              flavor: updatedOrder.flavor,
+              storage: updatedOrder.storage,
+              method: updatedOrder.method,
+              deliveryTime: updatedOrder.deliveryTime
+            } : order
+          ));
+          setIsEditingOrder(false);
+          setSelectedOrder(null);
+        }}
+        store={selectedOrder?.store || "bannos"}
       />
 
       {/* Scanner Overlay */}

@@ -6,6 +6,7 @@ import { Card } from "./ui/card";
 import { X, Camera, AlertCircle, CheckCircle, Scan } from "lucide-react";
 import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
+import { completeFilling, completeCovering, completeDecorating, completePacking } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -77,11 +78,32 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     handleScan(manualInput.trim());
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (!order) return;
+    
     setIsProcessing(true);
     
-    // Simulate completion processing
-    setTimeout(() => {
+    try {
+      // Call appropriate stage completion RPC based on current stage
+      let result;
+      const store = order.store || 'bannos'; // Default to bannos if store not found
+      switch (order.stage) {
+        case 'Filling':
+          result = await completeFilling(order.id, store);
+          break;
+        case 'Covering':
+          result = await completeCovering(order.id, store);
+          break;
+        case 'Decorating':
+          result = await completeDecorating(order.id, store);
+          break;
+        case 'Packing':
+          result = await completePacking(order.id, store);
+          break;
+        default:
+          throw new Error(`Unknown stage: ${order.stage}`);
+      }
+      
       setScanState('success');
       setIsProcessing(false);
       
@@ -90,7 +112,13 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         onOrderCompleted(order.id);
         handleClose();
       }, 1500);
-    }, 1000);
+      
+    } catch (error) {
+      console.error('Error completing stage:', error);
+      setIsProcessing(false);
+      setScanState('error');
+      setErrorMessage(`Failed to complete ${order.stage} stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleClose = () => {

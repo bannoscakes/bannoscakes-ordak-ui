@@ -1,13 +1,24 @@
-import { Search, Bell, User } from "lucide-react";
+import { Search, Bell, User, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import { useAuthContext } from "../contexts/AuthContext";
 
 interface HeaderProps {
   onRefresh?: () => Promise<void>;
 }
 
 export function Header({ onRefresh }: HeaderProps) {
+  const { user, signOut } = useAuthContext();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
     <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
@@ -35,12 +46,19 @@ export function Header({ onRefresh }: HeaderProps) {
           </Button>
           
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              Admin
-            </Badge>
-            <Button variant="ghost" size="sm">
-              <User className="h-5 w-5" />
-            </Button>
+            {user && (
+              <>
+                <Badge variant="outline" className="text-xs">
+                  {user.role}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {user.fullName}
+                </span>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

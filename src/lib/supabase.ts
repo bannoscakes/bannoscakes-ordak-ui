@@ -10,7 +10,13 @@ export function getSupabase(): SupabaseClient {
     // Do not initialize at import time; throw only when someone tries to use the client
     throw new Error('Supabase env not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
   }
-  _client = createClient(url, anon, { auth: { persistSession: false } });
+  _client = createClient(url, anon, { 
+    auth: { 
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    } 
+  });
   return _client;
 }
 

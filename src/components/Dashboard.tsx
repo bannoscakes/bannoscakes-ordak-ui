@@ -16,15 +16,22 @@ import { TimePayrollPage } from "./TimePayrollPage";
 import { StaffWorkspacePage } from "./StaffWorkspacePage";
 import { SupervisorWorkspacePage } from "./SupervisorWorkspacePage";
 import { BarcodeTest } from "./BarcodeTest";
+import { ErrorTest } from "./ErrorTest";
+import { LoginForm } from "./Auth/LoginForm";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 // Import real RPCs for dashboard stats
-import { getQueue } from "../lib/rpc-client";
+import { getQueueStats } from "../lib/rpc-client";
 import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
 import { makeEmptyCounts } from "@/types/stage";
+import { useAuthContext } from "../contexts/AuthContext";
 
-export function Dashboard() {
+interface DashboardProps {
+  onNavigateToSignup?: () => void;
+}
+
+export function Dashboard({ onNavigateToSignup }: DashboardProps = {}) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
@@ -32,6 +39,9 @@ export function Dashboard() {
     bannos: makeEmptyCounts(),
     flourlane: makeEmptyCounts(),
   });
+  
+  // Get authentication state
+  const { user, loading: authLoading } = useAuthContext();
   
   // Parse URL parameters once and cache them
   const { viewFilter, staffFilter } = useMemo(() => {
@@ -46,37 +56,33 @@ export function Dashboard() {
   // Load dashboard stats from real data
   async function loadDashboardStats() {
     try {
-      // Fetch orders from both stores
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 1000 }),
-        getQueue({ store: "flourlane", limit: 1000 })
+      // Fetch stats from both stores using the dedicated stats RPC
+      const [bannosStats, flourlaneStats] = await Promise.all([
+        getQueueStats("bannos"),
+        getQueueStats("flourlane")
       ]);
       
-      const orders = [...bannosOrders, ...flourlaneOrders];
-      
-      // Count orders by store and stage
+      // Map RPC stats to our StatsByStore format
       const stats: StatsByStore = {
-        bannos: makeEmptyCounts(),
-        flourlane: makeEmptyCounts(),
+        bannos: {
+          total: Number(bannosStats?.total_orders || 0),
+          filling: Number(bannosStats?.filling_count || 0),
+          covering: Number(bannosStats?.covering_count || 0),
+          decorating: Number(bannosStats?.decorating_count || 0),
+          packing: Number(bannosStats?.packing_count || 0),
+          complete: Number(bannosStats?.complete_count || 0),
+          unassigned: Number(bannosStats?.unassigned_count || 0),
+        },
+        flourlane: {
+          total: Number(flourlaneStats?.total_orders || 0),
+          filling: Number(flourlaneStats?.filling_count || 0),
+          covering: Number(flourlaneStats?.covering_count || 0),
+          decorating: Number(flourlaneStats?.decorating_count || 0),
+          packing: Number(flourlaneStats?.packing_count || 0),
+          complete: Number(flourlaneStats?.complete_count || 0),
+          unassigned: Number(flourlaneStats?.unassigned_count || 0),
+        },
       };
-      
-      orders.forEach((order: any) => {
-        const store = (order.store || (order.id.startsWith('bannos') ? 'bannos' : 'flourlane')) as StoreKey;
-        if (store in stats) {
-          stats[store].total++;
-          
-          // Count by stage
-          const stageLower = order.stage?.toLowerCase() || 'filling';
-          if (isStage(stageLower)) {
-            stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
-          }
-          
-          // Count unassigned
-          if (order.assignee_id === null && order.stage !== 'Complete') {
-            stats[store].unassigned++;
-          }
-        }
-      });
       
       setDashboardStats(stats);
     } catch (error) {
@@ -84,9 +90,6 @@ export function Dashboard() {
     }
   }
 
-  // Type guard for stage keys
-  const isStage = (s: string): s is Stage =>
-    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
   
   // Load stats on mount and when view changes
   useEffect(() => {
@@ -188,18 +191,13 @@ export function Dashboard() {
         case "staff-workspace":
           return (
             <ErrorBoundary>
-              <StaffWorkspacePage 
-                staffName="John Doe"
-                onSignOut={() => setActiveView('dashboard')}
-              />
+              <StaffWorkspacePage />
             </ErrorBoundary>
           );
         case "supervisor-workspace":
           return (
             <ErrorBoundary>
               <SupervisorWorkspacePage 
-                supervisorName="Jane Supervisor"
-                onSignOut={() => setActiveView('dashboard')}
                 onNavigateToBannosQueue={() => setActiveView('bannos-production')}
                 onNavigateToFlourlaneQueue={() => setActiveView('flourlane-production')}
               />
@@ -235,6 +233,12 @@ export function Dashboard() {
               <BarcodeTest />
             </ErrorBoundary>
           );
+        case "error-test":
+          return (
+            <ErrorBoundary>
+              <ErrorTest />
+            </ErrorBoundary>
+          );
         case "time-payroll":
           return (
             <ErrorBoundary>
@@ -251,7 +255,7 @@ export function Dashboard() {
         default:
           return (
             <ErrorBoundary>
-              <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+              <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} onNavigateToSignup={onNavigateToSignup} />
             </ErrorBoundary>
           );
       }
@@ -259,11 +263,49 @@ export function Dashboard() {
       console.error('Error rendering dashboard content:', error);
       return (
         <ErrorBoundary>
-          <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+          <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} onNavigateToSignup={onNavigateToSignup} />
         </ErrorBoundary>
       );
     }
   };
+
+  // Show login form if no user is authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Welcome to Bannos Cakes</h1>
+            <p className="text-muted-foreground">Please sign in to access the system</p>
+          </div>
+          <LoginForm onSuccess={() => window.location.reload()} userType="staff" />
+          {onNavigateToSignup && (
+            <div className="mt-4 text-center">
+              <button
+                onClick={onNavigateToSignup}
+                className="text-sm text-blue-600 hover:text-blue-700 underline"
+              >
+                Don't have an account? Create one
+              </button>
+            </div>
+          )}
+        </div>
+        <Toaster />
+      </div>
+    );
+  }
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse">
+          <div className="w-12 h-12 bg-muted rounded-lg mb-4 mx-auto"></div>
+          <div className="h-4 bg-muted rounded w-32"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-muted/30">

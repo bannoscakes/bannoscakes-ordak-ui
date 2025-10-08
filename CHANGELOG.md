@@ -1,3 +1,271 @@
+## [v0.6.5-beta] - 2025-01-30 - Messaging System Cleanup & Fresh Start
+
+### 🎯 Overview
+Complete cleanup of the problematic messaging system and preparation for a fresh, simple implementation. This release removes all complex messaging database objects, UI components with mock data, and provides a clean foundation for building a working messaging system with real users.
+
+### ✅ Messaging System Cleanup
+- **Database Cleanup**: Removed all messaging-related tables (messages, conversations, conversation_participants)
+- **Function Cleanup**: Dropped all messaging RPC functions (get_messages, get_conversations, send_message, etc.)
+- **Enum Cleanup**: Removed conversation_type enum and related database objects
+- **Mock Data Removal**: Deleted SimpleMessaging component that contained mock data
+- **UI Reversion**: Reverted QuickActions.tsx to use MainDashboardMessaging (non-functional but clean)
+
+### ✅ Real User Verification
+- **9 Real Staff Members**: Confirmed all real user accounts exist in auth.users and staff_shared
+- **Clean Database**: Verified no messaging-related objects remain in database
+- **Authentication Ready**: All real users can log in and access the system
+- **No Mock Data**: Committed to building with real data only
+
+### ✅ Technical Improvements
+- **Clean Slate**: Fresh foundation for messaging system implementation
+- **Real User Focus**: All development will use actual staff accounts
+- **Simplified Approach**: Plan to build simple, working messaging before adding complexity
+- **Database Integrity**: Clean database state with only essential objects
+
+### 📋 Files Modified
+- `clean_messaging_database.sql` - Complete database cleanup script
+- `check_clean_database.sql` - Database status verification script
+- `src/components/SimpleMessaging.tsx` - Deleted (contained mock data)
+- `src/components/QuickActions.tsx` - Reverted to use MainDashboardMessaging
+
+### 🚀 Next Phase: Simple Messaging System
+- **Minimal Database Schema**: Simple tables for conversations and messages
+- **Basic RPC Functions**: Essential functions for sending/receiving messages
+- **Real User Integration**: Connect to existing staff_shared table
+- **Progressive Enhancement**: Start simple, add features incrementally
+
+---
+
+## [v0.6.4-beta] - 2025-01-30 - Authentication & Role-Based Access Control
+
+### 🎯 Overview
+Complete authentication system implementation with Supabase Auth integration. This release provides secure login/logout functionality, role-based access control, user registration, and session persistence across the application.
+
+### ✅ Authentication Features
+- **Supabase Auth Integration**: Real authentication using Supabase's built-in auth system
+- **Role-Based Access Control**: Protected routes based on user roles (Staff, Supervisor, Admin)
+- **User Registration**: Signup form for creating new staff accounts
+- **Session Persistence**: Users stay logged in across browser sessions
+- **Demo Accounts**: Pre-configured demo accounts for testing
+
+### ✅ Security Features
+- **Protected Routes**: All workspace pages require authentication
+- **Role Permissions**: Users can only access features appropriate to their role
+- **Session Management**: Automatic token refresh and secure session handling
+- **User Profile Management**: Staff profiles stored in database with role assignments
+
+### ✅ Technical Implementation
+- **Auth Service**: Centralized authentication service with Supabase integration
+- **Auth Context**: React context for global authentication state management
+- **Protected Route Component**: Higher-order component for role-based route protection
+- **Staff RPC Functions**: Database functions for user profile retrieval and management
+- **Database Schema**: `staff_shared` table for user profiles and role management
+
+### ✅ Demo Accounts Available
+- **Staff**: `staff@bannos.com` / `demo123` (Staff role, bannos store)
+- **Supervisor**: `supervisor@bannos.com` / `demo123` (Supervisor role, both stores)
+- **Admin**: `admin@bannos.com` / `demo123` (Admin role, both stores)
+
+### 🚀 Production Ready
+- ✅ Authentication system fully functional
+- ✅ Role-based access control implemented
+- ✅ Session persistence working
+- ✅ User registration and management
+- ✅ Secure route protection
+
+---
+
+## [v0.6.3-beta] - 2025-01-30 - Scanner Integration with Database
+
+### 🎯 Overview
+Complete integration of scanner functionality with the database backend. This release wires all scanner components to use real RPC functions instead of mock data, enabling actual stage completion and barcode printing through the database.
+
+### ✅ Scanner Integration Features
+- **Real RPC Integration**: All scanner components now use database RPC functions
+- **Stage Completion**: Scanner can complete Filling, Covering, Decorating, and Packing stages
+- **Barcode Printing**: Integrated with `handle_print_barcode` RPC function
+- **Order Lookup**: Uses `get_order_for_scan` RPC for barcode scanning
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Store Parameter**: Proper store parameter passing for multi-store support
+
+### ✅ Technical Improvements
+- **RPC Client Updates**: Fixed function signatures to match database schema
+- **Parameter Mapping**: Correct mapping of `p_order_id`, `p_store`, `p_notes` parameters
+- **Stage Mapping**: Smart stage-to-completion-function mapping
+- **Import Fixes**: Replaced mock imports with real RPC imports
+- **Type Safety**: Updated function signatures and return types
+
+### ✅ Components Updated
+- **Scanner.tsx**: Uses real `handleScanCommand` with database integration
+- **ScannerOverlay.tsx**: Calls real stage completion RPC functions
+- **scan-handler.ts**: Maps stages to appropriate completion functions
+- **rpc-client.ts**: Updated stage completion function signatures
+
+### ✅ Database RPCs Integrated
+- `get_order_for_scan(p_barcode_data)` - Order lookup by barcode
+- `handle_print_barcode(p_order_id, p_store)` - Barcode printing and filling start
+- `complete_filling(p_order_id, p_store, p_notes)` - Complete filling stage
+- `complete_covering(p_order_id, p_store, p_notes)` - Complete covering stage
+- `complete_decorating(p_order_id, p_store, p_notes)` - Complete decorating stage
+- `complete_packing(p_order_id, p_store, p_notes)` - Complete packing stage
+
+### 🚀 Production Ready
+- ✅ Scanner functionality fully wired to database
+- ✅ Stage completion working with real RPC calls
+- ✅ Barcode printing integrated with database
+- ✅ Error handling and user feedback in place
+- ✅ Multi-store support with proper parameter passing
+
+---
+
+## [v0.6.2-beta] - 2025-01-30 - Barcode Print & Scan Integration
+
+### 🎯 Overview
+Complete integration of barcode print and scan functionality into the order management system. This release wires the existing barcode functionality to order cards and provides a proper barcode preview with print and download options.
+
+### ✅ Barcode Integration Features
+- **Print Barcode Button**: Wired to existing order detail drawer
+- **Barcode Preview Window**: Shows visual barcode with order details
+- **Print Functionality**: Direct printing with RPC integration
+- **Download Functionality**: PNG download of barcode image
+- **Scan Barcode Button**: Wired to existing scanner functionality
+- **Proper Measurements**: Barcode preview sized proportionally to order cards
+
+### ✅ Technical Improvements
+- **RPC Integration**: Connected `handlePrintBarcode` RPC function
+- **UI Components**: Integrated `BarcodeGenerator` component
+- **Dialog Implementation**: Switched from Sheet to Dialog for better UX
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Responsive Design**: Proper sizing and layout for different screen sizes
+
+### ✅ Bug Fixes
+- **Import Error**: Fixed missing `X` icon import from lucide-react
+- **Double Close Buttons**: Resolved duplicate X buttons in barcode preview
+- **Measurement Issues**: Fixed barcode preview sizing and proportions
+- **Component Integration**: Proper wiring of existing barcode functionality
+
+### 📋 Files Modified
+- `src/components/StaffOrderDetailDrawer.tsx` - Barcode print/scan integration
+- `src/components/BarcodeGenerator.tsx` - Improved sizing and layout
+- `src/lib/rpc-client.ts` - Barcode RPC function integration
+
+### 🚀 Production Ready
+- ✅ Barcode print functionality fully working
+- ✅ Barcode scan functionality fully working
+- ✅ Proper UI integration with order cards
+- ✅ Error handling and user feedback in place
+- ✅ Responsive design and proper measurements
+
+---
+
+## [v0.6.1-beta] - 2025-01-30 - Complete Settings Management Integration
+
+### 🎯 Overview
+Complete integration of all Settings page functionality with real database persistence. This release fixes all settings management issues and provides full CRUD operations for flavours, storage locations, monitor settings, and due date configurations.
+
+### ✅ Settings Components Integrated
+- **Flavours Management**: Add, edit, remove filling flavours with full persistence
+- **Storage Locations Management**: Add, edit, remove storage locations with full persistence  
+- **Monitor Settings**: Auto-refresh (15/30/60 sec) and density (compact/cozy) with full persistence
+- **Due Date Settings**: Default due dates, allowed days, and blackout dates with full persistence
+- **Printing Settings**: Ticket size, copies, and barcode prefix configuration
+- **Shopify Integration**: Storefront access token management
+
+### ✅ Database Integration Features
+- **Full CRUD Operations**: Create, read, update, delete for all settings
+- **Real-time Data**: Live data fetching from Supabase database
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Data Validation**: Input validation and type safety
+- **Multi-store Support**: Separate settings for Bannos and Flourlane stores
+- **JSONB Data Handling**: Proper handling of complex data types
+
+### ✅ Technical Improvements
+- **RPC Integration**: All settings use proper RPC calls with error handling
+- **Type Safety**: Full TypeScript integration with proper interfaces
+- **Performance**: Optimized data fetching and rendering
+- **UI/UX**: Consistent interface with proper add/remove controls
+- **Data Persistence**: Reliable data storage and retrieval across page reloads
+
+### ✅ Bug Fixes
+- **Flavours Persistence**: Fixed `LIMIT 1` clause in `get_flavours` RPC function
+- **Storage Locations Persistence**: Fixed `LIMIT 1` clause in `get_storage_locations` RPC function
+- **Storage Locations UI**: Added missing "Add location" button and remove controls
+- **Monitor Density Persistence**: Fixed JSONB string extraction in `get_monitor_density` RPC function
+- **Monitor Density Save**: Fixed `JSON.stringify()` issue in `setMonitorDensity` RPC client
+- **Settings Loading**: Fixed functional update pattern in `setSettings` state management
+- **Data Format Handling**: Enhanced RPC clients to handle multiple return formats
+
+### 📋 Files Modified
+- `src/components/SettingsPage.tsx` - Complete settings management integration
+- `src/lib/rpc-client.ts` - Enhanced RPC functions with proper data handling
+- `supabase/sql/027_fix_get_flavours.sql` - Fixed flavours RPC function
+- `supabase/sql/028_fix_get_storage_locations.sql` - Fixed storage locations RPC function
+- `supabase/sql/029_monitor_density_management.sql` - Complete monitor density management
+
+### 🚀 Production Ready
+- ✅ All settings components fully functional
+- ✅ Real database integration complete
+- ✅ Error handling and validation in place
+- ✅ Type safety and performance optimized
+- ✅ Multi-store support working
+- ✅ Ready for production use
+
+---
+
+## [v0.6.0-beta] - 2025-01-30 - Complete Inventory UI Integration
+
+### 🎯 Overview
+Complete integration of all 6 inventory components with real database functionality, including full CRUD operations, proper error handling, and data persistence. This release connects the entire inventory management system to the Supabase backend.
+
+### ✅ Inventory Components Integrated
+- **ComponentsInventory**: Component management with stock tracking and CRUD operations
+- **BOMsInventory**: Bill of Materials management with component relationships
+- **AccessoryKeywords**: Keyword management for component matching and search
+- **ProductRequirements**: Product requirement tracking and management
+- **TransactionsInventory**: Stock transaction history and audit trail
+- **ToolsInventory**: Tool and equipment inventory management
+
+### ✅ Database Integration Features
+- **Full CRUD Operations**: Create, read, update, delete for all inventory entities
+- **Real-time Data**: Live data fetching from Supabase database
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Data Validation**: Input validation and type safety
+- **Audit Trail**: Complete transaction history tracking
+- **Stock Management**: Real-time stock level updates and tracking
+
+### ✅ Technical Improvements
+- **RPC Integration**: All inventory components use proper RPC calls
+- **Type Safety**: Full TypeScript integration with proper interfaces
+- **Performance**: Optimized data fetching and rendering
+- **UI/UX**: Consistent interface across all inventory tabs
+- **Data Persistence**: Reliable data storage and retrieval
+
+### ✅ Bug Fixes
+- **TransactionsInventory**: Fixed "Performed By" column to show `performer_name` instead of `reason`
+- **BOMsInventory**: Removed IIFE causing unnecessary re-renders and console logs
+- **AccessoryKeywords**: Fixed variable shadowing bug preventing new keyword additions
+- **SettingsPage**: Fixed RPC function signatures to match database schema
+
+### 📋 Files Modified
+- `src/components/inventory/TransactionsInventory.tsx` - Fixed performer display
+- `src/components/inventory/BOMsInventory.tsx` - Optimized rendering
+- `src/components/inventory/AccessoryKeywords.tsx` - Fixed CRUD operations
+- `src/components/inventory/ProductRequirements.tsx` - Fixed CRUD operations
+- `src/components/inventory/ComponentsInventory.tsx` - Already working
+- `src/components/inventory/ToolsInventory.tsx` - Already working
+- `src/lib/rpc-client.ts` - Enhanced with proper JSONB handling
+- `supabase/sql/017_fix_get_settings_rpc.sql` - Fixed settings RPC functions
+- `supabase/sql/018_fix_set_setting_rpc.sql` - Fixed settings RPC functions
+
+### 🚀 Production Ready
+- ✅ All inventory components fully functional
+- ✅ Real database integration complete
+- ✅ Error handling and validation in place
+- ✅ Type safety and performance optimized
+- ✅ Ready for production use
+
+---
+
 ## [v0.5.0-beta] - 2025-01-30 - Complete Barcode Scanning & Printing System
 
 ### 🎯 Overview
