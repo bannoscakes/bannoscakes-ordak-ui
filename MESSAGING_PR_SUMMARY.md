@@ -241,6 +241,7 @@ All checks passed (see detailed report in chat history):
 -- Run these in order:
 1. supabase/sql/20241007_messaging_schema_fixed.sql  -- Tables and indexes
 2. supabase/sql/20241007_messaging_rpc_simple.sql    -- RPC functions and RLS
+3. supabase/sql/20241008_fix_messaging_foreign_keys.sql -- Foreign key constraints
 ```
 
 ### For Existing Database
