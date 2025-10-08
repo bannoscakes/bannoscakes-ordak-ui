@@ -12,6 +12,7 @@ import { ErrorDisplay } from "../ErrorDisplay";
 
 import { useErrorNotifications } from "../../lib/error-notifications";
 import { useRealtimeMessages } from "../../hooks/useRealtimeMessages";
+import { useDebouncedCallback } from "../../lib/useDebouncedCallback";
 
 import {
   getConversations,
@@ -90,16 +91,15 @@ export function MessagesPage() {
     loadUnreadCount();
   };
 
-  // Debounced loadConversations to prevent excessive calls
-  const debouncedLoadConversations = useCallback(() => {
-    const timeoutId = setTimeout(() => {
-      loadConversations();
-    }, 150);
-    return () => clearTimeout(timeoutId);
-  }, []);
+  // ✅ debounce background refreshes triggered by realtime
+  const [debouncedRefresh, cancelRefresh] = useDebouncedCallback(
+    () => loadConversations(false),
+    150
+  );
 
   const handleConversationUpdate = () => {
-    debouncedLoadConversations();
+    cancelRefresh();
+    debouncedRefresh();
   };
 
   const { isConnected } = useRealtimeMessages({
@@ -110,7 +110,7 @@ export function MessagesPage() {
 
   // Initial load
   useEffect(() => {
-    loadConversations();
+    loadConversations(true);
     loadUnreadCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -121,9 +121,10 @@ export function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation, currentUserId]);
 
-  const loadConversations = async () => {
+  // ✅ separate initial vs background loading to avoid flicker
+  const loadConversations = async (showSpinner = true) => {
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       setError(null);
       const data: RPCConversation[] = await getConversations();
       setConversations(data.map(toUIConversation));
@@ -135,7 +136,7 @@ export function MessagesPage() {
         showRecoveryActions: true,
       });
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   };
 
@@ -182,11 +183,10 @@ export function MessagesPage() {
     setSelectedConversation(toId(conversationId));
   };
 
+  // ✅ optimistic send that reconciles temp -> server id
   const handleSendMessage = async (text: string) => {
     if (!selectedConversation || !text.trim()) return;
     const body = text.trim();
-
-    // 1. Optimistic bubble - show message instantly
     const tempId = `temp-${Date.now()}`;
     const optimistic: Message = {
       id: tempId,
@@ -196,27 +196,18 @@ export function MessagesPage() {
       senderName: "You",
       read: true,
     };
-
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === tempId)) return prev;
-      return [...prev, optimistic].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    });
-
+    setMessages(prev =>
+      prev.some(m => m.id === tempId) ? prev :
+        [...prev, optimistic].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+    );
     try {
-      // 2. RPC call
       const messageId = await sendMessage(selectedConversation, body);
-
-      // 3. Update last message preview
-      await loadConversations();
-      setConversations((prev) => prev.map((c) => (c.id === selectedConversation ? { ...c, unreadCount: 0 } : c)));
+      // ✅ replace the optimistic bubble with real one
+      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: String(messageId) } : m)));
+      await loadConversations(false); // background refresh; no skeleton flicker
     } catch (err) {
       console.error("Failed to send message:", err);
-      // Remove optimistic message on error
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      showError(err, {
-        title: "Failed to Send Message",
-        showRecoveryActions: true,
-      });
+      showError(err, { title: "Failed to Send Message", showRecoveryActions: true });
     }
   };
 
