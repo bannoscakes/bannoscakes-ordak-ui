@@ -62,64 +62,30 @@ ALTER TABLE message_reads
 ADD CONSTRAINT fk_message_reads_conversation_id 
 FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
 
--- 4. Add foreign key constraints to staff_shared ONLY if it exists
-DO $$
+-- 4. Add foreign key constraints to staff_shared (now guaranteed to exist)
 BEGIN
-  -- Check if staff_shared table exists
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_shared' AND table_schema = 'public') THEN
-    -- Add foreign key constraints to staff_shared
-    BEGIN
-      ALTER TABLE conversations 
-      ADD CONSTRAINT fk_conversations_created_by 
-      FOREIGN KEY (created_by) REFERENCES staff_shared(user_id);
-    EXCEPTION WHEN duplicate_object THEN
-      -- Constraint already exists, ignore
-    END;
+  ALTER TABLE conversations 
+  ADD CONSTRAINT fk_conversations_created_by 
+  FOREIGN KEY (created_by) REFERENCES staff_shared(user_id);
+EXCEPTION WHEN duplicate_object THEN
+  -- Constraint already exists, ignore
+END;
 
-    BEGIN
-      ALTER TABLE messages 
-      ADD CONSTRAINT fk_messages_sender_id 
-      FOREIGN KEY (sender_id) REFERENCES staff_shared(user_id);
-    EXCEPTION WHEN duplicate_object THEN
-      -- Constraint already exists, ignore
-    END;
+BEGIN
+  ALTER TABLE messages 
+  ADD CONSTRAINT fk_messages_sender_id 
+  FOREIGN KEY (sender_id) REFERENCES staff_shared(user_id);
+EXCEPTION WHEN duplicate_object THEN
+  -- Constraint already exists, ignore
+END;
 
-    BEGIN
-      ALTER TABLE conversation_participants 
-      ADD CONSTRAINT fk_conversation_participants_user_id 
-      FOREIGN KEY (user_id) REFERENCES staff_shared(user_id);
-    EXCEPTION WHEN duplicate_object THEN
-      -- Constraint already exists, ignore
-    END;
-  ELSE
-    -- If staff_shared doesn't exist, add constraints to users table instead
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
-      BEGIN
-        ALTER TABLE conversations 
-        ADD CONSTRAINT fk_conversations_created_by 
-        FOREIGN KEY (created_by) REFERENCES users(id);
-      EXCEPTION WHEN duplicate_object THEN
-        -- Constraint already exists, ignore
-      END;
-
-      BEGIN
-        ALTER TABLE messages 
-        ADD CONSTRAINT fk_messages_sender_id 
-        FOREIGN KEY (sender_id) REFERENCES users(id);
-      EXCEPTION WHEN duplicate_object THEN
-        -- Constraint already exists, ignore
-      END;
-
-      BEGIN
-        ALTER TABLE conversation_participants 
-        ADD CONSTRAINT fk_conversation_participants_user_id 
-        FOREIGN KEY (user_id) REFERENCES users(id);
-      EXCEPTION WHEN duplicate_object THEN
-        -- Constraint already exists, ignore
-      END;
-    END IF;
-  END IF;
-END $$;
+BEGIN
+  ALTER TABLE conversation_participants 
+  ADD CONSTRAINT fk_conversation_participants_user_id 
+  FOREIGN KEY (user_id) REFERENCES staff_shared(user_id);
+EXCEPTION WHEN duplicate_object THEN
+  -- Constraint already exists, ignore
+END;
 
 -- 5. Create indexes
 CREATE INDEX IF NOT EXISTS idx_conversations_created_by ON conversations(created_by);
@@ -212,11 +178,7 @@ BEGIN
     c.created_by,
     c.created_at,
     c.updated_at,
-    COALESCE(
-      (SELECT s.full_name FROM public.staff_shared s WHERE s.user_id = c.created_by),
-      (SELECT u.email FROM public.users u WHERE u.id = c.created_by),
-      'Unknown'
-    ) AS created_by_name,
+    (SELECT s.full_name FROM public.staff_shared s WHERE s.user_id = c.created_by) AS created_by_name,
     (SELECT COUNT(*)::INT FROM public.conversation_participants cp WHERE cp.conversation_id = c.id) AS participant_count,
     (SELECT m.body FROM public.messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_text,
     (SELECT m.created_at FROM public.messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_at,
@@ -322,12 +284,10 @@ BEGIN
     RAISE EXCEPTION 'User not authorized to send messages to this conversation';
   END IF;
 
-  -- Get sender name from staff_shared or users table
-  SELECT COALESCE(
-    (SELECT s.full_name FROM public.staff_shared s WHERE s.user_id = v_user_id),
-    (SELECT u.email FROM public.users u WHERE u.id = v_user_id),
-    'Unknown'
-  ) INTO v_sender_name;
+  -- Get sender name from staff_shared table
+  SELECT s.full_name INTO v_sender_name 
+  FROM public.staff_shared s 
+  WHERE s.user_id = v_user_id;
 
   -- Insert message
   INSERT INTO public.messages (conversation_id, sender_id, sender_name, body)
