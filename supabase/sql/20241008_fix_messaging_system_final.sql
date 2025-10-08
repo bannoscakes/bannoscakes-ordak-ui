@@ -1,9 +1,22 @@
--- Complete Messaging System Migration
--- Creates all messaging tables, constraints, and RPC functions from scratch
--- This replaces the previous partial migrations
+-- Final fix for messaging system - handles all edge cases
+-- This migration ensures the messaging system works regardless of existing state
 
--- 1. Create messaging tables
-CREATE TABLE IF NOT EXISTS conversations (
+-- 1. Drop any existing messaging tables and functions to start fresh
+DROP TABLE IF EXISTS message_reads CASCADE;
+DROP TABLE IF EXISTS messages CASCADE;
+DROP TABLE IF EXISTS conversation_participants CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+
+-- Drop any existing messaging functions
+DROP FUNCTION IF EXISTS public.create_conversation(UUID[], TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.get_conversations(INT, INT);
+DROP FUNCTION IF EXISTS public.get_messages_temp(UUID, INT, INT);
+DROP FUNCTION IF EXISTS public.send_message(UUID, TEXT);
+DROP FUNCTION IF EXISTS public.mark_messages_read(UUID);
+DROP FUNCTION IF EXISTS public.get_unread_count();
+
+-- 2. Create messaging tables without foreign key constraints initially
+CREATE TABLE conversations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   type TEXT NOT NULL CHECK (type IN ('direct', 'group', 'broadcast')),
   name TEXT, -- null for direct chats, custom name for groups
@@ -12,7 +25,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS conversation_participants (
+CREATE TABLE conversation_participants (
   conversation_id UUID NOT NULL,
   user_id UUID NOT NULL,
   role TEXT DEFAULT 'member',
@@ -20,7 +33,7 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
   PRIMARY KEY (conversation_id, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE messages (
   id BIGSERIAL PRIMARY KEY,
   conversation_id UUID NOT NULL,
   sender_id UUID NOT NULL,
@@ -29,19 +42,32 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS message_reads (
+CREATE TABLE message_reads (
   conversation_id UUID NOT NULL,
   user_id UUID NOT NULL,
   last_read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (conversation_id, user_id)
 );
 
--- 2. Add foreign key constraints (only if staff_shared table exists)
+-- 3. Add basic foreign key constraints (internal to messaging system)
+ALTER TABLE conversation_participants 
+ADD CONSTRAINT fk_conversation_participants_conversation_id 
+FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
+
+ALTER TABLE messages 
+ADD CONSTRAINT fk_messages_conversation_id 
+FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
+
+ALTER TABLE message_reads 
+ADD CONSTRAINT fk_message_reads_conversation_id 
+FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
+
+-- 4. Add foreign key constraints to staff_shared ONLY if it exists
 DO $$
 BEGIN
   -- Check if staff_shared table exists
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_shared' AND table_schema = 'public') THEN
-    -- Add foreign key constraints
+    -- Add foreign key constraints to staff_shared
     BEGIN
       ALTER TABLE conversations 
       ADD CONSTRAINT fk_conversations_created_by 
@@ -65,30 +91,44 @@ BEGIN
     EXCEPTION WHEN duplicate_object THEN
       -- Constraint already exists, ignore
     END;
+  ELSE
+    -- If staff_shared doesn't exist, add constraints to users table instead
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+      BEGIN
+        ALTER TABLE conversations 
+        ADD CONSTRAINT fk_conversations_created_by 
+        FOREIGN KEY (created_by) REFERENCES users(id);
+      EXCEPTION WHEN duplicate_object THEN
+        -- Constraint already exists, ignore
+      END;
+
+      BEGIN
+        ALTER TABLE messages 
+        ADD CONSTRAINT fk_messages_sender_id 
+        FOREIGN KEY (sender_id) REFERENCES users(id);
+      EXCEPTION WHEN duplicate_object THEN
+        -- Constraint already exists, ignore
+      END;
+
+      BEGIN
+        ALTER TABLE conversation_participants 
+        ADD CONSTRAINT fk_conversation_participants_user_id 
+        FOREIGN KEY (user_id) REFERENCES users(id);
+      EXCEPTION WHEN duplicate_object THEN
+        -- Constraint already exists, ignore
+      END;
+    END IF;
   END IF;
 END $$;
 
--- 3. Add table constraints
-ALTER TABLE conversation_participants 
-ADD CONSTRAINT fk_conversation_participants_conversation_id 
-FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
-
-ALTER TABLE messages 
-ADD CONSTRAINT fk_messages_conversation_id 
-FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
-
-ALTER TABLE message_reads 
-ADD CONSTRAINT fk_message_reads_conversation_id 
-FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE;
-
--- 4. Create indexes
+-- 5. Create indexes
 CREATE INDEX IF NOT EXISTS idx_conversations_created_by ON conversations(created_by);
 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
 CREATE INDEX IF NOT EXISTS idx_conversation_participants_user_id ON conversation_participants(user_id);
 
--- 5. Create RPC functions
+-- 6. Create RPC functions
 CREATE OR REPLACE FUNCTION public.create_conversation(
   p_participant_ids UUID[],
   p_name TEXT DEFAULT NULL,
@@ -172,7 +212,11 @@ BEGIN
     c.created_by,
     c.created_at,
     c.updated_at,
-    (SELECT s.full_name FROM public.staff_shared s WHERE s.user_id = c.created_by) AS created_by_name,
+    COALESCE(
+      (SELECT s.full_name FROM public.staff_shared s WHERE s.user_id = c.created_by),
+      (SELECT u.email FROM public.users u WHERE u.id = c.created_by),
+      'Unknown'
+    ) AS created_by_name,
     (SELECT COUNT(*)::INT FROM public.conversation_participants cp WHERE cp.conversation_id = c.id) AS participant_count,
     (SELECT m.body FROM public.messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_text,
     (SELECT m.created_at FROM public.messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_at,
@@ -278,10 +322,12 @@ BEGIN
     RAISE EXCEPTION 'User not authorized to send messages to this conversation';
   END IF;
 
-  -- Get sender name
-  SELECT s.full_name INTO v_sender_name 
-  FROM public.staff_shared s 
-  WHERE s.user_id = v_user_id;
+  -- Get sender name from staff_shared or users table
+  SELECT COALESCE(
+    (SELECT s.full_name FROM public.staff_shared s WHERE s.user_id = v_user_id),
+    (SELECT u.email FROM public.users u WHERE u.id = v_user_id),
+    'Unknown'
+  ) INTO v_sender_name;
 
   -- Insert message
   INSERT INTO public.messages (conversation_id, sender_id, sender_name, body)
@@ -359,13 +405,14 @@ BEGIN
 END;
 $$;
 
--- 6. Enable Row Level Security
+-- 7. Enable Row Level Security
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE message_reads ENABLE ROW LEVEL SECURITY;
 
--- 7. Create RLS policies
+-- 8. Create RLS policies
+DROP POLICY IF EXISTS "Users can view conversations they participate in" ON conversations;
 CREATE POLICY "Users can view conversations they participate in" ON conversations
   FOR SELECT USING (
     EXISTS (
@@ -375,6 +422,7 @@ CREATE POLICY "Users can view conversations they participate in" ON conversation
     )
   );
 
+DROP POLICY IF EXISTS "Users can view messages in conversations they participate in" ON messages;
 CREATE POLICY "Users can view messages in conversations they participate in" ON messages
   FOR SELECT USING (
     EXISTS (
@@ -384,6 +432,7 @@ CREATE POLICY "Users can view messages in conversations they participate in" ON 
     )
   );
 
+DROP POLICY IF EXISTS "Users can view conversation participants for conversations they participate in" ON conversation_participants;
 CREATE POLICY "Users can view conversation participants for conversations they participate in" ON conversation_participants
   FOR SELECT USING (
     EXISTS (
@@ -393,10 +442,11 @@ CREATE POLICY "Users can view conversation participants for conversations they p
     )
   );
 
+DROP POLICY IF EXISTS "Users can view their own message reads" ON message_reads;
 CREATE POLICY "Users can view their own message reads" ON message_reads
   FOR SELECT USING (user_id = auth.uid());
 
--- 8. Grant permissions
+-- 9. Grant permissions
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT ALL ON conversations TO authenticated;
 GRANT ALL ON messages TO authenticated;
