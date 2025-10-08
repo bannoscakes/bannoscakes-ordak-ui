@@ -117,7 +117,7 @@ export function BarcodeGenerator({
                     hasPrinted = true;
                     
                     // Wait for barcode image to load before printing
-                    const barcodeImg = document.querySelector('.barcode-image img');
+                    const barcodeImg = document.querySelector('.barcode-container img');
                     if (barcodeImg && !barcodeImg.complete) {
                       barcodeImg.addEventListener('load', function() {
                         setTimeout(function() {
