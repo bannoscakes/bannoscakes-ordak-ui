@@ -39,73 +39,20 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 2: Staff Management RPCs ✅
-
-### Branch: `feat/staff-management-rpcs`
-**Priority:** High  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
-
-#### Tasks:
-- [x] `get_staff_list` - Get all staff with filtering
-- [x] `get_staff_member` - Get individual staff details  
-- [x] `upsert_staff_member` - Create/update staff members
-- [x] `deactivate_staff_member` - Soft delete staff
-- [x] `start_shift/end_shift` - Shift management
-- [x] `get_current_shift` - Get active shift details
-- [x] `get_shift_history` - Get shift history with filtering
-- [x] `start_break/end_break` - Break management
-- [x] Role-based access control and audit logging
-
-#### Acceptance Criteria:
-- All staff management RPCs working with proper validation
-- Shift tracking and break management working
-- Role-based permissions enforced
-- Audit logging for all staff changes
-
----
-
-## 🗂️ Phase 3: Order Management RPCs ✅
-
-### Branch: `feat/order-management-rpcs`
-**Priority:** High  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
-
-#### Tasks:
-- [x] `assign_staff` - Assign staff member to order
-- [x] `unassign_staff` - Remove staff assignment
-- [x] `move_to_next_stage` - Move to next stage automatically
-- [x] `move_to_stage` - Move to specific stage
-- [x] `update_order_notes` - Update order notes
-- [x] `update_order_priority` - Change priority level
-- [x] `update_order_due_date` - Update due date
-- [x] `get_order` - Get single order with assignee details
-- [x] Test all order management operations
-
-#### Acceptance Criteria:
-- All order management RPCs working with proper validation
-- Stage progression working correctly
-- Order updates with audit logging
-- Staff assignment working
-
----
-
-## 🗂️ Phase 4: Queue Management RPCs ✅
+## 🗂️ Phase 2: Queue Management RPCs
 
 ### Branch: `feat/queue-management-rpcs`
 **Priority:** Critical  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
+**Estimate:** 2-3 days
 
 #### Tasks:
-- [x] `get_queue` - Full queue with all parameters (store, stage, assignee, storage, search, pagination)
-- [x] `get_queue_stats` - Queue statistics and counts by stage
-- [x] `get_unassigned_counts` - Unassigned orders count by stage
-- [x] `set_storage` - Set storage location for order
-- [x] `get_orders_by_assignee` - Get orders assigned to specific staff
-- [x] `get_queue_minimal` - Updated compatibility wrapper
-- [x] Test all queue operations
+- [ ] `get_queue` - Full queue with all parameters (store, stage, assignee, storage, search, pagination)
+- [ ] `get_order` - Single order lookup by store and order_id
+- [ ] `assign_staff` - Assign staff member to order
+- [ ] `set_storage` - Set storage location for order
+- [ ] Update existing `get_queue_minimal` to use new `get_queue`
+- [ ] Test all queue operations
+- [ ] Update UI to use new RPCs
 
 #### Acceptance Criteria:
 - All queue RPCs working with proper validation
@@ -116,24 +63,24 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 3: Scanner & Stage Management RPCs ✅
+## 🗂️ Phase 3: Scanner & Stage Management RPCs
 
 ### Branch: `feat/scanner-stage-rpcs`
 **Priority:** Critical  
-**Estimate:** 3-4 days  
-**Status:** ✅ COMPLETED
+**Estimate:** 3-4 days
 
 #### Tasks:
-- [x] `handle_print_barcode` - Print barcode and start filling stage
-- [x] `complete_filling` - Complete filling stage
-- [x] `complete_covering` - Complete covering stage
-- [x] `complete_decorating` - Complete decorating stage
-- [x] `start_packing` - Start packing stage
-- [x] `complete_packing` - Complete packing stage
-- [x] `qc_return_to_decorating` - QC return to decorating
-- [x] `get_order_for_scan` - Lookup order by barcode/scan
-- [x] Compatibility wrappers (`print_barcode`, `complete_stage`)
-- [x] Test all stage transitions
+- [ ] `handle_print_barcode` - Print barcode and start filling stage
+- [ ] `complete_filling` - Complete filling stage
+- [ ] `complete_covering` - Complete covering stage
+- [ ] `complete_decorating` - Complete decorating stage
+- [ ] `start_packing` - Start packing stage
+- [ ] `complete_packing` - Complete packing stage
+- [ ] `qc_return_to_decorating` - QC return to decorating
+- [ ] `get_order_for_scan` - Lookup order by barcode/scan
+- [ ] Compatibility wrappers (`print_barcode`, `complete_stage`)
+- [ ] Test all stage transitions
+- [ ] Update ScannerOverlay component
 
 #### Acceptance Criteria:
 - All stage transitions working correctly
@@ -144,27 +91,7 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 4: Inventory Management RPCs ✅
-
-### Branch: `feat/inventory-management-rpcs`
-**Priority:** High  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
-
-#### Tasks:
-- [x] `get_components` - Get all components with filtering
-- [x] `get_component` - Get single component by ID or SKU
-- [x] `upsert_component` - Create or update components
-- [x] `update_component_stock` - Update stock levels with audit trail
-- [x] `get_low_stock_components` - Get components below minimum stock
-- [x] `get_inventory_value` - Get total inventory value and summary
-- [x] `bulk_update_component_stock` - Update multiple components at once
-- [x] `deactivate_component` - Soft delete components
-- [x] Test all inventory management operations
-
----
-
-## 🗂️ Phase 5: Staff & Time Management RPCs
+## 🗂️ Phase 4: Staff & Time Management RPCs
 
 ### Branch: `feat/staff-time-rpcs`
 **Priority:** High  
@@ -172,10 +99,10 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 #### Tasks:
 - [ ] `get_staff_me` - Get current staff member info
-- [ ] `start_shift` - Start work shift (Already done in Phase 2!)
-- [ ] `end_shift` - End work shift (Already done in Phase 2!)
-- [ ] `start_break` - Start break (Already done in Phase 2!)
-- [ ] `end_break` - End break (Already done in Phase 2!)
+- [ ] `start_shift` - Start work shift
+- [ ] `end_shift` - End work shift
+- [ ] `start_break` - Start break
+- [ ] `end_break` - End break
 - [ ] Time tracking validation and business rules
 - [ ] Test all time tracking operations
 - [ ] Update StaffWorkspacePage component
@@ -189,28 +116,24 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 7: Settings Management RPCs ✅
+## 🗂️ Phase 5: Settings Management RPCs
 
-### Branch: `feat/settings-management-rpcs`
+### Branch: `feat/settings-rpcs`
 **Priority:** Medium  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
+**Estimate:** 2-3 days
 
 #### Tasks:
-- [x] `get_settings` - Get all settings for a store
-- [x] `get_setting` - Get single setting by key
-- [x] `set_setting` - Set/update any setting
-- [x] `get_settings_printing` - Get printing configuration
-- [x] `set_settings_printing` - Set printing configuration
-- [x] `get_flavours` - Get available flavors
-- [x] `set_flavours` - Set available flavors
-- [x] `get_storage_locations` - Get storage locations
-- [x] `set_storage_locations` - Set storage locations
-- [x] `get_monitor_density` - Get monitor density setting
-- [x] `set_monitor_density` - Set monitor density setting
-- [x] `delete_setting` - Deactivate a setting
-- [x] Role-based access control (Admin/Supervisor)
-- [x] Test all settings operations
+- [ ] `get_settings_printing` - Get printing configuration
+- [ ] `set_settings_printing` - Set printing configuration
+- [ ] `get_flavours` - Get available flavors
+- [ ] `set_flavours` - Set available flavors
+- [ ] `get_storage_locations` - Get storage locations
+- [ ] `set_storage_locations` - Set storage locations
+- [ ] `get_monitor_density` - Get monitor density setting
+- [ ] `set_monitor_density` - Set monitor density setting
+- [ ] Role-based access control (Admin/Supervisor)
+- [ ] Test all settings operations
+- [ ] Update SettingsPage component
 
 #### Acceptance Criteria:
 - All settings RPCs working
@@ -220,20 +143,19 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 8: Complete Grid & Order Management RPCs ✅
+## 🗂️ Phase 6: Complete Grid & Order Management RPCs
 
 ### Branch: `feat/complete-grid-rpcs`
 **Priority:** High  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
+**Estimate:** 2-3 days
 
 #### Tasks:
-- [x] `get_complete` - Get completed orders with filtering (date range, search, sorting)
-- [x] `update_order_core` - Update order core fields (flavour, notes, etc.)
-- [x] `get_complete_minimal` - Simplified complete orders view
-- [x] Multi-store support (both Bannos and Flourlane)
-- [x] Order editing validation and business rules
-- [x] Test all order management operations
+- [ ] `get_complete` - Get completed orders with filtering
+- [ ] `update_order_core` - Update order core fields
+- [ ] Order editing validation and business rules
+- [ ] Test all order management operations
+- [ ] Update OrderDetailDrawer component
+- [ ] Update complete orders views
 
 #### Acceptance Criteria:
 - Complete orders filtering working
@@ -265,23 +187,20 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 
 ---
 
-## 🗂️ Phase 9: Final RPCs - Analytics, Shopify & Bulk Operations ✅
+## 🗂️ Phase 8: Enhanced Shopify Integration
 
-### Branch: `feat/analytics-reporting-rpcs`
+### Branch: `feat/enhanced-shopify-rpcs`
 **Priority:** High  
-**Estimate:** 2-3 days  
-**Status:** ✅ COMPLETED
+**Estimate:** 2-3 days
 
 #### Tasks:
-- [x] `get_staff_me` - Get current staff member info
-- [x] `get_inventory_status` - Get detailed stock status
-- [x] `cancel_order` - Cancel an order (Admin only)
-- [x] `bulk_assign` - Assign multiple orders to staff
-- [x] `test_storefront_token` - Test Shopify connection (placeholder)
-- [x] `connect_catalog` - Connect product catalog (placeholder)
-- [x] `sync_shopify_orders` - Sync orders from Shopify (placeholder)
-- [x] `get_staff_times` - Get staff hours summary for payroll
-- [x] `get_staff_times_detail` - Get detailed time entries
+- [ ] `test_storefront_token` - Test Shopify connection
+- [ ] `connect_catalog` - Connect product catalog
+- [ ] `sync_shopify_orders` - Sync orders from Shopify
+- [ ] Enhanced `ingest_order` with more fields
+- [ ] HMAC verification for webhooks
+- [ ] Test all Shopify operations
+- [ ] Update webhook handling
 
 #### Acceptance Criteria:
 - Shopify integration working
