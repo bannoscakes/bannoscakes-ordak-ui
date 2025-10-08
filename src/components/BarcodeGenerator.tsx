@@ -109,31 +109,34 @@ export function BarcodeGenerator({
                   </div>
                 </div>
                 <script>
-                  // Track print state to prevent duplicate calls
+                  // Prevent double print dialog with race condition guard
                   let hasPrinted = false;
                   
                   function triggerPrint() {
                     if (hasPrinted) return;
                     hasPrinted = true;
-                    window.print();
+                    
+                    // Wait for barcode image to load before printing
+                    const barcodeImg = document.querySelector('.barcode-container img');
+                    if (barcodeImg && !barcodeImg.complete) {
+                      barcodeImg.addEventListener('load', function() {
+                        setTimeout(function() {
+                          window.print();
+                        }, 100);
+                      });
+                    } else {
+                      // Image already loaded or doesn't exist, print immediately
+                      setTimeout(function() {
+                        window.print();
+                      }, 100);
+                    }
                   }
                   
-                  // Wait for the image to load before printing
-                  const img = document.querySelector('img');
-                  if (img) {
-                    if (img.complete && img.naturalHeight !== 0) {
-                      // Image already loaded
-                      triggerPrint();
-                    } else {
-                      // Wait for image to load
-                      img.addEventListener('load', triggerPrint);
-                      img.addEventListener('error', function() {
-                        console.warn('Image failed to load, printing anyway');
-                        triggerPrint();
-                      });
-                    }
-                  } else {
-                    // No image found, print immediately
+                  // Wait for both window load AND barcode image load
+                  window.addEventListener('load', triggerPrint);
+                  
+                  // Fallback: if load event already fired, check image and print
+                  if (document.readyState === 'complete') {
                     triggerPrint();
                   }
                 </script>
