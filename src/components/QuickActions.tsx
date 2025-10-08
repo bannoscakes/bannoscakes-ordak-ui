@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   Plus,
   FileText,
+  MessageSquare,
 } from "lucide-react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -37,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
+import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -100,6 +102,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [selectedUrgentOrders, setSelectedUrgentOrders] = useState<Set<string>>(new Set());
   const [selectedPhotoReviews, setSelectedPhotoReviews] = useState<Set<string>>(new Set());
   const [showReworkDialog, setShowReworkDialog] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
   
 
   const actions = [
@@ -146,6 +149,13 @@ export function QuickActions({ store }: QuickActionsProps) {
       label: "QC Photo Check",
       description: "Flag photo issues quickly",
       color: "bg-purple-50 text-purple-600 hover:bg-purple-100"
+    },
+    {
+      id: "messages",
+      icon: MessageSquare,
+      label: "Messages",
+      description: "Team communication",
+      color: "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
     }
   ];
 
@@ -229,6 +239,10 @@ export function QuickActions({ store }: QuickActionsProps) {
     setSelectedPhotoReviews(new Set());
   };
 
+  const handleCloseMessaging = () => {
+    setShowMessaging(false);
+  };
+
   return (
     <>
       <Card className="p-6">
@@ -248,6 +262,8 @@ export function QuickActions({ store }: QuickActionsProps) {
                   handleNewOrder();
                 } else if (action.id === "store-report") {
                   handleStoreReport();
+                } else if (action.id === "messages") {
+                  setShowMessaging(true);
                 } else {
                   setActiveModal(action.id);
                 }
@@ -263,6 +279,13 @@ export function QuickActions({ store }: QuickActionsProps) {
           ))}
         </div>
       </Card>
+
+      {/* Messaging Component */}
+      {showMessaging && (
+        <Card className="p-6">
+          <MainDashboardMessaging onClose={handleCloseMessaging} />
+        </Card>
+      )}
 
       {/* Find Order Modal */}
       <Dialog open={activeModal === "find-order"} onOpenChange={(open) => !open && closeModal()}>
