@@ -15,7 +15,7 @@ import {
   FileSpreadsheet,
   Plus,
   FileText,
-  MessageSquare
+  MessageSquare,
 } from "lucide-react";
 // import { NewConversationModal } from "./messaging/NewConversationModal"; // Removed - using dedicated page
 // import { MainDashboardMessaging } from "./MainDashboardMessaging"; // Removed - using dedicated page
@@ -102,8 +102,6 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [selectedPhotoReviews, setSelectedPhotoReviews] = useState<Set<string>>(new Set());
   const [showReworkDialog, setShowReworkDialog] = useState(false);
   
-  // Messaging modal states removed - using dedicated /messages page
-
   // Navigation function for messages
   const handleNavigateToMessages = () => {
     try {
@@ -219,7 +217,6 @@ export function QuickActions({ store }: QuickActionsProps) {
     toast(`Marked ${count} orders as Rework.`);
   };
 
-  // handleCreateConversation removed - using dedicated /messages page
 
   const toggleUrgentOrder = (id: string) => {
     const newSelected = new Set(selectedUrgentOrders);
@@ -589,7 +586,6 @@ export function QuickActions({ store }: QuickActionsProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Messaging modals removed - using dedicated /messages page */}
 
       {/* Rework Confirmation Dialog */}
       <AlertDialog open={showReworkDialog} onOpenChange={setShowReworkDialog}>
