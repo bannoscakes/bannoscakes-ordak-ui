@@ -51,6 +51,12 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
         const myUserId = toId(currentUser?.user_id);
         setCurrentUserId(myUserId);
 
+        // If we couldn't get current user, show error and prevent conversation creation
+        if (!myUserId) {
+          setErrorMsg("Unable to identify current user. Please refresh and try again.");
+          return;
+        }
+
         // Map to a shape with user_id (UUID) — DO NOT pass email here
         // EXCLUDE current user from the list
         const mapped = (list || [])
@@ -134,12 +140,18 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
       setIsSubmitting(true);
       setErrorMsg(null);
 
+      // Guard: ensure we have current user ID
+      if (!currentUserId) {
+        setErrorMsg("Unable to identify current user. Please refresh and try again.");
+        return;
+      }
+
       // Extra guard: filter out current user from selected participants
       const ids = selected.filter(id => id !== currentUserId);
       
-      // Guard: require at least 1 participant for direct, >=2 for group (excluding self)
-      if (!isGroup && ids.length < 1) {
-        setErrorMsg("Select at least one other person.");
+      // Guard: require exactly 1 participant for direct, >=2 for group (excluding self)
+      if (!isGroup && ids.length !== 1) {
+        setErrorMsg("Select exactly one person for a direct message.");
         return;
       }
       if (isGroup && ids.length < 2) {

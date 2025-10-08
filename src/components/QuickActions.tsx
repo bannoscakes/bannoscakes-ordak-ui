@@ -105,8 +105,8 @@ export function QuickActions({ store }: QuickActionsProps) {
   // Navigation function for messages
   const handleNavigateToMessages = () => {
     try {
-      window.history.pushState({}, '', '/messages');
-      window.location.reload();
+      // Use window.location.href to actually navigate to the messages page
+      window.location.href = '/messages';
     } catch (error) {
       console.error('Navigation error:', error);
     }
