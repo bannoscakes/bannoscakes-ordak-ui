@@ -16,7 +16,6 @@ import { TimePayrollPage } from "./TimePayrollPage";
 import { StaffWorkspacePage } from "./StaffWorkspacePage";
 import { SupervisorWorkspacePage } from "./SupervisorWorkspacePage";
 import { BarcodeTest } from "./BarcodeTest";
-import { ErrorTest } from "./ErrorTest";
 import { LoginForm } from "./Auth/LoginForm";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -231,12 +230,6 @@ export function Dashboard({ onNavigateToSignup }: DashboardProps = {}) {
           return (
             <ErrorBoundary>
               <BarcodeTest />
-            </ErrorBoundary>
-          );
-        case "error-test":
-          return (
-            <ErrorBoundary>
-              <ErrorTest />
             </ErrorBoundary>
           );
         case "time-payroll":
