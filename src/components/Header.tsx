@@ -1,13 +1,14 @@
-import { Search, Bell, User } from "lucide-react";
+import { Search, Bell, User, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 
 interface HeaderProps {
   onRefresh?: () => Promise<void>;
+  onSignOut?: () => void;
 }
 
-export function Header({ onRefresh }: HeaderProps) {
+export function Header({ onRefresh, onSignOut }: HeaderProps) {
   return (
     <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
@@ -41,6 +42,11 @@ export function Header({ onRefresh }: HeaderProps) {
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
             </Button>
+            {onSignOut && (
+              <Button variant="ghost" size="sm" onClick={onSignOut}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

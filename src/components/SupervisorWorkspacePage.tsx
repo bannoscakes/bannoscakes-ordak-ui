@@ -4,12 +4,13 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
+import { MainDashboardMessaging } from "./MainDashboardMessaging";
 import { getQueue } from "../lib/rpc-client";
 
 interface QueueItem {
@@ -106,6 +107,7 @@ export function SupervisorWorkspacePage({
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(true);
+  const [showMessaging, setShowMessaging] = useState(false);
 
   // Update elapsed time
   useEffect(() => {
@@ -316,7 +318,7 @@ export function SupervisorWorkspacePage({
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Queue Shortcuts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Bannos Queue Shortcut */}
           <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={onNavigateToBannosQueue}>
             <div className="flex items-center justify-between">
@@ -344,6 +346,22 @@ export function SupervisorWorkspacePage({
                   <h3 className="font-medium text-foreground">Open Flourlane Queue</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">Assign orders</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </Card>
+
+          {/* Messages Shortcut */}
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setShowMessaging(true)}>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <MessageSquare className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <h3 className="font-medium text-foreground">Messages</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">Team communication</p>
               </div>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </div>
@@ -494,6 +512,24 @@ export function SupervisorWorkspacePage({
             >
               Show My Tasks
             </Button>
+          </Card>
+        )}
+
+        {/* Messaging Component */}
+        {showMessaging && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-foreground">Messages</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowMessaging(false)}
+                className="text-muted-foreground"
+              >
+                Close
+              </Button>
+            </div>
+            <MainDashboardMessaging onClose={() => setShowMessaging(false)} />
           </Card>
         )}
       </div>

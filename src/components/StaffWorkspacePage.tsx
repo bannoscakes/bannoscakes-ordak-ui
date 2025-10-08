@@ -18,11 +18,13 @@ import {
   Coffee,
   Clock,
   Briefcase,
+  MessageSquare,
 } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { toast } from "sonner";
+import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 // Import real RPCs
 import { getQueue } from "../lib/rpc-client";
@@ -118,6 +120,7 @@ export function StaffWorkspacePage({
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
+  const [showMessaging, setShowMessaging] = useState(false);
 
   // Mock unread message count
 
@@ -404,13 +407,20 @@ export function StaffWorkspacePage({
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-1 max-w-md">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger
               value="orders"
               className="flex items-center gap-2"
             >
               <Briefcase className="h-4 w-4" />
               My Orders ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="messages"
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Messages
             </TabsTrigger>
           </TabsList>
 
@@ -557,6 +567,13 @@ export function StaffWorkspacePage({
                 </Card>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent
+            value="messages"
+            className="space-y-6 mt-6"
+          >
+            <MainDashboardMessaging />
           </TabsContent>
 
         </Tabs>
