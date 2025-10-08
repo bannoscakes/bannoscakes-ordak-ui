@@ -809,7 +809,7 @@ export async function setSetting(store: Store, key: string, value: any) {
   const { data, error } = await supabase.rpc('set_setting', {
     p_store: store,
     p_key: key,
-    p_value: typeof value === 'string' ? value : JSON.stringify(value)
+    p_value: value
   });
   if (error) throw error;
   return data;
@@ -828,7 +828,7 @@ export async function setPrintingSettings(store: Store, settings: any) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_printing_settings', {
     p_store: store,
-    p_settings: typeof settings === 'string' ? settings : JSON.stringify(settings)
+    p_settings: settings
   });
   if (error) throw error;
   return data;
