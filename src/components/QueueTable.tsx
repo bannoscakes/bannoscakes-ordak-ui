@@ -18,7 +18,7 @@ import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { NetworkErrorRecovery } from "./NetworkErrorRecovery";
+// import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
 import { getQueue, getUnassignedCounts } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
 import type { Stage } from "../types/db";
@@ -230,7 +230,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   if (error) {
     return (
       <div className="space-y-4">
-        <NetworkErrorRecovery onRetry={fetchQueueData} />
+        <ErrorDisplay error={error} onRetry={fetchQueueData} />
         <ErrorDisplay
           error={error}
           title="Failed to Load Queue"
