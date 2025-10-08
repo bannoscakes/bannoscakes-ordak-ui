@@ -109,31 +109,22 @@ export function BarcodeGenerator({
                   </div>
                 </div>
                 <script>
-                  // Track print state to prevent duplicate calls
+                  // Prevent double print dialog with race condition guard
                   let hasPrinted = false;
                   
                   function triggerPrint() {
                     if (hasPrinted) return;
                     hasPrinted = true;
-                    window.print();
+                    setTimeout(function() {
+                      window.print();
+                    }, 100);
                   }
                   
-                  // Wait for the image to load before printing
-                  const img = document.querySelector('img');
-                  if (img) {
-                    if (img.complete && img.naturalHeight !== 0) {
-                      // Image already loaded
-                      triggerPrint();
-                    } else {
-                      // Wait for image to load
-                      img.addEventListener('load', triggerPrint);
-                      img.addEventListener('error', function() {
-                        console.warn('Image failed to load, printing anyway');
-                        triggerPrint();
-                      });
-                    }
-                  } else {
-                    // No image found, print immediately
+                  // Ensure the window is fully loaded before printing
+                  window.addEventListener('load', triggerPrint);
+                  
+                  // Fallback: if load event already fired, print immediately
+                  if (document.readyState === 'complete') {
                     triggerPrint();
                   }
                 </script>
