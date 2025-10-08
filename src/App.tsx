@@ -5,6 +5,10 @@ import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
 import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Card } from "./components/ui/card";
+import { Label } from "./components/ui/label";
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -23,6 +27,7 @@ export default function App() {
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
   const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Check URL on mount and set initial view
   useEffect(() => {
@@ -39,11 +44,14 @@ export default function App() {
       } else if (isSupervisorWorkspace) {
         setCurrentView('supervisor-signin');
       } else {
+        // Default to dashboard but require authentication
         setCurrentView('dashboard');
+        setIsAuthenticated(false); // Force login first
       }
     } catch (error) {
       console.error('Error parsing URL:', error);
       setCurrentView('dashboard');
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +104,29 @@ export default function App() {
       window.history.pushState({}, '', '/');
     } catch (error) {
       console.error('Supervisor sign out error:', error);
+    }
+  };
+
+  const handleMainDashboardSignIn = (email: string, password: string) => {
+    try {
+      // TODO: Implement real authentication
+      // For now, just set authenticated to true
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error('Main dashboard sign in error:', error);
+    }
+  };
+
+  const handleMainDashboardSignOut = () => {
+    try {
+      setIsAuthenticated(false);
+      setStaffSession(null);
+      setSupervisorSession(null);
+      setCurrentView('dashboard');
+      
+      window.history.pushState({}, '', '/');
+    } catch (error) {
+      console.error('Main dashboard sign out error:', error);
     }
   };
 
@@ -174,10 +205,108 @@ export default function App() {
       );
     }
 
-    // Default to dashboard
+    // Show login screen if not authenticated for dashboard
+    if (currentView === 'dashboard' && !isAuthenticated) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Card className="w-full max-w-md p-6">
+            <div className="space-y-6">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-foreground">Welcome to Bannos Cakes</h1>
+                <p className="text-muted-foreground mt-2">Please sign in to continue</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    defaultValue="admin@bannoscakes.com"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    defaultValue="admin123"
+                  />
+                </div>
+                
+                <Button 
+                  className="w-full" 
+                  onClick={() => handleMainDashboardSignIn("admin@bannoscakes.com", "admin123")}
+                >
+                  Sign In
+                </Button>
+              </div>
+              
+              <div className="text-center text-sm text-muted-foreground">
+                <p>Default credentials: admin@bannoscakes.com / admin123</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      );
+    }
+
+    // Show dashboard if authenticated
+    if (currentView === 'dashboard' && isAuthenticated) {
+      return (
+        <div className="min-h-screen bg-background">
+          <Dashboard onSignOut={handleMainDashboardSignOut} />
+        </div>
+      );
+    }
+
+    // Fallback to login
     return (
-      <div className="min-h-screen bg-background">
-        <Dashboard />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md p-6">
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground">Welcome to Bannos Cakes</h1>
+              <p className="text-muted-foreground mt-2">Please sign in to continue</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  defaultValue="admin@bannoscakes.com"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  defaultValue="admin123"
+                />
+              </div>
+              
+              <Button 
+                className="w-full" 
+                onClick={() => handleMainDashboardSignIn("admin@bannoscakes.com", "admin123")}
+              >
+                Sign In
+              </Button>
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Default credentials: admin@bannoscakes.com / admin123</p>
+            </div>
+          </div>
+        </Card>
       </div>
     );
   };
