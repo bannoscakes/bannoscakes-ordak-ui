@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Search, 
   Calendar, 
@@ -17,16 +17,16 @@ import {
   FileText,
   MessageSquare
 } from "lucide-react";
+// import { NewConversationModal } from "./messaging/NewConversationModal"; // Removed - using dedicated page
+// import { MainDashboardMessaging } from "./MainDashboardMessaging"; // Removed - using dedicated page
+// import { createConversation } from "../lib/rpc-client"; // Removed - using dedicated page
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Checkbox } from "./ui/checkbox";
-import { Textarea } from "./ui/textarea";
-import { Switch } from "./ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -102,10 +102,17 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [selectedPhotoReviews, setSelectedPhotoReviews] = useState<Set<string>>(new Set());
   const [showReworkDialog, setShowReworkDialog] = useState(false);
   
-  // Send Message modal states
-  const [messageText, setMessageText] = useState("");
-  const [messageRecipient, setMessageRecipient] = useState("all-staff");
-  const [isPinned, setIsPinned] = useState(false);
+  // Messaging modal states removed - using dedicated /messages page
+
+  // Navigation function for messages
+  const handleNavigateToMessages = () => {
+    try {
+      window.history.pushState({}, '', '/messages');
+      window.location.reload();
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  };
 
   const actions = [
     // Original store-specific actions
@@ -127,7 +134,7 @@ export function QuickActions({ store }: QuickActionsProps) {
       id: "send-message",
       icon: MessageSquare,
       label: "Send Message",
-      description: "Message staff or broadcast to all",
+      description: "Start a conversation with staff members",
       color: "bg-orange-50 text-orange-600 hover:bg-orange-100"
     },
     // New universal actions
@@ -212,37 +219,7 @@ export function QuickActions({ store }: QuickActionsProps) {
     toast(`Marked ${count} orders as Rework.`);
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim()) {
-      toast.error("Please enter a message");
-      return;
-    }
-
-    const recipientText = getRecipientDisplayName(messageRecipient);
-    
-    setMessageText("");
-    setMessageRecipient("all-staff");
-    setIsPinned(false);
-    setActiveModal(null);
-    
-    if (isPinned) {
-      toast.success(`📌 Announcement sent to ${recipientText}`);
-    } else {
-      toast.success(`Message sent to ${recipientText}`);
-    }
-  };
-
-  const getRecipientDisplayName = (recipient: string) => {
-    const recipients = {
-      "all-staff": "All Staff",
-      "bannos-team": "Bannos Team",
-      "flourlane-team": "Flourlane Team",
-      "supervisors": "Supervisors",
-      "bakers": "Bakers",
-      "decorators": "Decorators"
-    };
-    return recipients[recipient as keyof typeof recipients] || "Selected Recipients";
-  };
+  // handleCreateConversation removed - using dedicated /messages page
 
   const toggleUrgentOrder = (id: string) => {
     const newSelected = new Set(selectedUrgentOrders);
@@ -270,9 +247,6 @@ export function QuickActions({ store }: QuickActionsProps) {
     setSearchResult(null);
     setSelectedUrgentOrders(new Set());
     setSelectedPhotoReviews(new Set());
-    setMessageText("");
-    setMessageRecipient("all-staff");
-    setIsPinned(false);
   };
 
   return (
@@ -295,7 +269,8 @@ export function QuickActions({ store }: QuickActionsProps) {
                 } else if (action.id === "store-report") {
                   handleStoreReport();
                 } else if (action.id === "send-message") {
-                  setActiveModal(action.id);
+                  // Navigate to dedicated messages page
+                  handleNavigateToMessages();
                 } else {
                   setActiveModal(action.id);
                 }
@@ -314,12 +289,15 @@ export function QuickActions({ store }: QuickActionsProps) {
 
       {/* Find Order Modal */}
       <Dialog open={activeModal === "find-order"} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby="find-order-description">
           <DialogHeader>
             <DialogTitle>Find Order</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div id="find-order-description" className="text-sm text-muted-foreground">
+              Search for an order by number or scan a barcode to quickly locate it in the system.
+            </div>
             <div className="space-y-2">
               <Label htmlFor="order-search">Order number</Label>
               <Input
@@ -376,12 +354,15 @@ export function QuickActions({ store }: QuickActionsProps) {
 
       {/* Bake List Modal */}
       <Dialog open={activeModal === "bake-list"} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="bake-list-description">
           <DialogHeader>
             <DialogTitle>Bake List (This Week)</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div id="bake-list-description" className="text-sm text-muted-foreground">
+              View all cakes and baked goods scheduled for production this week.
+            </div>
             {mockBakeList.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
@@ -434,12 +415,15 @@ export function QuickActions({ store }: QuickActionsProps) {
 
       {/* Urgent Jobs Modal */}
       <Dialog open={activeModal === "urgent-jobs"} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="urgent-jobs-description">
           <DialogHeader>
             <DialogTitle>Urgent Jobs (Today)</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div id="urgent-jobs-description" className="text-sm text-muted-foreground">
+              High-priority orders that need immediate attention, sorted by priority and due time.
+            </div>
             <p className="text-xs text-muted-foreground">Sorted by priority, then time.</p>
             
             {mockUrgentOrders.length > 0 ? (
@@ -519,12 +503,15 @@ export function QuickActions({ store }: QuickActionsProps) {
 
       {/* QC Photo Check Modal */}
       <Dialog open={activeModal === "qc-photo"} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="qc-photo-description">
           <DialogHeader>
             <DialogTitle>QC Photo Check (Today)</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
+            <div id="qc-photo-description" className="text-sm text-muted-foreground">
+              Review and approve photos of completed orders for quality control.
+            </div>
             <p className="text-xs text-muted-foreground">Auto checks for blur and missing elements when available.</p>
             
             {/* Filter Chips */}
@@ -602,86 +589,7 @@ export function QuickActions({ store }: QuickActionsProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Send Message Modal */}
-      <Dialog open={activeModal === "send-message"} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Send Message</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Recipient Selector */}
-            <div className="space-y-2">
-              <Label htmlFor="recipient">Send to</Label>
-              <Select value={messageRecipient} onValueChange={setMessageRecipient}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all-staff">📢 All Staff (Broadcast)</SelectItem>
-                  <SelectItem value="bannos-team">🔵 Bannos Team</SelectItem>
-                  <SelectItem value="flourlane-team">🌸 Flourlane Team</SelectItem>
-                  <SelectItem value="supervisors">👥 Supervisors</SelectItem>
-                  <SelectItem value="bakers">🍰 Bakers</SelectItem>
-                  <SelectItem value="decorators">🎨 Decorators</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Message Text */}
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                placeholder="Type your message here..."
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                className="min-h-24"
-              />
-            </div>
-
-            {/* Pin as Announcement */}
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-              <div>
-                <Label htmlFor="pin-announcement" className="text-sm font-medium">
-                  Pin as Announcement
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Pinned messages appear at the top of everyone's message list
-                </p>
-              </div>
-              <Switch
-                id="pin-announcement"
-                checked={isPinned}
-                onCheckedChange={setIsPinned}
-              />
-            </div>
-
-            {/* Preview */}
-            {messageText.trim() && (
-              <div className="p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  {isPinned && <span className="text-xs">📌</span>}
-                  <span className="text-xs font-medium">
-                    Preview: {getRecipientDisplayName(messageRecipient)}
-                  </span>
-                </div>
-                <p className="text-sm text-foreground">{messageText}</p>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSendMessage} disabled={!messageText.trim()} className="flex-1">
-                {isPinned ? "📌 Send Announcement" : "Send Message"}
-              </Button>
-              <Button variant="outline" onClick={() => closeModal()} className="flex-1">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Messaging modals removed - using dedicated /messages page */}
 
       {/* Rework Confirmation Dialog */}
       <AlertDialog open={showReworkDialog} onOpenChange={setShowReworkDialog}>

@@ -6,6 +6,133 @@
 
 import { getSupabase } from './supabase';
 import type { Stage, Store, Priority } from '../types/db';
+import { createError, handleError, logError, ErrorCode } from './error-handler';
+
+// =============================================
+// MESSAGING TYPES
+// =============================================
+
+export interface Message {
+  id: number;
+  body: string;
+  sender_id: string;
+  sender_name: string;
+  created_at: string;
+  is_own_message: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  name: string | null;
+  type: 'direct' | 'group' | 'broadcast';
+  created_by: string;
+  created_at: string;
+  last_message_text: string | null;
+  last_message_at: string | null;
+  last_message_sender_id: string | null;
+  last_message_sender_name: string | null;
+  unread_count: number;
+  participant_count: number;
+}
+
+export interface ConversationParticipant {
+  user_id: string;
+  full_name: string;
+  role: string;
+  is_online: boolean;
+  joined_at: string;
+}
+
+// =============================================
+// ERROR HANDLING WRAPPER
+// =============================================
+
+/**
+ * Wraps RPC calls with standardized error handling
+ */
+async function withErrorHandling<T>(
+  rpcCall: () => Promise<T>,
+  context: { operation: string; rpcName: string; params?: any }
+): Promise<T> {
+  const startTime = Date.now();
+  
+  try {
+    const result = await rpcCall();
+    const duration = Date.now() - startTime;
+    
+    // Log successful operations in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`RPC ${context.rpcName} completed in ${duration}ms`);
+    }
+    
+    return result;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    // Handle different types of errors
+    let appError;
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      // Supabase error
+      const supabaseError = error as any;
+      
+      switch (supabaseError.code) {
+        case 'PGRST301': // Function not found
+          appError = createError(
+            ErrorCode.SYS002,
+            `RPC function '${context.rpcName}' not found`,
+            { rpcName: context.rpcName, params: context.params },
+            { operation: context.operation, duration }
+          );
+          break;
+          
+        case 'PGRST116': // Insufficient privileges
+          appError = createError(
+            ErrorCode.AUTH004,
+            'Insufficient permissions to perform this operation',
+            { rpcName: context.rpcName, params: context.params },
+            { operation: context.operation, duration }
+          );
+          break;
+          
+        case 'PGRST204': // Row not found
+          appError = createError(
+            ErrorCode.ORD001,
+            'Record not found',
+            { rpcName: context.rpcName, params: context.params },
+            { operation: context.operation, duration }
+          );
+          break;
+          
+        default:
+          appError = createError(
+            ErrorCode.SYS002,
+            supabaseError.message || 'Database operation failed',
+            { rpcName: context.rpcName, params: context.params, originalError: supabaseError },
+            { operation: context.operation, duration }
+          );
+      }
+    } else {
+      // Generic error
+      appError = handleError(error, {
+        operation: context.operation,
+        rpcName: context.rpcName,
+        params: context.params,
+        duration
+      });
+    }
+    
+    // Log the error
+    logError(appError, {
+      operation: context.operation,
+      rpcName: context.rpcName,
+      params: context.params,
+      duration
+    });
+    
+    throw appError;
+  }
+}
 
 // =============================================
 // STAFF MANAGEMENT
@@ -68,21 +195,30 @@ export interface GetQueueParams {
 }
 
 export async function getQueue(params: GetQueueParams = {}) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_queue', {
-    p_store: params.store || null,
-    p_stage: params.stage || null,
-    p_assignee_id: params.assignee_id || null,
-    p_storage: params.storage || null,
-    p_priority: params.priority || null,
-    p_search: params.search || null,
-    p_offset: params.offset || 0,
-    p_limit: params.limit || 50,
-    p_sort_by: params.sort_by || 'priority',
-    p_sort_order: params.sort_order || 'DESC',
-  });
-  if (error) throw error;
-  return data || [];
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_queue', {
+        p_store: params.store || null,
+        p_stage: params.stage || null,
+        p_assignee_id: params.assignee_id || null,
+        p_storage: params.storage || null,
+        p_priority: params.priority || null,
+        p_search: params.search || null,
+        p_offset: params.offset || 0,
+        p_limit: params.limit || 50,
+        p_sort_by: params.sort_by || 'priority',
+        p_sort_order: params.sort_order || 'DESC',
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    {
+      operation: 'getQueue',
+      rpcName: 'get_queue',
+      params
+    }
+  );
 }
 
 export async function getQueueStats(store?: Store | null) {
@@ -236,31 +372,34 @@ export async function getOrderForScan(scan: string) {
   return data?.[0] || null;
 }
 
-export async function completeFilling(orderId: string, performedBy?: string) {
+export async function completeFilling(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_filling', {
     p_order_id: orderId,
-    p_performed_by: performedBy || null,
+    p_store: store,
+    p_notes: notes || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function completeCovering(orderId: string, performedBy?: string) {
+export async function completeCovering(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_covering', {
     p_order_id: orderId,
-    p_performed_by: performedBy || null,
+    p_store: store,
+    p_notes: notes || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function completeDecorating(orderId: string, performedBy?: string) {
+export async function completeDecorating(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_decorating', {
     p_order_id: orderId,
-    p_performed_by: performedBy || null,
+    p_store: store,
+    p_notes: notes || null,
   });
   if (error) throw error;
   return data;
@@ -276,22 +415,23 @@ export async function startPacking(orderId: string, performedBy?: string) {
   return data;
 }
 
-export async function completePacking(orderId: string, performedBy?: string) {
+export async function completePacking(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_packing', {
     p_order_id: orderId,
-    p_performed_by: performedBy || null,
+    p_store: store,
+    p_notes: notes || null,
   });
   if (error) throw error;
   return data;
 }
 
-export async function qcReturnToDecorating(orderId: string, performedBy?: string, reason?: string) {
+export async function qcReturnToDecorating(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('qc_return_to_decorating', {
     p_order_id: orderId,
-    p_performed_by: performedBy || null,
-    p_reason: reason || null,
+    p_store: store,
+    p_notes: notes || null,
   });
   if (error) throw error;
   return data;
@@ -654,12 +794,22 @@ export async function getSettings(store: Store) {
   return data;
 }
 
+export async function getSetting(store: Store, key: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_setting', {
+    p_store: store,
+    p_key: key
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function setSetting(store: Store, key: string, value: any) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_setting', {
     p_store: store,
     p_key: key,
-    p_value: value
+    p_value: typeof value === 'string' ? value : JSON.stringify(value)
   });
   if (error) throw error;
   return data;
@@ -678,18 +828,23 @@ export async function setPrintingSettings(store: Store, settings: any) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_printing_settings', {
     p_store: store,
-    p_settings: settings
+    p_settings: typeof settings === 'string' ? settings : JSON.stringify(settings)
   });
   if (error) throw error;
   return data;
 }
 
 export async function getMonitorDensity(store: Store) {
+  console.log('getMonitorDensity called for store:', store);
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_monitor_density', {
     p_store: store
   });
-  if (error) throw error;
+  if (error) {
+    console.error('getMonitorDensity error:', error);
+    throw error;
+  }
+  console.log('getMonitorDensity raw data:', data);
   return data;
 }
 
@@ -703,39 +858,104 @@ export async function setMonitorDensity(store: Store, density: string) {
   return data;
 }
 
-export async function getFlavours(store: Store) {
+export async function getFlavours(store: Store): Promise<string[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_flavours', {
     p_store: store,
   });
   if (error) throw error;
-  return data;
+  
+  // Handle different return formats
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data && typeof data === 'object' && data.data && Array.isArray(data.data)) {
+    return data.data;
+  } else if (data && typeof data === 'object' && Array.isArray(data.flavours)) {
+    return data.flavours;
+  } else {
+    console.warn('Unexpected flavours data format:', data);
+    return [];
+  }
 }
 
-export async function getStorageLocations(store: Store) {
+export async function getStorageLocations(store: Store): Promise<string[]> {
+  console.log('getStorageLocations called for store:', store);
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_storage_locations', {
     p_store: store,
   });
-  if (error) throw error;
-  return data;
+  if (error) {
+    console.error('getStorageLocations error:', error);
+    throw error;
+  }
+  
+  console.log('getStorageLocations raw data:', data);
+  
+  // Handle different return formats
+  if (Array.isArray(data)) {
+    console.log('getStorageLocations returning array:', data);
+    return data;
+  } else if (data && typeof data === 'object' && data.data && Array.isArray(data.data)) {
+    console.log('getStorageLocations returning data.data:', data.data);
+    return data.data;
+  } else if (data && typeof data === 'object' && Array.isArray(data.locations)) {
+    console.log('getStorageLocations returning data.locations:', data.locations);
+    return data.locations;
+  } else {
+    console.warn('Unexpected storage locations data format:', data);
+    return [];
+  }
 }
 
 export async function setFlavours(store: Store, flavours: string[]) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_flavours', {
     p_store: store,
-    p_flavours: JSON.stringify(flavours),
+    p_flavours: flavours,
   });
   if (error) throw error;
   return data;
 }
 
 export async function setStorageLocations(store: Store, locations: string[]) {
+  console.log('setStorageLocations called with:', { store, locations });
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_storage_locations', {
     p_store: store,
-    p_locations: JSON.stringify(locations),
+    p_locations: locations,
+  });
+  if (error) {
+    console.error('setStorageLocations error:', error);
+    throw error;
+  }
+  console.log('setStorageLocations result:', data);
+  return data;
+}
+
+// =============================================
+// DUE DATE MANAGEMENT
+// =============================================
+
+export interface DueDateSettings {
+  defaultDue: string;
+  allowedDays: boolean[];
+  blackoutDates: string[];
+}
+
+export async function getDueDateSettings(store: Store): Promise<DueDateSettings> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_due_date_settings', {
+    p_store: store,
+  });
+  if (error) throw error;
+  return data as DueDateSettings;
+}
+
+export async function setDueDateSettings(store: Store, settings: DueDateSettings) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('set_due_date_settings', {
+    p_store: store,
+    p_settings: settings,
   });
   if (error) throw error;
   return data;
@@ -794,5 +1014,185 @@ export async function cancelOrder(orderId: string, store: Store, reason?: string
   });
   if (error) throw error;
   return data;
+}
+
+// =============================================
+// MESSAGING
+// =============================================
+
+export async function createConversation(
+  participants: string[],
+  name?: string,
+  type: 'direct' | 'group' | 'broadcast' = 'direct'
+) {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('create_conversation', {
+        p_participants: participants,
+        p_name: name || null,
+        p_type: type,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    {
+      operation: 'createConversation',
+      rpcName: 'create_conversation',
+      params: { participants, name, type }
+    }
+  );
+}
+
+export async function getConversations(limit = 50, offset = 0): Promise<Conversation[]> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_conversations', {
+        p_limit: limit,
+        p_offset: offset,
+      });
+      if (error) throw error;
+      return (data || []) as Conversation[];
+    },
+    {
+      operation: 'getConversations',
+      rpcName: 'get_conversations',
+      params: { limit, offset }
+    }
+  );
+}
+
+export async function getConversationParticipants(conversationId: string): Promise<ConversationParticipant[]> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_conversation_participants', {
+        p_conversation_id: conversationId,
+      });
+      if (error) throw error;
+      return (data || []) as ConversationParticipant[];
+    },
+    {
+      operation: 'getConversationParticipants',
+      rpcName: 'get_conversation_participants',
+      params: { conversationId }
+    }
+  );
+}
+
+export async function sendMessage(conversationId: string, body: string): Promise<number> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('send_message', {
+        p_conversation_id: conversationId,
+        p_content: body,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    {
+      operation: 'sendMessage',
+      rpcName: 'send_message',
+      params: { conversationId, body }
+    }
+  );
+}
+
+export async function getMessages(
+  conversationId: string, 
+  limit = 50, 
+  offset = 0
+): Promise<Message[]> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_messages_temp', {
+        p_conversation_id: conversationId,
+        p_limit: limit,
+        p_offset: offset,
+      });
+      if (error) throw error;
+      return (data || []) as Message[];
+    },
+    {
+      operation: 'getMessages',
+      rpcName: 'get_messages_temp',
+      params: { conversationId, limit, offset }
+    }
+  );
+}
+
+export async function markMessagesRead(conversationId: string): Promise<boolean> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('mark_messages_read', {
+        p_conversation_id: conversationId,
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    {
+      operation: 'markMessagesRead',
+      rpcName: 'mark_messages_read',
+      params: { conversationId }
+    }
+  );
+}
+
+export async function getUnreadCount(): Promise<number> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_unread_count');
+      if (error) throw error;
+      return data as number;
+    },
+    {
+      operation: 'getUnreadCount',
+      rpcName: 'get_unread_count',
+      params: {}
+    }
+  );
+}
+
+export async function addParticipant(conversationId: string, userId: string): Promise<boolean> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('add_participant', {
+        p_conversation_id: conversationId,
+        p_user_id: userId,
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    {
+      operation: 'addParticipant',
+      rpcName: 'add_participant',
+      params: { conversationId, userId }
+    }
+  );
+}
+
+export async function removeParticipant(conversationId: string, userId: string): Promise<boolean> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('remove_participant', {
+        p_conversation_id: conversationId,
+        p_user_id: userId,
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    {
+      operation: 'removeParticipant',
+      rpcName: 'remove_participant',
+      params: { conversationId, userId }
+    }
+  );
 }
 

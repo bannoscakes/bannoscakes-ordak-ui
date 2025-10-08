@@ -1,30 +1,59 @@
 import { useState, useEffect } from "react";
 import { Dashboard } from "./components/Dashboard";
-import { StaffSignInPage } from "./components/StaffSignInPage";
 import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
-import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
+import { MessagesPage } from "./components/messaging/MessagesPage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
+import { LoginForm } from "./components/Auth/LoginForm";
+import { SignupForm } from "./components/Auth/SignupForm";
 
-type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
+type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace' | 'signup' | 'messages';
 
-interface StaffSession {
-  email: string;
-  name: string;
-}
-
-interface SupervisorSession {
-  email: string;
-  name: string;
-}
-
-export default function App() {
+// Component to handle role-based routing
+function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
-  const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
-  const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, loading: authLoading } = useAuthContext();
 
-  // Check URL on mount and set initial view
+  // Handle role-based routing when user is authenticated
+  useEffect(() => {
+    console.log('=== ROUTING DEBUG ===');
+    console.log('authLoading:', authLoading);
+    console.log('user:', user);
+    console.log('currentView:', currentView);
+    
+    if (!authLoading && user) {
+      console.log('User authenticated, role:', user.role);
+      
+      // Redirect based on user role
+      switch (user.role) {
+        case 'Admin':
+          console.log('Setting view to dashboard for Admin');
+          setCurrentView('dashboard');
+          break;
+        case 'Supervisor':
+          console.log('Setting view to supervisor-workspace for Supervisor');
+          setCurrentView('supervisor-workspace');
+          break;
+        case 'Staff':
+          console.log('Setting view to staff-workspace for Staff');
+          setCurrentView('staff-workspace');
+          break;
+        default:
+          console.log('Setting view to dashboard for unknown role');
+          setCurrentView('dashboard');
+      }
+    } else if (!authLoading && !user) {
+      console.log('No user authenticated, setting view to dashboard');
+      // No user authenticated, show dashboard with login option
+      setCurrentView('dashboard');
+    }
+    console.log('=== ROUTING DEBUG END ===');
+  }, [user, authLoading]);
+
+  // Check URL on mount and set initial view (for direct URL access)
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -33,13 +62,22 @@ export default function App() {
       
       const isStaffWorkspace = pathname === '/workspace/staff' || viewParam === 'staff';
       const isSupervisorWorkspace = pathname === '/workspace/supervisor' || viewParam === 'supervisor';
+      const isMessages = pathname === '/messages' || viewParam === 'messages';
 
-      if (isStaffWorkspace) {
-        setCurrentView('staff-signin');
-      } else if (isSupervisorWorkspace) {
-        setCurrentView('supervisor-signin');
-      } else {
-        setCurrentView('dashboard');
+      // Only override if user is not authenticated or URL explicitly specifies workspace
+      if (!user) {
+        if (isStaffWorkspace) {
+          setCurrentView('staff-workspace');
+        } else if (isSupervisorWorkspace) {
+          setCurrentView('supervisor-workspace');
+        } else if (isMessages) {
+          setCurrentView('messages');
+        } else {
+          setCurrentView('dashboard');
+        }
+      } else if (user && isMessages) {
+        // Allow authenticated users to access messages
+        setCurrentView('messages');
       }
     } catch (error) {
       console.error('Error parsing URL:', error);
@@ -47,56 +85,14 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  const handleStaffSignIn = (email: string, pin: string) => {
-    try {
-      // TODO: Implement real authentication
-      // This will be replaced with actual API call to authenticate staff
-      const name = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      setStaffSession({ email, name });
-      setCurrentView('staff-workspace');
-      
-      window.history.pushState({}, '', '/workspace/staff');
-    } catch (error) {
-      console.error('Staff sign in error:', error);
-    }
+  const handleNavigateToSignup = () => {
+    setCurrentView('signup');
   };
 
-  const handleStaffSignOut = () => {
-    try {
-      setStaffSession(null);
-      setCurrentView('dashboard');
-      
-      window.history.pushState({}, '', '/');
-    } catch (error) {
-      console.error('Staff sign out error:', error);
-    }
-  };
-
-  const handleSupervisorSignIn = (email: string, pin: string) => {
-    try {
-      // TODO: Implement real authentication
-      // This will be replaced with actual API call to authenticate supervisor
-      const name = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      setSupervisorSession({ email, name });
-      setCurrentView('supervisor-workspace');
-      
-      window.history.pushState({}, '', '/workspace/supervisor');
-    } catch (error) {
-      console.error('Supervisor sign in error:', error);
-    }
-  };
-
-  const handleSupervisorSignOut = () => {
-    try {
-      setSupervisorSession(null);
-      setCurrentView('dashboard');
-      
-      window.history.pushState({}, '', '/');
-    } catch (error) {
-      console.error('Supervisor sign out error:', error);
-    }
+  const handleNavigateToLogin = () => {
+    setCurrentView('dashboard');
   };
 
   const handleNavigateToBannosQueue = () => {
@@ -130,61 +126,71 @@ export default function App() {
   }
 
   const renderMainContent = () => {
-    // Show staff signin for staff workspace access without session
-    if (currentView === 'staff-signin' && !staffSession) {
+    // Show signup form
+    if (currentView === 'signup') {
       return (
-        <div className="min-h-screen bg-background">
-          <StaffSignInPage onSignIn={handleStaffSignIn} />
-        </div>
-      );
-    }
-
-    // Show staff workspace if signed in
-    if (currentView === 'staff-workspace' && staffSession) {
-      return (
-        <div className="min-h-screen bg-background">
-          <StaffWorkspacePage 
-            staffName={staffSession.name}
-            onSignOut={handleStaffSignOut}
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <SignupForm 
+            onSuccess={handleNavigateToLogin}
+            onCancel={handleNavigateToLogin}
           />
         </div>
       );
     }
 
-    // Show supervisor signin for supervisor workspace access without session
-    if (currentView === 'supervisor-signin' && !supervisorSession) {
+    // Show staff workspace with authentication
+    if (currentView === 'staff-workspace') {
       return (
-        <div className="min-h-screen bg-background">
-          <SupervisorSignInPage onSignIn={handleSupervisorSignIn} />
-        </div>
+        <ProtectedRoute requiredRole="Staff" userType="staff">
+          <div className="min-h-screen bg-background">
+            <StaffWorkspacePage />
+          </div>
+        </ProtectedRoute>
       );
     }
 
-    // Show supervisor workspace if signed in
-    if (currentView === 'supervisor-workspace' && supervisorSession) {
+    // Show supervisor workspace with authentication
+    if (currentView === 'supervisor-workspace') {
       return (
-        <div className="min-h-screen bg-background">
-          <SupervisorWorkspacePage 
-            supervisorName={supervisorSession.name}
-            onSignOut={handleSupervisorSignOut}
-            onNavigateToBannosQueue={handleNavigateToBannosQueue}
-            onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
-          />
-        </div>
+        <ProtectedRoute requiredRole="Supervisor" userType="supervisor">
+          <div className="min-h-screen bg-background">
+            <SupervisorWorkspacePage 
+              onNavigateToBannosQueue={handleNavigateToBannosQueue}
+              onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
+            />
+          </div>
+        </ProtectedRoute>
       );
     }
 
-    // Default to dashboard
+    // Show messages page
+    if (currentView === 'messages') {
+      return (
+        <ProtectedRoute requiredRole="Admin" userType="admin">
+          <div className="min-h-screen bg-background">
+            <MessagesPage />
+          </div>
+        </ProtectedRoute>
+      );
+    }
+
+    // Default to dashboard with signup option
     return (
       <div className="min-h-screen bg-background">
-        <Dashboard />
+        <Dashboard onNavigateToSignup={handleNavigateToSignup} />
       </div>
     );
   };
 
+  return renderMainContent();
+}
+
+export default function App() {
   return (
     <ErrorBoundary>
-      {renderMainContent()}
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
