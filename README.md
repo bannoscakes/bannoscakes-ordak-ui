@@ -181,3 +181,4 @@ To run from source:
 # Go >= 1.22
 go run . help
 ```
+# Testing permanent staff_shared fix
