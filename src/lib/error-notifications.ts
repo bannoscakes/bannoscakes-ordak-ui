@@ -74,8 +74,9 @@ export const showErrorNotification = (
   }
 
   // Show technical details in development
-  if (showTechnicalDetails && isAppError) {
-    finalDescription += `\n\nTechnical Details:\nError ID: ${error.correlationId.slice(-8)}\nCode: ${error.code}`;
+  if (showTechnicalDetails && isAppError && error instanceof Error && 'correlationId' in error && 'code' in error) {
+    const appError = error as any;
+    finalDescription += `\n\nTechnical Details:\nError ID: ${appError.correlationId?.slice(-8) || 'N/A'}\nCode: ${appError.code || 'N/A'}`;
   }
 
   // Log description to console if provided

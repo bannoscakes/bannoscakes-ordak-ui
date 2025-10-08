@@ -78,9 +78,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               <Badge variant="outline" className="text-xs">
                 {code}
               </Badge>
-              {isAppError && error.correlationId && (
+              {isAppError && error instanceof Error && 'correlationId' in error && (error as any).correlationId && (
                 <Badge variant="secondary" className="text-xs">
-                  ID: {error.correlationId.slice(-8)}
+                  ID: {(error as any).correlationId.slice(-8)}
                 </Badge>
               )}
             </div>
@@ -108,13 +108,17 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono">
                 <div className="space-y-1">
-                  <div><strong>Correlation ID:</strong> {error.correlationId}</div>
-                  <div><strong>Timestamp:</strong> {error.timestamp}</div>
-                  {error.details && (
-                    <div><strong>Details:</strong> {JSON.stringify(error.details, null, 2)}</div>
+                  {error instanceof Error && 'correlationId' in error && (
+                    <div><strong>Correlation ID:</strong> {(error as any).correlationId}</div>
                   )}
-                  {error.context && (
-                    <div><strong>Context:</strong> {JSON.stringify(error.context, null, 2)}</div>
+                  {error instanceof Error && 'timestamp' in error && (
+                    <div><strong>Timestamp:</strong> {(error as any).timestamp}</div>
+                  )}
+                  {error instanceof Error && 'details' in error && (error as any).details && (
+                    <div><strong>Details:</strong> {JSON.stringify((error as any).details, null, 2)}</div>
+                  )}
+                  {error instanceof Error && 'context' in error && (error as any).context && (
+                    <div><strong>Context:</strong> {JSON.stringify((error as any).context, null, 2)}</div>
                   )}
                 </div>
               </CollapsibleContent>
@@ -163,9 +167,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
         {code && (
           <CardDescription className="flex items-center gap-2">
             <Badge variant="outline">{code}</Badge>
-            {isAppError && error.correlationId && (
+            {isAppError && error instanceof Error && 'correlationId' in error && (error as any).correlationId && (
               <span className="text-xs text-gray-500">
-                ID: {error.correlationId.slice(-8)}
+                ID: {(error as any).correlationId.slice(-8)}
               </span>
             )}
           </CardDescription>
@@ -196,13 +200,17 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 p-3 bg-gray-100 rounded text-sm font-mono">
               <div className="space-y-2">
-                <div><strong>Correlation ID:</strong> {error.correlationId}</div>
-                <div><strong>Timestamp:</strong> {error.timestamp}</div>
-                {error.details && (
-                  <div><strong>Details:</strong> {JSON.stringify(error.details, null, 2)}</div>
+                {error instanceof Error && 'correlationId' in error && (
+                  <div><strong>Correlation ID:</strong> {(error as any).correlationId}</div>
                 )}
-                {error.context && (
-                  <div><strong>Context:</strong> {JSON.stringify(error.context, null, 2)}</div>
+                {error instanceof Error && 'timestamp' in error && (
+                  <div><strong>Timestamp:</strong> {(error as any).timestamp}</div>
+                )}
+                {error instanceof Error && 'details' in error && (error as any).details && (
+                  <div><strong>Details:</strong> {JSON.stringify((error as any).details, null, 2)}</div>
+                )}
+                {error instanceof Error && 'context' in error && (error as any).context && (
+                  <div><strong>Context:</strong> {JSON.stringify((error as any).context, null, 2)}</div>
                 )}
               </div>
             </CollapsibleContent>

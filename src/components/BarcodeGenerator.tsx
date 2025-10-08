@@ -109,19 +109,23 @@ export function BarcodeGenerator({
                   </div>
                 </div>
                 <script>
-                  // Ensure the window is fully loaded before printing
-                  window.addEventListener('load', function() {
-                    // Small delay to ensure all content is rendered
+                  // Prevent double print dialog with race condition guard
+                  let hasPrinted = false;
+                  
+                  function triggerPrint() {
+                    if (hasPrinted) return;
+                    hasPrinted = true;
                     setTimeout(function() {
                       window.print();
                     }, 100);
-                  });
+                  }
+                  
+                  // Ensure the window is fully loaded before printing
+                  window.addEventListener('load', triggerPrint);
                   
                   // Fallback: if load event already fired, print immediately
                   if (document.readyState === 'complete') {
-                    setTimeout(function() {
-                      window.print();
-                    }, 100);
+                    triggerPrint();
                   }
                 </script>
               </body>
