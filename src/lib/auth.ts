@@ -41,7 +41,7 @@ class AuthService {
       }
 
       if (session?.user) {
-        await this.loadUserProfile(session.user);
+        await this.loadUserProfile(session.user, session);
       } else {
         this.updateAuthState({ user: null, session: null, loading: false });
       }
@@ -51,7 +51,7 @@ class AuthService {
         console.log('Auth state changed:', event, session?.user?.email);
         
         if (session?.user) {
-          await this.loadUserProfile(session.user);
+          await this.loadUserProfile(session.user, session);
         } else {
           this.updateAuthState({ user: null, session: null, loading: false });
         }
@@ -62,7 +62,7 @@ class AuthService {
     }
   }
 
-  private async loadUserProfile(user: User) {
+  private async loadUserProfile(user: User, session: Session) {
     try {
       console.log('Loading user profile for:', user.email, 'User ID:', user.id);
       
@@ -98,7 +98,7 @@ class AuthService {
         };
 
         console.log('Created auth user:', authUser);
-        this.updateAuthState({ user: authUser, session: null, loading: false });
+        this.updateAuthState({ user: authUser, session: session, loading: false });
       } else {
         console.error('User profile not found in staff_shared table for user:', user.id);
         this.updateAuthState({ user: null, session: null, loading: false });
@@ -156,7 +156,12 @@ class AuthService {
       
       // Clear any local storage
       console.log('Clearing localStorage...');
-      localStorage.removeItem('sb-iwavciibrspfjezujydc-auth-token');
+      // Clear all Supabase-related localStorage items
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
       sessionStorage.clear();
       
       console.log('=== SIGNOUT DEBUG END ===');
