@@ -10,13 +10,10 @@ export function useAuth() {
 
   useEffect(() => {
     // Subscribe to auth state changes
+    // The subscribe method immediately calls the listener with current state
     const unsubscribe = authService.subscribe((state) => {
       setAuthState(state);
     });
-
-    // Get initial state
-    const initialState = authService.getCurrentState();
-    setAuthState(initialState);
 
     return unsubscribe;
   }, []);
