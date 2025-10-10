@@ -1,14 +1,13 @@
 import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { authService } from "@/lib/auth";
 
 export default function Logout() {
   useEffect(() => {
     (async () => {
       try { 
-        await supabase.auth.signOut(); 
+        // Use authService instead of direct supabase calls
+        await authService.signOut();
       } catch {}
-      localStorage.clear();
-      sessionStorage.clear();
       location.replace("/"); // redirects to dashboard (your root)
     })();
   }, []);
