@@ -72,8 +72,8 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
         // Convert real staff to time records (with mock time data for now)
         const staffTimeRecords: StaffTimeRecord[] = staffList.map((staff) => ({
           id: staff.user_id,
-          name: staff.full_name,
-          avatar: staff.full_name.split(' ').map(n => n[0]).join('').toUpperCase(),
+          name: staff.full_name || 'Unknown Staff',
+          avatar: (staff.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase(),
           daysWorked: 0, // TODO: Get real time tracking data
           totalShiftHours: 0,
           totalBreakMinutes: 0,
