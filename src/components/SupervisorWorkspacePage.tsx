@@ -4,6 +4,7 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
@@ -32,7 +33,6 @@ interface QueueItem {
 }
 
 interface SupervisorWorkspacePageProps {
-  supervisorName: string;
   onSignOut: () => void;
   onNavigateToBannosQueue: () => void;
   onNavigateToFlourlaneQueue: () => void;
@@ -91,11 +91,12 @@ const getRealisticSize = (originalSize: string, product: string, store: string) 
 };
 
 export function SupervisorWorkspacePage({ 
-  supervisorName, 
   onSignOut, 
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
+  const { user, signOut } = useAuth();
+  const displayName = user?.fullName || user?.email || "Signed in";
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -271,7 +272,7 @@ export function SupervisorWorkspacePage({
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-medium text-foreground">Supervisor Workspace</h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-foreground font-medium">{supervisorName}</span>
+              <span className="text-sm text-foreground font-medium">{displayName}</span>
               
               {/* Shift Controls */}
               {shiftStatus === 'not-started' ? (

@@ -190,7 +190,6 @@ function MainViews() {
   }
   if (currentView === "supervisor-workspace") {
     return <SupervisorWorkspacePage 
-      supervisorName={supervisorSession?.name || 'Supervisor'}
       onSignOut={handleSupervisorSignOut}
       onNavigateToBannosQueue={handleNavigateToBannosQueue}
       onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
