@@ -142,7 +142,7 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
 
       // Guard: ensure we have current user ID
       if (!currentUserId) {
-        setErrorMsg("Unable to identify current user. Please refresh and try again.");
+        setErrorMsg("Please sign in to start a conversation.");
         return;
       }
 
@@ -172,6 +172,19 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
       setIsSubmitting(false);
     }
   };
+
+  // If not signed in, be clear:
+  if (!currentUserId) {
+    return (
+      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+        <DialogContent className="md:max-w-[700px] max-h-[85vh] overflow-hidden">
+          <div className="p-4 text-sm text-destructive text-center">
+            Please sign in to start a conversation.
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
