@@ -182,7 +182,6 @@ function MainViews() {
   }
   if (currentView === "staff-workspace") {
     return <StaffWorkspacePage 
-      staffName={staffSession?.name || 'Staff'}
       onSignOut={handleStaffSignOut}
     />;
   }
