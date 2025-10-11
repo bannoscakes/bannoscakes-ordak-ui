@@ -4,6 +4,7 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Tabs,
   TabsContent,
@@ -53,7 +54,6 @@ interface QueueItem {
 }
 
 interface StaffWorkspacePageProps {
-  staffName: string;
   onSignOut: () => void;
 }
 
@@ -102,9 +102,10 @@ const getRealisticSize = (
 };
 
 export function StaffWorkspacePage({
-  staffName,
   onSignOut,
 }: StaffWorkspacePageProps) {
+  const { user, signOut } = useAuth();
+  const displayName = user?.fullName || user?.email || "Signed in";
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -325,7 +326,7 @@ export function StaffWorkspacePage({
             </h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-foreground font-medium">
-                {staffName}
+                {displayName}
               </span>
               <Button
                 variant="outline"
