@@ -156,12 +156,7 @@ class AuthService {
       
       // Clear any local storage
       console.log('Clearing localStorage...');
-      // Clear all Supabase-related localStorage items
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-')) {
-          localStorage.removeItem(key);
-        }
-      });
+      localStorage.removeItem('sb-iwavciibrspfjezujydc-auth-token');
       sessionStorage.clear();
       
       console.log('=== SIGNOUT DEBUG END ===');
