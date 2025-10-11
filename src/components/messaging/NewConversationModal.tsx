@@ -28,7 +28,6 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [loadingCurrentUser, setLoadingCurrentUser] = useState(false);
 
   // Load staff once when opened (or when search changes if you support server-side filtering)
   useEffect(() => {
@@ -36,7 +35,6 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
     let cancelled = false;
     const run = async () => {
       setLoadingStaff(true);
-      setLoadingCurrentUser(true);
       setErrorMsg(null);
       try {
         // Get current user and staff list in parallel with better error handling
@@ -79,7 +77,6 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
       } finally {
         if (!cancelled) {
           setLoadingStaff(false);
-          setLoadingCurrentUser(false);
         }
       }
     };
@@ -177,19 +174,6 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
       setIsSubmitting(false);
     }
   };
-
-  // Show loading state while checking authentication
-  if (loadingCurrentUser) {
-    return (
-      <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="md:max-w-[700px] max-h-[85vh] overflow-hidden">
-          <div className="p-4 text-sm text-muted-foreground text-center">
-            Loading...
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   // If not signed in, be clear:
   if (!currentUserId) {

@@ -189,7 +189,6 @@ export function Dashboard() {
           return (
             <ErrorBoundary>
               <StaffWorkspacePage 
-                staffName="John Doe"
                 onSignOut={() => setActiveView('dashboard')}
               />
             </ErrorBoundary>
@@ -198,7 +197,6 @@ export function Dashboard() {
           return (
             <ErrorBoundary>
               <SupervisorWorkspacePage 
-                supervisorName="Jane Supervisor"
                 onSignOut={() => setActiveView('dashboard')}
                 onNavigateToBannosQueue={() => setActiveView('bannos-production')}
                 onNavigateToFlourlaneQueue={() => setActiveView('flourlane-production')}
