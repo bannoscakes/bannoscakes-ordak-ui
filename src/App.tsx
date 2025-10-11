@@ -60,6 +60,7 @@ function RootApp() {
  * keep it here unchanged.
  */
 function MainViews() {
+  const { signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
@@ -92,22 +93,20 @@ function MainViews() {
     }
   }, []);
 
-  // Mock sign-in handlers removed - using real auth now
-  const handleStaffSignOut = () => {
+  // Real sign-out handlers - properly invalidate Supabase session
+  const handleStaffSignOut = async () => {
     try {
-      setStaffSession(null);
-      setCurrentView('dashboard');
-      window.history.pushState({}, '', '/');
+      await signOut(); // This will trigger AuthProvider to update state
+      // No need to manually clear state - AuthProvider handles this
     } catch (error) {
       console.error('Staff sign out error:', error);
     }
   };
 
-  const handleSupervisorSignOut = () => {
+  const handleSupervisorSignOut = async () => {
     try {
-      setSupervisorSession(null);
-      setCurrentView('dashboard');
-      window.history.pushState({}, '', '/');
+      await signOut(); // This will trigger AuthProvider to update state
+      // No need to manually clear state - AuthProvider handles this
     } catch (error) {
       console.error('Supervisor sign out error:', error);
     }
