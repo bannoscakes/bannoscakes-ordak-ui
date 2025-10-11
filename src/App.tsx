@@ -21,7 +21,6 @@ function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
 
-
 type AppView = 'dashboard' | 'staff-workspace' | 'supervisor-workspace';
 
 interface StaffSession {
