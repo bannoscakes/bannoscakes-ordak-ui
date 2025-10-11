@@ -21,8 +21,6 @@ function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
 
-// Gate supervisor demo login behind environment flag
-const SUPERVISOR_DEMO = import.meta.env.VITE_SUPERVISOR_DEMO_LOGIN === "true";
 
 type AppView = 'dashboard' | 'staff-workspace' | 'supervisor-workspace';
 
@@ -83,7 +81,7 @@ function MainViews() {
       // Auth is now handled above - no more mock sign-in redirects
       if (isStaffWorkspace) {
         setCurrentView("staff-workspace");
-      } else if (isSupervisorWorkspace && SUPERVISOR_DEMO) {
+      } else if (isSupervisorWorkspace) {
         setCurrentView("supervisor-workspace");
       } else {
         setCurrentView("dashboard");
