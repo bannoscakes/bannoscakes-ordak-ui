@@ -1,10 +1,10 @@
-import * as mockRpc from "../mocks/rpc";
+// Mock types removed - using direct Supabase calls
 import { supabase } from "./supabase";
 
 const QUEUE_SOURCE =
   String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "vw_queue_minimal";
 
-export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
+export const get_queue = async (..._args: any[]) => {
   try {
     if (!supabase) return []; // no envs set → safe fallback
     // Adjust the view/columns to your schema; this is a conservative example.
@@ -22,7 +22,7 @@ export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
       title: row.title ?? "",
       priority: row.priority ?? 0,
       due_date: row.due_date ?? null,
-    })) as unknown as Awaited<ReturnType<typeof mockRpc.get_queue>>;
+    })) as unknown as any[];
 
     return items;
   } catch {
@@ -32,12 +32,12 @@ export const get_queue: typeof mockRpc.get_queue = async (..._args) => {
 };
 
 // keep these throwing until implemented
-export const get_order_for_scan: typeof mockRpc.get_order_for_scan = async (..._args) => {
+export const get_order_for_scan = async (..._args: any[]) => {
   throw new Error("rpc.real:get_order_for_scan not wired; leave VITE_USE_MOCKS=true");
 };
-export const advance_stage: typeof mockRpc.advance_stage = async (..._args) => {
+export const advance_stage = async (..._args: any[]) => {
   throw new Error("rpc.real:advance_stage not wired; leave VITE_USE_MOCKS=true");
 };
-export const handle_print_barcode: typeof mockRpc.handle_print_barcode = async (..._args) => {
+export const handle_print_barcode = async (..._args: any[]) => {
   throw new Error("rpc.real:handle_print_barcode not wired; leave VITE_USE_MOCKS=true");
 };

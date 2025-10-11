@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { authService, type AuthState, type AuthUser } from '../lib/auth';
 
 export function useAuth() {
@@ -18,15 +18,21 @@ export function useAuth() {
     return unsubscribe;
   }, []);
 
+  // Memoize functions to prevent stale references
+  const signIn = useCallback(authService.signIn.bind(authService), []);
+  const signOut = useCallback(authService.signOut.bind(authService), []);
+  const signUp = useCallback(authService.signUp.bind(authService), []);
+  const hasRole = useCallback(authService.hasRole.bind(authService), []);
+  const canAccessStore = useCallback(authService.canAccessStore.bind(authService), []);
   return {
     user: authState.user,
     session: authState.session,
     loading: authState.loading,
-    signIn: authService.signIn.bind(authService),
-    signOut: authService.signOut.bind(authService),
-    signUp: authService.signUp.bind(authService),
-    hasRole: authService.hasRole.bind(authService),
-    canAccessStore: authService.canAccessStore.bind(authService)
+    signIn,
+    signOut,
+    signUp,
+    hasRole,
+    canAccessStore
   };
 }
 

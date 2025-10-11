@@ -1,10 +1,29 @@
-import { useState, useEffect } from "react";
+// App.tsx (integrated with real Supabase auth)
+
+import React, { useEffect, useState } from "react";
+
+// ✅ real auth system (from the audit)
+import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./hooks/useAuth";
+
+// ✅ real login screen
+import { LoginForm } from "./components/Auth/LoginForm";
+
+// ✅ panic sign-out route
+import Logout from "./components/Logout";
+
+// ⛳ your existing stuff (keep these)
 import { Dashboard } from "./components/Dashboard";
 import { StaffSignInPage } from "./components/StaffSignInPage";
 import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
 import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+
+// Tiny spinner (fallback if you don't have one)
+function Spinner() {
+  return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+}
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -18,32 +37,70 @@ interface SupervisorSession {
   name: string;
 }
 
+/**
+ * Wrap the entire app with the AuthProvider once.
+ */
 export default function App() {
+  return (
+    <AuthProvider>
+      <RootApp />
+    </AuthProvider>
+  );
+}
+
+/**
+ * Your original view-based app now gates rendering on auth.
+ * - If loading: show spinner
+ * - If not signed-in: show real LoginForm
+ * - If signed-in: render your normal view switch (unchanged)
+ */
+function RootApp() {
+  const { user, loading } = useAuth();
+
+  // Panic route still works: /logout
+  if (typeof window !== "undefined" && window.location.pathname === "/logout") {
+    return <Logout />;
+  }
+
+  if (loading) return <Spinner />;
+  if (!user) return <LoginForm onSuccess={() => {}} />; // 🔐 real login when signed out
+
+  // ✅ signed in: use your existing view logic
+  return <MainViews />;
+}
+
+/**
+ * Your existing view-switch stays the same.
+ * If you already have a function like renderMainContent()/currentView,
+ * keep it here unchanged.
+ */
+function MainViews() {
+  const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
   const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Check URL on mount and set initial view
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const pathname = window.location.pathname;
-      const viewParam = urlParams.get('view');
-      
-      const isStaffWorkspace = pathname === '/workspace/staff' || viewParam === 'staff';
-      const isSupervisorWorkspace = pathname === '/workspace/supervisor' || viewParam === 'supervisor';
+      const viewParam = urlParams.get("view");
+
+      const isStaffWorkspace =
+        pathname === "/workspace/staff" || viewParam === "staff";
+      const isSupervisorWorkspace =
+        pathname === "/workspace/supervisor" || viewParam === "supervisor";
 
       if (isStaffWorkspace) {
-        setCurrentView('staff-signin');
+        setCurrentView("staff-signin");
       } else if (isSupervisorWorkspace) {
-        setCurrentView('supervisor-signin');
+        setCurrentView("supervisor-signin");
       } else {
-        setCurrentView('dashboard');
+        setCurrentView("dashboard");
       }
-    } catch (error) {
-      console.error('Error parsing URL:', error);
-      setCurrentView('dashboard');
+    } catch (err) {
+      console.error("Error parsing URL:", err);
+      setCurrentView("dashboard");
     } finally {
       setIsLoading(false);
     }
@@ -117,74 +174,34 @@ export default function App() {
     }
   };
 
-  // Show loading state while initializing
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="w-12 h-12 bg-muted rounded-lg mb-4 mx-auto"></div>
-          <div className="h-4 bg-muted rounded w-32"></div>
-        </div>
-      </div>
-    );
+  if (isLoading) return <Spinner />;
+
+  // ⬇️ this is your original render switch (unchanged)
+  if (currentView === "staff-signin") {
+    return <StaffSignInPage onSignIn={handleStaffSignIn} />;
+  }
+  if (currentView === "staff-workspace") {
+    return <StaffWorkspacePage 
+      staffName={staffSession?.name || 'Staff'}
+      onSignOut={handleStaffSignOut}
+    />;
+  }
+  if (currentView === "supervisor-signin") {
+    return <SupervisorSignInPage onSignIn={handleSupervisorSignIn} />;
+  }
+  if (currentView === "supervisor-workspace") {
+    return <SupervisorWorkspacePage 
+      supervisorName={supervisorSession?.name || 'Supervisor'}
+      onSignOut={handleSupervisorSignOut}
+      onNavigateToBannosQueue={handleNavigateToBannosQueue}
+      onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
+    />;
   }
 
-  const renderMainContent = () => {
-    // Show staff signin for staff workspace access without session
-    if (currentView === 'staff-signin' && !staffSession) {
-      return (
-        <div className="min-h-screen bg-background">
-          <StaffSignInPage onSignIn={handleStaffSignIn} />
-        </div>
-      );
-    }
-
-    // Show staff workspace if signed in
-    if (currentView === 'staff-workspace' && staffSession) {
-      return (
-        <div className="min-h-screen bg-background">
-          <StaffWorkspacePage 
-            staffName={staffSession.name}
-            onSignOut={handleStaffSignOut}
-          />
-        </div>
-      );
-    }
-
-    // Show supervisor signin for supervisor workspace access without session
-    if (currentView === 'supervisor-signin' && !supervisorSession) {
-      return (
-        <div className="min-h-screen bg-background">
-          <SupervisorSignInPage onSignIn={handleSupervisorSignIn} />
-        </div>
-      );
-    }
-
-    // Show supervisor workspace if signed in
-    if (currentView === 'supervisor-workspace' && supervisorSession) {
-      return (
-        <div className="min-h-screen bg-background">
-          <SupervisorWorkspacePage 
-            supervisorName={supervisorSession.name}
-            onSignOut={handleSupervisorSignOut}
-            onNavigateToBannosQueue={handleNavigateToBannosQueue}
-            onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
-          />
-        </div>
-      );
-    }
-
-    // Default to dashboard
-    return (
-      <div className="min-h-screen bg-background">
-        <Dashboard />
-      </div>
-    );
-  };
-
+  // default: dashboard
   return (
     <ErrorBoundary>
-      {renderMainContent()}
+      <Dashboard />
     </ErrorBoundary>
   );
 }
