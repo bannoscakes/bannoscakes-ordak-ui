@@ -75,7 +75,9 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
           setStaff([]);
         }
       } finally {
-        if (!cancelled) setLoadingStaff(false);
+        if (!cancelled) {
+          setLoadingStaff(false);
+        }
       }
     };
     run();
