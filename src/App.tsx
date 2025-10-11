@@ -16,7 +16,7 @@ import Logout from "./components/Logout";
 import { Dashboard } from "./components/Dashboard";
 import { StaffSignInPage } from "./components/StaffSignInPage";
 import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
-import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
+import SupervisorSignInPageGated from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -24,6 +24,9 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
+
+// Gate supervisor demo login behind environment flag
+const SUPERVISOR_DEMO = import.meta.env.VITE_SUPERVISOR_DEMO_LOGIN === "true";
 
 type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
 
@@ -93,7 +96,7 @@ function MainViews() {
 
       if (isStaffWorkspace) {
         setCurrentView("staff-signin");
-      } else if (isSupervisorWorkspace) {
+      } else if (isSupervisorWorkspace && SUPERVISOR_DEMO) {
         setCurrentView("supervisor-signin");
       } else {
         setCurrentView("dashboard");
@@ -186,7 +189,7 @@ function MainViews() {
     />;
   }
   if (currentView === "supervisor-signin") {
-    return <SupervisorSignInPage onSignIn={handleSupervisorSignIn} />;
+    return <SupervisorSignInPageGated onSignIn={handleSupervisorSignIn} />;
   }
   if (currentView === "supervisor-workspace") {
     return <SupervisorWorkspacePage 
