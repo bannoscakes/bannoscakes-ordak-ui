@@ -1,5 +1,3 @@
-// App.tsx (integrated with real Supabase auth)
-
 import React, { useEffect, useState } from "react";
 
 // ✅ real auth system (from the audit)
@@ -14,9 +12,7 @@ import Logout from "./components/Logout";
 
 // ⛳ your existing stuff (keep these)
 import { Dashboard } from "./components/Dashboard";
-import { StaffSignInPage } from "./components/StaffSignInPage";
 import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
-import SupervisorSignInPageGated from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -25,10 +21,7 @@ function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
 
-// Gate supervisor demo login behind environment flag
-const SUPERVISOR_DEMO = import.meta.env.VITE_SUPERVISOR_DEMO_LOGIN === "true";
-
-type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
+type AppView = 'dashboard' | 'staff-workspace' | 'supervisor-workspace';
 
 interface StaffSession {
   email: string;
@@ -40,9 +33,6 @@ interface SupervisorSession {
   name: string;
 }
 
-/**
- * Wrap the entire app with the AuthProvider once.
- */
 export default function App() {
   return (
     <AuthProvider>
@@ -51,24 +41,16 @@ export default function App() {
   );
 }
 
-/**
- * Your original view-based app now gates rendering on auth.
- * - If loading: show spinner
- * - If not signed-in: show real LoginForm
- * - If signed-in: render your normal view switch (unchanged)
- */
 function RootApp() {
   const { user, loading } = useAuth();
 
-  // Panic route still works: /logout
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
     return <Logout />;
   }
-
+  
   if (loading) return <Spinner />;
-  if (!user) return <LoginForm onSuccess={() => {}} />; // 🔐 real login when signed out
+  if (!user) return <LoginForm onSuccess={() => {}} />; // 🔐 real login
 
-  // ✅ signed in: use your existing view logic
   return <MainViews />;
 }
 
@@ -94,10 +76,11 @@ function MainViews() {
       const isSupervisorWorkspace =
         pathname === "/workspace/supervisor" || viewParam === "supervisor";
 
+      // Auth is now handled above - no more mock sign-in redirects
       if (isStaffWorkspace) {
-        setCurrentView("staff-signin");
-      } else if (isSupervisorWorkspace && SUPERVISOR_DEMO) {
-        setCurrentView("supervisor-signin");
+        setCurrentView("staff-workspace");
+      } else if (isSupervisorWorkspace) {
+        setCurrentView("supervisor-workspace");
       } else {
         setCurrentView("dashboard");
       }
@@ -109,42 +92,14 @@ function MainViews() {
     }
   }, []);
 
-  const handleStaffSignIn = (email: string, pin: string) => {
-    try {
-      // TODO: Implement real authentication
-      // This will be replaced with actual API call to authenticate staff
-      const name = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      setStaffSession({ email, name });
-      setCurrentView('staff-workspace');
-      
-      window.history.pushState({}, '', '/workspace/staff');
-    } catch (error) {
-      console.error('Staff sign in error:', error);
-    }
-  };
-
+  // Mock sign-in handlers removed - using real auth now
   const handleStaffSignOut = () => {
     try {
       setStaffSession(null);
       setCurrentView('dashboard');
-      
       window.history.pushState({}, '', '/');
     } catch (error) {
       console.error('Staff sign out error:', error);
-    }
-  };
-
-  const handleSupervisorSignIn = (email: string, pin: string) => {
-    try {
-      // TODO: Implement real authentication
-      // This will be replaced with actual API call to authenticate supervisor
-      const name = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
-      setSupervisorSession({ email, name });
-      setCurrentView('supervisor-workspace');
-      
-      window.history.pushState({}, '', '/workspace/supervisor');
-    } catch (error) {
-      console.error('Supervisor sign in error:', error);
     }
   };
 
@@ -152,7 +107,6 @@ function MainViews() {
     try {
       setSupervisorSession(null);
       setCurrentView('dashboard');
-      
       window.history.pushState({}, '', '/');
     } catch (error) {
       console.error('Supervisor sign out error:', error);
@@ -179,17 +133,11 @@ function MainViews() {
 
   if (isLoading) return <Spinner />;
 
-  // ⬇️ this is your original render switch (unchanged)
-  if (currentView === "staff-signin") {
-    return <StaffSignInPage onSignIn={handleStaffSignIn} />;
-  }
+  // Render workspace views - auth is handled above
   if (currentView === "staff-workspace") {
     return <StaffWorkspacePage 
       onSignOut={handleStaffSignOut}
     />;
-  }
-  if (currentView === "supervisor-signin") {
-    return <SupervisorSignInPageGated onSignIn={handleSupervisorSignIn} />;
   }
   if (currentView === "supervisor-workspace") {
     return <SupervisorWorkspacePage 
