@@ -24,7 +24,6 @@ export function useAuth() {
   const signUp = useCallback(authService.signUp.bind(authService), []);
   const hasRole = useCallback(authService.hasRole.bind(authService), []);
   const canAccessStore = useCallback(authService.canAccessStore.bind(authService), []);
-
   return {
     user: authState.user,
     session: authState.session,
