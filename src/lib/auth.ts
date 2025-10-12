@@ -155,8 +155,10 @@ class AuthService {
       this.updateAuthState({ user: null, session: null, loading: false });
       console.log('Auth state after update:', this.authState);
       
-      // Clear any local storage
-      if (config.persistSupabaseSession && typeof window !== 'undefined') {
+      // Clear any persisted auth storage regardless of current config, since
+      // a previous session may have been stored before persistence was
+      // disabled.
+      if (typeof window !== 'undefined') {
         console.log('Clearing persisted auth storage...');
         window.localStorage.removeItem(config.supabaseStorageKey);
         window.sessionStorage.removeItem(config.supabaseStorageKey);
