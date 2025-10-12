@@ -358,7 +358,7 @@ export function SupervisorWorkspacePage({
           </Card>
 
           {/* Messages Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => { console.log("[UI] supervisor messages button click"); setShowMessaging(true); }}>
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setShowMessaging(true)}>
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
