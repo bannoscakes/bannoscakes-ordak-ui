@@ -95,8 +95,13 @@ export function SupervisorWorkspacePage({
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
+
+  // Auth logging
+  useEffect(() => {
+    console.log(`[AUTH] SupervisorWorkspacePage loading=${loading} userId=${user?.id || null}`);
+  }, [loading, user]);
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -353,7 +358,7 @@ export function SupervisorWorkspacePage({
           </Card>
 
           {/* Messages Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setShowMessaging(true)}>
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => { console.log("[UI] supervisor messages button click"); setShowMessaging(true); }}>
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

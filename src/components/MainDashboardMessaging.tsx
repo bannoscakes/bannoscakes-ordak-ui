@@ -7,6 +7,7 @@ import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 // import { ScrollArea } from "./ui/scroll-area"; // Removed - using native scroll
 import { Search, Plus, MessageSquare, X } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
@@ -43,6 +44,12 @@ interface MainDashboardMessagingProps {
 }
 
 export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps) {
+  // Auth logging
+  const { user, loading: authLoading } = useAuth();
+  useEffect(() => {
+    console.log(`[AUTH] MainDashboardMessaging loading=${authLoading} userId=${user?.id || null}`);
+  }, [authLoading, user]);
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -59,6 +66,19 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
   useEffect(() => {
     getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
   }, []);
+
+  // Log messaging state
+  useEffect(() => {
+    console.log("[MSG] currentUserId:", currentUserId);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    console.log("[MSG] conversations:", conversations?.length);
+  }, [conversations]);
+
+  useEffect(() => {
+    console.log("[MSG] messages len:", messages?.length, "for selected:", selectedConversation);
+  }, [messages, selectedConversation]);
 
   // Realtime
   const handleNewMessage = (row: RealtimeMessageRow) => {

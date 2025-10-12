@@ -32,6 +32,7 @@ export const useRealtimeMessages = ({
 
   // 1) Messages channel — subscribe once to all INSERTs
   useEffect(() => {
+    console.log("[RT] subscribe messages");
     const supabase = getSupabase();
 
     if (messageChannelRef.current) {
@@ -51,6 +52,7 @@ export const useRealtimeMessages = ({
           // filter: conversationId ? `conversation_id=eq.${conversationId}` : undefined
         },
         (payload) => {
+          console.log("[RT] new message", payload.new?.id, "conv:", payload.new?.conversation_id);
           latestOnNewMessage.current?.(payload.new as RealtimeMessageRow);
         }
       )
@@ -75,6 +77,7 @@ export const useRealtimeMessages = ({
   useEffect(() => {
     if (!latestOnConversationUpdate.current) return;
 
+    console.log("[RT] subscribe conversations");
     const supabase = getSupabase();
 
     if (conversationsChannelRef.current) {
@@ -94,6 +97,7 @@ export const useRealtimeMessages = ({
         (payload) => {
           const action = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
           const row = action === 'DELETE' ? payload.old : payload.new;
+          console.log("[RT] conversation event:", action, "id:", (row as any)?.id);
           latestOnConversationUpdate.current?.(row, action);
         }
       )

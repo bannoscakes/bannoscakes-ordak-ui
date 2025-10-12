@@ -104,8 +104,13 @@ const getRealisticSize = (
 export function StaffWorkspacePage({
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
+
+  // Auth logging
+  useEffect(() => {
+    console.log(`[AUTH] StaffWorkspacePage loading=${loading} userId=${user?.id || null}`);
+  }, [loading, user]);
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");

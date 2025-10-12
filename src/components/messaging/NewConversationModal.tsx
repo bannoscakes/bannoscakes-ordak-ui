@@ -51,6 +51,9 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
         const myUserId = toId(currentUser?.user_id);
         setCurrentUserId(myUserId);
 
+        // Log modal state
+        console.log("[MODAL] currentUserId:", myUserId, "staff len:", list?.length, "loadingStaff:", false);
+
         // If we couldn't get current user, show error and prevent conversation creation
         if (!myUserId) {
           setErrorMsg("Unable to identify current user. Please refresh and try again.");

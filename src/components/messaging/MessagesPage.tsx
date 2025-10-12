@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Search, Send, Plus, ArrowLeft } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
@@ -38,6 +39,12 @@ import {
 import type { RealtimeMessageRow } from "../../lib/messaging-types";
 
 export function MessagesPage() {
+  // Auth logging
+  const { user, loading: authLoading } = useAuth();
+  useEffect(() => {
+    console.log(`[AUTH] MessagesPage loading=${authLoading} userId=${user?.id || null}`);
+  }, [authLoading, user]);
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -64,6 +71,19 @@ export function MessagesPage() {
   useEffect(() => {
     getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
   }, []);
+
+  // Log messaging state
+  useEffect(() => {
+    console.log("[MSG] currentUserId:", currentUserId);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    console.log("[MSG] conversations:", conversations?.length);
+  }, [conversations]);
+
+  useEffect(() => {
+    console.log("[MSG] messages len:", messages?.length, "for selected:", selectedConversation);
+  }, [messages, selectedConversation]);
 
   // Realtime handlers
   const handleNewMessage = (row: RealtimeMessageRow) => {
