@@ -259,6 +259,23 @@ export function MessagesPage() {
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
 
+  // Block UI until auth is ready
+  if (authLoading) {
+    return (
+      <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">
+        <div className="text-sm text-destructive">Please sign in to view messages.</div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">

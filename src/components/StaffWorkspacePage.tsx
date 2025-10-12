@@ -305,6 +305,23 @@ export function StaffWorkspacePage({
     return "bg-purple-100 text-purple-700 border-purple-200";
   };
 
+  // Block UI until auth is ready
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="text-sm text-destructive">Please sign in to access the staff workspace.</div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">

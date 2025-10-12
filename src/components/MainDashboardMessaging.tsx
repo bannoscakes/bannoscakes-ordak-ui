@@ -257,6 +257,23 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
 
+  // Block UI until auth is ready
+  if (authLoading) {
+    return (
+      <Card className="p-4">
+        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      </Card>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <Card className="p-4">
+        <div className="text-sm text-destructive">Please sign in to view messages.</div>
+      </Card>
+    );
+  }
+
   if (loading) {
     return (
       <Card className="p-4">
