@@ -150,7 +150,7 @@ function RoleBasedRouter() {
   if (user.role === 'Admin') {
     return (
       <ErrorBoundary>
-        <Dashboard />
+        <Dashboard onSignOut={signOut} />
       </ErrorBoundary>
     );
   }

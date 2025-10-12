@@ -24,7 +24,7 @@ import { getQueue } from "../lib/rpc-client";
 import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
 import { makeEmptyCounts } from "@/types/stage";
 
-export function Dashboard() {
+export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
@@ -275,7 +275,7 @@ export function Dashboard() {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <ErrorBoundary>
-          <Header onRefresh={loadDashboardStats} />
+          <Header onRefresh={loadDashboardStats} onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
           {renderContent()}
