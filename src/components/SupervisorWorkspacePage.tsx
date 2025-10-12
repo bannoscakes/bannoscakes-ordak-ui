@@ -364,15 +364,6 @@ export function SupervisorWorkspacePage({
             Open Flourlane Queue
           </Button>
 
-          {/* Messages Shortcut */}
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 px-4 py-2"
-            onClick={() => setActiveTab("messages")}
-          >
-            <MessageSquare className="h-4 w-4" />
-            Messages
-          </Button>
         </div>
 
         {/* Tabs */}
