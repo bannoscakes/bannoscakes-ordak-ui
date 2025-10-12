@@ -1,3 +1,66 @@
+## [v0.6.0-beta] - 2025-01-30 - Single URL Architecture & Authentication Fixes
+
+### 🎯 Overview
+Complete implementation of single URL architecture with role-based routing, fixing all authentication issues and implementing comprehensive safeguards to prevent regression. This is a critical architectural improvement that simplifies user experience and eliminates URL-based routing confusion.
+
+### ✅ Phase 1: Single URL Architecture Implementation
+- **Unified URL Structure**: All users access same URL (`/`) regardless of role
+- **Role-Based Routing**: Interface determined by user role, not URL path
+- **Eliminated Role-Specific URLs**: Removed `/workspace/staff`, `/workspace/supervisor`, `/dashboard` patterns
+- **Simplified Navigation**: Single URL for all users with automatic role-based interface switching
+- **Improved UX**: No confusion about which URL to use for different roles
+
+### ✅ Phase 2: Authentication & Sign-Out Fixes
+- **Fixed React Rules of Hooks Violation**: Resolved "Rendered more hooks than during the previous render" error
+- **Added Sign-Out to Admin Dashboard**: Admin users can now sign out from the dashboard
+- **Unified Sign-Out Experience**: All roles (Staff, Supervisor, Admin) have working sign-out functionality
+- **Session Management**: Proper session handling with automatic role-based routing after login
+- **Authentication Flow**: Clean login → role-based interface → sign-out → login cycle
+
+### ✅ Phase 3: Comprehensive Safeguards & Documentation
+- **Automated Tests**: `src/tests/single-url-architecture.test.tsx` prevents regression
+- **ESLint Rules**: Custom rules catch forbidden role-specific URL patterns
+- **Validation Scripts**: Pre-commit validation ensures architecture compliance
+- **Complete Documentation**: `docs/SINGLE_URL_ARCHITECTURE.md` with examples and guidelines
+- **NPM Scripts**: `npm run validate:architecture` for comprehensive validation
+
+### ✅ Phase 4: Critical Bug Fixes
+- **Double URL Change Triggering**: Fixed navigateToQueue function causing duplicate URL change events
+- **Infinite Redirect Loops**: Added infinite loop prevention in role-based routing
+- **Incorrect URL Classification**: Fixed overly broad dashboard condition that misclassified queue pages
+- **Merge Conflicts**: Resolved conflicts between dev branch and feature branches
+- **TypeScript Compliance**: All changes pass type checking and linting
+
+### 🔧 Technical Implementation
+- **App.tsx Rewrite**: Complete restructuring of routing logic for single URL architecture
+- **RoleBasedRouter Component**: Centralized role-based routing with proper hook management
+- **Header Component Updates**: Added sign-out functionality to Admin Dashboard header
+- **Dashboard Component**: Updated to receive and pass through sign-out props
+- **Authentication Service**: Enhanced with proper session management and error handling
+
+### 🛡️ Safeguards Implemented
+- **Pre-commit Validation**: `scripts/validate-single-url.sh` blocks violating commits
+- **Automated Testing**: Tests ensure single URL architecture cannot be broken
+- **Code Quality**: ESLint rules prevent introduction of forbidden patterns
+- **Documentation**: Comprehensive guide for maintaining the architecture
+- **Validation Commands**: Easy-to-use npm scripts for ongoing validation
+
+### 🎯 User Experience Improvements
+- **Simplified URLs**: All users access `localhost:3000/` (or production domain)
+- **Role-Based Interfaces**: Staff see Staff Workspace, Admin see Dashboard, Supervisor see Supervisor Workspace
+- **Consistent Sign-Out**: Working sign-out button in all interfaces
+- **No URL Confusion**: Single URL eliminates "which URL should I use?" questions
+- **Seamless Navigation**: Role-based routing works automatically after login
+
+### 📊 Impact
+- **Eliminated URL-based routing complexity**
+- **Fixed all authentication and sign-out issues**
+- **Implemented bulletproof safeguards against regression**
+- **Improved user experience with simplified navigation**
+- **Enhanced maintainability with comprehensive documentation**
+
+---
+
 ## [v0.5.0-beta] - 2025-01-30 - Complete Barcode Scanning & Printing System
 
 ### 🎯 Overview
