@@ -52,8 +52,10 @@ function RootApp() {
  * Routes users to appropriate landing page based on their role
  */
 function RoleBasedRouter() {
+  // ✅ All hooks declared unconditionally at the top
   const { user, signOut } = useAuth();
   const [currentUrl, setCurrentUrl] = useState(window.location.href);
+  const [didRoute, setDidRoute] = useState(false);
 
   // Listen for URL changes (including browser back/forward)
   useEffect(() => {
@@ -124,14 +126,13 @@ function RoleBasedRouter() {
       console.error('Error redirecting:', error);
     }
   };
-  // Route guards - protect routes by role
-  if (!user) {
-    return <LoginForm onSuccess={() => {}} />;
-  }
 
-  // Check for route mismatches and redirect if needed
+  // ✅ Single effect that handles all routing logic
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setDidRoute(true);
+      return;
+    }
 
     // Calculate workspace inside effect to react to URL changes
     const workspace = getCurrentWorkspace();
@@ -157,9 +158,16 @@ function RoleBasedRouter() {
         redirectToRoleLanding(user.role);
       }
     }
+
+    setDidRoute(true);
   }, [user, currentUrl]); // Re-evaluate on user or URL changes
 
-  // Get current workspace for rendering (outside useEffect to avoid stale closure)
+  // ✅ Early returns AFTER all hooks have been declared
+  if (!user) {
+    return <LoginForm onSuccess={() => {}} />;
+  }
+
+  // Get current workspace for rendering
   const workspace = getCurrentWorkspace();
   // Route guards with proper role checking
   if (workspace.isStaffWorkspace) {
