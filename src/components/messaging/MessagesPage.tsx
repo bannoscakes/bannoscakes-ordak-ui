@@ -63,10 +63,12 @@ export function MessagesPage() {
     }
   };
 
-  // Current user id for own-message mapping
+  // Current user id for own-message mapping - wait for auth to complete
   useEffect(() => {
-    getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
-  }, []);
+    if (!authLoading && user) {
+      getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
+    }
+  }, [authLoading, user]);
 
 
   // Realtime handlers
@@ -112,12 +114,14 @@ export function MessagesPage() {
     onConversationUpdate: handleConversationUpdate,
   });
 
-  // Initial load
+  // Initial load - wait for auth to complete
   useEffect(() => {
-    loadConversations(true);
-    loadUnreadCount();
+    if (!authLoading && user) {
+      loadConversations(true);
+      loadUnreadCount();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, user]);
 
   // Load messages when a conversation is selected
   useEffect(() => {
