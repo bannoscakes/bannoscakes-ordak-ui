@@ -98,10 +98,6 @@ export function SupervisorWorkspacePage({
   const { user, signOut, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
 
-  // Auth logging
-  useEffect(() => {
-    console.log(`[AUTH] SupervisorWorkspacePage authLoading=${authLoading} userId=${user?.id || null}`);
-  }, [authLoading, user]);
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");

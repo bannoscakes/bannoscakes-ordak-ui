@@ -44,11 +44,7 @@ interface MainDashboardMessagingProps {
 }
 
 export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps) {
-  // Auth logging
   const { user, loading: authLoading } = useAuth();
-  useEffect(() => {
-    console.log(`[AUTH] MainDashboardMessaging loading=${authLoading} userId=${user?.id || null}`);
-  }, [authLoading, user]);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,18 +63,6 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
   }, []);
 
-  // Log messaging state
-  useEffect(() => {
-    console.log("[MSG] currentUserId:", currentUserId);
-  }, [currentUserId]);
-
-  useEffect(() => {
-    console.log("[MSG] conversations:", conversations?.length);
-  }, [conversations]);
-
-  useEffect(() => {
-    console.log("[MSG] messages len:", messages?.length, "for selected:", selectedConversation);
-  }, [messages, selectedConversation]);
 
   // Realtime
   const handleNewMessage = (row: RealtimeMessageRow) => {
@@ -231,7 +215,6 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
 
   const handleCreateConversation = async (participants: string[], isGroup: boolean) => {
     try {
-      console.log("onCreateConversation participants:", participants); // should be UUIDs, not emails
       const id = await createConversation(
         participants,
         isGroup ? "Group Chat" : undefined,
