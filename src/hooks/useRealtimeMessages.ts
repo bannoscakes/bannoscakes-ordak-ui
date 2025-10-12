@@ -74,7 +74,6 @@ export const useRealtimeMessages = ({
   // 2) Conversations channel — subscribe once if a handler is provided
   useEffect(() => {
     if (!latestOnConversationUpdate.current) return;
-
     const supabase = getSupabase();
 
     if (conversationsChannelRef.current) {

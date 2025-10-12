@@ -48,35 +48,6 @@ export function LoginForm({ onSuccess, userType = 'staff' }: LoginFormProps) {
     }
   };
 
-  const handleDemoLogin = async () => {
-    const demoCredentials = userType === 'supervisor' 
-      ? { email: "supervisor@bannos.com", password: "demo123" }
-      : { email: "staff@bannos.com", password: "demo123" };
-
-    setEmail(demoCredentials.email);
-    setPassword(demoCredentials.password);
-    
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const { authService } = await import('../../lib/auth');
-      
-      const result = await authService.signIn(demoCredentials.email, demoCredentials.password);
-      
-      if (result.success) {
-        toast.success("Demo account signed in successfully");
-        onSuccess();
-      } else {
-        setError("Demo login failed. Please check if demo accounts are set up.");
-      }
-    } catch (error) {
-      console.error('Demo login error:', error);
-      setError("Demo login failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -154,24 +125,6 @@ export function LoginForm({ onSuccess, userType = 'staff' }: LoginFormProps) {
             )}
           </Button>
 
-          <div className="text-center">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleDemoLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                `Try Demo ${userType === 'supervisor' ? 'Supervisor' : 'Staff'} Account`
-              )}
-            </Button>
-          </div>
         </form>
       </CardContent>
     </Card>

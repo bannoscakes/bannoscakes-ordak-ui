@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Search, Send, Plus, ArrowLeft } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
@@ -38,6 +39,8 @@ import {
 import type { RealtimeMessageRow } from "../../lib/messaging-types";
 
 export function MessagesPage() {
+  const { user, loading: authLoading } = useAuth();
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -60,10 +63,13 @@ export function MessagesPage() {
     }
   };
 
-  // Current user id for own-message mapping
+  // Current user id for own-message mapping - wait for auth to complete
   useEffect(() => {
-    getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
-  }, []);
+    if (!authLoading && user) {
+      getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
+    }
+  }, [authLoading, user]);
+
 
   // Realtime handlers
   const handleNewMessage = (row: RealtimeMessageRow) => {
@@ -108,12 +114,14 @@ export function MessagesPage() {
     onConversationUpdate: handleConversationUpdate,
   });
 
-  // Initial load
+  // Initial load - wait for auth to complete
   useEffect(() => {
-    loadConversations(true);
-    loadUnreadCount();
+    if (!authLoading && user) {
+      loadConversations(true);
+      loadUnreadCount();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, user]);
 
   // Load messages when a conversation is selected
   useEffect(() => {
@@ -250,6 +258,23 @@ export function MessagesPage() {
   );
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
+
+  // Block UI until auth is ready
+  if (authLoading) {
+    return (
+      <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">
+        <div className="text-sm text-destructive">Please sign in to view messages.</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

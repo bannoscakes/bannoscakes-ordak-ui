@@ -95,8 +95,9 @@ export function SupervisorWorkspacePage({
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
+
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -263,6 +264,23 @@ export function SupervisorWorkspacePage({
   const getStorageColor = () => {
     return "bg-purple-100 text-purple-700 border-purple-200";
   };
+
+  // Block UI until auth is ready
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+        <div className="text-sm text-destructive">Please sign in to access the supervisor workspace.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
