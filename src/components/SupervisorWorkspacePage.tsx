@@ -375,8 +375,35 @@ export function SupervisorWorkspacePage({
           </Button>
         </div>
 
-        {/* My Tasks Section (Optional) */}
-        {showMyTasks && (
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger
+              value="orders"
+              className="flex items-center gap-2"
+            >
+              <Briefcase className="h-4 w-4" />
+              My Orders ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="messages"
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Messages
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent
+            value="orders"
+            className="space-y-6 mt-6"
+          >
+            {/* My Tasks Section (Optional) */}
+            {showMyTasks && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium text-foreground">Assigned to me (Today)</h2>
@@ -520,25 +547,17 @@ export function SupervisorWorkspacePage({
               Show My Tasks
             </Button>
           </Card>
-        )}
+            )}
+          </TabsContent>
 
-        {/* Messaging Component */}
-        {showMessaging && (
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">Messages</h2>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowMessaging(false)}
-                className="text-muted-foreground"
-              >
-                Close
-              </Button>
-            </div>
-            <MainDashboardMessaging onClose={() => setShowMessaging(false)} />
-          </Card>
-        )}
+          <TabsContent
+            value="messages"
+            className="space-y-6 mt-6"
+          >
+            <MainDashboardMessaging />
+          </TabsContent>
+
+        </Tabs>
       </div>
 
       {/* Order Detail Drawer */}
