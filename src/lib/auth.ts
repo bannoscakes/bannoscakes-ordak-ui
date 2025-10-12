@@ -1,4 +1,5 @@
 import { getSupabase } from './supabase';
+import { config } from './config';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface AuthUser {
@@ -155,9 +156,11 @@ class AuthService {
       console.log('Auth state after update:', this.authState);
       
       // Clear any local storage
-      console.log('Clearing localStorage...');
-      localStorage.removeItem('sb-iwavciibrspfjezujydc-auth-token');
-      sessionStorage.clear();
+      if (config.persistSupabaseSession && typeof window !== 'undefined') {
+        console.log('Clearing persisted auth storage...');
+        window.localStorage.removeItem(config.supabaseStorageKey);
+        window.sessionStorage.removeItem(config.supabaseStorageKey);
+      }
       
       console.log('=== SIGNOUT DEBUG END ===');
       
