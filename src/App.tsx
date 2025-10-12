@@ -79,85 +79,50 @@ function RoleBasedRouter() {
     };
   }, []);
 
-  // Centralized workspace determination logic
+  // Single URL architecture - all users use "/" and route internally by role
   const getCurrentWorkspace = () => {
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
     
-    // Check for specific workspace routes first
-    const isStaffWorkspace = pathname === "/workspace/staff" || urlParams.get("view") === "staff";
-    const isSupervisorWorkspace = pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor";
-    
-    // Dashboard is only the root path, dashboard path, or when no specific view is set AND no workspace path
-    const isDashboard = (pathname === "/" || pathname === "/dashboard") && 
-                       !pathname.includes("/workspace/") && 
-                       !urlParams.get("view") &&
-                       !urlParams.get("page");
+    // All users use the root path "/" - no role-specific URLs
+    const isRootPath = pathname === "/";
     
     return {
       pathname,
       urlParams,
-      isStaffWorkspace,
-      isSupervisorWorkspace,
-      isDashboard
+      isRootPath,
+      // These are determined by user role, not URL
+      isStaffWorkspace: false, // Will be determined by user role
+      isSupervisorWorkspace: false, // Will be determined by user role  
+      isDashboard: false // Will be determined by user role
     };
   };
 
-  // Helper function to get expected URL for a role
-  const getExpectedUrlForRole = (role: 'Staff' | 'Supervisor' | 'Admin') => {
-    switch (role) {
-      case 'Admin':
-        return '/dashboard';
-      case 'Supervisor':
-        return '/workspace/supervisor';
-      case 'Staff':
-        return '/workspace/staff';
-      default:
-        return '/dashboard';
-    }
-  };
-
-  // Helper function to redirect to role-appropriate landing page
+  // Single URL architecture - all users stay on "/"
   const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
     try {
-      const expectedUrl = getExpectedUrlForRole(role);
-      window.history.pushState({}, '', expectedUrl);
+      // Always redirect to root path "/" - role-based routing is internal
+      window.history.pushState({}, '', '/');
     } catch (error) {
       console.error('Error redirecting:', error);
     }
   };
 
-  // ✅ Single effect that handles all routing logic
+  // ✅ Single effect that handles all routing logic - ROLE-BASED, not URL-based
   useEffect(() => {
     if (!user) {
       setDidRoute(true);
       return;
     }
 
-    // Calculate workspace inside effect to react to URL changes
+    // Single URL architecture - ensure all users are on "/"
     const workspace = getCurrentWorkspace();
-    const { isStaffWorkspace, isSupervisorWorkspace, isDashboard, pathname } = workspace;
-
-    // Route by role with URL respect
-    if (isStaffWorkspace && user.role === 'Staff') {
-      // Staff accessing staff workspace - allow
-      console.log('Staff accessing staff workspace');
-    } else if (isSupervisorWorkspace && (user.role === 'Supervisor' || user.role === 'Admin')) {
-      // Supervisor/Admin accessing supervisor workspace - allow
-      console.log('Supervisor/Admin accessing supervisor workspace');
-    } else if (isDashboard && user.role === 'Admin') {
-      // Admin accessing dashboard - allow
-      console.log('Admin accessing dashboard');
-    } else {
-      // Route mismatch - redirect to appropriate landing page
-      console.log(`Role mismatch: User role ${user.role}, trying to access ${pathname}`);
-      
-      // Prevent infinite loops by checking if we're already at the correct URL
-      const expectedUrl = getExpectedUrlForRole(user.role);
-      if (window.location.pathname !== expectedUrl) {
-        redirectToRoleLanding(user.role);
-      }
+    if (!workspace.isRootPath) {
+      // Redirect to root path if not already there
+      redirectToRoleLanding(user.role);
     }
+
+    console.log(`User ${user.fullName} (${user.role}) accessing single URL architecture`);
 
     setDidRoute(true);
   }, [user, currentUrl]); // Re-evaluate on user or URL changes
@@ -167,20 +132,14 @@ function RoleBasedRouter() {
     return <LoginForm onSuccess={() => {}} />;
   }
 
-  // Get current workspace for rendering
-  const workspace = getCurrentWorkspace();
-  // Route guards with proper role checking
-  if (workspace.isStaffWorkspace) {
-    if (user.role !== 'Staff') {
-      return <UnauthorizedAccess userRole={user.role} requiredRole="Staff" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
-    }
+  // Single URL architecture - route by USER ROLE, not URL
+  // All users access "/" but see different interfaces based on their role
+  
+  if (user.role === 'Staff') {
     return <StaffWorkspacePage onSignOut={signOut} />;
   }
 
-  if (workspace.isSupervisorWorkspace) {
-    if (user.role !== 'Supervisor' && user.role !== 'Admin') {
-      return <UnauthorizedAccess userRole={user.role} requiredRole="Supervisor or Admin" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
-    }
+  if (user.role === 'Supervisor') {
     return <SupervisorWorkspacePage 
       onSignOut={signOut}
       onNavigateToBannosQueue={() => navigateToQueue('bannos')}
@@ -188,10 +147,7 @@ function RoleBasedRouter() {
     />;
   }
 
-  if (workspace.isDashboard) {
-    if (user.role !== 'Admin') {
-      return <UnauthorizedAccess userRole={user.role} requiredRole="Admin" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
-    }
+  if (user.role === 'Admin') {
     return (
       <ErrorBoundary>
         <Dashboard />
@@ -217,57 +173,4 @@ function navigateToQueue(queueType: 'bannos' | 'flourlane') {
   }
 }
 
-/**
- * Unauthorized access component - SPA compatible with role-appropriate navigation
- */
-function UnauthorizedAccess({ 
-  userRole, 
-  requiredRole, 
-  onNavigateToDashboard 
-}: { 
-  userRole: string; 
-  requiredRole: string;
-  onNavigateToDashboard: () => void;
-}) {
-  const { signOut } = useAuth();
-  
-  // Get appropriate button text based on user role
-  const getNavigationButtonText = (role: string) => {
-    switch (role) {
-      case 'Admin':
-        return 'Go to Dashboard';
-      case 'Supervisor':
-        return 'Go to Supervisor Workspace';
-      case 'Staff':
-        return 'Go to Staff Workspace';
-      default:
-        return 'Go to Dashboard';
-    }
-  };
-  
-  return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-      <div className="max-w-md mx-auto p-6 bg-background rounded-lg shadow-lg">
-        <h1 className="text-xl font-semibold text-foreground mb-2">Access Denied</h1>
-        <p className="text-sm text-muted-foreground mb-4">
-          Your role ({userRole}) does not have permission to access this area.
-          Required role: {requiredRole}
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={onNavigateToDashboard}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-          >
-            {getNavigationButtonText(userRole)}
-          </button>
-          <button
-            onClick={signOut}
-            className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// UnauthorizedAccess component removed - not needed with single URL architecture
