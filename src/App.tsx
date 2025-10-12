@@ -82,12 +82,22 @@ function RoleBasedRouter() {
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
     
+    // Check for specific workspace routes first
+    const isStaffWorkspace = pathname === "/workspace/staff" || urlParams.get("view") === "staff";
+    const isSupervisorWorkspace = pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor";
+    
+    // Dashboard is only the root path, dashboard path, or when no specific view is set AND no workspace path
+    const isDashboard = (pathname === "/" || pathname === "/dashboard") && 
+                       !pathname.includes("/workspace/") && 
+                       !urlParams.get("view") &&
+                       !urlParams.get("page");
+    
     return {
       pathname,
       urlParams,
-      isStaffWorkspace: pathname === "/workspace/staff" || urlParams.get("view") === "staff",
-      isSupervisorWorkspace: pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor",
-      isDashboard: pathname === "/" || pathname === "/dashboard" || (!pathname.includes("/workspace/") && !urlParams.get("view"))
+      isStaffWorkspace,
+      isSupervisorWorkspace,
+      isDashboard
     };
   };
 
