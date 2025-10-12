@@ -4,7 +4,6 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Search, Send, Plus, ArrowLeft } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
 
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
@@ -13,7 +12,6 @@ import { ErrorDisplay } from "../ErrorDisplay";
 
 import { useErrorNotifications } from "../../lib/error-notifications";
 import { useRealtimeMessages } from "../../hooks/useRealtimeMessages";
-import { useDebouncedCallback } from "../../lib/useDebouncedCallback";
 
 import {
   getConversations,
@@ -39,8 +37,6 @@ import {
 import type { RealtimeMessageRow } from "../../lib/messaging-types";
 
 export function MessagesPage() {
-  const { user, loading: authLoading } = useAuth();
-
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -63,13 +59,10 @@ export function MessagesPage() {
     }
   };
 
-  // Current user id for own-message mapping - wait for auth to complete
+  // Current user id for own-message mapping
   useEffect(() => {
-    if (!authLoading && user) {
-      getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
-    }
-  }, [authLoading, user]);
-
+    getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
+  }, []);
 
   // Realtime handlers
   const handleNewMessage = (row: RealtimeMessageRow) => {
@@ -97,15 +90,16 @@ export function MessagesPage() {
     loadUnreadCount();
   };
 
-  // ✅ debounce background refreshes triggered by realtime
-  const [debouncedRefresh, cancelRefresh] = useDebouncedCallback(
-    () => loadConversations(false),
-    150
-  );
+  // Debounced loadConversations to prevent excessive calls
+  const debouncedLoadConversations = useCallback(() => {
+    const timeoutId = setTimeout(() => {
+      loadConversations();
+    }, 150);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const handleConversationUpdate = () => {
-    cancelRefresh();
-    debouncedRefresh();
+    debouncedLoadConversations();
   };
 
   const { isConnected } = useRealtimeMessages({
@@ -114,14 +108,12 @@ export function MessagesPage() {
     onConversationUpdate: handleConversationUpdate,
   });
 
-  // Initial load - wait for auth to complete
+  // Initial load
   useEffect(() => {
-    if (!authLoading && user) {
-      loadConversations(true);
-      loadUnreadCount();
-    }
+    loadConversations();
+    loadUnreadCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, []);
 
   // Load messages when a conversation is selected
   useEffect(() => {
@@ -129,10 +121,9 @@ export function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation, currentUserId]);
 
-  // ✅ separate initial vs background loading to avoid flicker
-  const loadConversations = async (showSpinner = true) => {
+  const loadConversations = async () => {
     try {
-      if (showSpinner) setLoading(true);
+      setLoading(true);
       setError(null);
       const data: RPCConversation[] = await getConversations();
       setConversations(data.map(toUIConversation));
@@ -144,7 +135,7 @@ export function MessagesPage() {
         showRecoveryActions: true,
       });
     } finally {
-      if (showSpinner) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -191,10 +182,11 @@ export function MessagesPage() {
     setSelectedConversation(toId(conversationId));
   };
 
-  // ✅ optimistic send that reconciles temp -> server id
   const handleSendMessage = async (text: string) => {
     if (!selectedConversation || !text.trim()) return;
     const body = text.trim();
+
+    // 1. Optimistic bubble - show message instantly
     const tempId = `temp-${Date.now()}`;
     const optimistic: Message = {
       id: tempId,
@@ -204,18 +196,27 @@ export function MessagesPage() {
       senderName: "You",
       read: true,
     };
-    setMessages(prev =>
-      prev.some(m => m.id === tempId) ? prev :
-        [...prev, optimistic].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    );
+
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === tempId)) return prev;
+      return [...prev, optimistic].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    });
+
     try {
+      // 2. RPC call
       const messageId = await sendMessage(selectedConversation, body);
-      // ✅ replace the optimistic bubble with real one
-      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: messageId } : m)));
-      await loadConversations(false); // background refresh; no skeleton flicker
+
+      // 3. Update last message preview
+      await loadConversations();
+      setConversations((prev) => prev.map((c) => (c.id === selectedConversation ? { ...c, unreadCount: 0 } : c)));
     } catch (err) {
       console.error("Failed to send message:", err);
-      showError(err, { title: "Failed to Send Message", showRecoveryActions: true });
+      // Remove optimistic message on error
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      showError(err, {
+        title: "Failed to Send Message",
+        showRecoveryActions: true,
+      });
     }
   };
 
@@ -258,23 +259,6 @@ export function MessagesPage() {
   );
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
-
-  // Block UI until auth is ready
-  if (authLoading) {
-    return (
-      <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading authentication...</div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return (
-      <div className="flex h-[calc(100vh-2rem)] bg-background items-center justify-center">
-        <div className="text-sm text-destructive">Please sign in to view messages.</div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (

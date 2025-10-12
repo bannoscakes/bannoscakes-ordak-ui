@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Messaging Debug Test</title>
+</head>
+<body>
+    <h1>Messaging System Debug Test</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+        
+        const supabaseUrl = 'https://your-project.supabase.co';
+        const supabaseKey = 'your-anon-key';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        async function testMessaging() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Test 1: Check if messaging tables exist
+                results.innerHTML += '<h3>Test 1: Checking messaging tables...</h3>';
+                const { data: tables, error: tablesError } = await supabase
+                    .from('information_schema.tables')
+                    .select('table_name')
+                    .eq('table_schema', 'public')
+                    .in('table_name', ['conversations', 'messages', 'conversation_participants']);
+                
+                if (tablesError) {
+                    results.innerHTML += `<p style="color: red;">Error checking tables: ${tablesError.message}</p>`;
+                } else {
+                    results.innerHTML += `<p>Tables found: ${JSON.stringify(tables)}</p>`;
+                }
+                
+                // Test 2: Check if RPC functions exist
+                results.innerHTML += '<h3>Test 2: Checking RPC functions...</h3>';
+                const { data: functions, error: functionsError } = await supabase
+                    .from('information_schema.routines')
+                    .select('routine_name')
+                    .eq('routine_schema', 'public')
+                    .in('routine_name', ['get_conversations', 'send_message', 'create_conversation']);
+                
+                if (functionsError) {
+                    results.innerHTML += `<p style="color: red;">Error checking functions: ${functionsError.message}</p>`;
+                } else {
+                    results.innerHTML += `<p>Functions found: ${JSON.stringify(functions)}</p>`;
+                }
+                
+                // Test 3: Try to call get_conversations
+                results.innerHTML += '<h3>Test 3: Testing get_conversations RPC...</h3>';
+                const { data: conversations, error: conversationsError } = await supabase
+                    .rpc('get_conversations', { p_limit: 10, p_offset: 0 });
+                
+                if (conversationsError) {
+                    results.innerHTML += `<p style="color: red;">Error calling get_conversations: ${conversationsError.message}</p>`;
+                } else {
+                    results.innerHTML += `<p>Conversations: ${JSON.stringify(conversations)}</p>`;
+                }
+                
+            } catch (error) {
+                results.innerHTML += `<p style="color: red;">Unexpected error: ${error.message}</p>`;
+            }
+        }
+        
+        testMessaging();
+    </script>
+</body>
+</html>

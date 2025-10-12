@@ -13,7 +13,7 @@ import { createError, handleError, logError, ErrorCode } from './error-handler';
 // =============================================
 
 export interface Message {
-  id: string;
+  id: number;
   body: string;
   sender_id: string;
   sender_name: string;
@@ -1081,7 +1081,7 @@ export async function getConversationParticipants(conversationId: string): Promi
   );
 }
 
-export async function sendMessage(conversationId: string, body: string): Promise<string> {
+export async function sendMessage(conversationId: string, body: string): Promise<number> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
@@ -1090,7 +1090,7 @@ export async function sendMessage(conversationId: string, body: string): Promise
         p_content: body,
       });
       if (error) throw error;
-      return data as string;
+      return data as number;
     },
     {
       operation: 'sendMessage',
@@ -1101,14 +1101,14 @@ export async function sendMessage(conversationId: string, body: string): Promise
 }
 
 export async function getMessages(
-  conversationId: string,
-  limit = 50,
+  conversationId: string, 
+  limit = 50, 
   offset = 0
 ): Promise<Message[]> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
-      const { data, error } = await supabase.rpc('get_messages', {
+      const { data, error } = await supabase.rpc('get_messages_temp', {
         p_conversation_id: conversationId,
         p_limit: limit,
         p_offset: offset,
@@ -1118,7 +1118,7 @@ export async function getMessages(
     },
     {
       operation: 'getMessages',
-      rpcName: 'get_messages',
+      rpcName: 'get_messages_temp',
       params: { conversationId, limit, offset }
     }
   );
