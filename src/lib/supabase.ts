@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { config } from './config';
 
 let _client: SupabaseClient | null = null;
 
@@ -10,13 +11,20 @@ export function getSupabase(): SupabaseClient {
     // Do not initialize at import time; throw only when someone tries to use the client
     throw new Error('Supabase env not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
   }
+  const persistSession = config.persistSupabaseSession;
+  const authOptions: Parameters<typeof createClient>[2]['auth'] = {
+    persistSession,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: config.supabaseStorageKey,
+  };
+
+  if (persistSession && typeof window !== 'undefined') {
+    authOptions.storage = window.localStorage;
+  }
+
   _client = createClient(url, anon, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storage: localStorage,
-    },
+    auth: authOptions,
   });
   return _client;
 }

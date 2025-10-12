@@ -1,4 +1,5 @@
 import { getSupabase } from './supabase';
+import { config } from './config';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface AuthUser {
@@ -154,10 +155,36 @@ class AuthService {
       this.updateAuthState({ user: null, session: null, loading: false });
       console.log('Auth state after update:', this.authState);
       
-      // Clear any local storage
-      console.log('Clearing localStorage...');
-      localStorage.removeItem('sb-iwavciibrspfjezujydc-auth-token');
-      sessionStorage.clear();
+      // Clear any persisted auth storage regardless of current config, since
+      // a previous session may have been stored before persistence was
+      // disabled.
+      if (typeof window !== 'undefined') {
+        console.log('Clearing persisted auth storage...');
+
+        const legacySupabaseStorageKey = (() => {
+          const supabaseUrl = config.supabaseUrl;
+          if (!supabaseUrl) {
+            return null;
+          }
+
+          try {
+            const projectRef = new URL(supabaseUrl).host.split('.')[0];
+            return projectRef ? `sb-${projectRef}-auth-token` : null;
+          } catch (error) {
+            console.warn('Unable to derive legacy Supabase storage key:', error);
+            return null;
+          }
+        })();
+
+        const storageKeys = new Set([
+          config.supabaseStorageKey,
+          legacySupabaseStorageKey
+        ].filter(Boolean) as string[]);
+
+        [window.localStorage, window.sessionStorage].forEach(storage => {
+          storageKeys.forEach(key => storage.removeItem(key));
+        });
+      }
       
       console.log('=== SIGNOUT DEBUG END ===');
       
