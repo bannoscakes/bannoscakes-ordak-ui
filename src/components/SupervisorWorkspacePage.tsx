@@ -4,8 +4,14 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "./ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare, Briefcase } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -109,7 +115,7 @@ export function SupervisorWorkspacePage({
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(true);
-  const [showMessaging, setShowMessaging] = useState(false);
+  const [activeTab, setActiveTab] = useState("orders");
 
   // Update elapsed time
   useEffect(() => {
@@ -362,7 +368,7 @@ export function SupervisorWorkspacePage({
           <Button 
             variant="outline" 
             className="flex items-center gap-2 px-4 py-2"
-            onClick={() => setShowMessaging(true)}
+            onClick={() => setActiveTab("messages")}
           >
             <MessageSquare className="h-4 w-4" />
             Messages
