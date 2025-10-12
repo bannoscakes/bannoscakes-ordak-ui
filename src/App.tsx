@@ -82,48 +82,59 @@ function RoleBasedRouter() {
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
     
+    // Check for specific workspace routes first
+    const isStaffWorkspace = pathname === "/workspace/staff" || urlParams.get("view") === "staff";
+    const isSupervisorWorkspace = pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor";
+    
+    // Dashboard is only the root path, dashboard path, or when no specific view is set AND no workspace path
+    const isDashboard = (pathname === "/" || pathname === "/dashboard") && 
+                       !pathname.includes("/workspace/") && 
+                       !urlParams.get("view") &&
+                       !urlParams.get("page");
+    
     return {
       pathname,
       urlParams,
-      isStaffWorkspace: pathname === "/workspace/staff" || urlParams.get("view") === "staff",
-      isSupervisorWorkspace: pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor",
-      isDashboard: pathname === "/" || pathname === "/dashboard" || (!pathname.includes("/workspace/") && !urlParams.get("view"))
+      isStaffWorkspace,
+      isSupervisorWorkspace,
+      isDashboard
     };
+  };
+
+  // Helper function to get expected URL for a role
+  const getExpectedUrlForRole = (role: 'Staff' | 'Supervisor' | 'Admin') => {
+    switch (role) {
+      case 'Admin':
+        return '/dashboard';
+      case 'Supervisor':
+        return '/workspace/supervisor';
+      case 'Staff':
+        return '/workspace/staff';
+      default:
+        return '/dashboard';
+    }
   };
 
   // Helper function to redirect to role-appropriate landing page
   const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
     try {
-      switch (role) {
-        case 'Admin':
-          window.history.pushState({}, '', '/dashboard');
-          break;
-        case 'Supervisor':
-          window.history.pushState({}, '', '/workspace/supervisor');
-          break;
-        case 'Staff':
-          window.history.pushState({}, '', '/workspace/staff');
-          break;
-        default:
-          console.warn('Unknown role:', role);
-          window.history.pushState({}, '', '/dashboard');
-      }
+      const expectedUrl = getExpectedUrlForRole(role);
+      window.history.pushState({}, '', expectedUrl);
     } catch (error) {
       console.error('Error redirecting:', error);
     }
   };
-
   // Route guards - protect routes by role
   if (!user) {
     return <LoginForm onSuccess={() => {}} />;
   }
 
-  const workspace = getCurrentWorkspace();
-
   // Check for route mismatches and redirect if needed
   useEffect(() => {
     if (!user) return;
 
+    // Calculate workspace inside effect to react to URL changes
+    const workspace = getCurrentWorkspace();
     const { isStaffWorkspace, isSupervisorWorkspace, isDashboard, pathname } = workspace;
 
     // Route by role with URL respect
@@ -139,10 +150,17 @@ function RoleBasedRouter() {
     } else {
       // Route mismatch - redirect to appropriate landing page
       console.log(`Role mismatch: User role ${user.role}, trying to access ${pathname}`);
-      redirectToRoleLanding(user.role);
+      
+      // Prevent infinite loops by checking if we're already at the correct URL
+      const expectedUrl = getExpectedUrlForRole(user.role);
+      if (window.location.pathname !== expectedUrl) {
+        redirectToRoleLanding(user.role);
+      }
     }
   }, [user, currentUrl]); // Re-evaluate on user or URL changes
 
+  // Get current workspace for rendering (outside useEffect to avoid stale closure)
+  const workspace = getCurrentWorkspace();
   // Route guards with proper role checking
   if (workspace.isStaffWorkspace) {
     if (user.role !== 'Staff') {
@@ -183,9 +201,9 @@ function RoleBasedRouter() {
 function navigateToQueue(queueType: 'bannos' | 'flourlane') {
   try {
     const url = `/?page=${queueType}-production&view=unassigned`;
+    // Use pushState which is already patched to trigger handleUrlChange
+    // No need to manually dispatch popstate event as it causes double triggering
     window.history.pushState({}, '', url);
-    // Trigger URL change event instead of full reload
-    window.dispatchEvent(new PopStateEvent('popstate'));
   } catch (error) {
     console.error('Navigation error:', error);
   }
