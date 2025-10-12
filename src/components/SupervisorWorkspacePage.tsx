@@ -361,14 +361,8 @@ export function SupervisorWorkspacePage({
           {/* Messages Shortcut */}
           <Button 
             variant="outline" 
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-100 border-yellow-400"
-            onClick={() => {
-              console.log('[SUPERVISOR] Messages button clicked, current showMessaging:', showMessaging);
-              console.log('[SUPERVISOR] Auth state - loading:', authLoading, 'user:', user?.id);
-              alert('Messages button clicked! Check console for details.');
-              setShowMessaging(true);
-              console.log('[SUPERVISOR] setShowMessaging(true) called');
-            }}
+            className="flex items-center gap-2 px-4 py-2"
+            onClick={() => setShowMessaging(true)}
           >
             <MessageSquare className="h-4 w-4" />
             Messages
@@ -530,16 +524,12 @@ export function SupervisorWorkspacePage({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => {
-                  console.log('[SUPERVISOR] Close button clicked');
-                  setShowMessaging(false);
-                }}
+                onClick={() => setShowMessaging(false)}
                 className="text-muted-foreground"
               >
                 Close
               </Button>
             </div>
-            {console.log('[SUPERVISOR] Rendering MainDashboardMessaging component')}
             <MainDashboardMessaging onClose={() => setShowMessaging(false)} />
           </Card>
         )}
