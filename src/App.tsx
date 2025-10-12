@@ -53,51 +53,43 @@ function RootApp() {
  */
 function RoleBasedRouter() {
   const { user, signOut } = useAuth();
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [currentUrl, setCurrentUrl] = useState(window.location.href);
 
+  // Listen for URL changes (including browser back/forward)
   useEffect(() => {
-    // Initialize routing based on user role
-    const initializeRouting = async () => {
-      try {
-        if (!user) return;
-
-        // Get current URL path
-        const pathname = window.location.pathname;
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // Determine if user is trying to access a specific workspace via URL
-        const isStaffWorkspace = pathname === "/workspace/staff" || urlParams.get("view") === "staff";
-        const isSupervisorWorkspace = pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor";
-        const isDashboard = pathname === "/" || pathname === "/dashboard" || (!isStaffWorkspace && !isSupervisorWorkspace);
-
-        // Route by role with URL respect
-        if (isStaffWorkspace && user.role === 'Staff') {
-          // Staff accessing staff workspace - allow
-          console.log('Staff accessing staff workspace');
-        } else if (isSupervisorWorkspace && (user.role === 'Supervisor' || user.role === 'Admin')) {
-          // Supervisor/Admin accessing supervisor workspace - allow
-          console.log('Supervisor/Admin accessing supervisor workspace');
-        } else if (isDashboard && user.role === 'Admin') {
-          // Admin accessing dashboard - allow
-          console.log('Admin accessing dashboard');
-        } else {
-          // Route mismatch - redirect to appropriate landing page
-          console.log(`Role mismatch: User role ${user.role}, trying to access ${pathname}`);
-          redirectToRoleLanding(user.role);
-        }
-      } catch (error) {
-        console.error('Error initializing routing:', error);
-        // Fallback to role-based landing
-        if (user) {
-          redirectToRoleLanding(user.role);
-        }
-      } finally {
-        setIsInitializing(false);
-      }
+    const handleUrlChange = () => {
+      setCurrentUrl(window.location.href);
     };
 
-    initializeRouting();
-  }, [user]);
+    // Listen for popstate events (browser back/forward)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Also listen for programmatic navigation
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      handleUrlChange();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.history.pushState = originalPushState;
+    };
+  }, []);
+
+  // Centralized workspace determination logic
+  const getCurrentWorkspace = () => {
+    const pathname = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    return {
+      pathname,
+      urlParams,
+      isStaffWorkspace: pathname === "/workspace/staff" || urlParams.get("view") === "staff",
+      isSupervisorWorkspace: pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor",
+      isDashboard: pathname === "/" || pathname === "/dashboard" || (!pathname.includes("/workspace/") && !urlParams.get("view"))
+    };
+  };
 
   // Helper function to redirect to role-appropriate landing page
   const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
@@ -121,32 +113,47 @@ function RoleBasedRouter() {
     }
   };
 
-  // Show loading while routing is being determined
-  if (isInitializing) return <Spinner />;
-
   // Route guards - protect routes by role
   if (!user) {
     return <LoginForm onSuccess={() => {}} />;
   }
 
-  // Determine current view based on URL and role
-  const pathname = window.location.pathname;
-  const urlParams = new URLSearchParams(window.location.search);
-  const isStaffWorkspace = pathname === "/workspace/staff" || urlParams.get("view") === "staff";
-  const isSupervisorWorkspace = pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor";
-  const isDashboard = pathname === "/" || pathname === "/dashboard" || (!isStaffWorkspace && !isSupervisorWorkspace);
+  const workspace = getCurrentWorkspace();
+
+  // Check for route mismatches and redirect if needed
+  useEffect(() => {
+    if (!user) return;
+
+    const { isStaffWorkspace, isSupervisorWorkspace, isDashboard, pathname } = workspace;
+
+    // Route by role with URL respect
+    if (isStaffWorkspace && user.role === 'Staff') {
+      // Staff accessing staff workspace - allow
+      console.log('Staff accessing staff workspace');
+    } else if (isSupervisorWorkspace && (user.role === 'Supervisor' || user.role === 'Admin')) {
+      // Supervisor/Admin accessing supervisor workspace - allow
+      console.log('Supervisor/Admin accessing supervisor workspace');
+    } else if (isDashboard && user.role === 'Admin') {
+      // Admin accessing dashboard - allow
+      console.log('Admin accessing dashboard');
+    } else {
+      // Route mismatch - redirect to appropriate landing page
+      console.log(`Role mismatch: User role ${user.role}, trying to access ${pathname}`);
+      redirectToRoleLanding(user.role);
+    }
+  }, [user, currentUrl]); // Re-evaluate on user or URL changes
 
   // Route guards with proper role checking
-  if (isStaffWorkspace) {
+  if (workspace.isStaffWorkspace) {
     if (user.role !== 'Staff') {
-      return <UnauthorizedAccess userRole={user.role} requiredRole="Staff" />;
+      return <UnauthorizedAccess userRole={user.role} requiredRole="Staff" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
     }
     return <StaffWorkspacePage onSignOut={signOut} />;
   }
 
-  if (isSupervisorWorkspace) {
+  if (workspace.isSupervisorWorkspace) {
     if (user.role !== 'Supervisor' && user.role !== 'Admin') {
-      return <UnauthorizedAccess userRole={user.role} requiredRole="Supervisor or Admin" />;
+      return <UnauthorizedAccess userRole={user.role} requiredRole="Supervisor or Admin" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
     }
     return <SupervisorWorkspacePage 
       onSignOut={signOut}
@@ -155,9 +162,9 @@ function RoleBasedRouter() {
     />;
   }
 
-  if (isDashboard) {
+  if (workspace.isDashboard) {
     if (user.role !== 'Admin') {
-      return <UnauthorizedAccess userRole={user.role} requiredRole="Admin" />;
+      return <UnauthorizedAccess userRole={user.role} requiredRole="Admin" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
     }
     return (
       <ErrorBoundary>
@@ -171,23 +178,31 @@ function RoleBasedRouter() {
 }
 
 /**
- * Queue navigation helper
+ * Queue navigation helper - SPA compatible
  */
 function navigateToQueue(queueType: 'bannos' | 'flourlane') {
   try {
     const url = `/?page=${queueType}-production&view=unassigned`;
     window.history.pushState({}, '', url);
-    // Reload the page to trigger the routing logic
-    window.location.reload();
+    // Trigger URL change event instead of full reload
+    window.dispatchEvent(new PopStateEvent('popstate'));
   } catch (error) {
     console.error('Navigation error:', error);
   }
 }
 
 /**
- * Unauthorized access component
+ * Unauthorized access component - SPA compatible
  */
-function UnauthorizedAccess({ userRole, requiredRole }: { userRole: string; requiredRole: string }) {
+function UnauthorizedAccess({ 
+  userRole, 
+  requiredRole, 
+  onNavigateToDashboard 
+}: { 
+  userRole: string; 
+  requiredRole: string;
+  onNavigateToDashboard: () => void;
+}) {
   const { signOut } = useAuth();
   
   return (
@@ -200,7 +215,7 @@ function UnauthorizedAccess({ userRole, requiredRole }: { userRole: string; requ
         </p>
         <div className="flex gap-2">
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={onNavigateToDashboard}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
             Go to Dashboard
