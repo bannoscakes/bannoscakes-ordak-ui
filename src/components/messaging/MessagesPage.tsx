@@ -203,7 +203,7 @@ export function MessagesPage() {
     try {
       const messageId = await sendMessage(selectedConversation, body);
       // ✅ replace the optimistic bubble with real one
-      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: String(messageId) } : m)));
+      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: messageId } : m)));
       await loadConversations(false); // background refresh; no skeleton flicker
     } catch (err) {
       console.error("Failed to send message:", err);

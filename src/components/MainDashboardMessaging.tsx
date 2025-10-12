@@ -201,7 +201,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     try {
       const messageId = await sendMessage(selectedConversation, body);
       // ✅ replace optimistic with server message id
-      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: String(messageId) } : m)));
+      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: messageId } : m)));
       await loadConversations(false); // background refresh only
     } catch (err) {
       console.error("Failed to send message:", err);
