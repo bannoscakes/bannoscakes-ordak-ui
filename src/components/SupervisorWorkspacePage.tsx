@@ -371,9 +371,10 @@ export function SupervisorWorkspacePage({
           </Card>
 
           {/* Messages Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => {
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer bg-yellow-100 border-2 border-yellow-400" onClick={() => {
             console.log('[SUPERVISOR] Messages button clicked, current showMessaging:', showMessaging);
             console.log('[SUPERVISOR] Auth state - loading:', authLoading, 'user:', user?.id);
+            alert('Messages button clicked! Check console for details.');
             setShowMessaging(true);
             console.log('[SUPERVISOR] setShowMessaging(true) called');
           }}>
