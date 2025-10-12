@@ -371,7 +371,12 @@ export function SupervisorWorkspacePage({
           </Card>
 
           {/* Messages Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setShowMessaging(true)}>
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => {
+            console.log('[SUPERVISOR] Messages button clicked, current showMessaging:', showMessaging);
+            console.log('[SUPERVISOR] Auth state - loading:', authLoading, 'user:', user?.id);
+            setShowMessaging(true);
+            console.log('[SUPERVISOR] setShowMessaging(true) called');
+          }}>
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -542,12 +547,16 @@ export function SupervisorWorkspacePage({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => setShowMessaging(false)}
+                onClick={() => {
+                  console.log('[SUPERVISOR] Close button clicked');
+                  setShowMessaging(false);
+                }}
                 className="text-muted-foreground"
               >
                 Close
               </Button>
             </div>
+            {console.log('[SUPERVISOR] Rendering MainDashboardMessaging component')}
             <MainDashboardMessaging onClose={() => setShowMessaging(false)} />
           </Card>
         )}

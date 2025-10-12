@@ -45,6 +45,8 @@ interface MainDashboardMessagingProps {
 
 export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps) {
   const { user, loading: authLoading } = useAuth();
+  
+  console.log('[MAIN_MESSAGING] Component rendered - authLoading:', authLoading, 'user:', user?.id);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
