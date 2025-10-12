@@ -160,8 +160,30 @@ class AuthService {
       // disabled.
       if (typeof window !== 'undefined') {
         console.log('Clearing persisted auth storage...');
-        window.localStorage.removeItem(config.supabaseStorageKey);
-        window.sessionStorage.removeItem(config.supabaseStorageKey);
+
+        const legacySupabaseStorageKey = (() => {
+          const supabaseUrl = config.supabaseUrl;
+          if (!supabaseUrl) {
+            return null;
+          }
+
+          try {
+            const projectRef = new URL(supabaseUrl).host.split('.')[0];
+            return projectRef ? `sb-${projectRef}-auth-token` : null;
+          } catch (error) {
+            console.warn('Unable to derive legacy Supabase storage key:', error);
+            return null;
+          }
+        })();
+
+        const storageKeys = new Set([
+          config.supabaseStorageKey,
+          legacySupabaseStorageKey
+        ].filter(Boolean) as string[]);
+
+        [window.localStorage, window.sessionStorage].forEach(storage => {
+          storageKeys.forEach(key => storage.removeItem(key));
+        });
       }
       
       console.log('=== SIGNOUT DEBUG END ===');
