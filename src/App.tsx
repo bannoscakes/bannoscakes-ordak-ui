@@ -124,7 +124,6 @@ function RoleBasedRouter() {
       console.error('Error redirecting:', error);
     }
   };
-
   // Route guards - protect routes by role
   if (!user) {
     return <LoginForm onSuccess={() => {}} />;
@@ -162,7 +161,6 @@ function RoleBasedRouter() {
 
   // Get current workspace for rendering (outside useEffect to avoid stale closure)
   const workspace = getCurrentWorkspace();
-
   // Route guards with proper role checking
   if (workspace.isStaffWorkspace) {
     if (user.role !== 'Staff') {
