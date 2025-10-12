@@ -337,60 +337,42 @@ export function SupervisorWorkspacePage({
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Queue Shortcuts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-2 mb-6">
           {/* Bannos Queue Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={onNavigateToBannosQueue}>
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Users className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <h3 className="font-medium text-foreground">Open Bannos Queue</h3>
-                </div>
-                <p className="text-sm text-muted-foreground">Assign orders</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </Card>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 px-4 py-2"
+            onClick={onNavigateToBannosQueue}
+          >
+            <Users className="h-4 w-4" />
+            Open Bannos Queue
+          </Button>
 
           {/* Flourlane Queue Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={onNavigateToFlourlaneQueue}>
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
-                    <TallCakeIcon className="h-4 w-4 text-pink-600" />
-                  </div>
-                  <h3 className="font-medium text-foreground">Open Flourlane Queue</h3>
-                </div>
-                <p className="text-sm text-muted-foreground">Assign orders</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </Card>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 px-4 py-2"
+            onClick={onNavigateToFlourlaneQueue}
+          >
+            <TallCakeIcon className="h-4 w-4" />
+            Open Flourlane Queue
+          </Button>
 
           {/* Messages Shortcut */}
-          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer bg-yellow-100 border-2 border-yellow-400" onClick={() => {
-            console.log('[SUPERVISOR] Messages button clicked, current showMessaging:', showMessaging);
-            console.log('[SUPERVISOR] Auth state - loading:', authLoading, 'user:', user?.id);
-            alert('Messages button clicked! Check console for details.');
-            setShowMessaging(true);
-            console.log('[SUPERVISOR] setShowMessaging(true) called');
-          }}>
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <MessageSquare className="h-4 w-4 text-indigo-600" />
-                  </div>
-                  <h3 className="font-medium text-foreground">Messages</h3>
-                </div>
-                <p className="text-sm text-muted-foreground">Team communication</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </Card>
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-100 border-yellow-400"
+            onClick={() => {
+              console.log('[SUPERVISOR] Messages button clicked, current showMessaging:', showMessaging);
+              console.log('[SUPERVISOR] Auth state - loading:', authLoading, 'user:', user?.id);
+              alert('Messages button clicked! Check console for details.');
+              setShowMessaging(true);
+              console.log('[SUPERVISOR] setShowMessaging(true) called');
+            }}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Messages
+          </Button>
         </div>
 
         {/* My Tasks Section (Optional) */}
