@@ -21,18 +21,6 @@ function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
 
-type AppView = 'dashboard' | 'staff-workspace' | 'supervisor-workspace';
-
-interface StaffSession {
-  email: string;
-  name: string;
-}
-
-interface SupervisorSession {
-  email: string;
-  name: string;
-}
-
 export default function App() {
   return (
     <AuthProvider>
@@ -44,112 +32,216 @@ export default function App() {
 function RootApp() {
   const { user, loading } = useAuth();
 
+  // Handle panic logout route
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
     return <Logout />;
   }
   
+  // Show loading while auth is initializing
   if (loading) return <Spinner />;
-  if (!user) return <LoginForm onSuccess={() => {}} />; // 🔐 real login
+  
+  // Show login form if not authenticated
+  if (!user) return <LoginForm onSuccess={() => {}} />;
 
-  return <MainViews />;
+  // User is authenticated - route by role
+  return <RoleBasedRouter />;
 }
 
 /**
- * Your existing view-switch stays the same.
- * If you already have a function like renderMainContent()/currentView,
- * keep it here unchanged.
+ * Role-based routing system
+ * Routes users to appropriate landing page based on their role
  */
-function MainViews() {
-  const { signOut } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
-  const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
-  const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
+function RoleBasedRouter() {
+  const { user, signOut } = useAuth();
+  const [currentUrl, setCurrentUrl] = useState(window.location.href);
 
+  // Listen for URL changes (including browser back/forward)
   useEffect(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const pathname = window.location.pathname;
-      const viewParam = urlParams.get("view");
+    const handleUrlChange = () => {
+      setCurrentUrl(window.location.href);
+    };
 
-      const isStaffWorkspace =
-        pathname === "/workspace/staff" || viewParam === "staff";
-      const isSupervisorWorkspace =
-        pathname === "/workspace/supervisor" || viewParam === "supervisor";
+    // Listen for popstate events (browser back/forward)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Also listen for programmatic navigation
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      handleUrlChange();
+    };
 
-      // Auth is now handled above - no more mock sign-in redirects
-      if (isStaffWorkspace) {
-        setCurrentView("staff-workspace");
-      } else if (isSupervisorWorkspace) {
-        setCurrentView("supervisor-workspace");
-      } else {
-        setCurrentView("dashboard");
-      }
-    } catch (err) {
-      console.error("Error parsing URL:", err);
-      setCurrentView("dashboard");
-    } finally {
-      setIsLoading(false);
-    }
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.history.pushState = originalPushState;
+    };
   }, []);
 
-  // Real sign-out handlers - properly invalidate Supabase session
-  const handleStaffSignOut = async () => {
+  // Centralized workspace determination logic
+  const getCurrentWorkspace = () => {
+    const pathname = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    return {
+      pathname,
+      urlParams,
+      isStaffWorkspace: pathname === "/workspace/staff" || urlParams.get("view") === "staff",
+      isSupervisorWorkspace: pathname === "/workspace/supervisor" || urlParams.get("view") === "supervisor",
+      isDashboard: pathname === "/" || pathname === "/dashboard" || (!pathname.includes("/workspace/") && !urlParams.get("view"))
+    };
+  };
+
+  // Helper function to redirect to role-appropriate landing page
+  const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
     try {
-      await signOut(); // This will trigger AuthProvider to update state
-      // No need to manually clear state - AuthProvider handles this
+      switch (role) {
+        case 'Admin':
+          window.history.pushState({}, '', '/dashboard');
+          break;
+        case 'Supervisor':
+          window.history.pushState({}, '', '/workspace/supervisor');
+          break;
+        case 'Staff':
+          window.history.pushState({}, '', '/workspace/staff');
+          break;
+        default:
+          console.warn('Unknown role:', role);
+          window.history.pushState({}, '', '/dashboard');
+      }
     } catch (error) {
-      console.error('Staff sign out error:', error);
+      console.error('Error redirecting:', error);
     }
   };
 
-  const handleSupervisorSignOut = async () => {
-    try {
-      await signOut(); // This will trigger AuthProvider to update state
-      // No need to manually clear state - AuthProvider handles this
-    } catch (error) {
-      console.error('Supervisor sign out error:', error);
-    }
-  };
-
-  const handleNavigateToBannosQueue = () => {
-    try {
-      window.history.pushState({}, '', '/?page=bannos-production&view=unassigned');
-      setCurrentView('dashboard');
-    } catch (error) {
-      console.error('Navigation error:', error);
-    }
-  };
-
-  const handleNavigateToFlourlaneQueue = () => {
-    try {
-      window.history.pushState({}, '', '/?page=flourlane-production&view=unassigned');
-      setCurrentView('dashboard');
-    } catch (error) {
-      console.error('Navigation error:', error);
-    }
-  };
-
-  if (isLoading) return <Spinner />;
-
-  // Render workspace views - auth is handled above
-  if (currentView === "staff-workspace") {
-    return <StaffWorkspacePage 
-      onSignOut={handleStaffSignOut}
-    />;
+  // Route guards - protect routes by role
+  if (!user) {
+    return <LoginForm onSuccess={() => {}} />;
   }
-  if (currentView === "supervisor-workspace") {
+
+  const workspace = getCurrentWorkspace();
+
+  // Check for route mismatches and redirect if needed
+  useEffect(() => {
+    if (!user) return;
+
+    const { isStaffWorkspace, isSupervisorWorkspace, isDashboard, pathname } = workspace;
+
+    // Route by role with URL respect
+    if (isStaffWorkspace && user.role === 'Staff') {
+      // Staff accessing staff workspace - allow
+      console.log('Staff accessing staff workspace');
+    } else if (isSupervisorWorkspace && (user.role === 'Supervisor' || user.role === 'Admin')) {
+      // Supervisor/Admin accessing supervisor workspace - allow
+      console.log('Supervisor/Admin accessing supervisor workspace');
+    } else if (isDashboard && user.role === 'Admin') {
+      // Admin accessing dashboard - allow
+      console.log('Admin accessing dashboard');
+    } else {
+      // Route mismatch - redirect to appropriate landing page
+      console.log(`Role mismatch: User role ${user.role}, trying to access ${pathname}`);
+      redirectToRoleLanding(user.role);
+    }
+  }, [user, currentUrl]); // Re-evaluate on user or URL changes
+
+  // Route guards with proper role checking
+  if (workspace.isStaffWorkspace) {
+    if (user.role !== 'Staff') {
+      return <UnauthorizedAccess userRole={user.role} requiredRole="Staff" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
+    }
+    return <StaffWorkspacePage onSignOut={signOut} />;
+  }
+
+  if (workspace.isSupervisorWorkspace) {
+    if (user.role !== 'Supervisor' && user.role !== 'Admin') {
+      return <UnauthorizedAccess userRole={user.role} requiredRole="Supervisor or Admin" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
+    }
     return <SupervisorWorkspacePage 
-      onSignOut={handleSupervisorSignOut}
-      onNavigateToBannosQueue={handleNavigateToBannosQueue}
-      onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
+      onSignOut={signOut}
+      onNavigateToBannosQueue={() => navigateToQueue('bannos')}
+      onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
     />;
   }
 
-  // default: dashboard
+  if (workspace.isDashboard) {
+    if (user.role !== 'Admin') {
+      return <UnauthorizedAccess userRole={user.role} requiredRole="Admin" onNavigateToDashboard={() => redirectToRoleLanding(user.role)} />;
+    }
+    return (
+      <ErrorBoundary>
+        <Dashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  // Fallback - shouldn't reach here
+  return <Spinner />;
+}
+
+/**
+ * Queue navigation helper - SPA compatible
+ */
+function navigateToQueue(queueType: 'bannos' | 'flourlane') {
+  try {
+    const url = `/?page=${queueType}-production&view=unassigned`;
+    window.history.pushState({}, '', url);
+    // Trigger URL change event instead of full reload
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  } catch (error) {
+    console.error('Navigation error:', error);
+  }
+}
+
+/**
+ * Unauthorized access component - SPA compatible with role-appropriate navigation
+ */
+function UnauthorizedAccess({ 
+  userRole, 
+  requiredRole, 
+  onNavigateToDashboard 
+}: { 
+  userRole: string; 
+  requiredRole: string;
+  onNavigateToDashboard: () => void;
+}) {
+  const { signOut } = useAuth();
+  
+  // Get appropriate button text based on user role
+  const getNavigationButtonText = (role: string) => {
+    switch (role) {
+      case 'Admin':
+        return 'Go to Dashboard';
+      case 'Supervisor':
+        return 'Go to Supervisor Workspace';
+      case 'Staff':
+        return 'Go to Staff Workspace';
+      default:
+        return 'Go to Dashboard';
+    }
+  };
+  
   return (
-    <ErrorBoundary>
-      <Dashboard />
-    </ErrorBoundary>
+    <div className="min-h-screen bg-muted/30 flex items-center justify-center">
+      <div className="max-w-md mx-auto p-6 bg-background rounded-lg shadow-lg">
+        <h1 className="text-xl font-semibold text-foreground mb-2">Access Denied</h1>
+        <p className="text-sm text-muted-foreground mb-4">
+          Your role ({userRole}) does not have permission to access this area.
+          Required role: {requiredRole}
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={onNavigateToDashboard}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            {getNavigationButtonText(userRole)}
+          </button>
+          <button
+            onClick={signOut}
+            className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
