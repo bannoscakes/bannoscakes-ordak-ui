@@ -104,13 +104,13 @@ const getRealisticSize = (
 export function StaffWorkspacePage({
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
 
   // Auth logging
   useEffect(() => {
-    console.log(`[AUTH] StaffWorkspacePage loading=${loading} userId=${user?.id || null}`);
-  }, [loading, user]);
+    console.log(`[AUTH] StaffWorkspacePage authLoading=${authLoading} userId=${user?.id || null}`);
+  }, [authLoading, user]);
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
