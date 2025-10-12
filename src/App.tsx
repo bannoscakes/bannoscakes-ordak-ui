@@ -192,7 +192,7 @@ function navigateToQueue(queueType: 'bannos' | 'flourlane') {
 }
 
 /**
- * Unauthorized access component - SPA compatible
+ * Unauthorized access component - SPA compatible with role-appropriate navigation
  */
 function UnauthorizedAccess({ 
   userRole, 
@@ -204,6 +204,20 @@ function UnauthorizedAccess({
   onNavigateToDashboard: () => void;
 }) {
   const { signOut } = useAuth();
+  
+  // Get appropriate button text based on user role
+  const getNavigationButtonText = (role: string) => {
+    switch (role) {
+      case 'Admin':
+        return 'Go to Dashboard';
+      case 'Supervisor':
+        return 'Go to Supervisor Workspace';
+      case 'Staff':
+        return 'Go to Staff Workspace';
+      default:
+        return 'Go to Dashboard';
+    }
+  };
   
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center">
@@ -218,7 +232,7 @@ function UnauthorizedAccess({
             onClick={onNavigateToDashboard}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
           >
-            Go to Dashboard
+            {getNavigationButtonText(userRole)}
           </button>
           <button
             onClick={signOut}
