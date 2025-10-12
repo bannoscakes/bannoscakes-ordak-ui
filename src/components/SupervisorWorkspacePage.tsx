@@ -366,22 +366,6 @@ export function SupervisorWorkspacePage({
 
         </div>
 
-        {/* Messages Shortcut */}
-        <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer bg-yellow-100 border-2 border-yellow-400" onClick={() => setActiveTab("messages")}>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="h-4 w-4 text-indigo-600" />
-                </div>
-                <h3 className="font-medium text-foreground">Messages</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">Team communication</p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </Card>
-
         {/* Tabs */}
         <Tabs
           value={activeTab}
