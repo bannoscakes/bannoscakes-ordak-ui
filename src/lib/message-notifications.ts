@@ -160,7 +160,7 @@ export const showBrowserNotification = (
         ? `${message.text.substring(0, 100)}...` 
         : message.text,
       icon: '/favicon.ico',
-      tag: `message-${message.id}`, // Prevent duplicate notifications
+      tag: `message-${String(message.id)}`, // Prevent duplicate notifications
     });
 
     // Auto-close after 5 seconds

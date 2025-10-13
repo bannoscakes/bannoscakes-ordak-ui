@@ -34,6 +34,9 @@ import {
   type UIMessage as Message,
 } from "../lib/messaging-adapters";
 
+import type { Message as BaseMessage } from "../types/messages";
+import { isOptimistic } from "../features/messages/utils";
+
 import type { RealtimeMessageRow } from "../lib/messaging-types";
 import { ChatWindow } from "./messaging/ChatWindow";
 

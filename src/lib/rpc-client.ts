@@ -12,12 +12,14 @@ import { createError, handleError, logError, ErrorCode } from './error-handler';
 // MESSAGING TYPES
 // =============================================
 
+import type { ServerMessage } from '../types/messages';
+
 export interface Message {
   id: number;
   body: string;
-  sender_id: string;
-  sender_name: string;
-  created_at: string;
+  authorId: string;
+  createdAt: string;
+  conversationId: string;
   is_own_message: boolean;
 }
 
