@@ -1,3 +1,34 @@
+## [v0.7.0-beta] - 2025-02-01 - Messaging System Integration & Optimistic Updates
+
+### 🎯 Overview
+Complete integration of the messaging system with type-safe optimistic updates, background loading patterns, and proper realtime configuration. This release ensures a smooth, flicker-free messaging experience with instant feedback and proper message reconciliation.
+
+### ✅ Type-Safe Optimistic Messages
+- **Server/Client ID Separation**: `ServerMessage` with server `id`, `OptimisticMessage` with client `clientId`
+- **Type Guards**: `isOptimistic()` helper for safe optimistic message detection
+- **Base Message Types**: `MessageId`, `BaseMessage`, and union `Message` type
+- **Backward Compatibility**: Maintained compatibility with existing UI components
+
+### ✅ Background Loading Pattern
+- **No Loading Flicker**: Background updates for realtime listeners
+- **Foreground vs Background**: Loading spinners only for user-initiated actions
+- **Conversation Refresh**: Background updates on new messages
+- **Unread Count Updates**: Silent badge updates without UI disruption
+
+### ✅ Optimistic Message Reconciliation
+- **Instant Feedback**: Messages appear immediately with `uuid` clientId
+- **Server Reconciliation**: Replace optimistic with server ID after RPC success
+- **Error Handling**: Remove optimistic messages on failure with toast notification
+- **Background Refresh**: Update conversation list without loading spinner
+
+### ✅ Supabase Configuration
+- **Realtime Publication**: Idempotent migration ensures publication exists
+- **Preview Environment**: Guarded publication setup for fresh environments
+- **Health Check**: Prevents "Service health check failed" errors
+- **Tables Verified**: `conversations` and `messages` in realtime publication
+
+---
+
 ## [v0.6.0-beta] - 2025-01-30 - Single URL Architecture & Authentication Fixes
 
 ### 🎯 Overview
