@@ -1,18 +1,5 @@
 import { useState, useEffect } from 'react';
-// import { authService, type AuthState, type AuthUser } from '../lib/auth'; // Module doesn't exist
-
-// Temporary types until auth module is implemented
-interface AuthUser {
-  id: string;
-  email: string;
-  role: string;
-}
-
-interface AuthState {
-  user: AuthUser | null;
-  session: any | null;
-  loading: boolean;
-}
+import { authService, type AuthState, type AuthUser } from '../lib/auth';
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -22,19 +9,23 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    // Temporary: Set loading to false since authService doesn't exist yet
-    setAuthState(prev => ({ ...prev, loading: false }));
+    // Subscribe to auth state changes
+    const unsubscribe = authService.subscribe((state) => {
+      setAuthState(state);
+    });
+
+    return unsubscribe;
   }, []);
 
   return {
     user: authState.user,
     session: authState.session,
     loading: authState.loading,
-    signIn: async () => { console.log('signIn not implemented'); },
-    signOut: async () => { console.log('signOut not implemented'); },
-    signUp: async () => { console.log('signUp not implemented'); },
-    hasRole: (role: string) => { console.log('hasRole not implemented', role); return false; },
-    canAccessStore: (store: string) => { console.log('canAccessStore not implemented', store); return false; }
+    signIn: authService.signIn.bind(authService),
+    signOut: authService.signOut.bind(authService),
+    signUp: authService.signUp.bind(authService),
+    hasRole: authService.hasRole.bind(authService),
+    canAccessStore: authService.canAccessStore.bind(authService)
   };
 }
 
