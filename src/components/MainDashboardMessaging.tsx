@@ -83,14 +83,16 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
       setConversations((prev) => prev.map((c) => (c.id === selectedConversation ? { ...c, unreadCount: 0 } : c)));
     }
 
-    loadConversations();
-    loadUnreadCount();
+    // ✅ Background updates - no loading spinner flicker
+    loadConversations({ background: true });
+    loadUnreadCount({ background: true });
   };
 
   // Debounced loadConversations to prevent excessive calls
   const debouncedLoadConversations = useCallback(() => {
     const timeoutId = setTimeout(() => {
-      loadConversations();
+      // ✅ Background updates - no loading spinner flicker
+      loadConversations({ background: true });
     }, 150);
     return () => clearTimeout(timeoutId);
   }, []);
@@ -121,21 +123,27 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation, currentUserId]);
 
-  const loadConversations = async () => {
+  const loadConversations = async (opts?: { background?: boolean }) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
       const data: RPCConversation[] = await getConversations();
       setConversations(data.map(toUIConversation));
     } catch (err) {
       console.error("Failed to load conversations:", err);
-      setError(err);
-      showErrorWithRetry(err, loadConversations, {
-        title: "Failed to Load Conversations",
-        showRecoveryActions: true,
-      });
+      if (!opts?.background) {
+        setError(err);
+        showErrorWithRetry(err, () => loadConversations(), {
+          title: "Failed to Load Conversations",
+          showRecoveryActions: true,
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.background) {
+        setLoading(false);
+      }
     }
   };
 
@@ -148,7 +156,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
       setMessages(transformed);
 
       await markAsRead(conversationId);
-      loadUnreadCount();
+      // Note: markAsRead already calls loadUnreadCount with background: true
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
     } catch (err) {
       console.error("Failed to load messages:", err);
@@ -159,19 +167,21 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     }
   };
 
-  const loadUnreadCount = async () => {
+  const loadUnreadCount = async (opts?: { background?: boolean }) => {
     try {
       const count = await getUnreadCount();
       setUnreadCount(count);
     } catch (err) {
       console.error("Failed to load unread count:", err);
+      // Silently fail on background updates to avoid disrupting UX
     }
   };
 
   const markAsRead = async (conversationId: string) => {
     try {
       await markMessagesRead(conversationId);
-      loadUnreadCount();
+      // ✅ Background update - no loading spinner flicker
+      loadUnreadCount({ background: true });
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
     } catch (err) {
       console.error("Failed to mark messages as read:", err);
