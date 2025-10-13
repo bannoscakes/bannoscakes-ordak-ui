@@ -68,10 +68,17 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   // Handle initial conversation selection
   useEffect(() => {
     if (initialConversationId) {
-      setSelectedConversation(initialConversationId);
-      setIsExpanded(true);
+      // Wait for conversations to load before setting selected conversation
+      if (conversations.length > 0) {
+        setSelectedConversation(initialConversationId);
+        setIsExpanded(true);
+      }
+    } else {
+      // Reset selected conversation when initialConversationId is null
+      setSelectedConversation(null);
+      setIsExpanded(false);
     }
-  }, [initialConversationId]);
+  }, [initialConversationId, conversations.length]);
 
   // Realtime
   const handleNewMessage = (row: RealtimeMessageRow) => {
