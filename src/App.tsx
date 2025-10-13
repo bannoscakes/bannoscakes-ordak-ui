@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 // ✅ real auth system (from the audit)
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
+import type { AuthUser } from "./lib/auth";
 
 // ✅ real login screen
 import { LoginForm } from "./components/Auth/LoginForm";
@@ -119,10 +120,10 @@ function RoleBasedRouter() {
     const workspace = getCurrentWorkspace();
     if (!workspace.isRootPath) {
       // Redirect to root path if not already there
-      redirectToRoleLanding(user.role);
+      redirectToRoleLanding((user as AuthUser).role);
     }
 
-    console.log(`User ${user.fullName} (${user.role}) accessing single URL architecture`);
+    console.log(`User ${(user as AuthUser).fullName} (${(user as AuthUser).role}) accessing single URL architecture`);
 
     setDidRoute(true);
   }, [user, currentUrl]); // Re-evaluate on user or URL changes

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -17,7 +16,11 @@ import { Clock, Users, Search, X } from "lucide-react";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
+import { StaffAssignmentModal } from "./StaffAssignmentModal";
+import { ErrorDisplay } from "./ErrorDisplay";
+// import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
 import { getQueue, getUnassignedCounts } from "../lib/rpc-client";
+import { useErrorNotifications } from "../lib/error-notifications";
 import type { Stage } from "../types/db";
 
 interface QueueItem {
@@ -34,6 +37,8 @@ interface QueueItem {
   dueTime: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
+  assigneeId?: string;
+  assigneeName?: string;
 }
 
 interface QueueTableProps {
@@ -50,8 +55,13 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [selectedStage, setSelectedStage] = useState("unassigned");
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [isAssigningStaff, setIsAssigningStaff] = useState(false);
+  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+
+  const { showError, showErrorWithRetry } = useErrorNotifications();
 
   // Fetch real queue data from Supabase
   useEffect(() => {
@@ -61,6 +71,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const fetchQueueData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Fetch queue data using the new RPC
       const orders = await getQueue({
@@ -112,6 +123,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       setQueueData(grouped);
     } catch (error) {
       console.error('Failed to fetch queue:', error);
+      setError(error);
+      showErrorWithRetry(error, fetchQueueData, {
+        title: 'Failed to Load Queue',
+        showRecoveryActions: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -208,6 +224,21 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           </div>
         </div>
       </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <ErrorDisplay error={error} onRetry={fetchQueueData} />
+        <ErrorDisplay
+          error={error}
+          title="Failed to Load Queue"
+          onRetry={fetchQueueData}
+          variant="card"
+          showDetails={process.env.NODE_ENV === 'development'}
+        />
+      </div>
     );
   }
 
@@ -394,12 +425,22 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                               </Badge>
                             </div>
                             <OrderOverflowMenu
-                              onEdit={() => {
+                              item={item}
+                              variant="queue"
+                              onAssignToStaff={(item) => {
+                                setSelectedOrder(item);
+                                setIsAssigningStaff(true);
+                              }}
+                              onEditOrder={(item) => {
                                 setSelectedOrder(item);
                                 setIsEditingOrder(true);
                               }}
-                              onDelete={() => {
-                                // TODO: Implement delete functionality
+                              onOpenOrder={(item) => {
+                                setSelectedOrder(item);
+                                setIsOrderDetailOpen(true);
+                              }}
+                              onViewDetails={(item) => {
+                                window.open(`https://admin.shopify.com/orders/${item.orderNumber}`, '_blank');
                               }}
                             />
                           </div>
@@ -417,21 +458,51 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       {/* Order Detail Drawer */}
       <OrderDetailDrawer
         order={selectedOrder}
-        open={!!selectedOrder && !isEditingOrder}
-        onClose={() => setSelectedOrder(null)}
+        isOpen={isOrderDetailOpen && !isEditingOrder}
+        onClose={() => {
+          setIsOrderDetailOpen(false);
+          setSelectedOrder(null);
+        }}
+        store={store}
       />
 
       {/* Edit Order Drawer */}
       <EditOrderDrawer
         order={selectedOrder}
-        open={isEditingOrder}
+        isOpen={isEditingOrder}
         onClose={() => {
           setIsEditingOrder(false);
           setSelectedOrder(null);
         }}
-        onSave={(updatedOrder) => {
+        onSaved={(updatedOrder) => {
           // TODO: Implement order update functionality
           setIsEditingOrder(false);
+          setSelectedOrder(null);
+        }}
+        store={store}
+      />
+
+      {/* Staff Assignment Modal */}
+      <StaffAssignmentModal
+        isOpen={isAssigningStaff}
+        onClose={() => {
+          setIsAssigningStaff(false);
+          setSelectedOrder(null);
+        }}
+        order={selectedOrder}
+        store={store}
+        onAssigned={(updatedOrder) => {
+          // Update the order in the queue data
+          setQueueData(prev => {
+            const newData = { ...prev };
+            Object.keys(newData).forEach(stage => {
+              newData[stage] = newData[stage].map(item => 
+                item.id === updatedOrder.id ? updatedOrder : item
+              );
+            });
+            return newData;
+          });
+          setIsAssigningStaff(false);
           setSelectedOrder(null);
         }}
       />

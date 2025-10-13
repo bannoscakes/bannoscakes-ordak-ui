@@ -1,5 +1,6 @@
 // lib/messaging-adapters.ts
 import type { Message as RPCMessage, Conversation as RPCConversation } from './rpc-client';
+import type { Message as BaseMessage } from '../types/messages';
 
 export interface UIMessage {
   id: string;
@@ -27,13 +28,13 @@ export const toId = (v: unknown) => (v == null ? '' : String(v));
 export const CURRENT_USER_SENTINEL = 'current-user';
 
 export function toUIMessage(msg: RPCMessage, currentUserId?: string): UIMessage {
-  const isOwn = Boolean((msg as any).is_own_message) || (currentUserId && msg.sender_id === currentUserId);
+  const isOwn = Boolean((msg as any).is_own_message) || (currentUserId && msg.authorId === currentUserId);
   return {
     id: toId(msg.id),
     text: msg.body ?? '',
-    timestamp: msg.created_at,
-    senderId: isOwn ? CURRENT_USER_SENTINEL : toId(msg.sender_id),
-    senderName: msg.sender_name || 'Unknown',
+    timestamp: msg.createdAt,
+    senderId: isOwn ? CURRENT_USER_SENTINEL : toId(msg.authorId),
+    senderName: msg.authorId || 'Unknown',
     read: isOwn,
   };
 }

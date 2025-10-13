@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { Printer, QrCode, ExternalLink, Bot } from "lucide-react";
+import { Printer, QrCode, ExternalLink, Bot, X, Package, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
+import { handlePrintBarcode as printBarcodeRPC, setStorage, getStorageLocations, qcReturnToDecorating } from "../lib/rpc-client";
+import { BarcodeGenerator } from "./BarcodeGenerator";
 
 interface QueueItem {
   id: string;
@@ -94,19 +97,95 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
-  const extendedOrder = getExtendedOrderData(order);
+  const [selectedStorage, setSelectedStorage] = useState("");
+  const [availableStorageLocations, setAvailableStorageLocations] = useState<string[]>([]);
+  const [storageLoading, setStorageLoading] = useState(false);
   
+  const extendedOrder = getExtendedOrderData(order);
+  const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
+
+  // Load storage locations when component mounts or order changes
+  useEffect(() => {
+    if (isOpen && extendedOrder?.store) {
+      loadStorageLocations();
+      // Set current storage location
+      setSelectedStorage(extendedOrder.storage || "");
+    }
+  }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
+
+  // Early return after all hooks
   if (!extendedOrder) return null;
 
-  const storeName = extendedOrder.store === "bannos" ? "Bannos" : "Flourlane";
+  const loadStorageLocations = async () => {
+    try {
+      setStorageLoading(true);
+      const locations = await getStorageLocations(extendedOrder.store);
+      setAvailableStorageLocations(locations);
+    } catch (error) {
+      console.error('Error loading storage locations:', error);
+      toast.error('Failed to load storage locations');
+      // Fallback to default locations
+      setAvailableStorageLocations([
+        "Store Fridge",
+        "Store Freezer", 
+        "Kitchen Coolroom",
+        "Kitchen Freezer",
+        "Basement Coolroom"
+      ]);
+    } finally {
+      setStorageLoading(false);
+    }
+  };
+
+  const handleStorageChange = async (newStorage: string) => {
+    if (!extendedOrder || newStorage === selectedStorage) return;
+
+    try {
+      await setStorage(extendedOrder.id, extendedOrder.store, newStorage);
+      setSelectedStorage(newStorage);
+      toast.success(`Storage location updated to ${newStorage}`);
+    } catch (error) {
+      console.error('Error updating storage location:', error);
+      toast.error('Failed to update storage location');
+    }
+  };
+
+  const handleQCReturn = async () => {
+    if (qcIssue === "None") {
+      toast.error("Please select a QC issue before returning order");
+      return;
+    }
+
+    try {
+      const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
+      await qcReturnToDecorating(extendedOrder.id, extendedOrder.store, notes);
+      toast.success(`Order returned to Decorating stage: ${qcIssue}`);
+      onClose();
+    } catch (error) {
+      console.error('Failed to return order to decorating:', error);
+      toast.error('Failed to return order to decorating stage');
+    }
+  };
 
   const handlePrintBarcode = () => {
     setShowPrintConfirm(true);
   };
 
-  const confirmPrint = () => {
-    setShowPrintConfirm(false);
-    toast.success("Barcode sent to printer");
+  const handleBarcodePrint = async () => {
+    try {
+      // Generate a simple barcode string for the order
+      const barcode = `ORD-${extendedOrder.orderNumber}`;
+      await printBarcodeRPC(barcode, extendedOrder.id);
+      toast.success(`Barcode sent to printer for ${extendedOrder.orderNumber}`);
+    } catch (error) {
+      console.error('Error printing barcode:', error);
+      toast.error("Failed to print barcode");
+    }
+  };
+
+  const handleBarcodeDownload = () => {
+    // BarcodeGenerator handles download automatically
+    toast.success("Barcode downloaded");
   };
 
   const handleViewInShopify = () => {
@@ -127,25 +206,26 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   if (showPrintConfirm) {
     return (
-      <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-[480px] p-0">
-          <div className="h-full flex flex-col items-center justify-center p-6 space-y-6">
-            <div className="text-center space-y-2">
-              <Printer className="h-12 w-12 text-muted-foreground mx-auto" />
-              <h3 className="text-lg font-medium">Print Barcode</h3>
-              <p className="text-sm text-muted-foreground">
-                Print barcode for Order #{extendedOrder.orderNumber}?
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={confirmPrint}>Print</Button>
-              <Button variant="outline" onClick={() => setShowPrintConfirm(false)}>
-                Cancel
-              </Button>
+      <Dialog open={showPrintConfirm} onOpenChange={setShowPrintConfirm}>
+        <DialogContent className="w-[400px] max-w-[90vw] p-6">
+          <DialogHeader>
+            <DialogTitle>Print Barcode</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex items-center justify-center py-4">
+            <div className="w-full max-w-[320px]">
+              <BarcodeGenerator
+                orderId={extendedOrder.orderNumber}
+                productTitle={extendedOrder.product}
+                dueDate={extendedOrder.dueTime}
+                store={extendedOrder.store}
+                onPrint={handleBarcodePrint}
+                onDownload={handleBarcodeDownload}
+              />
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     );
   }
 
@@ -348,6 +428,58 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     className="min-h-[60px] text-sm"
                   />
                 </div>
+
+                {/* Storage Location Section */}
+                <div className="border-t border-amber-300 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Package className="h-4 w-4 text-amber-600" />
+                    <label className="text-sm font-medium text-foreground">
+                      Storage Location
+                    </label>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-foreground block mb-2">
+                      Select where to store this order
+                    </label>
+                    {storageLoading ? (
+                      <div className="p-3 bg-muted/30 rounded-lg border text-center">
+                        <span className="text-xs text-muted-foreground">Loading storage locations...</span>
+                      </div>
+                    ) : (
+                      <Select 
+                        value={selectedStorage || "none"} 
+                        onValueChange={handleStorageChange}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select storage location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              <span>No storage assigned</span>
+                            </div>
+                          </SelectItem>
+                          {availableStorageLocations.map((location) => (
+                            <SelectItem key={location} value={location}>
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4" />
+                                <span>{location}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    
+                    {selectedStorage && selectedStorage !== "none" && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
+                        ✓ Order will be stored in: <strong>{selectedStorage}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -391,6 +523,17 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Scan Barcode
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={handleQCReturn}
+                    disabled={qcIssue === "None"}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Return to Decorating
                   </Button>
                 </div>
               </div>

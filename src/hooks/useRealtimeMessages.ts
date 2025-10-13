@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useErrorNotifications } from '../lib/error-notifications';
 import type { RealtimeMessageRow } from '../lib/messaging-types';
+import type { Message } from '../types/messages';
 
 interface UseRealtimeMessagesProps {
   conversationId: string | null; // kept for compatibility; see note in alt version
@@ -74,6 +75,7 @@ export const useRealtimeMessages = ({
   // 2) Conversations channel — subscribe once if a handler is provided
   useEffect(() => {
     if (!latestOnConversationUpdate.current) return;
+
     const supabase = getSupabase();
 
     if (conversationsChannelRef.current) {

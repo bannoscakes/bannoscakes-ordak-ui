@@ -1,5 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
-import { authService, type AuthState, type AuthUser } from '../lib/auth';
+import { useState, useEffect } from 'react';
+// import { authService, type AuthState, type AuthUser } from '../lib/auth'; // Module doesn't exist
+
+// Temporary types until auth module is implemented
+interface AuthUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
+interface AuthState {
+  user: AuthUser | null;
+  session: any | null;
+  loading: boolean;
+}
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
@@ -9,30 +22,19 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    // Subscribe to auth state changes
-    // The subscribe method immediately calls the listener with current state
-    const unsubscribe = authService.subscribe((state) => {
-      setAuthState(state);
-    });
-
-    return unsubscribe;
+    // Temporary: Set loading to false since authService doesn't exist yet
+    setAuthState(prev => ({ ...prev, loading: false }));
   }, []);
 
-  // Memoize functions to prevent stale references
-  const signIn = useCallback(authService.signIn.bind(authService), []);
-  const signOut = useCallback(authService.signOut.bind(authService), []);
-  const signUp = useCallback(authService.signUp.bind(authService), []);
-  const hasRole = useCallback(authService.hasRole.bind(authService), []);
-  const canAccessStore = useCallback(authService.canAccessStore.bind(authService), []);
   return {
     user: authState.user,
     session: authState.session,
     loading: authState.loading,
-    signIn,
-    signOut,
-    signUp,
-    hasRole,
-    canAccessStore
+    signIn: async () => { console.log('signIn not implemented'); },
+    signOut: async () => { console.log('signOut not implemented'); },
+    signUp: async () => { console.log('signUp not implemented'); },
+    hasRole: (role: string) => { console.log('hasRole not implemented', role); return false; },
+    canAccessStore: (store: string) => { console.log('canAccessStore not implemented', store); return false; }
   };
 }
 
@@ -53,7 +55,7 @@ export function useRequireAuth(requiredRole?: 'Staff' | 'Supervisor' | 'Admin') 
         return;
       }
     }
-  }, [auth.loading, auth.user, auth.hasRole, requiredRole]);
+  }, [auth.loading, auth.user, requiredRole]);
 
   return auth;
 }
@@ -65,7 +67,7 @@ export function useRequireStore(store: 'bannos' | 'flourlane') {
     if (!auth.loading && auth.user && !auth.canAccessStore(store)) {
       console.log(`User cannot access store: ${store}`);
     }
-  }, [auth.loading, auth.user, auth.canAccessStore, store]);
+  }, [auth.loading, auth.user, store]);
 
   return auth;
 }

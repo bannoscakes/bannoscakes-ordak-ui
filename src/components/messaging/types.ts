@@ -1,3 +1,5 @@
+import type { Message as BaseMessage } from '../../types/messages';
+
 export interface Message {
   id: string;
   text: string;
@@ -5,6 +7,10 @@ export interface Message {
   senderId: string;
   senderName: string;
   read: boolean;
+  conversationId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface Conversation {

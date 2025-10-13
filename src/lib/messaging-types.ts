@@ -5,7 +5,7 @@
 
 // Realtime row coming directly from the "messages" table subscription
 export interface RealtimeMessageRow {
-  id: string;
+  id: number;
   conversation_id: string;
   body: string;
   sender_id: string;

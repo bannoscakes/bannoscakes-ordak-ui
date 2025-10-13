@@ -1,5 +1,7 @@
 // components/MainDashboardMessaging.tsx
 import { useState, useEffect, useCallback } from "react";
+import { v4 as uuid } from "uuid";
+import { toast } from "sonner";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -7,13 +9,11 @@ import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 // import { ScrollArea } from "./ui/scroll-area"; // Removed - using native scroll
 import { Search, Plus, MessageSquare, X } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
 
 import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { useErrorNotifications } from "../lib/error-notifications";
 import { useRealtimeMessages } from "../hooks/useRealtimeMessages";
-import { useDebouncedCallback } from "../lib/useDebouncedCallback";
 
 import {
   getConversations,
@@ -36,6 +36,9 @@ import {
   type UIMessage as Message,
 } from "../lib/messaging-adapters";
 
+import type { OptimisticMessage } from "../types/messages";
+import { isOptimistic } from "../features/messages/utils";
+
 import type { RealtimeMessageRow } from "../lib/messaging-types";
 import { ChatWindow } from "./messaging/ChatWindow";
 
@@ -44,8 +47,6 @@ interface MainDashboardMessagingProps {
 }
 
 export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps) {
-  const { user, loading: authLoading } = useAuth();
-
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -60,11 +61,8 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
   const { showError, showErrorWithRetry } = useErrorNotifications();
 
   useEffect(() => {
-    if (!authLoading && user) {
-      getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
-    }
-  }, [authLoading, user]);
-
+    getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
+  }, []);
 
   // Realtime
   const handleNewMessage = (row: RealtimeMessageRow) => {
@@ -87,19 +85,22 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
       setConversations((prev) => prev.map((c) => (c.id === selectedConversation ? { ...c, unreadCount: 0 } : c)));
     }
 
-    loadConversations();
-    loadUnreadCount();
+    // ✅ Background updates - no loading spinner flicker
+    loadConversations({ background: true });
+    loadUnreadCount({ background: true });
   };
 
-  // ✅ debounce realtime refreshes
-  const [debouncedRefresh, cancelRefresh] = useDebouncedCallback(
-    () => loadConversations(false),
-    150
-  );
+  // Debounced loadConversations to prevent excessive calls
+  const debouncedLoadConversations = useCallback(() => {
+    const timeoutId = setTimeout(() => {
+      // ✅ Background updates - no loading spinner flicker
+      loadConversations({ background: true });
+    }, 150);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const handleConversationUpdate = () => {
-    cancelRefresh();
-    debouncedRefresh();
+    debouncedLoadConversations();
   };
 
   const { isConnected } = useRealtimeMessages({
@@ -108,14 +109,12 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     onConversationUpdate: handleConversationUpdate,
   });
 
-  // Initial load - wait for auth to complete
+  // Initial
   useEffect(() => {
-    if (!authLoading && user) {
-      loadConversations(true);
-      loadUnreadCount();
-    }
+    loadConversations();
+    loadUnreadCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user]);
+  }, []);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -126,22 +125,27 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation, currentUserId]);
 
-  // ✅ separate initial vs background loading to avoid flicker
-  const loadConversations = async (showSpinner = true) => {
+  const loadConversations = async (opts?: { background?: boolean }) => {
     try {
-      if (showSpinner) setLoading(true);
-      setError(null);
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
       const data: RPCConversation[] = await getConversations();
       setConversations(data.map(toUIConversation));
     } catch (err) {
       console.error("Failed to load conversations:", err);
-      setError(err);
-      showErrorWithRetry(err, loadConversations, {
-        title: "Failed to Load Conversations",
-        showRecoveryActions: true,
-      });
+      if (!opts?.background) {
+        setError(err);
+        showErrorWithRetry(err, () => loadConversations(), {
+          title: "Failed to Load Conversations",
+          showRecoveryActions: true,
+        });
+      }
     } finally {
-      if (showSpinner) setLoading(false);
+      if (!opts?.background) {
+        setLoading(false);
+      }
     }
   };
 
@@ -154,7 +158,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
       setMessages(transformed);
 
       await markAsRead(conversationId);
-      loadUnreadCount();
+      // Note: markAsRead already calls loadUnreadCount with background: true
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
     } catch (err) {
       console.error("Failed to load messages:", err);
@@ -165,19 +169,21 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     }
   };
 
-  const loadUnreadCount = async () => {
+  const loadUnreadCount = async (opts?: { background?: boolean }) => {
     try {
       const count = await getUnreadCount();
       setUnreadCount(count);
     } catch (err) {
       console.error("Failed to load unread count:", err);
+      // Silently fail on background updates to avoid disrupting UX
     }
   };
 
   const markAsRead = async (conversationId: string) => {
     try {
       await markMessagesRead(conversationId);
-      loadUnreadCount();
+      // ✅ Background update - no loading spinner flicker
+      loadUnreadCount({ background: true });
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
     } catch (err) {
       console.error("Failed to mark messages as read:", err);
@@ -189,36 +195,82 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
     setIsExpanded(true);
   };
 
-  // ✅ optimistic send that reconciles temp -> server id
   const handleSendMessage = async (text: string) => {
-    if (!selectedConversation || !text.trim()) return;
+    if (!selectedConversation || !text.trim() || !currentUserId) return;
     const body = text.trim();
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: Message = {
-      id: tempId,
-      text: body,
-      timestamp: new Date().toISOString(),
-      senderId: CURRENT_USER_SENTINEL,
-      senderName: "You",
-      read: true,
+
+    // 1) Add optimistic bubble with clientId
+    const clientId = uuid();
+    const optimistic: OptimisticMessage = {
+      clientId,
+      optimistic: true,
+      conversationId: selectedConversation,
+      authorId: currentUserId,
+      body,
+      createdAt: new Date().toISOString(),
     };
-    setMessages(prev =>
-      prev.some(m => m.id === tempId) ? prev :
-        [...prev, optimistic].sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    );
+
+    // Add to messages as any to maintain compatibility with UIMessage
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: clientId,
+        text: body,
+        timestamp: optimistic.createdAt,
+        senderId: CURRENT_USER_SENTINEL,
+        senderName: "You",
+        read: true,
+        conversationId: selectedConversation,
+        authorId: currentUserId,
+        body: body,
+        createdAt: optimistic.createdAt,
+      } as any,
+    ]);
+
     try {
+      // 2) RPC — return inserted id
       const messageId = await sendMessage(selectedConversation, body);
-      // ✅ replace optimistic with server message id
-      setMessages(prev => prev.map(m => (m.id === tempId ? { ...m, id: messageId } : m)));
-      await loadConversations(false); // background refresh only
+
+      // 3) Reconcile optimistic with server copy
+      setMessages((prev) =>
+        prev.map((m) => {
+          // Check if this is our optimistic message
+          if ((m as any).id === clientId) {
+            return {
+              id: String(messageId),
+              text: body,
+              timestamp: optimistic.createdAt,
+              senderId: CURRENT_USER_SENTINEL,
+              senderName: "You",
+              read: true,
+              conversationId: selectedConversation,
+              authorId: currentUserId,
+              body: body,
+              createdAt: optimistic.createdAt,
+            } as any;
+          }
+          return m;
+        })
+      );
+
+      // 4) Lightweight refresh for last-message preview (no spinner)
+      loadConversations({ background: true });
+      loadUnreadCount?.({ background: true });
     } catch (err) {
       console.error("Failed to send message:", err);
-      showError(err, { title: "Failed to Send Message", showRecoveryActions: true });
+      // Remove optimistic on failure
+      setMessages((prev) => prev.filter((m) => (m as any).id !== clientId));
+      toast.error("Failed to send message");
+      showError(err, {
+        title: "Failed to Send Message",
+        showRecoveryActions: true,
+      });
     }
   };
 
   const handleCreateConversation = async (participants: string[], isGroup: boolean) => {
     try {
+      console.log("onCreateConversation participants:", participants); // should be UUIDs, not emails
       const id = await createConversation(
         participants,
         isGroup ? "Group Chat" : undefined,
@@ -256,23 +308,6 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
   );
 
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
-
-  // Block UI until auth is ready
-  if (authLoading) {
-    return (
-      <Card className="p-4">
-        <div className="text-sm text-muted-foreground">Loading authentication...</div>
-      </Card>
-    );
-  }
-  
-  if (!user) {
-    return (
-      <Card className="p-4">
-        <div className="text-sm text-destructive">Please sign in to view messages.</div>
-      </Card>
-    );
-  }
 
   if (loading) {
     return (

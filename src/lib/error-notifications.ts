@@ -3,8 +3,6 @@ import { AppError, getErrorMessage, getErrorCode, getRecoveryActions, ErrorCode 
 
 export interface ErrorNotificationOptions {
   title?: string;
-  /** Optional long description to show in the UI / console. */
-  description?: string; // ✅ allow description so callers compile cleanly
   duration?: number;
   showRecoveryActions?: boolean;
   showTechnicalDetails?: boolean;
@@ -21,7 +19,6 @@ export const showErrorNotification = (
 ) => {
   const {
     title,
-    description,
     duration = 5000,
     showRecoveryActions = false,
     showTechnicalDetails = false,
@@ -68,26 +65,21 @@ export const showErrorNotification = (
   }
 
   // Show recovery actions as additional info
-  let finalDescription = description || message;
+  let description = message;
   if (showRecoveryActions && recoveryActions.length > 0) {
-    finalDescription += `\n\nSuggested actions:\n• ${recoveryActions.slice(0, 2).join('\n• ')}`;
+    description += `\n\nSuggested actions:\n• ${recoveryActions.slice(0, 2).join('\n• ')}`;
   }
 
   // Show technical details in development
   if (showTechnicalDetails && isAppError) {
-    finalDescription += `\n\nTechnical Details:\nError ID: ${error.correlationId.slice(-8)}\nCode: ${error.code}`;
-  }
-
-  // Log description to console if provided
-  if (description) {
-    console.error(description);
+    description += `\n\nTechnical Details:\nError ID: ${error.correlationId.slice(-8)}\nCode: ${error.code}`;
   }
 
   // Show toast based on type
   switch (notificationType) {
     case 'warning':
       toast.warning(notificationTitle, {
-        description: finalDescription,
+        description,
         duration,
         action: actions.length > 0 ? actions[0] : undefined,
       });
@@ -96,7 +88,7 @@ export const showErrorNotification = (
     case 'error':
     default:
       toast.error(notificationTitle, {
-        description: finalDescription,
+        description,
         duration,
         action: actions.length > 0 ? actions[0] : undefined,
       });
