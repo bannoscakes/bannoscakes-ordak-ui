@@ -425,9 +425,9 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
         </Card>
       ) : (
         // Expanded view - full messaging interface
-        <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
+        <div className="flex h-full w-full overflow-hidden rounded-2xl border flex-1 min-h-0">
           {/* Conversations Sidebar */}
-          <div className="col-span-4 border rounded-lg bg-card flex flex-col min-h-0 min-w-0 overflow-hidden">
+          <aside className="flex-none w-72 min-w-[18rem] border-r bg-white flex flex-col">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">Conversations</h4>
@@ -483,7 +483,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
           </div>
 
           {/* Chat Area */}
-          <div className="col-span-8 border rounded-lg bg-card flex flex-col min-h-0 min-w-0">
+          <section className="flex-1 min-w-0 bg-white flex flex-col">
             {selectedConversation && selectedConv ? (
               <ChatWindow conversation={selectedConv} messages={messages} onSendMessage={handleSendMessage} />
             ) : (
