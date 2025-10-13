@@ -19,6 +19,6 @@ export const config: AppConfig = {
   // Default to true so mocks work out of the box in local dev
   useMocks: String(import.meta.env.VITE_USE_MOCKS ?? "true").toLowerCase() === "true",
   persistSupabaseSession:
-    String(import.meta.env.VITE_SUPABASE_PERSIST_SESSION ?? "false").toLowerCase() === "true",
+    String(import.meta.env.VITE_SUPABASE_PERSIST_SESSION ?? "true").toLowerCase() === "true",
   supabaseStorageKey: (import.meta.env.VITE_SUPABASE_STORAGE_KEY as string | undefined) ?? "ordak-auth-token",
 } as const;
