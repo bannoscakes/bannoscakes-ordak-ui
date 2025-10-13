@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuthContext } from "../../contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -13,6 +14,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess, userType = 'staff' }: LoginFormProps) {
+  const { signIn } = useAuthContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -29,10 +31,7 @@ export function LoginForm({ onSuccess, userType = 'staff' }: LoginFormProps) {
     setError("");
 
     try {
-      // Import auth service dynamically to avoid circular imports
-      const { authService } = await import('../../lib/auth');
-      
-      const result = await authService.signIn(email, password);
+      const result = await signIn(email, password);
       
       if (result.success) {
         toast.success("Signed in successfully");

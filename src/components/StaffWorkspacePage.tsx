@@ -4,7 +4,7 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import {
   Tabs,
   TabsContent,
@@ -104,7 +104,7 @@ const getRealisticSize = (
 export function StaffWorkspacePage({
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuthContext();
   const displayName = user?.fullName || user?.email || "Signed in";
 
   const [orders, setOrders] = useState<QueueItem[]>([]);

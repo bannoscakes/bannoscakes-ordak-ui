@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuthContext } from "../../contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -14,6 +15,7 @@ interface SignupFormProps {
 }
 
 export function SignupForm({ onSuccess, onCancel }: SignupFormProps) {
+  const { signUp } = useAuthContext();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -53,9 +55,7 @@ export function SignupForm({ onSuccess, onCancel }: SignupFormProps) {
     setError("");
 
     try {
-      const { authService } = await import('../../lib/auth');
-      
-      const result = await authService.signUp(
+      const result = await signUp(
         formData.email,
         formData.password,
         formData.fullName,

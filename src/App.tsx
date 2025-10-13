@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 // ✅ real auth system (from the audit)
-import { AuthProvider } from "./contexts/AuthContext";
-import { useAuth } from "./hooks/useAuth";
+import { AuthProvider, useAuthContext } from "./contexts/AuthContext";
 import type { AuthUser } from "./lib/auth";
 
 // ✅ real login screen
@@ -31,7 +30,7 @@ export default function App() {
 }
 
 function RootApp() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthContext();
 
   // Handle panic logout route
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
@@ -54,7 +53,7 @@ function RootApp() {
  */
 function RoleBasedRouter() {
   // ✅ All hooks declared unconditionally at the top
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useAuthContext();
   const [currentUrl, setCurrentUrl] = useState(window.location.href);
   const [didRoute, setDidRoute] = useState(false);
 

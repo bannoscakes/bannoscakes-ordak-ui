@@ -10,7 +10,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "./ui/tabs";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare, Briefcase } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
@@ -101,7 +101,7 @@ export function SupervisorWorkspacePage({
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuthContext();
   const displayName = user?.fullName || user?.email || "Signed in";
 
   const [orders, setOrders] = useState<QueueItem[]>([]);
