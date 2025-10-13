@@ -282,8 +282,10 @@ export function QuickActions({ store }: QuickActionsProps) {
 
       {/* Messaging Component */}
       {showMessaging && (
-        <Card className="p-6">
-          <MainDashboardMessaging onClose={handleCloseMessaging} />
+        <Card className="p-6 h-[600px] flex flex-col">
+          <div className="flex-1 min-h-0">
+            <MainDashboardMessaging onClose={handleCloseMessaging} />
+          </div>
         </Card>
       )}
 

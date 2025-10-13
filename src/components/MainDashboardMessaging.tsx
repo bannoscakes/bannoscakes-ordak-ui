@@ -340,7 +340,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col">
       {/* Status and Actions Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -425,7 +425,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
         </Card>
       ) : (
         // Expanded view - full messaging interface
-        <div className="grid grid-cols-12 gap-4 h-[70vh] min-h-0">
+        <div className="grid grid-cols-12 gap-4 flex-1 min-h-0">
           {/* Conversations Sidebar */}
           <div className="col-span-4 border rounded-lg bg-card flex flex-col min-h-0 min-w-0 overflow-hidden">
             <div className="p-4 border-b">

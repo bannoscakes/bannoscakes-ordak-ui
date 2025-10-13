@@ -13,15 +13,12 @@ export function getSupabase(): SupabaseClient {
   }
   const persistSession = config.persistSupabaseSession;
   const authOptions: Parameters<typeof createClient>[2]['auth'] = {
-    persistSession,
+    persistSession: true,                           // ✅ keep session on reload
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined, // ✅ where to keep it
+    storageKey: config.supabaseStorageKey,         // ✅ stable key
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: config.supabaseStorageKey,
   };
-
-  if (persistSession && typeof window !== 'undefined') {
-    authOptions.storage = window.localStorage;
-  }
 
   _client = createClient(url, anon, {
     auth: authOptions,
