@@ -290,7 +290,13 @@ export function QuickActions({ store }: QuickActionsProps) {
       {/* Admin Messaging Dialog */}
       <AdminMessagingDialog
         open={showMessaging}
-        onOpenChange={setShowMessaging}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseMessaging();
+          } else {
+            setShowMessaging(true);
+          }
+        }}
         initialConversationId={initialConversationId}
       />
 
