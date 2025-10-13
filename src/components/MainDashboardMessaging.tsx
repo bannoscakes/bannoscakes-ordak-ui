@@ -44,9 +44,10 @@ import { ChatWindow } from "./messaging/ChatWindow";
 
 interface MainDashboardMessagingProps {
   onClose?: () => void;
+  initialConversationId?: string | null;
 }
 
-export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps) {
+export function MainDashboardMessaging({ onClose, initialConversationId }: MainDashboardMessagingProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -63,6 +64,21 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
   useEffect(() => {
     getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
   }, []);
+
+  // Handle initial conversation selection
+  useEffect(() => {
+    if (initialConversationId) {
+      // Wait for conversations to load before setting selected conversation
+      if (conversations.length > 0) {
+        setSelectedConversation(initialConversationId);
+        setIsExpanded(true);
+      }
+    } else {
+      // Reset selected conversation when initialConversationId is null
+      setSelectedConversation(null);
+      setIsExpanded(false);
+    }
+  }, [initialConversationId, conversations.length]);
 
   // Realtime
   const handleNewMessage = (row: RealtimeMessageRow) => {
