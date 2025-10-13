@@ -1,9 +1,12 @@
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
-  import { defineConfig } from 'vite';
-  import react from '@vitejs/plugin-react-swc';
-  import path from 'path';
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const DEV_PORT = Number(env.VITE_DEV_PORT ?? 3000);
 
-  export default defineConfig({
+  return {
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -54,7 +57,17 @@
       outDir: 'build',
     },
     server: {
-      port: 3001,
-      open: true,
+      port: DEV_PORT,
+      strictPort: true,      // never hop to 3001/3002
+      host: 'localhost',
+      open: false,
+      hmr: { clientPort: DEV_PORT },
     },
-  });
+    preview: {
+      port: DEV_PORT,
+      strictPort: true,
+      host: 'localhost',
+      open: false,
+    },
+  };
+});
