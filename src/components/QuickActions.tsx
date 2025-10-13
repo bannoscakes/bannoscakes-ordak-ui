@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { MainDashboardMessaging } from "./MainDashboardMessaging";
+import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -103,6 +103,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [selectedPhotoReviews, setSelectedPhotoReviews] = useState<Set<string>>(new Set());
   const [showReworkDialog, setShowReworkDialog] = useState(false);
   const [showMessaging, setShowMessaging] = useState(false);
+  const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   
 
   const actions = [
@@ -239,8 +240,14 @@ export function QuickActions({ store }: QuickActionsProps) {
     setSelectedPhotoReviews(new Set());
   };
 
+  const openMessages = (convId?: string) => {
+    setInitialConversationId(convId ?? null);
+    setShowMessaging(true);
+  };
+
   const handleCloseMessaging = () => {
     setShowMessaging(false);
+    setInitialConversationId(null);
   };
 
   return (
@@ -263,7 +270,7 @@ export function QuickActions({ store }: QuickActionsProps) {
                 } else if (action.id === "store-report") {
                   handleStoreReport();
                 } else if (action.id === "messages") {
-                  setShowMessaging(true);
+                  openMessages();
                 } else {
                   setActiveModal(action.id);
                 }
@@ -280,14 +287,12 @@ export function QuickActions({ store }: QuickActionsProps) {
         </div>
       </Card>
 
-      {/* Messaging Component */}
-      {showMessaging && (
-        <Card className="p-6 h-[600px] flex flex-col">
-          <div className="flex-1 min-h-0">
-            <MainDashboardMessaging onClose={handleCloseMessaging} />
-          </div>
-        </Card>
-      )}
+      {/* Admin Messaging Dialog */}
+      <AdminMessagingDialog
+        open={showMessaging}
+        onOpenChange={setShowMessaging}
+        initialConversationId={initialConversationId}
+      />
 
       {/* Find Order Modal */}
       <Dialog open={activeModal === "find-order"} onOpenChange={(open) => !open && closeModal()}>
