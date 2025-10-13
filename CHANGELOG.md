@@ -1,3 +1,39 @@
+## [v0.8.0-beta] - 2025-01-13 - Authentication System Lockdown & Dev Environment Hardening
+
+### 🔒 Authentication System Lockdown
+- **Session Persistence Control**: Added `VITE_SUPABASE_PERSIST_SESSION` environment variable for explicit control
+- **Auto-Login Prevention**: Disabled demo/auto-login flags in development environment
+- **Demo Mode Gating**: Supervisor demo login now requires `MODE === 'demo'` (never true in dev)
+- **Storage Management**: Sign-out properly clears both localStorage and sessionStorage
+- **Auth Hydration Gate**: Maintained proper loading states during authentication initialization
+
+### 🛡️ Development Environment Hardening
+- **Port Enforcement**: Dev server locked to `localhost:3000` with `--strictPort` (fails if busy)
+- **No Port Hopping**: Eliminated silent fallback to 3001/3002 ports
+- **HMR Alignment**: Fixed port mismatch between server and Hot Module Replacement client
+- **Robust Port Validation**: Improved `VITE_DEV_PORT` handling to prevent server failures
+- **Single URL Architecture**: All users access root path with role-based internal routing
+
+### 🔧 Configuration Improvements
+- **Environment Variables**: Added comprehensive `.env.example` with port discipline
+- **Script Updates**: Updated `dev` and `preview` scripts to respect `VITE_DEV_PORT`
+- **Vite Configuration**: Enhanced with `loadEnv` support and proper port handling
+- **Type Safety**: Maintained TypeScript compatibility throughout auth system
+
+### 📋 Security Enhancements
+- **No Surprise Logins**: Eliminated auto-login from stored sessions in development
+- **Explicit Authentication**: All authentication now requires explicit user action
+- **Session Control**: Clear separation between development and production session behavior
+- **Demo Mode Isolation**: Demo features completely isolated from development workflow
+
+### 🎯 Developer Experience
+- **Predictable Behavior**: Consistent port usage and authentication flow
+- **Clear Error Messages**: Port conflicts now fail loudly with clear error messages
+- **Environment Clarity**: Clear distinction between development and production configurations
+- **Debugging Support**: Maintained comprehensive logging for authentication flow debugging
+
+---
+
 ## [v0.7.0-beta] - 2025-02-01 - Messaging System Integration & Optimistic Updates
 
 ### 🎯 Overview
