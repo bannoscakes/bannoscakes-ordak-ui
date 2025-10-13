@@ -12,9 +12,15 @@ export function getSupabase(): SupabaseClient {
     throw new Error('Supabase env not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
   }
   const persistSession = config.persistSupabaseSession;
+  const storage =
+    typeof window !== 'undefined'
+      ? persistSession
+        ? window.localStorage
+        : undefined
+      : undefined;
   const authOptions: Parameters<typeof createClient>[2]['auth'] = {
-    persistSession: true,                           // ✅ keep session on reload
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined, // ✅ where to keep it
+    persistSession,                                 // ✅ keep session on reload
+    storage,                                        // ✅ where to keep it
     storageKey: config.supabaseStorageKey,         // ✅ stable key
     autoRefreshToken: true,
     detectSessionInUrl: true,
