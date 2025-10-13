@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { config } from './config';
+import { clearSupabaseAuthStorage } from './supabase-storage';
 
 let _client: SupabaseClient | null = null;
 
@@ -12,6 +13,9 @@ export function getSupabase(): SupabaseClient {
     throw new Error('Supabase env not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
   }
   const persistSession = config.persistSupabaseSession;
+  if (!persistSession) {
+    clearSupabaseAuthStorage();
+  }
   const storage =
     typeof window !== 'undefined'
       ? persistSession
