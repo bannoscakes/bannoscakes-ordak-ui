@@ -480,7 +480,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
                 ))}
               </div>
             </div>
-          </div>
+          </aside>
 
           {/* Chat Area */}
           <section className="flex-1 min-w-0 bg-white flex flex-col">
@@ -495,7 +495,7 @@ export function MainDashboardMessaging({ onClose }: MainDashboardMessagingProps)
                 </div>
               </div>
             )}
-          </div>
+          </section>
         </div>
       )}
 
