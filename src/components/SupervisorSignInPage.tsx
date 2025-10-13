@@ -7,8 +7,8 @@ import { Separator } from "./ui/separator";
 import { Scan, AlertCircle, Shield } from "lucide-react";
 import { toast } from "sonner";
 
-// Gate mock supervisor login behind environment flag (default OFF)
-const DEMO = import.meta.env.VITE_SUPERVISOR_DEMO_LOGIN === "true";
+// Gate mock supervisor login behind demo mode (never true in dev)
+const DEMO = import.meta.env.MODE === 'demo' && import.meta.env.VITE_SUPERVISOR_DEMO_LOGIN === 'true';
 
 interface SupervisorSignInPageProps {
   onSignIn: (email: string, pin: string) => void;

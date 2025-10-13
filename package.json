@@ -7,8 +7,9 @@
   },
   "packageManager": "npm@11",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --strictPort --open false",
     "build": "vite build",
+    "preview": "vite preview --strictPort --open false",
     "test": "vitest",
     "test:single-url": "vitest src/tests/single-url-architecture.test.tsx",
     "lint": "eslint .",
