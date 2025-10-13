@@ -4,7 +4,7 @@ import path from 'path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const DEV_PORT = Number(env.VITE_DEV_PORT ?? 3000);
+  const DEV_PORT = Number(env.VITE_DEV_PORT) || 3000;
 
   return {
     plugins: [react()],
