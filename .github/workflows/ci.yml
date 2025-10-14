@@ -15,9 +15,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Guard RPC-only writes
-        run: npm run guard:no-direct-writes
-
       - name: Use Node 18
         uses: actions/setup-node@v4
         with:
@@ -26,6 +23,9 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Guard RPC-only writes
+        run: bash scripts/scan-direct-writes.sh
 
       # Type-check only on main (skip on dev while we clean imports/types)
       - name: Type check (main only)
