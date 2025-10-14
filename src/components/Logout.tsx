@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { authService } from "@/lib/auth";
+import { safePushState } from "@/lib/safeNavigate";
 
 export default function Logout() {
   useEffect(() => {
@@ -11,7 +12,7 @@ export default function Logout() {
         console.error('Sign out error:', error);
       } finally {
         // Always redirect to sign-in page after sign out
-        window.location.replace("/sign-in");
+        safePushState("/sign-in");
       }
     })();
   }, []);

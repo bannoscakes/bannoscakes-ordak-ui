@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
+import { safePushState } from "@/lib/safeNavigate";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -114,18 +115,22 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
                 } ${(item.isProduction || item.isMonitor || item.isAnalytics || item.isStaff || item.isSettings) && !collapsed ? 'ml-4 w-[calc(100%-1rem)]' : ''} ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90' : 'hover:bg-sidebar-accent text-sidebar-foreground'} ${!isClickable ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => {
                   if (isClickable) {
+                    // Single URL architecture - all navigation stays on "/" with query params
                     if (item.id === "staff") {
-                      window.history.pushState({}, '', '/staff');
+                      safePushState('/?view=staff');
                     } else if (item.id === "staff-workspace") {
-                      window.history.pushState({}, '', '/workspace/staff');
+                      safePushState('/?view=staff-workspace');
                     } else if (item.id === "supervisor-workspace") {
-                      window.history.pushState({}, '', '/workspace/supervisor');
+                      safePushState('/?view=supervisor-workspace');
                     } else if (item.id === "time-payroll") {
-                      window.history.pushState({}, '', '/admin/time');
+                      safePushState('/?view=time-payroll');
                     } else if (item.id === "bannos-settings") {
-                      window.history.pushState({}, '', '/bannos/settings');
+                      safePushState('/?view=bannos-settings');
                     } else if (item.id === "flourlane-settings") {
-                      window.history.pushState({}, '', '/flourlane/settings');
+                      safePushState('/?view=flourlane-settings');
+                    } else {
+                      // Default to root with view parameter
+                      safePushState(`/?view=${item.id}`);
                     }
                     onViewChange(item.id);
                   }
