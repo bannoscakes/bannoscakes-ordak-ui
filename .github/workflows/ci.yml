@@ -41,7 +41,6 @@ jobs:
         run: |
           ! grep -r "service_role" --include="*.ts" --include="*.tsx" src/ || (echo "Found 'service_role' in sources" && exit 1)
 
-
       # Build only on main
       - name: Build (main only)
         if: ${{ github.ref == 'refs/heads/main' }}
