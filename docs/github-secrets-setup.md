@@ -17,11 +17,19 @@ To enable CI builds, you must add the following secrets to your GitHub repositor
 
 ### Required Secrets
 
-| Secret Name | Value | Description |
-|-------------|-------|-------------|
-| `VITE_SUPABASE_URL` | `https://iwavciibrspfjezujydc.supabase.co` | Your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3YXZjaWlicnNwZmplenVqeWRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjEyNDgsImV4cCI6MjA3MzYzNzI0OH0.38Z23XIXV3lOOE7Bzq-L0_BipY1wfdXu07hMzN4I6Ec` | Your Supabase anonymous key |
+**⚠️ Important:** Use placeholder values in the table below. Get your actual values from your Supabase project settings.
+
+| Secret Name | Example Value | Description |
+|-------------|---------------|-------------|
+| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Your Supabase project URL (from Project Settings → API) |
+| `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | Your Supabase anonymous key (from Project Settings → API) |
 | `VITE_APP_URL` | `http://localhost:3000` | Application URL |
+
+**How to get your actual values:**
+1. Go to your Supabase project dashboard
+2. Navigate to **Settings** → **API**
+3. Copy the **Project URL** for `VITE_SUPABASE_URL`
+4. Copy the **anon public** key for `VITE_SUPABASE_ANON_KEY`
 
 ### Optional Secrets
 
