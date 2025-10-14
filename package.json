@@ -26,6 +26,7 @@
     "pre-release": "node -e \"console.log('Preparing release…')\" && npm run changelog",
     "post-release": "git push && git push --tags && echo \"Tag pushed. GitHub Release will auto-publish if Actions is enabled.\"",
     "guard:rpc": "bash scripts/guard-rpc.sh",
+    "guard:no-direct-writes": "bash scripts/scan-direct-writes.sh",
     "preflight": "bash scripts/preflight-no-dupes.sh"
   },
   "dependencies": {

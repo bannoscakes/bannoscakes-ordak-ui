@@ -36,14 +36,18 @@ jobs:
         run: |
           ! grep -r "service_role" --include="*.ts" --include="*.tsx" src/ || (echo "Found 'service_role' in sources" && exit 1)
 
+      # Security check: block direct database writes from frontend
+      - name: Security check - no direct table writes in src/
+        run: npm run guard:no-direct-writes
+
       # Build only on main
       - name: Build (main only)
         if: ${{ github.ref == 'refs/heads/main' }}
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_APP_URL: http://localhost:5173
+          VITE_SUPABASE_URL: https://iwavciibrspfjezujydc.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3YXZjaWlicnNwZmplenVqeWRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjEyNDgsImV4cCI6MjA3MzYzNzI0OH0.38Z23XIXV3lOOE7Bzq-L0_BipY1wfdXu07hMzN4I6Ec
+          VITE_APP_URL: http://localhost:3000
 
       # Tests only on main (optional)
       - name: Tests (main only, if present)
