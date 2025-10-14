@@ -244,7 +244,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="overflow-x-auto">
         {/* Header */}
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -400,17 +400,17 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                             <p className="truncate">{item.customerName}</p>
                           </div>
                           
-                          <div>
+                          <div className="hidden md:block">
                             <p className="text-sm text-muted-foreground">Product</p>
                             <p className="truncate">{item.product}</p>
                           </div>
                           
-                          <div>
+                          <div className="hidden lg:block">
                             <p className="text-sm text-muted-foreground">Due Time</p>
                             <p>{item.dueTime}</p>
                           </div>
                           
-                          <div>
+                          <div className="hidden md:block">
                             <p className="text-sm text-muted-foreground">Priority</p>
                             <Badge className={getPriorityColor(item.priority)} variant="secondary">
                               {item.priority}

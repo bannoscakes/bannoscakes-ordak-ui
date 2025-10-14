@@ -339,9 +339,9 @@ export function MessagesPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] bg-background min-h-0">
+    <div className="flex h-[calc(100vh-2rem)] bg-background min-h-0 overflow-hidden">
       {/* Sidebar */}
-      <div className="w-80 border-r bg-card flex flex-col min-h-0 min-w-0 overflow-hidden">
+      <div className="flex-none w-72 min-w-[18rem] md:w-80 md:min-w-[20rem] border-r bg-card flex flex-col min-h-0 overflow-hidden">
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -385,7 +385,7 @@ export function MessagesPage() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         {selectedConversation && selectedConv ? (
           <ChatWindow conversation={selectedConv} messages={messages} onSendMessage={handleSendMessage} />
         ) : (
