@@ -1,53 +1,27 @@
-# CODEOWNERS - Code Review Requirements
-# 
-# This file defines ownership and review requirements for critical files.
-# Any PR modifying these files requires approval from the designated team.
-#
-# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Auth system — LOCKED
+/src/lib/auth.ts                 @bannoscakes/architecture-team
+/src/contexts/AuthContext.tsx    @bannoscakes/architecture-team
+/src/hooks/useAuth.ts            @bannoscakes/architecture-team
+/src/App.tsx                     @bannoscakes/architecture-team
+/vite.config.ts                  @bannoscakes/architecture-team
+/package.json                    @bannoscakes/architecture-team
 
-# ==============================================================================
-# Auth System - Locked (see docs/AUTH_SYSTEM_LOCKED.md)
-# ⚠️ DO NOT MODIFY THESE FILES WITHOUT ARCHITECTURAL REVIEW ⚠️
-# ==============================================================================
+# Single URL architecture
+/docs/SINGLE_URL_ARCHITECTURE.md                 @bannoscakes/architecture-team
+/.eslintrc.single-url.js                         @bannoscakes/architecture-team
+/src/tests/single-url-architecture.test.tsx      @bannoscakes/architecture-team
+/docs/AUTH_SYSTEM_LOCKED.md                      @bannoscakes/architecture-team
 
-src/lib/auth.ts                   @architecture-team
-src/contexts/AuthContext.tsx      @architecture-team
-src/hooks/useAuth.ts              @architecture-team
-src/App.tsx                       @architecture-team
-vite.config.ts                    @architecture-team
-package.json                      @architecture-team
+# Messaging
+/src/features/messages/**        @bannoscakes/architecture-team
 
-# ==============================================================================
-# Single URL Architecture
-# These files enforce role-based routing without URL-based separation
-# ==============================================================================
+# RPC & Database
+/src/lib/rpc-client.ts           @bannoscakes/backend-team
+/supabase/sql/**                 @bannoscakes/database-team
 
-src/tests/single-url-architecture.test.tsx  @architecture-team
-.eslintrc.single-url.js                     @architecture-team
-docs/SINGLE_URL_ARCHITECTURE.md             @architecture-team
+# CI & Tests
+/.github/workflows/**            @bannoscakes/architecture-team
+/tests/**                        @bannoscakes/architecture-team
 
-# ==============================================================================
-# RPC Client & Database
-# Critical for all database operations and backend integration
-# ==============================================================================
-
-src/lib/rpc-client.ts             @backend-team
-supabase/sql/**                   @database-team
-
-# ==============================================================================
-# CI/CD & Automation
-# Workflow changes require DevOps review
-# ==============================================================================
-
-.github/workflows/**              @devops-team
-scripts/**                        @devops-team
-
-# ==============================================================================
-# Documentation
-# Core architectural and system documentation
-# ==============================================================================
-
-docs/AUTH_SYSTEM_LOCKED.md        @architecture-team
-docs/PROJECT_STATUS.md            @devops-team
-docs/AUDIT_PLAN.md                @devops-team
-
+# Optional fallback
+*                                 @bannoscakes/architecture-team
