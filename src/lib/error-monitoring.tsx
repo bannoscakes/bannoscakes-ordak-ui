@@ -4,26 +4,25 @@ import * as Sentry from "@sentry/react";
  * Initialize Sentry error monitoring
  * Only initializes if VITE_SENTRY_DSN is provided
  */
-export function initErrorMonitoring() {
+export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   
   if (!dsn) {
-    console.log("Sentry not configured - VITE_SENTRY_DSN not provided");
-    return;
+    return; // no-op if DSN not set
   }
 
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-    ],
-    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
-    debug: import.meta.env.DEV,
+    integrations: [Sentry.browserTracingIntegration()],
+    tracesSampleRate: import.meta.env.DEV ? 0 : 0.1,
+    replaysSessionSampleRate: 0,          // off by default
+    replaysOnErrorSampleRate: 0.5,        // optional: replay on errors only
   });
-
-  console.log("Sentry initialized for error monitoring");
 }
+
+// Backward compatibility
+export const initErrorMonitoring = initSentry;
 
 /**
  * Sentry Error Boundary component

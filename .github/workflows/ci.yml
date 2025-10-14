@@ -12,6 +12,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Guard RPC-only writes
+        run: npm run guard:no-direct-writes
 
       - name: Use Node 18
         uses: actions/setup-node@v4
@@ -36,9 +41,6 @@ jobs:
         run: |
           ! grep -r "service_role" --include="*.ts" --include="*.tsx" src/ || (echo "Found 'service_role' in sources" && exit 1)
 
-      # Security check: block direct database writes from frontend
-      - name: Security check - no direct table writes in src/
-        run: npm run guard:no-direct-writes
 
       # Build only on main
       - name: Build (main only)
