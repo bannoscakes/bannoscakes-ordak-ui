@@ -15,7 +15,7 @@ export function initSentry() {
     dsn,
     environment: import.meta.env.MODE,
     integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: import.meta.env.DEV ? 0 : 0.1,
+    tracesSampleRate: import.meta.env.DEV ? 1.0 : 0.1,
     replaysSessionSampleRate: 0,          // off by default
     replaysOnErrorSampleRate: 0.5,        // optional: replay on errors only
   });
