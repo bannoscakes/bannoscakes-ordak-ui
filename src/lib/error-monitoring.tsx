@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react";
+import { BrowserTracing } from "@sentry/tracing";
 
 /**
  * Initialize Sentry error monitoring
@@ -16,7 +17,7 @@ export function initErrorMonitoring() {
     dsn,
     environment: import.meta.env.MODE,
     integrations: [
-      new Sentry.BrowserTracing(),
+      new BrowserTracing(),
     ],
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
     debug: import.meta.env.DEV,
@@ -50,7 +51,7 @@ export const SentryErrorBoundary = Sentry.withErrorBoundary(
     ),
     beforeCapture: (scope, error, errorInfo) => {
       scope.setTag("errorBoundary", true);
-      scope.setContext("errorInfo", errorInfo);
+      scope.setContext("errorInfo", errorInfo as any);
     },
   }
 );
