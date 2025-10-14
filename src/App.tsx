@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import type { AuthUser } from "./lib/auth";
+import { safePushState } from "./lib/safeNavigate";
 
 // ✅ real login screen
 import { LoginForm } from "./components/Auth/LoginForm";
@@ -101,12 +102,8 @@ function RoleBasedRouter() {
 
   // Single URL architecture - all users stay on "/"
   const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
-    try {
-      // Always redirect to root path "/" - role-based routing is internal
-      window.history.pushState({}, '', '/');
-    } catch (error) {
-      console.error('Error redirecting:', error);
-    }
+    // Always redirect to root path "/" - role-based routing is internal
+    safePushState('/');
   };
 
   // ✅ Single effect that handles all routing logic - ROLE-BASED, not URL-based
@@ -164,14 +161,9 @@ function RoleBasedRouter() {
  * Queue navigation helper - SPA compatible
  */
 function navigateToQueue(queueType: 'bannos' | 'flourlane') {
-  try {
-    const url = `/?page=${queueType}-production&view=unassigned`;
-    // Use pushState which is already patched to trigger handleUrlChange
-    // No need to manually dispatch popstate event as it causes double triggering
-    window.history.pushState({}, '', url);
-  } catch (error) {
-    console.error('Navigation error:', error);
-  }
+  const url = `/?page=${queueType}-production&view=unassigned`;
+  // Use safe navigation to prevent /false routes
+  safePushState(url);
 }
 
 // UnauthorizedAccess component removed - not needed with single URL architecture
