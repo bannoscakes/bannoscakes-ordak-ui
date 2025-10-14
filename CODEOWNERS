@@ -22,6 +22,3 @@
 # CI & Tests
 /.github/workflows/**            @bannoscakes/architecture-team
 /tests/**                        @bannoscakes/architecture-team
-
-# Optional fallback
-*                                 @bannoscakes/architecture-team
