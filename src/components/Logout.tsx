@@ -11,8 +11,8 @@ export default function Logout() {
       } catch (error) {
         console.error('Sign out error:', error);
       } finally {
-        // Always redirect to sign-in page after sign out
-        safePushState("/sign-in");
+        // Always redirect to root page after sign out (single URL architecture)
+        safePushState("/");
       }
     })();
   }, []);

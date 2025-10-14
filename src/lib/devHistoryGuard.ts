@@ -4,7 +4,8 @@ export function installDevHistoryGuard() {
 
   window.history.pushState = ((data: any, title: string, url?: string | URL | null) => {
     const to = typeof url === "string" ? url : (url instanceof URL ? url.pathname + url.search : url);
-    if (to === "false" || to === "" || typeof to !== "string") {
+    // Allow undefined/null for no URL change, but block suspicious values
+    if (to === "false" || to === "") {
       // eslint-disable-next-line no-console
       console.warn("[dev-history-guard] blocked pushState", { to, stack: new Error().stack?.split("\n").slice(0,6).join("\n") });
       return; // block it in dev so it can't flip to /false
