@@ -20,27 +20,28 @@ jobs:
               - 'supabase/sql/**'
               - 'supabase/migrations/**'
       
-      - name: Skip if no SQL changes
-        if: steps.changes.outputs.sql != 'true'
-        run: echo "No SQL changes; skipping Supabase Preview." && exit 0
-
       - name: Checkout
+        if: steps.changes.outputs.sql == 'true'
         uses: actions/checkout@v4
 
       - name: Use Node 18
+        if: steps.changes.outputs.sql == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
       - name: Install
+        if: steps.changes.outputs.sql == 'true'
         run: npm ci
 
-      # Add your actual Supabase preview steps here
-      # This is a placeholder - replace with your actual Supabase preview logic
       - name: Supabase Preview
         if: steps.changes.outputs.sql == 'true'
         run: |
           echo "SQL changes detected, running Supabase preview..."
           # Add your actual Supabase preview commands here
           # For example: supabase db diff, supabase db push, etc.
+
+      - name: No SQL changes detected
+        if: steps.changes.outputs.sql != 'true'
+        run: echo "No SQL changes detected; skipping Supabase Preview."
