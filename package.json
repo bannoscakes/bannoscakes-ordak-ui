@@ -27,7 +27,8 @@
     "post-release": "git push && git push --tags && echo \"Tag pushed. GitHub Release will auto-publish if Actions is enabled.\"",
     "guard:rpc": "bash scripts/guard-rpc.sh",
     "guard:no-direct-writes": "bash scripts/scan-direct-writes.sh",
-    "preflight": "bash scripts/preflight-no-dupes.sh"
+    "preflight": "bash scripts/preflight-no-dupes.sh",
+    "security:validate": "npm run guard:no-direct-writes && npm run type-check"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",
