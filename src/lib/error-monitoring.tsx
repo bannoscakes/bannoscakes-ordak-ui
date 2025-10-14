@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/react";
-import { BrowserTracing } from "@sentry/tracing";
 
 /**
  * Initialize Sentry error monitoring
@@ -17,7 +16,7 @@ export function initErrorMonitoring() {
     dsn,
     environment: import.meta.env.MODE,
     integrations: [
-      new BrowserTracing(),
+      Sentry.browserTracingIntegration(),
     ],
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
     debug: import.meta.env.DEV,
