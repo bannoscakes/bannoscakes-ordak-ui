@@ -1,0 +1,46 @@
+name: Supabase Preview
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/sql/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/supabase-preview.yml'
+
+jobs:
+  preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            sql:
+              - 'supabase/sql/**'
+              - 'supabase/migrations/**'
+      
+      - name: Skip if no SQL changes
+        if: steps.changes.outputs.sql != 'true'
+        run: echo "No SQL changes; skipping Supabase Preview." && exit 0
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      # Add your actual Supabase preview steps here
+      # This is a placeholder - replace with your actual Supabase preview logic
+      - name: Supabase Preview
+        if: steps.changes.outputs.sql == 'true'
+        run: |
+          echo "SQL changes detected, running Supabase preview..."
+          # Add your actual Supabase preview commands here
+          # For example: supabase db diff, supabase db push, etc.
