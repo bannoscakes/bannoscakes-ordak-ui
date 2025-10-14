@@ -48,7 +48,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_APP_URL: ${{ secrets.VITE_APP_URL || 'http://localhost:3000' }}
+          VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
 
       # Tests only on main (optional)
       - name: Tests (main only, if present)
