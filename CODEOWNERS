@@ -48,7 +48,6 @@ scripts/**                        @devops-team
 # ==============================================================================
 
 docs/AUTH_SYSTEM_LOCKED.md        @architecture-team
-docs/SINGLE_URL_ARCHITECTURE.md   @architecture-team
 docs/PROJECT_STATUS.md            @devops-team
 docs/AUDIT_PLAN.md                @devops-team
 
