@@ -387,7 +387,21 @@ npm run validate:architecture
 
 **Status:** ✅ Active (includes ESLint + tests)
 
-#### 4. TypeScript Type Checking
+#### 4. No Direct Database Writes (`scripts/scan-direct-writes.sh`)
+**Purpose:** Block direct table writes from frontend - enforce RPC-only access
+
+```bash
+#!/usr/bin/env bash
+# Fails if .from().insert|update|delete patterns found in src/
+# All writes must use SECURITY DEFINER RPCs
+npm run guard:no-direct-writes
+```
+
+**Status:** ✅ Active  
+**Security Model:** All mutations must go through SECURITY DEFINER RPCs. Direct `.from().insert|update|delete` is blocked in CI.  
+**RLS Baseline:** Deferred to v1.0 hardening; internal-only while RLS is off.
+
+#### 5. TypeScript Type Checking
 **Purpose:** Ensure type safety across the codebase
 
 ```bash
@@ -403,6 +417,7 @@ npm run type-check
   "scripts": {
     "dev": "vite --port 3000 --strictPort --open false",
     "guard:rpc": "bash scripts/guard-rpc.sh",
+    "guard:no-direct-writes": "bash scripts/scan-direct-writes.sh",
     "preflight": "bash scripts/preflight-no-dupes.sh",
     "validate:architecture": "npm run test:single-url && npm run lint:single-url && npm run type-check",
     "lint:single-url": "eslint . --config .eslintrc.single-url.js",
