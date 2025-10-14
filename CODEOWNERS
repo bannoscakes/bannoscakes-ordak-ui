@@ -1,0 +1,54 @@
+# CODEOWNERS - Code Review Requirements
+# 
+# This file defines ownership and review requirements for critical files.
+# Any PR modifying these files requires approval from the designated team.
+#
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ==============================================================================
+# Auth System - Locked (see docs/AUTH_SYSTEM_LOCKED.md)
+# ⚠️ DO NOT MODIFY THESE FILES WITHOUT ARCHITECTURAL REVIEW ⚠️
+# ==============================================================================
+
+src/lib/auth.ts                   @architecture-team
+src/contexts/AuthContext.tsx      @architecture-team
+src/hooks/useAuth.ts              @architecture-team
+src/App.tsx                       @architecture-team
+vite.config.ts                    @architecture-team
+package.json                      @architecture-team
+
+# ==============================================================================
+# Single URL Architecture
+# These files enforce role-based routing without URL-based separation
+# ==============================================================================
+
+src/tests/single-url-architecture.test.tsx  @architecture-team
+.eslintrc.single-url.js                     @architecture-team
+docs/SINGLE_URL_ARCHITECTURE.md             @architecture-team
+
+# ==============================================================================
+# RPC Client & Database
+# Critical for all database operations and backend integration
+# ==============================================================================
+
+src/lib/rpc-client.ts             @backend-team
+supabase/sql/**                   @database-team
+
+# ==============================================================================
+# CI/CD & Automation
+# Workflow changes require DevOps review
+# ==============================================================================
+
+.github/workflows/**              @devops-team
+scripts/**                        @devops-team
+
+# ==============================================================================
+# Documentation
+# Core architectural and system documentation
+# ==============================================================================
+
+docs/AUTH_SYSTEM_LOCKED.md        @architecture-team
+docs/SINGLE_URL_ARCHITECTURE.md   @architecture-team
+docs/PROJECT_STATUS.md            @devops-team
+docs/AUDIT_PLAN.md                @devops-team
+
