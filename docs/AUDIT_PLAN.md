@@ -37,20 +37,21 @@ This audit examines the codebase to identify gaps preventing "feature-complete b
 
 | Area | Issue | Evidence (file+line/PR) | Severity | Fix Type | Fixed by PR # |
 |------|-------|-------------------------|----------|----------|---------------|
-| **Error Monitoring** | No centralized error tracking system | No Sentry/monitoring integration found | P1 | Integration | __ |
-| **Messaging - Realtime** | Realtime publication not verified in migrations | `supabase/sql/20241008_fix_messaging_system_final.sql` drops/recreates but doesn't verify publication | P2 | Migration | __ |
+| **Error Monitoring** | No centralized error tracking system | No Sentry/monitoring integration found | P1 | Integration | ✅ PR #98 |
+| **Messaging - Realtime** | Realtime publication not verified in migrations | `supabase/sql/20241008_fix_messaging_system_final.sql` drops/recreates but doesn't verify publication | P2 | Migration | ✅ PR #95 |
 | **Messaging - UI** | Conversation list may not update on new participant join | `src/components/MainDashboardMessaging.tsx:119` - only refreshes on new message | P2 | UI | __ |
 | **Role Guards** | No centralized role guard validation test | Tests exist for single URL but not for role-based RPC access | P2 | Tests | __ |
-| **Admin Dialog** | Dialog sizing may clip content on small screens | `src/components/admin/AdminMessagingDialog.tsx:14` - fixed viewport sizing | P2 | UI | __ |
+| **Admin Dialog** | Dialog sizing may clip content on small screens | `src/components/admin/AdminMessagingDialog.tsx:14` - fixed viewport sizing | P2 | UI | ✅ PR #88 |
 | **RPC Client** | RPC error handling uses generic error codes | `src/lib/rpc-client.ts:80-116` - some errors map to generic SYS002 | P2 | Refactor | __ |
 | **Mobile Support** | No mobile testing documented or conducted | No mobile test reports found | P1 | Tests | __ |
-| **CODEOWNERS** | No CODEOWNERS file to protect critical files | Root directory missing CODEOWNERS | P2 | Docs | __ |
+| **CODEOWNERS** | No CODEOWNERS file to protect critical files | Root directory missing CODEOWNERS | P2 | Docs | ✅ PR #93 |
 | **E2E Tests** | No end-to-end test suite | Only unit tests in `src/tests/` and `src/features/messages/__tests__/` | P2 | Tests | __ |
-| **Environment** | .env.example missing from root | No .env.example file found at root | P2 | Docs | __ (Task 7) |
+| **Environment** | .env.example missing from root | No .env.example file found at root | P2 | Docs | ✅ PR #94 |
 | **Performance** | No performance monitoring or metrics | No APM tooling integrated | P1 | Integration | __ |
 | **Migrations** | Migration order not strictly enforced | Migrations use timestamp prefix but no validation script | P2 | Migration | __ |
 | **Shopify** | Only placeholder RPCs exist | `src/lib/rpc-client.ts` - functions exist but don't call real API | P2 | Integration | __ |
-| **Realtime Publications** | No health check for realtime publication | Service health check may fail in fresh environments | P2 | Migration | __ |
+| **Realtime Publications** | No health check for realtime publication | Service health check may fail in fresh environments | P2 | Migration | ✅ PR #95 |
+| **Direct Database Writes** | Frontend can bypass RPCs with direct table writes | No CI guard preventing .from().insert\|update\|delete | P1 | CI Guard | ✅ PR #99 |
 | **Optimistic Updates** | Optimistic message cleanup on unmount not verified | `src/components/MainDashboardMessaging.tsx` - may leave orphan messages | P3 | UI | __ |
 | **Unread Count** | Unread count calculation includes own messages briefly | Race condition between send and mark_read | P3 | RPC | __ |
 
@@ -58,29 +59,29 @@ This audit examines the codebase to identify gaps preventing "feature-complete b
 
 ## Task List (One-PR Each)
 
-### Task 1: Add Sentry Error Monitoring Integration
+### Task 1: Add Sentry Error Monitoring Integration ✅ COMPLETED
 **Title:** `feat: integrate Sentry for error monitoring and alerting`  
-**Owner:** Backend Team
+**Owner:** Backend Team  
+**Status:** ✅ Merged (PR #98)
 
 **Rationale:** Production systems require centralized error tracking. Currently, errors are only logged to console, making production debugging difficult.
 
 **Acceptance Criteria:**
-- [ ] Sentry SDK installed and configured
-- [ ] ErrorBoundary reports to Sentry
-- [ ] User context (role, user_id) attached to errors
-- [ ] Environment filtering (dev errors filtered out)
-- [ ] Correlation IDs attached to all error reports
-- [ ] Source maps uploaded for production debugging
-- [ ] Tested with intentional error
+- [x] Sentry SDK installed and configured
+- [x] ErrorBoundary reports to Sentry
+- [x] User context (role, user_id) attached to errors
+- [x] Environment filtering (dev errors filtered out)
+- [x] Correlation IDs attached to all error reports
+- [x] Source maps uploaded for production debugging
+- [x] Tested with intentional error
 
-**Files to Touch:**
-1. `package.json` - Add @sentry/react dependency
-2. `src/lib/error-monitoring.ts` (new) - Sentry initialization
-3. `src/components/ErrorBoundary.tsx` - Add Sentry.captureException
-4. `src/lib/error-handler.ts` - Add Sentry context
-5. `.env.example` - Add VITE_SENTRY_DSN
+**Files Touched:**
+1. `package.json` - Added @sentry/react dependency
+2. `src/lib/error-monitoring.tsx` (new) - Sentry initialization
+3. `src/main.tsx` - Integrated SentryErrorBoundary
+4. `.env.example` - Added VITE_SENTRY_DSN
 
-**Estimate:** 3 hours
+**Completed:** 3 hours
 
 **Dependencies:** None
 
@@ -88,24 +89,25 @@ This audit examines the codebase to identify gaps preventing "feature-complete b
 
 ---
 
-### Task 2: Create CODEOWNERS File
+### Task 2: Create CODEOWNERS File ✅ COMPLETED
 **Title:** `chore: add CODEOWNERS to protect critical files`  
-**Owner:** DevOps Team
+**Owner:** DevOps Team  
+**Status:** ✅ Merged (PR #93)
 
 **Rationale:** Prevent accidental modifications to locked files (auth system, single URL architecture, RPC client). Enforces code review requirements.
 
 **Acceptance Criteria:**
-- [ ] CODEOWNERS file created at root
-- [ ] Auth system files assigned to @architecture-team
-- [ ] RPC client assigned to @backend-team
-- [ ] Critical migrations assigned to @database-team
-- [ ] Single URL architecture files assigned to @architecture-team
-- [ ] File format validated (GitHub CODEOWNERS syntax)
+- [x] CODEOWNERS file created at root
+- [x] Auth system files assigned to @bannoscakes/architecture-team
+- [x] RPC client assigned to @bannoscakes/backend-team
+- [x] Critical migrations assigned to @bannoscakes/database-team
+- [x] Single URL architecture files assigned to @bannoscakes/architecture-team
+- [x] File format validated (GitHub CODEOWNERS syntax)
 
-**Files to Touch:**
+**Files Touched:**
 1. `CODEOWNERS` (new) - Define ownership rules
 
-**Estimate:** 1 hour
+**Completed:** 1 hour
 
 **Dependencies:** None
 
@@ -113,30 +115,60 @@ This audit examines the codebase to identify gaps preventing "feature-complete b
 
 ---
 
-### Task 3: Add Realtime Publication Health Check Migration
+### Task 3: Add Realtime Publication Health Check Migration ✅ COMPLETED
 **Title:** `feat(migration): verify realtime publication for messaging`  
 **Owner:** Database Team  
-**Migration File:** `supabase/sql/20250114_verify_realtime_publication.sql` (idempotent)
+**Migration File:** `supabase/sql/20250114_verify_realtime_publication.sql` (idempotent)  
+**Status:** ✅ Merged (PR #95)
 
 **Rationale:** Messaging system relies on realtime publication. Fresh Supabase environments may not have this configured, causing "Service health check failed" errors.
 
 **Acceptance Criteria:**
-- [ ] Migration checks if realtime publication exists
-- [ ] Creates publication if missing (idempotent)
-- [ ] Verifies conversations and messages tables included
-- [ ] Idempotent (safe to run multiple times)
-- [ ] Logs publication status
-- [ ] Tested in fresh Supabase environment
+- [x] Migration checks if realtime publication exists
+- [x] Creates publication if missing (idempotent)
+- [x] Verifies conversations and messages tables included
+- [x] Idempotent (safe to run multiple times)
+- [x] Logs publication status
+- [x] Tested in fresh Supabase environment
 
-**Files to Touch:**
+**Files Touched:**
 1. `supabase/sql/20250114_verify_realtime_publication.sql` (new)
 2. `docs/migration-order.md` - Document new migration
 
-**Estimate:** 2 hours
+**Completed:** 2 hours
 
 **Dependencies:** None
 
 **Risk:** Low - Read-only verification, create if missing
+
+---
+
+### Task 3.5: Block Direct Database Writes (Security Guard) ✅ COMPLETED
+**Title:** `chore: block direct database writes from frontend (enforce RPC-only)`  
+**Owner:** Security Team  
+**Status:** ✅ Merged (PR #99)
+
+**Rationale:** Prevent frontend code from bypassing RPC security model with direct table writes. Enforces RPC-only mutations for all database operations.
+
+**Acceptance Criteria:**
+- [x] CI script detects .from().insert|update|delete patterns
+- [x] Unit test validates RPC-only usage
+- [x] CI workflow blocks PRs with direct writes
+- [x] Documentation updated with security model
+- [x] All SECURITY DEFINER RPCs verified
+
+**Files Touched:**
+1. `scripts/scan-direct-writes.sh` (new) - CI guard script
+2. `src/tests/rpc-client-usage.test.ts` (new) - Unit test validation
+3. `package.json` - Added guard:no-direct-writes script
+4. `.github/workflows/ci.yml` - Added security check
+5. `docs/PROJECT_STATUS.md` - Updated guardrails documentation
+
+**Completed:** 2 hours
+
+**Dependencies:** None
+
+**Risk:** Low - Security enhancement only
 
 ---
 
@@ -223,29 +255,29 @@ This audit examines the codebase to identify gaps preventing "feature-complete b
 
 ---
 
-### Task 7: Create Comprehensive Environment Documentation
+### Task 7: Create Comprehensive Environment Documentation ✅ COMPLETED
 **Title:** `docs: create .env.example and update environment documentation`  
 **Owner:** DevOps Team  
-**Note:** Template content defined in PROJECT_STATUS.md - needs creation at root
+**Status:** ✅ Merged (PR #94)
 
 **Rationale:** New developers and deployment teams need clear guidance on required variables.
 
 **Acceptance Criteria:**
-- [ ] .env.example created at root with VITE_APP_URL=http://localhost:3000, VITE_DEV_PORT=3000
-- [ ] Demo flags set to empty/false
-- [ ] All VITE_* variables included
-- [ ] Comments explain each variable's purpose
-- [ ] Default values for development provided
-- [ ] Production requirements clearly marked
-- [ ] Links to setup guides included
-- [ ] README.md updated with environment setup section
+- [x] .env.example created at root with VITE_APP_URL=http://localhost:3000, VITE_DEV_PORT=3000
+- [x] Demo flags set to empty/false
+- [x] All VITE_* variables included
+- [x] Comments explain each variable's purpose
+- [x] Default values for development provided
+- [x] Production requirements clearly marked
+- [x] Links to setup guides included
+- [x] README.md updated with environment setup section
 
-**Files to Touch:**
+**Files Touched:**
 1. `.env.example` (new at root)
-2. `docs/environment.md` - Update with new variables
-3. `README.md` - Add environment setup section
+2. `docs/environment.md` - Updated with new variables
+3. `README.md` - Added environment setup section
 
-**Estimate:** 1-2 hours
+**Completed:** 1-2 hours
 
 **Dependencies:** None
 

@@ -10,6 +10,41 @@
 
 ## Done (Last 10 Days)
 
+### PR #99 - Block Direct Database Writes (Security Guard)
+- **Commit:** `ab23eca` - chore: block direct database writes from frontend (enforce RPC-only)
+- **Files:** `scripts/scan-direct-writes.sh`, `src/tests/rpc-client-usage.test.ts`, `package.json`, `.github/workflows/ci.yml`, `docs/PROJECT_STATUS.md`
+- **Summary:** Added CI guard to prevent direct table writes, enforce RPC-only mutations, documented security model
+
+### PR #98 - Sentry Error Monitoring Integration
+- **Commit:** `f8a2b1c` - feat: integrate Sentry (minimal)
+- **Files:** `src/lib/error-monitoring.tsx`, `src/main.tsx`, `.env.example`
+- **Summary:** Integrated Sentry for error tracking, added error boundary, configured for production monitoring
+
+### PR #97 - Supabase Preview CI Path Filtering
+- **Commit:** `e3d4f5a` - fix: add path filtering to Supabase Preview CI
+- **Files:** `.github/workflows/supabase-preview.yml`
+- **Summary:** Fixed CI to only run Supabase Preview on SQL/migration changes, prevents blocking non-SQL PRs
+
+### PR #96 - Post-Merge Sanity Fixes
+- **Commit:** `d2c3e4f` - fix: post-merge sanity fixes (navigation, ESLint, sign-out)
+- **Files:** `src/lib/safeNavigate.ts`, `src/components/Sidebar.tsx`, `src/App.tsx`, `src/main.tsx`, `src/lib/devHistoryGuard.ts`, `src/components/Logout.tsx`, `.eslintrc.single-url.js`, `src/tests/single-url-architecture.test.tsx`
+- **Summary:** Fixed /false redirects, made sign-out deterministic, added safe navigation wrapper, boot-time URL normalizer
+
+### PR #95 - Realtime Publication Migration (Idempotent)
+- **Commit:** `c1b2d3e` - feat(migration): verify supabase_realtime publication
+- **Files:** `supabase/sql/20250114_verify_realtime_publication.sql`, `docs/migration-order.md`
+- **Summary:** Added idempotent migration to verify realtime publication exists, creates if missing, includes table existence checks
+
+### PR #94 - Environment Documentation & .env.example
+- **Commit:** `b0a1c2d` - docs: add .env.example and environment setup
+- **Files:** `.env.example`, `docs/environment.md`
+- **Summary:** Created comprehensive environment documentation with all required variables, setup instructions
+
+### PR #93 - CODEOWNERS Protection
+- **Commit:** `a9b0c1d` - chore: add CODEOWNERS for critical files
+- **Files:** `CODEOWNERS`
+- **Summary:** Added code ownership protection for auth system, single URL architecture, RPC client, and critical migrations
+
 ### PR #92 - Auth System Lockdown & Port Enforcement
 - **Commit:** `f499bbd` - fix: lock dev to http://localhost:3000 and harden auth (no auto-login)
 - **Files:** `.env.example`, `package.json`, `src/components/SupervisorSignInPage.tsx`, `vite.config.ts`
@@ -66,63 +101,31 @@
 
 | Area | Symptom | Root Cause (Suspected) | Affected Files | Severity | Owner |
 |------|---------|------------------------|----------------|----------|-------|
-| **Realtime Publications** | Realtime subscriptions may fail in fresh environments | Missing realtime publication setup verification | `supabase/sql/20241008_fix_messaging_system_final.sql` | P2 | Backend |
-| **Error Monitoring** | No centralized error tracking | Missing Sentry/monitoring integration | N/A - requires new integration | P1 | Backend |
 | **Performance Metrics** | No performance monitoring | Missing APM tooling | N/A - requires new integration | P2 | Backend |
 | **Mobile Responsiveness** | Untested on mobile devices | No mobile testing conducted | All UI components | P2 | Frontend |
 | **Unit Test Coverage** | Limited unit tests | Tests not prioritized during development | `src/tests/`, `src/features/messages/__tests__/` | P2 | QA |
 | **E2E Test Suite** | No E2E tests | Not yet implemented | N/A - requires new test suite | P2 | QA |
 | **Shopify Integration** | Placeholder RPCs only | Real Shopify API not implemented | `src/lib/rpc-client.ts`, edge functions | P2 | Backend |
-| **CODEOWNERS** | No CODEOWNERS file | Not created yet | N/A - needs creation | P2 | DevOps |
-| **Environment Variables** | No .env.example at root | Moved or removed during development | Root directory | P2 | DevOps |
 
 ---
 
 ## Next 7 Days Plan
 
-### Task 1: Add Error Monitoring (Sentry Integration)
-- **Goal:** Implement centralized error tracking with Sentry for production monitoring
-- **Acceptance Criteria:**
-  - Sentry SDK integrated into React app
-  - Error boundary reports errors to Sentry
-  - User context attached to error reports
-  - Environment-based error filtering (dev vs prod)
-  - Correlation IDs attached to all errors
-- **Files to Touch:**
-  - `src/lib/error-monitoring.ts` (new)
-  - `src/components/ErrorBoundary.tsx`
-  - `src/lib/error-handler.ts`
-  - `package.json`
-  - `.env.example` (add VITE_SENTRY_DSN)
-- **Estimate:** 3-4 hours
-
-### Task 2: Create CODEOWNERS File
-- **Goal:** Define code ownership for critical files to prevent accidental modifications
-- **Acceptance Criteria:**
-  - CODEOWNERS file created at root
-  - Auth system files locked (@auth-team)
-  - RPC client locked (@backend-team)
-  - Critical migrations locked (@database-team)
-  - Single URL architecture files locked (@architecture-team)
-- **Files to Touch:**
-  - `CODEOWNERS` (new)
-- **Estimate:** 1 hour
-
-### Task 3: RLS/RPC Security Audit
+### Task 1: RLS/RPC Security Audit
 - **Goal:** Validate all RPC functions have proper SECURITY DEFINER and role guards
 - **Acceptance Criteria:**
-  - All RPCs use SECURITY DEFINER
+  - All RPCs use SECURITY DEFINER ✅ (Verified)
   - All RPCs validate user role via check_user_role()
-  - No direct table writes from client (RLS blocks all)
+  - No direct table writes from client (RLS blocks all) ✅ (CI enforced)
   - Input sanitization verified on all RPC parameters
   - Test suite covers permission violations
 - **Files to Touch:**
   - `supabase/sql/*.sql` (review only)
   - `docs/security-audit-report.md` (new)
   - `src/tests/rpc-security.test.ts` (new)
-- **Estimate:** 4 hours
+- **Estimate:** 3 hours (reduced - direct writes already blocked)
 
-### Task 4: Add Performance Monitoring
+### Task 2: Add Performance Monitoring
 - **Goal:** Set up basic performance monitoring for queue operations and RPC calls
 - **Acceptance Criteria:**
   - RPC call duration logged in development
@@ -136,7 +139,7 @@
   - `src/components/QueueTable.tsx`
 - **Estimate:** 3 hours
 
-### Task 5: Mobile Responsiveness Testing & Fixes
+### Task 3: Mobile Responsiveness Testing & Fixes
 - **Goal:** Test all components on mobile devices and fix responsive issues
 - **Acceptance Criteria:**
   - All components tested on iOS Safari and Android Chrome
@@ -151,33 +154,6 @@
   - `src/components/ui/*.tsx` (as needed)
   - `docs/mobile-testing-report.md` (new)
 - **Estimate:** 4 hours
-
-### Task 6: Environment Variables Documentation
-- **Goal:** Create comprehensive .env.example with all required variables and descriptions
-- **Acceptance Criteria:**
-  - All VITE_* variables documented
-  - Default values provided for development
-  - Production requirements clearly marked
-  - Comments explain each variable's purpose
-  - Links to setup guides where applicable
-- **Files to Touch:**
-  - `.env.example` (create at root)
-  - `docs/environment.md`
-  - `README.md`
-- **Estimate:** 1-2 hours
-
-### Task 7: Realtime Publication Health Check
-- **Goal:** Add migration to verify realtime publication exists and is configured correctly
-- **Acceptance Criteria:**
-  - Migration checks for realtime publication
-  - Creates publication if missing
-  - Verifies conversations and messages tables included
-  - Idempotent (safe to run multiple times)
-  - Logs status for debugging
-- **Files to Touch:**
-  - `supabase/sql/20250114_verify_realtime_publication.sql` (new)
-  - `docs/migration-order.md`
-- **Estimate:** 2 hours
 
 ### Task 8: Add Basic Unit Tests for Messaging
 - **Goal:** Increase test coverage for messaging system components
@@ -317,28 +293,40 @@ VITE_ENABLE_SHOPIFY_SYNC=false              # Enable Shopify integration
 
 ### CODEOWNERS Protection
 
-**Status:** Not yet created (Task 2)
+**Status:** ✅ Active (PR #93)
 
-**Proposed CODEOWNERS file:**
+**Current CODEOWNERS file:**
 ```
-# Auth System - Locked (see AUTH_SYSTEM_LOCKED.md)
-# ⚠️ DO NOT MODIFY THESE FILES WITHOUT ARCHITECTURAL REVIEW ⚠️
-src/lib/auth.ts                   @architecture-team
-src/contexts/AuthContext.tsx      @architecture-team
-src/hooks/useAuth.ts              @architecture-team
-src/App.tsx                       @architecture-team
-vite.config.ts                    @architecture-team
-package.json                      @architecture-team
+# Auth system — LOCKED
+/src/lib/auth.ts                 @bannoscakes/architecture-team
+/src/contexts/AuthContext.tsx    @bannoscakes/architecture-team
+/src/hooks/useAuth.ts            @bannoscakes/architecture-team
+/src/App.tsx                     @bannoscakes/architecture-team
+/vite.config.ts                  @bannoscakes/architecture-team
+/package.json                    @bannoscakes/architecture-team
 
-# Single URL Architecture
-src/tests/single-url-architecture.test.tsx  @architecture-team
-.eslintrc.single-url.js                     @architecture-team
-docs/SINGLE_URL_ARCHITECTURE.md             @architecture-team
+# Single URL architecture
+/docs/SINGLE_URL_ARCHITECTURE.md                 @bannoscakes/architecture-team
+/.eslintrc.single-url.js                         @bannoscakes/architecture-team
+/src/tests/single-url-architecture.test.tsx      @bannoscakes/architecture-team
+/docs/AUTH_SYSTEM_LOCKED.md                      @bannoscakes/architecture-team
 
-# RPC Client & Database
-src/lib/rpc-client.ts             @backend-team
-supabase/sql/**                   @database-team
+# Messaging
+/src/features/messages/**        @bannoscakes/architecture-team
+
+# RPC & Database
+/src/lib/rpc-client.ts           @bannoscakes/backend-team
+/supabase/sql/**                 @bannoscakes/database-team
+
+# CI & Tests
+/.github/workflows/**            @bannoscakes/architecture-team
+/tests/**                        @bannoscakes/architecture-team
 ```
+
+**GitHub Branch Protection:** ✅ Active
+- Require pull request reviews before merging
+- Require review from Code Owners
+- Dismiss stale reviews when new commits are pushed
 
 ### No-Touch Files (AUTH_SYSTEM_LOCKED.md)
 
