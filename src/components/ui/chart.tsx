@@ -78,28 +78,6 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
-  function sanitizeCssVariableName(key: string): string | null {
-    const cleaned = key.trim().toLowerCase().replace(/[^a-z0-9_-]/gi, "");
-    if (!cleaned) return null;
-    // Avoid reserved words/prototypes just in case
-    if (cleaned === "constructor" || cleaned === "prototype") return null;
-    return cleaned;
-  }
-
-  function isSafeColor(value: string | undefined): value is string {
-    if (!value) return false;
-    const v = value.trim();
-    // Allow common safe patterns only
-    const hex = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
-    const rgb = /^rgb\(\s*(?:[0-9]{1,3}\s*,){2}\s*[0-9]{1,3}\s*\)$/;
-    const rgba = /^rgba\(\s*(?:[0-9]{1,3}\s*,){3}\s*(?:0|1|0?\.[0-9]+)\s*\)$/;
-    const hsl = /^hsl\(\s*(?:[0-9]{1,3}(?:\.[0-9]+)?)(?:deg|rad|grad|turn)?\s*,\s*[0-9]{1,3}%\s*,\s*[0-9]{1,3}%\s*\)$/;
-    const hsla = /^hsla\(\s*(?:[0-9]{1,3}(?:\.[0-9]+)?)(?:deg|rad|grad|turn)?\s*,\s*[0-9]{1,3}%\s*,\s*[0-9]{1,3}%\s*,\s*(?:0|1|0?\.[0-9]+)\s*\)$/;
-    const cssVar = /^var\(\s*--[a-zA-Z0-9_-]+\s*\)$/;
-    const named = /^[a-zA-Z]{1,30}$/; // e.g., red, blue, rebeccapurple
-    return hex.test(v) || rgb.test(v) || rgba.test(v) || hsl.test(v) || hsla.test(v) || cssVar.test(v) || named.test(v);
-  }
-
   return (
     <style
       dangerouslySetInnerHTML={{
@@ -109,14 +87,11 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const sanitizedKey = sanitizeCssVariableName(key);
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color;
-    if (!sanitizedKey || !isSafeColor(color)) return null;
-    return `  --color-${sanitizedKey}: ${color!.trim()};`;
+    return color ? `  --color-${key}: ${color};` : null;
   })
-  .filter(Boolean)
   .join("\n")}
 }
 `,
