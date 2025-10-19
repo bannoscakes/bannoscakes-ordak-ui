@@ -1,0 +1,9 @@
+{
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml"
+  },
+  "yaml.validate": true,
+  "files.associations": {
+    ".github/workflows/*.yml": "github-actions"
+  }
+}
