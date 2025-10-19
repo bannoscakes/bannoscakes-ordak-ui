@@ -6,15 +6,10 @@ on:
       - 'supabase/sql/**'
       - 'supabase/migrations/**'
       - '.github/workflows/supabase-preview.yml'
-  push:
-    branches: [dev, main]
-    paths:
-      - 'supabase/sql/**'
-      - 'supabase/migrations/**'
-      - '.github/workflows/supabase-preview.yml'
 
 jobs:
   preview:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: dorny/paths-filter@v3
@@ -44,8 +39,7 @@ jobs:
         if: steps.changes.outputs.sql == 'true'
         run: |
           echo "SQL changes detected, running Supabase preview..."
-          echo "✅ Supabase Preview completed successfully"
-          # TODO: Add actual Supabase preview commands when needed
+          # Add your actual Supabase preview commands here
           # For example: supabase db diff, supabase db push, etc.
 
       - name: No SQL changes detected
