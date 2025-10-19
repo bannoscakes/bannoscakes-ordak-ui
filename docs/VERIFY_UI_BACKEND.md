@@ -225,8 +225,10 @@ Record anything missing or mismatched here with action:
 | Staff RPCs | get_staff, get_staff_stats missing | Forward-fix migration 20250115_staff_surface.sql | ✅ | fa41ce3 | ✅ FIXED |
 | Inventory RPC | record_component_txn missing | Forward-fix migration 20250115_inventory_txn.sql | ✅ | fa41ce3 | ✅ FIXED |
 | Queue RPC | get_recent_orders not found | Assess if needed in UI | TBD | - | ⚠️ OPTIONAL |
+| Documentation | webhook-ingest.md outdated | Updated with kitchen-docket parity spec | ✅ | - | ✅ FIXED |
+| Documentation | task-splitting.md missing | Created post-ingestion splitting guide | ✅ | - | ✅ FIXED |
 
-**✅ Summary:** All critical RPCs now exist. Only optional `get_recent_orders` to be assessed based on UI needs.
+**✅ Summary:** All critical RPCs now exist. Documentation updated with webhook ingestion and task splitting specifications.
 
 ---
 
