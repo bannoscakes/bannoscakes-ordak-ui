@@ -49,7 +49,7 @@ jobs:
           # GitHub Actions secrets - these warnings are false positives from YAML linter
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_APP_URL: ${{ secrets.VITE_APP_URL }}  # GitHub secrets are valid context
+          VITE_APP_URL: ${{ secrets.VITE_APP_URL }}  # yamllint disable-line
 
       # Tests only on main (optional)
       - name: Tests (main only, if present)

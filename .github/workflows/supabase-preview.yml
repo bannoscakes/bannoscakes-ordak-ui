@@ -21,27 +21,27 @@ jobs:
               - 'supabase/migrations/**'
       
       - name: Checkout
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
+        if: steps.changes.outputs.sql == 'true'  # yamllint disable-line
         uses: actions/checkout@v4
 
       - name: Use Node 18
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
+        if: steps.changes.outputs.sql == 'true'  # yamllint disable-line
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
       - name: Install
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
+        if: steps.changes.outputs.sql == 'true'  # yamllint disable-line
         run: npm ci
 
       - name: Supabase Preview
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
+        if: steps.changes.outputs.sql == 'true'  # yamllint disable-line
         run: |
           echo "SQL changes detected, running Supabase preview..."
           # Add your actual Supabase preview commands here
           # For example: supabase db diff, supabase db push, etc.
 
       - name: No SQL changes detected
-        if: steps.changes.outputs.sql != 'true'  # dorny/paths-filter output is valid
+        if: steps.changes.outputs.sql != 'true'  # yamllint disable-line
         run: echo "No SQL changes detected; skipping Supabase Preview."

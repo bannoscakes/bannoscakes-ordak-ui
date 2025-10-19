@@ -1,0 +1,15 @@
+extends: default
+
+rules:
+  # Suppress false warnings for GitHub Actions context
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+  
+  # Allow GitHub Actions expressions
+  line-length:
+    max: 120
+    level: warning
+  
+  # Allow comments on same line
+  comments:
+    min-spaces-from-content: 1
