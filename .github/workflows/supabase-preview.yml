@@ -2,46 +2,26 @@ name: Supabase Preview
 
 on:
   pull_request:
-    paths:
-      - 'supabase/sql/**'
-      - 'supabase/migrations/**'
-      - '.github/workflows/supabase-preview.yml'
 
 jobs:
-  preview:
-    if: github.event_name == 'pull_request'
+  supabase-preview:
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
     steps:
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            sql:
-              - 'supabase/sql/**'
-              - 'supabase/migrations/**'
-      
       - name: Checkout
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
         uses: actions/checkout@v4
 
-      - name: Use Node 18
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
+      - name: Use Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 20
           cache: 'npm'
 
       - name: Install
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
         run: npm ci
 
-      - name: Supabase Preview
-        if: steps.changes.outputs.sql == 'true'  # dorny/paths-filter output is valid
-        run: |
-          echo "SQL changes detected, running Supabase preview..."
-          # Add your actual Supabase preview commands here
-          # For example: supabase db diff, supabase db push, etc.
-
-      - name: No SQL changes detected
-        if: steps.changes.outputs.sql != 'true'  # dorny/paths-filter output is valid
-        run: echo "No SQL changes detected; skipping Supabase Preview."
+      - name: Build
+        run: npm run build
