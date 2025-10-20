@@ -12,7 +12,7 @@ dockets.
 
 Topic: orders/create (handled per store).
 
-Idempotency key: order.admin_graphql_api_id (order_gid). If a
+Idempotency key: `order.admin_graphql_api_id` (order_gid). If a
 payload arrives with a order_gid that has already been ingested,
 processing is skipped and a 200 response is returned.
 
@@ -22,9 +22,9 @@ multiple records in your database or multiple stock movements.
 ## Store Mapping
 
 Orders are stored in different tables depending on the shop domain. If
-order.shop_domain (or order.domain) contains bannos, insert into
-orders_bannos. If it contains flourlane, insert into
-orders_flourlane.
+`order.shop_domain` (or `order.domain`) contains bannos, insert into
+`orders_bannos`. If it contains flourlane, insert into
+`orders_flourlane`.
 
 ## Field Mapping (DB)
 
@@ -34,16 +34,16 @@ card item with quantity > 0 and is used for summary fields.
 
 | Target column | Source / Rule |
 |---|---|
-| id | bannos-<order_number> or flourlane-<order_number>. If order_number is missing, fall back to <prefix>-<order.id>. |
-| shopify_order_id | order.id |
-| shopify_order_gid | order.admin_graphql_api_id |
-| shopify_order_number | order.order_number |
-| customer_name | Use order.shipping_address.name; if blank, use order.customer.name. |
+| id | `bannos-<order_number>` or `flourlane-<order_number>`. If `order_number` is missing, fall back to `<prefix>-<order.id>`. |
+| shopify_order_id | `order.id` |
+| shopify_order_gid | `order.admin_graphql_api_id` |
+| shopify_order_number | `order.order_number` |
+| customer_name | Use `order.shipping_address.name`; if blank, use `order.customer.name`. |
 | product_title | Title of the primary line item. |
 | flavour | Extract using the flavour rules below. |
-| notes | Concatenate order.note and the delivery instructions attribute (see below). Join parts with •. |
-| currency | order.presentment_currency if present; otherwise order.currency. |
-| total_amount | order.current_total_price if present; otherwise order.total_price. |
+| notes | Concatenate `order.note` and the delivery instructions attribute (see below). Join parts with •. |
+| currency | `order.presentment_currency` if present; otherwise `order.currency`. |
+| total_amount | `order.current_total_price` if present; otherwise `order.total_price`. |
 | order_json | The full raw JSON payload stored as jsonb for auditing and reprocessing. |
 | stage | Initialise as 'Filling'. Subsequent stage updates are driven by barcode scans. |
 | priority | Derived from due_date: High if the due date is today or overdue; Medium if tomorrow; Low for later dates. |
@@ -53,8 +53,8 @@ card item with quantity > 0 and is used for summary fields.
 
 Dates and methods are derived from order attributes so that the system
 behaves exactly like the kitchen docket. The attribute keys are case
-insensitive and may come from either order.attributes or
-order.note_attributes.
+insensitive and may come from either `order.attributes` or
+`order.note_attributes`.
 
 Due date: read Local Delivery Date and Time. Take the portion
 before the word "between" (if present) and trim whitespace. For
@@ -74,10 +74,10 @@ Dates are interpreted in the Australia/Sydney timezone.
 Kitchen staff need to see all notes on one line. To construct the
 notes column:
 
-Start with order.note if present.
+Start with `order.note` if present.
 
 Append the value of Delivery Instructions (case insensitive) from
-order.attributes or order.note_attributes if present.
+`order.attributes` or `order.note_attributes` if present.
 
 Join the two parts with • if both are non‑empty.
 
