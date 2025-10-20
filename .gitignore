@@ -3,7 +3,6 @@ dist/
 .DS_Store
 .env*
 .vscode/
-!.vscode/settings.json
 
 # local env
 .env.local
@@ -13,4 +12,3 @@ dist/
 .env
 .env.*
 !.env.example
-*.code-workspace
