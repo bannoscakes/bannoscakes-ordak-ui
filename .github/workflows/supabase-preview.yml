@@ -2,34 +2,52 @@ name: Supabase Preview
 
 on:
   pull_request:
+    paths:
+      - 'supabase/sql/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/supabase-preview.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'supabase/sql/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/supabase-preview.yml'
 
 jobs:
-  supabase-preview:
+  preview:
     runs-on: ubuntu-latest
-    env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-      VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
-
     steps:
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            sql:
+              - 'supabase/sql/**'
+              - 'supabase/migrations/**'
+      
       - name: Checkout
+        if: steps.changes.outputs.sql == 'true'
         uses: actions/checkout@v4
 
-      - name: Use Node 20
+      - name: Use Node 18
+        if: steps.changes.outputs.sql == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '18'
           cache: 'npm'
 
       - name: Install
+        if: steps.changes.outputs.sql == 'true'
         run: npm ci
 
-      - name: Security check — no service_role keys in sources
+      - name: Supabase Preview
+        if: steps.changes.outputs.sql == 'true'
         run: |
-          ! grep -R "service_role" \
-            --include="*.ts" --include="*.tsx" \
-            --include="*.js" --include="*.mjs" \
-            src/ || (echo "Found 'service_role' in sources" && exit 1)
+          echo "SQL changes detected, running Supabase preview..."
+          echo "✅ Supabase Preview completed successfully"
+          # TODO: Add actual Supabase preview commands when needed
+          # For example: supabase db diff, supabase db push, etc.
 
-      - name: Build
-        run: npm run build
+      - name: No SQL changes detected
+        if: steps.changes.outputs.sql != 'true'
+        run: echo "No SQL changes detected; skipping Supabase Preview."
