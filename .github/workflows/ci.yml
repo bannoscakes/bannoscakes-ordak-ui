@@ -33,6 +33,13 @@ jobs:
       - name: Lint (non-blocking)ß
         run: npm run lint 2>/dev/null || true
 
+      - name: Security check — no service_role keys in sources
+        run: |
+          ! grep -R "service_role" \
+            --include="*.ts" --include="*.tsx" \
+            --include="*.js" --include="*.mjs" \
+            src/ || (echo "Found 'service_role' in sources" && exit 1)
+
       - name: Build (main only)
         if: ${{ github.ref == 'refs/heads/main' }}
         run: npm run build
