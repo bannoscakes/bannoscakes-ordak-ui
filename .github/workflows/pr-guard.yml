@@ -1,0 +1,27 @@
+name: PR Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  block-workflow-edits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for workflow edits
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labelOK = context.payload.pull_request.labels?.some(l => l.name === 'allow-workflow-change');
+            const resp = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+            const touched = resp.data.map(f => f.filename);
+            const editedWorkflows = touched.filter(p => p.startsWith('.github/workflows/'));
+            if (editedWorkflows.length && !labelOK) {
+              core.setFailed(`Workflows changed: ${editedWorkflows.join(', ')}. Add label 'allow-workflow-change' to proceed.`);
+            } else {
+              core.notice('No protected workflow edits detected (or label present).');
+            }
