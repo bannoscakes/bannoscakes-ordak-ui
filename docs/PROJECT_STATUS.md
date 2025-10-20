@@ -1,8 +1,10 @@
-# Project Status - Week of 2025-01-13
-**Last Updated:** 2025-01-14  
+# Project Status - Week of 2025-01-15
+**Last Updated:** 2025-01-15  
 **Current Version:** v0.8.0-beta  
 **Current Branch:** dev  
-**Overall Progress:** ~85% Complete - Core Operations Ready, Monitoring & Polish Remaining
+**Overall Progress:** ~85% Complete - Core Operations Ready, Webhooks & Final Polish Remaining
+
+**Master Task List:** See [MASTER_TASKS.md](MASTER_TASKS.md) for complete task tracking and priority order.
 
 **Rollback Plan:** If critical issues arise, revert PR #86 (SHA 80c4e49) to restore last stable messaging/auth state.
 
@@ -109,94 +111,21 @@
 
 ---
 
-## Next 7 Days Plan
+## Next Steps
 
-### Task 1: RLS/RPC Security Audit
-- **Goal:** Validate all RPC functions have proper SECURITY DEFINER and role guards
-- **Acceptance Criteria:**
-  - All RPCs use SECURITY DEFINER ✅ (Verified)
-  - All RPCs validate user role via check_user_role()
-  - No direct table writes from client (RLS blocks all) ✅ (CI enforced)
-  - Input sanitization verified on all RPC parameters
-  - Test suite covers permission violations
-- **Files to Touch:**
-  - `supabase/sql/*.sql` (review only)
-  - `docs/security-audit-report.md` (new)
-  - `src/tests/rpc-security.test.ts` (new)
-- **Estimate:** 3 hours (reduced - direct writes already blocked)
+**See [MASTER_TASKS.md](MASTER_TASKS.md) for complete task list and priority order.**
 
-### Task 2: Add Performance Monitoring
-- **Goal:** Set up basic performance monitoring for queue operations and RPC calls
-- **Acceptance Criteria:**
-  - RPC call duration logged in development
-  - Queue render performance tracked
-  - Long-running operations flagged (>500ms)
-  - Performance data available in browser DevTools
-  - Optional: Web Vitals tracking
-- **Files to Touch:**
-  - `src/lib/rpc-client.ts`
-  - `src/lib/performance-monitor.ts` (new)
-  - `src/components/QueueTable.tsx`
-- **Estimate:** 3 hours
+**Immediate Next Task:** Clean Mock Order Data (Task 1)
+- Remove all fake/test orders from database
+- Verify clean state before webhooks
+- Must be done before webhook implementation
 
-### Task 3: Mobile Responsiveness Testing & Fixes
-- **Goal:** Test all components on mobile devices and fix responsive issues
-- **Acceptance Criteria:**
-  - All components tested on iOS Safari and Android Chrome
-  - Touch interactions work properly
-  - Scanner works on mobile devices
-  - No horizontal scroll on mobile
-  - All modals/dialogs mobile-friendly
-- **Files to Touch:**
-  - `src/components/MainDashboardMessaging.tsx`
-  - `src/components/QueueTable.tsx`
-  - `src/components/Scanner.tsx`
-  - `src/components/ui/*.tsx` (as needed)
-  - `docs/mobile-testing-report.md` (new)
-- **Estimate:** 4 hours
-
-### Task 8: Add Basic Unit Tests for Messaging
-- **Goal:** Increase test coverage for messaging system components
-- **Acceptance Criteria:**
-  - Tests for MainDashboardMessaging component
-  - Tests for optimistic message reconciliation
-  - Tests for realtime message handling
-  - Tests for conversation creation
-  - All tests passing
-- **Files to Touch:**
-  - `src/components/__tests__/MainDashboardMessaging.test.tsx` (new)
-  - `src/hooks/__tests__/useRealtimeMessages.test.ts` (new)
-  - `package.json` (add test dependencies if needed)
-- **Estimate:** 4 hours
-
-### Task 9: Shopify Webhook Implementation (Phase 1)
-- **Goal:** Implement basic Shopify webhook endpoint for order creation
-- **Acceptance Criteria:**
-  - Edge function receives webhook POST
-  - HMAC signature verification working
-  - Order ingestion RPC called successfully
-  - Error handling for malformed payloads
-  - Logging for debugging
-- **Files to Touch:**
-  - `supabase/functions/orders_create_bannos/index.ts`
-  - `supabase/functions/orders_create_flourlane/index.ts`
-  - `supabase/functions/_shared/hmac.ts`
-  - `docs/webhook-ingest.md`
-- **Estimate:** 4 hours
-
-### Task 10: Production Deployment Checklist
-- **Goal:** Create comprehensive checklist for production deployment
-- **Acceptance Criteria:**
-  - Environment variables checklist
-  - Database migration checklist
-  - Realtime configuration checklist
-  - Security checklist (RLS, CORS, etc.)
-  - Monitoring setup checklist
-  - Rollback plan documented
-- **Files to Touch:**
-  - `docs/DEPLOY_PRODUCTION.md`
-  - `docs/runbook.md`
-- **Estimate:** 2 hours
+**Critical Blockers for Production:**
+1. **Shopify Webhooks** (Phase 5) - System can't receive real orders
+2. **Mock Data Cleanup** - Must remove fake orders before webhooks  
+3. **Inventory UI Completion** (5 tabs) - Staff need full inventory management
+4. **Mobile Testing** - Production floor uses tablets
+5. **E2E Testing** - Prevent regressions
 
 ---
 
