@@ -1,0 +1,3 @@
+# CODEOWNERS - Protect critical infrastructure files
+.github/workflows/*  @bannoscakes
+scripts/*            @bannoscakes
