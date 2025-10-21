@@ -16,6 +16,11 @@ import {
   AlertCircle
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
+import ChartContainer from "@/components/analytics/ChartContainer";
+import KpiValue from "@/components/analytics/KpiValue";
+import { toNumberOrNull } from "@/lib/metrics";
+import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 
 // Mock data for Bannos Analytics
 const revenueData = [
@@ -55,46 +60,19 @@ const productionEfficiency = [
   { station: "Packing", efficiency: 96.2, target: 92, output: 1320 }
 ];
 
-const kpiMetrics = [
-  {
-    title: "Monthly Revenue",
-    value: "$66,000",
-    change: "+12.3%",
-    trend: "up",
-    icon: DollarSign,
-    color: "text-green-600",
-    bg: "bg-green-50"
-  },
-  {
-    title: "Total Orders",
-    value: "465",
-    change: "+8.7%", 
-    trend: "up",
-    icon: Package,
-    color: "text-blue-600",
-    bg: "bg-blue-50"
-  },
-  {
-    title: "Average Order Value",
-    value: "$141.90",
-    change: "-0.4%",
-    trend: "down",
-    icon: Target,
-    color: "text-orange-600",
-    bg: "bg-orange-50"
-  },
-  {
-    title: "Quality Score",
-    value: "97.8%",
-    change: "+2.1%",
-    trend: "up", 
-    icon: Award,
-    color: "text-purple-600",
-    bg: "bg-purple-50"
-  }
+const kpiMetrics: Array<{ title: string; value: number | null | undefined; change: string; trend: "up" | "down"; icon: any; color: string; bg: string }> = [
+  { title: "Monthly Revenue", value: undefined, change: "", trend: "up", icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+  { title: "Total Orders", value: undefined, change: "", trend: "up", icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
+  { title: "Average Order Value", value: undefined, change: "", trend: "down", icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
+  { title: "Quality Score", value: undefined, change: "", trend: "up", icon: Award, color: "text-purple-600", bg: "bg-purple-50" }
 ];
 
 export function BannosAnalyticsPage() {
+  const isEnabled = useAnalyticsEnabled();
+  const revenueDataUse = isEnabled ? revenueData : [];
+  const productPerformanceUse = isEnabled ? productPerformance : [];
+  const qualityMetricsUse = isEnabled ? qualityMetrics : [];
+  const productionEfficiencyUse = isEnabled ? productionEfficiency : [];
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -119,33 +97,37 @@ export function BannosAnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiMetrics.map((metric, index) => (
-          <Card key={index} className="p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="font-medium text-muted-foreground">{metric.title}</p>
+      {/* KPI tiles */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpiMetrics.map((metric) => {
+          const raw = metric?.value as any;
+          const num = toNumberOrNull(raw);
+          const isEnabled = useAnalyticsEnabled();
+          const isEmpty = num == null;
+
+          const unit =
+            /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
+            /Revenue|\$|Amount/i.test(metric.title) ? "currency" :
+            /Total|Staff|Orders|Hours|Count/i.test(metric.title) ? "count" :
+            "raw";
+
+          return (
+            <Card key={metric.title}>
+              <div className="flex items-center justify-between p-4">
                 <div className="space-y-1">
-                  <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
-                  <div className="flex items-center gap-1">
-                    {metric.trend === "up" ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
-                    )}
-                    <span className={`text-sm ${metric.trend === "up" ? "text-green-600" : "text-red-600"}`}>
-                      {metric.change}
-                    </span>
-                  </div>
+                  <p className="text-sm text-muted-foreground">{metric.title}</p>
+                  <p className="text-3xl font-semibold text-foreground">
+                    <KpiValue value={num} unit={unit as any} />
+                  </p>
+                  {isEmpty && !isEnabled && (
+                    <p className="text-xs text-muted-foreground">No data yet</p>
+                  )}
                 </div>
-              </div>
-              <div className={`p-3 rounded-xl ${metric.bg}`}>
                 <metric.icon className={`h-6 w-6 ${metric.color}`} />
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* Analytics Tabs */}
@@ -168,15 +150,17 @@ export function BannosAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-                    <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ChartContainer hasData={revenueDataUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={revenueDataUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                      <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
@@ -189,15 +173,17 @@ export function BannosAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ChartContainer hasData={revenueDataUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={revenueDataUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -211,23 +197,25 @@ export function BannosAnalyticsPage() {
                 <CardTitle>Product Category Distribution</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={productPerformance}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      dataKey="value"
-                      label={({name, value}) => `${name}: ${value}%`}
-                    >
-                      {productPerformance.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <ChartContainer hasData={productPerformanceUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={productPerformanceUse}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        dataKey="value"
+                        label={({name, value}) => `${name}: ${value}%`}
+                      >
+                        {productPerformanceUse.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
@@ -237,15 +225,17 @@ export function BannosAnalyticsPage() {
                 <CardTitle>Revenue by Product</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={productPerformance} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={120} />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-                    <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ChartContainer hasData={productPerformanceUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={productPerformanceUse} layout="horizontal">
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={120} />
+                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                      <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -262,15 +252,17 @@ export function BannosAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={qualityMetrics}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis domain={[90, 100]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} dot={{fill: '#3b82f6', strokeWidth: 2, r: 4}} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <ChartContainer hasData={qualityMetricsUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={qualityMetricsUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis domain={[90, 100]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} dot={{fill: '#3b82f6', strokeWidth: 2, r: 4}} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
