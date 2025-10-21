@@ -21,10 +21,9 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
 import { getStaffList } from "../lib/rpc-client";
 import { toast } from "sonner";
-import KpiValue from "@/components/analytics/KpiValue";
-import EmptyChart from "@/components/analytics/EmptyChart";
-import { toNumberOrNull } from "@/lib/metrics";
-import { ANALYTICS_ENABLED } from "@/config/flags";
+import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
+import ChartContainer from "@/components/analytics/ChartContainer";
+import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 
 // =============================================================================
 // MOCK DATA - TODO: Replace with real data from database when features are implemented
@@ -175,7 +174,7 @@ export function StaffAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [totalStaff, setTotalStaff] = useState(0);
   const [activeStaff, setActiveStaff] = useState(0);
-  const isEnabled = ANALYTICS_ENABLED;
+  const isEnabled = useAnalyticsEnabled();
   
   // Fetch real staff data
   useEffect(() => {
@@ -249,27 +248,16 @@ export function StaffAnalyticsPage() {
               <div className="space-y-2">
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
-                  <div className="space-y-1">
-                    {(() => {
-                      const raw = metric?.value;
-                      const num = isEnabled ? toNumberOrNull(raw) : null;
-                      const unit = metric.title.match(/(Quality|Productivity|Attendance|Training)/i)
-                        ? "percent"
-                        : metric.title.match(/Revenue|Value/i)
-                        ? "currency"
-                        : metric.title.match(/Total|Orders|Staff|Hours|Count/i)
-                        ? "count"
-                        : "raw";
-                      const isEmpty = num === null || num === undefined;
-                      return (
-                        <>
-                          <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>
-                          {isEmpty && !isEnabled && (
-                            <p className="text-xs text-muted-foreground">No data yet</p>
-                          )}
-                        </>
-                      );
-                    })()}
+                  <AnalyticsKPI
+                    title={metric.title}
+                    rawValue={metric.value}
+                    unit={
+                      /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
+                      /Revenue|Sales|\$|Amount/i.test(metric.title) ? "currency" :
+                      /Total|Orders|Staff|Hours|Count/i.test(metric.title) ? "count" :
+                      "raw"
+                    }
+                  />
                     {isEnabled && (
                       <div className="flex items-center gap-1">
                         {metric.trend === "up" ? (
@@ -314,9 +302,7 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {staffProductivityData.length === 0 ? (
-                  <EmptyChart />
-                ) : (
+                <ChartContainer hasData={staffProductivityData.length > 0}>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={staffProductivityData}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -326,7 +312,7 @@ export function StaffAnalyticsPage() {
                     <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
                   </LineChart>
                 </ResponsiveContainer>
-                )}
+                </ChartContainer>
               </CardContent>
             </Card>
 
@@ -339,9 +325,7 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {staffProductivityData.length === 0 ? (
-                  <EmptyChart />
-                ) : (
+                <ChartContainer hasData={staffProductivityData.length > 0}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={staffProductivityData}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -353,7 +337,7 @@ export function StaffAnalyticsPage() {
                     <Legend />
                   </BarChart>
                 </ResponsiveContainer>
-                )}
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -480,9 +464,7 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {attendanceDataUse.length === 0 ? (
-                  <EmptyChart />
-                ) : (
+                <ChartContainer hasData={attendanceDataUse.length > 0}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={attendanceDataUse}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -495,7 +477,7 @@ export function StaffAnalyticsPage() {
                     <Legend />
                   </BarChart>
                 </ResponsiveContainer>
-                )}
+                </ChartContainer>
               </CardContent>
             </Card>
 

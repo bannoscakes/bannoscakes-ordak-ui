@@ -17,10 +17,9 @@ import {
 } from "lucide-react";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
-import KpiValue from "@/components/analytics/KpiValue";
-import { ANALYTICS_ENABLED } from "@/config/flags";
-import EmptyChart from "@/components/analytics/EmptyChart";
-import { toNumberOrNull } from "@/lib/metrics";
+import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
+import ChartContainer from "@/components/analytics/ChartContainer";
+import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 
 // Mock data for Flourlane Analytics
 const revenueData = [
@@ -76,7 +75,7 @@ const kpiMetrics: Array<{ title: string; value: number | null | undefined; chang
 ];
 
 export function FlourlaneAnalyticsPage() {
-  const isEnabled = ANALYTICS_ENABLED;
+  const isEnabled = useAnalyticsEnabled();
   const revenueDataUse = isEnabled ? revenueData : [];
   const productPerformanceUse = isEnabled ? productPerformance : [];
   const qualityMetricsUse = isEnabled ? qualityMetrics : [];
@@ -113,28 +112,16 @@ export function FlourlaneAnalyticsPage() {
               <div className="space-y-2">
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
-                  <div className="space-y-1">
-                    {(() => {
-                      const raw = metric?.value;
-                      const num = toNumberOrNull(raw);
-                      const unit = metric.title.match(/(Quality|Productivity|Attendance|Training)/i)
-                        ? "percent"
-                        : metric.title.match(/Revenue|Value/i)
-                        ? "currency"
-                        : metric.title.match(/Total|Orders|Staff|Hours|Count/i)
-                        ? "count"
-                        : "raw";
-                      const isEmpty = num === null || num === undefined;
-                      return (
-                        <>
-                          <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>
-                          {isEmpty && !ANALYTICS_ENABLED && (
-                            <p className="text-xs text-muted-foreground">No data yet</p>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
+                <AnalyticsKPI
+                  title={metric.title}
+                  rawValue={metric.value}
+                  unit={
+                    /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
+                    /Revenue|Sales|\$|Amount/i.test(metric.title) ? "currency" :
+                    /Total|Staff|Orders|Hours|Count/i.test(metric.title) ? "count" :
+                    "raw"
+                  }
+                />
                 </div>
               </div>
               <div className={`p-3 rounded-xl ${metric.bg}`}>
@@ -166,19 +153,17 @@ export function FlourlaneAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {revenueDataUse.length === 0 ? (
-                  <EmptyChart />
-                ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={revenueDataUse}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-                    <Area type="monotone" dataKey="revenue" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-                )}
+                <ChartContainer hasData={revenueDataUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={revenueDataUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                      <Area type="monotone" dataKey="revenue" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
@@ -191,19 +176,17 @@ export function FlourlaneAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {revenueDataUse.length === 0 ? (
-                  <EmptyChart />
-                ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueDataUse}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="orders" fill="#ec4899" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-                )}
+                <ChartContainer hasData={revenueDataUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={revenueDataUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="orders" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -218,25 +201,25 @@ export function FlourlaneAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <ResponsiveContainer width="100%" height={300}>
-                  {productPerformanceUse.length === 0 ? (
-                    <EmptyChart />
-                  ) : (
-                  <PieChart>
-                    <Pie
-                      data={productPerformanceUse}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      dataKey="value"
-                      label={({name, value}) => `${name}: ${value}%`}
-                    >
-                      {productPerformanceUse.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                  )}
+                  <ChartContainer hasData={productPerformanceUse.length > 0}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={productPerformanceUse}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          dataKey="value"
+                          label={({name, value}) => `${name}: ${value}%`}
+                        >
+                          {productPerformanceUse.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -247,19 +230,17 @@ export function FlourlaneAnalyticsPage() {
                 <CardTitle>Revenue by Product</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {productPerformanceUse.length === 0 ? (
-                  <EmptyChart />
-                ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={productPerformanceUse} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={120} />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-                    <Bar dataKey="revenue" fill="#ec4899" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-                )}
+                <ChartContainer hasData={productPerformanceUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={productPerformanceUse} layout="horizontal">
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={120} />
+                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                      <Bar dataKey="revenue" fill="#ec4899" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -276,19 +257,17 @@ export function FlourlaneAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {qualityMetricsUse.length === 0 ? (
-                  <EmptyChart />
-                ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={qualityMetricsUse}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis domain={[95, 100]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="score" stroke="#ec4899" strokeWidth={3} dot={{fill: '#ec4899', strokeWidth: 2, r: 4}} />
-                  </LineChart>
-                </ResponsiveContainer>
-                )}
+                <ChartContainer hasData={qualityMetricsUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={qualityMetricsUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis domain={[95, 100]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="score" stroke="#ec4899" strokeWidth={3} dot={{fill: '#ec4899', strokeWidth: 2, r: 4}} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
