@@ -22,6 +22,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { getStaffList } from "../lib/rpc-client";
 import { toast } from "sonner";
 import KpiValue from "@/components/analytics/KpiValue";
+import EmptyChart from "@/components/analytics/EmptyChart";
 import { ANALYTICS_ENABLED } from "@/config/flags";
 
 // =============================================================================
@@ -247,14 +248,10 @@ export function StaffAnalyticsPage() {
               <div className="space-y-2">
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
-                  {(["Avg Productivity", "Attendance Rate", "Training Complete"].includes(metric.title) && !isEnabled) ? (
-                    <div className="space-y-1">
-                      <p className="text-3xl font-semibold text-foreground"><KpiValue value={null} /></p>
-                      <p className="text-xs text-muted-foreground">No data yet</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
+                  <div className="space-y-1">
+                    <p className="text-3xl font-semibold text-foreground"><KpiValue value={(isEnabled ? Number(metric.value) : undefined) as any} /></p>
+                    {!isEnabled && <p className="text-xs text-muted-foreground">No data yet</p>}
+                    {isEnabled && (
                       <div className="flex items-center gap-1">
                         {metric.trend === "up" ? (
                           <TrendingUp className="h-4 w-4 text-green-600" />
@@ -265,8 +262,8 @@ export function StaffAnalyticsPage() {
                           {metric.change}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
               <div className={`p-3 rounded-xl ${metric.bg}`}>
@@ -299,7 +296,7 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {staffProductivityData.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={staffProductivityData}>
@@ -324,7 +321,7 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {staffProductivityData.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={staffProductivityData}>
@@ -465,7 +462,7 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {attendanceDataUse.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={attendanceDataUse}>

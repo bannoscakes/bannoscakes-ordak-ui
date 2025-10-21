@@ -18,6 +18,7 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
 import KpiValue from "@/components/analytics/KpiValue";
 import { ANALYTICS_ENABLED } from "@/config/flags";
+import EmptyChart from "@/components/analytics/EmptyChart";
 
 // Mock data for Bannos Analytics
 const revenueData = [
@@ -57,11 +58,11 @@ const productionEfficiency = [
   { station: "Packing", efficiency: 96.2, target: 92, output: 1320 }
 ];
 
-const kpiMetrics = [
-  { title: "Monthly Revenue", value: null, change: "", trend: "up", icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-  { title: "Total Orders", value: null, change: "", trend: "up", icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
-  { title: "Average Order Value", value: null, change: "", trend: "down", icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
-  { title: "Quality Score", value: null, change: "", trend: "up", icon: Award, color: "text-purple-600", bg: "bg-purple-50" }
+const kpiMetrics: Array<{ title: string; value: number | null | undefined; change: string; trend: "up" | "down"; icon: any; color: string; bg: string }> = [
+  { title: "Monthly Revenue", value: undefined, change: "", trend: "up", icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+  { title: "Total Orders", value: undefined, change: "", trend: "up", icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
+  { title: "Average Order Value", value: undefined, change: "", trend: "down", icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
+  { title: "Quality Score", value: undefined, change: "", trend: "up", icon: Award, color: "text-purple-600", bg: "bg-purple-50" }
 ];
 
 export function BannosAnalyticsPage() {
@@ -103,9 +104,7 @@ export function BannosAnalyticsPage() {
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
                   <div className="space-y-1">
-                    <p className="text-3xl font-semibold text-foreground">
-                      {metric.title === "Quality Score" ? <KpiValue value={null} /> : "—"}
-                    </p>
+                    <p className="text-3xl font-semibold text-foreground"><KpiValue value={metric.value ?? null} /></p>
                     <p className="text-xs text-muted-foreground">No data yet</p>
                   </div>
                 </div>
@@ -139,7 +138,7 @@ export function BannosAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {revenueDataUse.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={revenueDataUse}>
@@ -164,7 +163,7 @@ export function BannosAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {revenueDataUse.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={revenueDataUse}>
@@ -191,7 +190,7 @@ export function BannosAnalyticsPage() {
               <CardContent className="p-0">
                 <ResponsiveContainer width="100%" height={300}>
                   {productPerformanceUse.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
+                    <EmptyChart />
                   ) : (
                   <PieChart>
                     <Pie
@@ -220,7 +219,7 @@ export function BannosAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {productPerformanceUse.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={productPerformanceUse} layout="horizontal">
@@ -249,7 +248,7 @@ export function BannosAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 {qualityMetricsUse.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
+                  <EmptyChart />
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={qualityMetricsUse}>
