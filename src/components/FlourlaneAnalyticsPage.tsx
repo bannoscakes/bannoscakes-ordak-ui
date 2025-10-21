@@ -19,6 +19,8 @@ import { TallCakeIcon } from "./TallCakeIcon";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
 import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
 import ChartContainer from "@/components/analytics/ChartContainer";
+import KpiValue from "@/components/analytics/KpiValue";
+import { toNumberOrNull } from "@/lib/metrics";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 
 // Mock data for Flourlane Analytics
@@ -104,32 +106,37 @@ export function FlourlaneAnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiMetrics.map((metric, index) => (
-          <Card key={index} className="p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="font-medium text-muted-foreground">{metric.title}</p>
+      {/* KPI tiles */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpiMetrics.map((metric) => {
+          const raw = metric?.value as any;
+          const num = toNumberOrNull(raw);
+          const isEnabled = useAnalyticsEnabled();
+          const isEmpty = num == null;
+
+          const unit =
+            /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
+            /Revenue|\$|Amount/i.test(metric.title) ? "currency" :
+            /Total|Staff|Orders|Hours|Count/i.test(metric.title) ? "count" :
+            "raw";
+
+          return (
+            <Card key={metric.title}>
+              <div className="flex items-center justify-between p-4">
                 <div className="space-y-1">
-                <AnalyticsKPI
-                  title={metric.title}
-                  rawValue={metric.value}
-                  unit={
-                    /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
-                    /Revenue|Sales|\$|Amount/i.test(metric.title) ? "currency" :
-                    /Total|Staff|Orders|Hours|Count/i.test(metric.title) ? "count" :
-                    "raw"
-                  }
-                />
+                  <p className="text-sm text-muted-foreground">{metric.title}</p>
+                  <p className="text-3xl font-semibold text-foreground">
+                    <KpiValue value={num} unit={unit as any} />
+                  </p>
+                  {isEmpty && !isEnabled && (
+                    <p className="text-xs text-muted-foreground">No data yet</p>
+                  )}
                 </div>
-              </div>
-              <div className={`p-3 rounded-xl ${metric.bg}`}>
                 <metric.icon className={`h-6 w-6 ${metric.color}`} />
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* Analytics Tabs */}
