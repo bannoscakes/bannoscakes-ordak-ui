@@ -303,15 +303,15 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <ChartContainer hasData={staffProductivityData.length > 0}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={staffProductivityData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis domain={[85, 100]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
-                  </LineChart>
-                </ResponsiveContainer>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={staffProductivityData}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis domain={[85, 100]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -326,17 +326,17 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <ChartContainer hasData={staffProductivityData.length > 0}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={staffProductivityData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="hours" fill="#8b5cf6" name="Regular Hours" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="overtime" fill="#f59e0b" name="Overtime" radius={[2, 2, 0, 0]} />
-                    <Legend />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={staffProductivityData}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="hours" fill="#8b5cf6" name="Regular Hours" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="overtime" fill="#f59e0b" name="Overtime" radius={[2, 2, 0, 0]} />
+                      <Legend />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -465,18 +465,18 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <ChartContainer hasData={attendanceDataUse.length > 0}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={attendanceDataUse}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="week" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="present" fill="#10b981" name="Present" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[2, 2, 0, 0]} />
-                    <Legend />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={attendanceDataUse}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis dataKey="week" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="present" fill="#10b981" name="Present" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[2, 2, 0, 0]} />
+                      <Legend />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -609,27 +609,25 @@ export function StaffAnalyticsPage() {
                 <CardTitle>Shift Distribution</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  {shiftDistributionUse.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
-                  ) : (
-                  <PieChart>
-                    <Pie
-                      data={shiftDistributionUse}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      dataKey="value"
-                      label={({name, value}) => `${name}: ${value}%`}
-                    >
-                      {shiftDistributionUse.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                  )}
-                </ResponsiveContainer>
+                <ChartContainer hasData={shiftDistributionUse.length > 0}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={shiftDistributionUse}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        dataKey="value"
+                        label={({name, value}) => `${name}: ${value}%`}
+                      >
+                        {shiftDistributionUse.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
               </CardContent>
             </Card>
 
