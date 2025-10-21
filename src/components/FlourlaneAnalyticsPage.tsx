@@ -20,6 +20,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import KpiValue from "@/components/analytics/KpiValue";
 import { ANALYTICS_ENABLED } from "@/config/flags";
 import EmptyChart from "@/components/analytics/EmptyChart";
+import { toNumberOrNull } from "@/lib/metrics";
 
 // Mock data for Flourlane Analytics
 const revenueData = [
@@ -113,7 +114,18 @@ export function FlourlaneAnalyticsPage() {
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
                   <div className="space-y-1">
-                    <p className="text-3xl font-semibold text-foreground"><KpiValue value={metric.value ?? null} /></p>
+                    {(() => {
+                      const raw = metric?.value;
+                      const num = toNumberOrNull(raw);
+                      const unit = metric.title.match(/(Quality|Productivity|Attendance|Training)/i)
+                        ? "percent"
+                        : metric.title.match(/Revenue|Value/i)
+                        ? "currency"
+                        : metric.title.match(/Total|Orders|Staff|Hours|Count/i)
+                        ? "count"
+                        : "raw";
+                      return <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>;
+                    })()}
                     <p className="text-xs text-muted-foreground">No data yet</p>
                   </div>
                 </div>
