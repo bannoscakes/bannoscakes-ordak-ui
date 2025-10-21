@@ -260,9 +260,16 @@ export function StaffAnalyticsPage() {
                         : metric.title.match(/Total|Orders|Staff|Hours|Count/i)
                         ? "count"
                         : "raw";
-                      return <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>;
+                      const isEmpty = num === null || num === undefined;
+                      return (
+                        <>
+                          <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>
+                          {isEmpty && !isEnabled && (
+                            <p className="text-xs text-muted-foreground">No data yet</p>
+                          )}
+                        </>
+                      );
                     })()}
-                    {!isEnabled && <p className="text-xs text-muted-foreground">No data yet</p>}
                     {isEnabled && (
                       <div className="flex items-center gap-1">
                         {metric.trend === "up" ? (

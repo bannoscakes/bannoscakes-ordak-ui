@@ -104,7 +104,6 @@ export function BannosAnalyticsPage() {
               <div className="space-y-2">
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
-                <div className="space-y-1">
                   {(() => {
                     const raw = metric?.value;
                     const num = toNumberOrNull(raw);
@@ -115,10 +114,16 @@ export function BannosAnalyticsPage() {
                       : metric.title.match(/Total|Orders|Staff|Hours|Count/i)
                       ? "count"
                       : "raw";
-                    return <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>;
+                    const isEmpty = num === null || num === undefined;
+                    return (
+                      <>
+                        <p className="text-3xl font-semibold text-foreground"><KpiValue value={num} unit={unit as any} /></p>
+                        {isEmpty && !ANALYTICS_ENABLED && (
+                          <p className="text-xs text-muted-foreground">No data yet</p>
+                        )}
+                      </>
+                    );
                   })()}
-                  <p className="text-xs text-muted-foreground">No data yet</p>
-                </div>
                 </div>
               </div>
               <div className={`p-3 rounded-xl ${metric.bg}`}>
