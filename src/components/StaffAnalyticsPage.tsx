@@ -21,6 +21,8 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
 import { getStaffList } from "../lib/rpc-client";
 import { toast } from "sonner";
+import KpiValue from "@/components/analytics/KpiValue";
+import { ANALYTICS_ENABLED } from "@/config/flags";
 
 // =============================================================================
 // MOCK DATA - TODO: Replace with real data from database when features are implemented
@@ -171,6 +173,7 @@ export function StaffAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [totalStaff, setTotalStaff] = useState(0);
   const [activeStaff, setActiveStaff] = useState(0);
+  const isEnabled = ANALYTICS_ENABLED;
   
   // Fetch real staff data
   useEffect(() => {
@@ -189,7 +192,7 @@ export function StaffAnalyticsPage() {
     fetchStaffStats();
   }, []);
   
-  // Update KPI metrics with real data
+  // Update KPI metrics with real data where available
   const kpiMetricsWithRealData = [
     {
       title: "Total Staff",
@@ -202,6 +205,15 @@ export function StaffAnalyticsPage() {
     },
     ...kpiMetrics.slice(1) // Keep other mock metrics for now
   ];
+
+  // Gate all mock datasets behind feature flag
+  const staffProductivityData = isEnabled ? staffProductivity : [];
+  const attendanceDataUse = isEnabled ? attendanceData : [];
+  const departmentPerformanceData = isEnabled ? departmentPerformance : [];
+  const skillsDistributionData = isEnabled ? skillsDistribution : [];
+  const trainingProgressData = isEnabled ? trainingProgress : [];
+  const shiftDistributionUse = isEnabled ? shiftDistribution : [];
+  const topPerformersData = isEnabled ? topPerformers : [];
 
   return (
     <div className="p-6 space-y-6">
@@ -235,17 +247,26 @@ export function StaffAnalyticsPage() {
               <div className="space-y-2">
                 <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
-                  <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
-                  <div className="flex items-center gap-1">
-                    {metric.trend === "up" ? (
-                      <TrendingUp className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 text-red-600" />
-                    )}
-                    <span className={`text-sm ${metric.trend === "up" ? "text-green-600" : "text-red-600"}`}>
-                      {metric.change}
-                    </span>
-                  </div>
+                  {(["Avg Productivity", "Attendance Rate", "Training Complete"].includes(metric.title) && !isEnabled) ? (
+                    <div className="space-y-1">
+                      <p className="text-3xl font-semibold text-foreground"><KpiValue value={null} /></p>
+                      <p className="text-xs text-muted-foreground">No data yet</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
+                      <div className="flex items-center gap-1">
+                        {metric.trend === "up" ? (
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className={`text-sm ${metric.trend === "up" ? "text-green-600" : "text-red-600"}`}>
+                          {metric.change}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className={`p-3 rounded-xl ${metric.bg}`}>
@@ -277,8 +298,11 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
+                {staffProductivityData.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No data to display</div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={staffProductivity}>
+                  <LineChart data={staffProductivityData}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="month" />
                     <YAxis domain={[85, 100]} />
@@ -286,6 +310,7 @@ export function StaffAnalyticsPage() {
                     <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
                   </LineChart>
                 </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -298,8 +323,11 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
+                {staffProductivityData.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No data to display</div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={staffProductivity}>
+                  <BarChart data={staffProductivityData}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -309,6 +337,7 @@ export function StaffAnalyticsPage() {
                     <Legend />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -323,7 +352,9 @@ export function StaffAnalyticsPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-4">
-                {topPerformers.map((performer, index) => (
+                {topPerformersData.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No data to display</div>
+                ) : topPerformersData.map((performer, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
@@ -433,8 +464,11 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
+                {attendanceDataUse.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No data to display</div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={attendanceData}>
+                  <BarChart data={attendanceDataUse}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="week" />
                     <YAxis />
@@ -445,6 +479,7 @@ export function StaffAnalyticsPage() {
                     <Legend />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
@@ -456,23 +491,34 @@ export function StaffAnalyticsPage() {
               <CardContent className="p-0">
                 <div className="space-y-6">
                   <div className="text-center">
-                    <p className="text-4xl font-semibold text-green-600">96.8%</p>
-                    <p className="text-muted-foreground">Overall Attendance Rate</p>
+                    {isEnabled ? (
+                      <>
+                        <p className="text-4xl font-semibold text-green-600">96.8%</p>
+                        <p className="text-muted-foreground">Overall Attendance Rate</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-4xl font-semibold text-foreground">—</p>
+                        <p className="text-sm text-muted-foreground">No data yet</p>
+                      </>
+                    )}
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="space-y-2">
-                      <p className="text-2xl font-semibold text-green-600">88</p>
-                      <p className="text-sm text-muted-foreground">Present</p>
+                  {isEnabled ? (
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="space-y-2">
+                        <p className="text-2xl font-semibold text-green-600">88</p>
+                        <p className="text-sm text-muted-foreground">Present</p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-2xl font-semibold text-red-600">4</p>
+                        <p className="text-sm text-muted-foreground">Absent</p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-2xl font-semibold text-orange-600">2</p>
+                        <p className="text-sm text-muted-foreground">Late</p>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-2xl font-semibold text-red-600">4</p>
-                      <p className="text-sm text-muted-foreground">Absent</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-2xl font-semibold text-orange-600">2</p>
-                      <p className="text-sm text-muted-foreground">Late</p>
-                    </div>
-                  </div>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -488,7 +534,9 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-4">
-                  {skillsDistribution.map((skill, index) => (
+                  {skillsDistributionData.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No data to display</div>
+                  ) : skillsDistributionData.map((skill, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex justify-between">
                         <span className="font-medium text-foreground">{skill.skill}</span>
@@ -528,7 +576,9 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-6">
-                  {trainingProgress.map((training, index) => (
+                  {trainingProgressData.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No data to display</div>
+                  ) : trainingProgressData.map((training, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex justify-between">
                         <span className="font-medium text-foreground">{training.name}</span>
@@ -562,21 +612,25 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <ResponsiveContainer width="100%" height={300}>
+                  {shiftDistributionUse.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No data to display</div>
+                  ) : (
                   <PieChart>
                     <Pie
-                      data={shiftDistribution}
+                      data={shiftDistributionUse}
                       cx="50%"
                       cy="50%"
                       outerRadius={100}
                       dataKey="value"
                       label={({name, value}) => `${name}: ${value}%`}
                     >
-                      {shiftDistribution.map((entry, index) => (
+                      {shiftDistributionUse.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip />
                   </PieChart>
+                  )}
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -588,7 +642,9 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-4">
-                  {shiftDistribution.map((shift, index) => (
+                  {shiftDistributionUse.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No data to display</div>
+                  ) : shiftDistributionUse.map((shift, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 rounded-full" style={{ backgroundColor: shift.color }}></div>
