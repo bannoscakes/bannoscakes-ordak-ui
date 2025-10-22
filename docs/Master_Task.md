@@ -5,7 +5,7 @@
 **Target:** v1.0.0 Production Ready  
 **Last Updated:** 2025-01-15
 
-## ✅ COMPLETED (Based on CHANGELOG v0.1.0 - v0.8.0)
+## ✅ COMPLETED (Based on CHANGELOG v0.1.0 - v0.9.0)
 
 ### Phase 1: Foundation & Database ✅ COMPLETE (v0.3.0-beta)
 - ✅ All 50+ RPC functions implemented
@@ -178,6 +178,44 @@
 ---
 
 *This file is the single source of truth for all remaining work. Every completed task must be marked here and added to CHANGELOG.md with evidence.*
+
+---
+
+## ✅ Phase 3: Analytics UI Refactor & Cleanup (v0.9.0-beta)
+**Goal:** Remove mock data, unify KPI and chart rendering, and prepare UI for live data integration.
+
+### Completed Work
+- Refactored Staff, Bannos, and Flourlane analytics pages:
+  - Removed hardcoded mock data and replaced with empty-state logic.
+  - Added `AnalyticsKPI`, `KpiValue`, `ChartContainer` shared components.
+  - Added `useAnalyticsEnabled()` hook + `flags.ts` toggle.
+  - Unified chart container pattern (one `ResponsiveContainer` per chart).
+  - Resolved all CI and build issues flagged by Bot and CodeRabbit.
+- Verified full build success and deployment (Supabase Preview + Vercel).
+- Confirmed UI consistency across all analytics pages.
+
+### Verification
+- **All Orders Cleared:** 0 rows in `orders_bannos`, `orders_flourlane`, `inventory_txn`.
+- **UI:** Analytics pages show clean empty states.
+- **Deployment:** Vercel, Supabase Preview, and CI all green.
+
+---
+
+## ▶️ Next Phase (v1.0.0-RC)
+- **Task 7 – Webhook Ingestion Setup (Edge Function + HMAC Verify)**
+  - Create `shopify-webhooks` Edge Function.
+  - Implement HMAC validation and idempotency via `processed_webhooks` table.
+  - Extend `dead_letter` for webhook error logging.
+  - Prepare test scripts for local HMAC verification.
+
+---
+
+🧠 Summary of project status after merge
+Area	Status	Notes
+Orders system	✅ Clean and verified	All tables empty, confirmed synced with UI
+Analytics UI	✅ Fully refactored	Using live components; ready for future metrics ingestion
+Inventory module	⏸ Deferred	Will resume after webhooks
+Webhook ingestion (next)	🚀 Ready to start	Baseline migration + Edge Function planned
 
 
 <!-- Content to be added by Panos -->
