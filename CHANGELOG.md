@@ -1,3 +1,29 @@
+## [v0.9.0-beta] – 2025-10-21
+### Major
+- **Analytics UI Refactor & Cleanup**
+  - Replaced all mock data and static charts with live-empty states.
+  - Introduced new shared components:
+    - `AnalyticsKPI` – standardized KPI tile rendering.
+    - `KpiValue` – consistent numeric formatting with unit types (`percent`, `count`, `currency`, `raw`).
+    - `ChartContainer` – single `ResponsiveContainer` wrapper; consistent empty-state handling.
+  - Added `useAnalyticsEnabled()` hook and feature flag in `config/flags.ts`.
+  - Added `toNumberOrNull()` parser in `lib/metrics.ts` for safe numeric conversion.
+  - Unified “No data yet” captions (only show when KPI value is empty).
+  - Ensured React hook rules are followed (moved `useAnalyticsEnabled` out of `.map()` loops).
+  - Fixed multiple JSX structure bugs:
+    - Removed duplicate/invalid `ResponsiveContainer` nesting.
+    - Corrected KPI card closures causing `Unterminated regular expression` build errors.
+  - Verified full build + deployment: ✅ CI / ✅ Supabase Preview / ✅ Vercel / ✅ CodeRabbit.
+
+### Minor
+- Ignored `.code-workspace` files to prevent local pull conflicts.
+- Confirmed orders wipe migration (v0.8.1) fully clears `orders_*` tables and dependents.
+- Synced `dev` branch to include analytics changes and environment clean slate.
+
+**Total PRs:** `#117` (Analytics UI Cleanup), `#116` (Orders Wipe Guarded)  
+**Author:** Panos  
+**Status:** ✅ Merged to `dev`
+
 ## [v0.8.0-beta] - 2025-01-13 - Authentication System Lockdown & Dev Environment Hardening
 
 ### 🔒 Authentication System Lockdown
