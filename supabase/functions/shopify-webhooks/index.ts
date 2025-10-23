@@ -40,12 +40,47 @@ serve(async (req) => {
   const hookId = req.headers.get("X-Shopify-Webhook-Id");
   const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
   const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
+
+  // Early validation: must have webhook id and shop domain
+  if (!hookId) {
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+      method: "POST",
+      headers: {
+        apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        created_at: new Date().toISOString(),
+        payload: { topic, shop_domain: shopDomain },
+        reason: "missing_webhook_id",
+      }),
+    });
+    return new Response("missing webhook id", { status: 400 });
+  }
+  if (shopDomain === "unknown") {
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+      method: "POST",
+      headers: {
+        apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        created_at: new Date().toISOString(),
+        payload: { topic },
+        reason: "missing_shop_domain",
+      }),
+    });
+    return new Response("missing shop domain", { status: 400 });
+  }
+
   const raw = await req.text();
 
   try {
-    // Idempotency check by (id, shop_domain)
+    // Idempotency check by (id, shop_domain); fail fast on REST error.
     const existsRes = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId ?? "")}&shop_domain=eq.${encodeURIComponent(shopDomain)}&select=id`,
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId)}&shop_domain=eq.${encodeURIComponent(shopDomain)}&select=id`,
       {
         headers: {
           apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -53,18 +88,18 @@ serve(async (req) => {
         },
       }
     );
-
-    if (hookId && existsRes.ok) {
-      const rows = await existsRes.json();
-      if (Array.isArray(rows) && rows.length > 0) {
-        // Already processed → fast 200
-        return new Response("ok", { status: 200 });
-      }
+    if (!existsRes.ok) {
+      throw new Error(`Idempotency check failed: ${existsRes.status}`);
+    }
+    const rows = await existsRes.json();
+    if (Array.isArray(rows) && rows.length > 0) {
+      // Already processed → fast 200
+      return new Response("ok", { status: 200 });
     }
 
     const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
     if (!hmacOk) {
-      // record rejection (per store)
+      // record rejection (per store) — no random UUID fallback
       await fetch(
         `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
         {
@@ -76,7 +111,7 @@ serve(async (req) => {
             Prefer: "resolution=merge-duplicates",
           },
           body: JSON.stringify({
-            id: hookId ?? crypto.randomUUID(),
+            id: hookId,
             shop_domain: shopDomain,
             topic,
             status: "rejected",
@@ -88,12 +123,11 @@ serve(async (req) => {
       return new Response("unauthorized", { status: 401 });
     }
 
-    // Parse JSON only after HMAC ok
+    // Parse JSON only after HMAC ok (kept for future splitting)
     let body: unknown = {};
     try { body = JSON.parse(raw); } catch { /* ignore */ }
 
-    // TODO (next step): enqueue splitting work here.
-    // For now, just mark processed.
+    // Mark processed — no random UUID fallback
     await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
       {
@@ -105,7 +139,7 @@ serve(async (req) => {
           Prefer: "resolution=merge-duplicates",
         },
         body: JSON.stringify({
-          id: hookId ?? crypto.randomUUID(),
+          id: hookId,
           shop_domain: shopDomain,
           topic,
           status: "ok",
@@ -136,4 +170,3 @@ serve(async (req) => {
     return new Response("error", { status: 500 });
   }
 });
-

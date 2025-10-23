@@ -7,6 +7,7 @@ create table if not exists public.processed_webhooks (
   topic text not null,
   received_at timestamptz not null default now(),
   status text not null default 'ok',   -- ok | rejected | error
+  constraint processed_webhooks_status_check check (status in ('ok','rejected','error')),
   http_hmac text,                      -- what client sent
   note text,                           -- failure reason if any
   primary key (id, shop_domain)        -- composite for true idempotency per store
@@ -22,4 +23,3 @@ begin
     alter table public.dead_letter add column reason text;
   end if;
 end$$;
-
