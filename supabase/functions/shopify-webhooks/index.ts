@@ -101,7 +101,7 @@ serve(async (req) => {
     const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
     if (!hmacOk) {
       // record rejection (per store) — no random UUID fallback
-      await fetch(
+      const rejectRes = await fetch(
         `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
         {
           method: "POST",
@@ -121,6 +121,9 @@ serve(async (req) => {
           }),
         }
       );
+      if (!rejectRes.ok) {
+        throw new Error(`Failed to record rejection: ${rejectRes.status}`);
+      }
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -129,7 +132,7 @@ serve(async (req) => {
     try { body = JSON.parse(raw); } catch { /* ignore */ }
 
     // Mark processed — no random UUID fallback
-    await fetch(
+    const markRes = await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
       {
         method: "POST",
@@ -148,6 +151,9 @@ serve(async (req) => {
         }),
       }
     );
+    if (!markRes.ok) {
+      throw new Error(`Failed to mark processed: ${markRes.status}`);
+    }
 
     return new Response("ok", { status: 200 });
   } catch (e) {
