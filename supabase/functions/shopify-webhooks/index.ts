@@ -75,8 +75,6 @@ serve(async (req) => {
     return new Response("missing shop domain", { status: 400 });
   }
 
-  const raw = await req.text();
-
   try {
     // Idempotency check by (id, shop_domain); fail fast on REST error.
     const existsRes = await fetch(
@@ -96,6 +94,9 @@ serve(async (req) => {
       // Already processed → fast 200
       return new Response("ok", { status: 200 });
     }
+
+    // Read body only after idempotency check passes
+    const raw = await req.text();
 
     const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
     if (!hmacOk) {
