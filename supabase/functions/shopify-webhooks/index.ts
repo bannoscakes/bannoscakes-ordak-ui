@@ -82,53 +82,60 @@ serve(async (req) => {
   }
 
   try {
-    // Idempotency check by (id, shop_domain); fail fast on REST error.
-    const existsRes = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId)}&shop_domain=eq.${encodeURIComponent(shopDomain)}&select=id`,
+    // Atomic idempotency: try to INSERT first (race-condition safe via PRIMARY KEY).
+    // If duplicate → already processing/processed → return 200 immediately.
+    const claimRes = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
       {
+        method: "POST",
         headers: {
           apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=ignore-duplicates",
         },
+        body: JSON.stringify({
+          id: hookId,
+          shop_domain: shopDomain,
+          topic,
+          status: "pending",
+        }),
       }
     );
-    if (!existsRes.ok) {
-      throw new Error(`Idempotency check failed: ${existsRes.status}`);
-    }
-    const rows = await existsRes.json();
-    if (Array.isArray(rows) && rows.length > 0) {
-      // Already processed → fast 200
+
+    // 201 = we claimed it, 200/204 = duplicate (ignored), 4xx/5xx = error
+    if (claimRes.status === 409 || (claimRes.ok && claimRes.status !== 201)) {
+      // Duplicate: already claimed by another request or already processed
       return new Response("ok", { status: 200 });
     }
+    if (!claimRes.ok) {
+      throw new Error(`Failed to claim webhook: ${claimRes.status}`);
+    }
 
-    // Read body only after idempotency check passes
+    // We successfully claimed it (201) → read body and process
     const raw = await req.text();
 
     const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
     if (!hmacOk) {
-      // record rejection (per store) — no random UUID fallback
+      // Update status to rejected (don't leak expected HMAC)
       const rejectRes = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId)}&shop_domain=eq.${encodeURIComponent(shopDomain)}`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: {
             apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
             "Content-Type": "application/json",
-            Prefer: "resolution=merge-duplicates",
           },
           body: JSON.stringify({
-            id: hookId,
-            shop_domain: shopDomain,
-            topic,
             status: "rejected",
             http_hmac: hmac,
-            note: "HMAC invalid; expected " + expected,
+            note: "HMAC invalid",
           }),
         }
       );
       if (!rejectRes.ok) {
-        throw new Error(`Failed to record rejection: ${rejectRes.status}`);
+        throw new Error(`Failed to record rejected webhook: ${rejectRes.status}`);
       }
       return new Response("unauthorized", { status: 401 });
     }
@@ -137,21 +144,19 @@ serve(async (req) => {
     let body: unknown = {};
     try { body = JSON.parse(raw); } catch { /* ignore */ }
 
-    // Mark processed — no random UUID fallback
+    // TODO (next step): enqueue splitting work here.
+
+    // Update status to ok
     const markRes = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`,
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId)}&shop_domain=eq.${encodeURIComponent(shopDomain)}`,
       {
-        method: "POST",
+        method: "PATCH",
         headers: {
           apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates",
         },
         body: JSON.stringify({
-          id: hookId,
-          shop_domain: shopDomain,
-          topic,
           status: "ok",
           http_hmac: hmac,
         }),
