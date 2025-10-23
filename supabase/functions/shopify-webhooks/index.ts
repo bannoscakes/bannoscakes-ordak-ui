@@ -24,6 +24,12 @@ async function verifyHmac(body: string, provided: string | null) {
   if (!provided) return { ok: false, expected: "(missing)" };
   if (!APP_SECRET) return { ok: false, expected: "(no secret)" };
   const expected = await signHmac(body, APP_SECRET);
+  
+  // timingSafeEqual requires same length; return false early if different
+  if (provided.length !== expected.length) {
+    return { ok: false, expected };
+  }
+  
   const ok = crypto.timingSafeEqual(
     new TextEncoder().encode(provided),
     new TextEncoder().encode(expected),
