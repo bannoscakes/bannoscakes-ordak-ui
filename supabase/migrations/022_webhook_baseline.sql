@@ -1,5 +1,5 @@
 -- 022_webhook_baseline.sql
--- Baseline for Shopify webhook ingest: idempotency table (shop-aware) + minimal dead_letter reason.
+-- Baseline for Shopify webhook ingest: idempotency table (shop-aware) + dead_letter table.
 
 create table if not exists public.processed_webhooks (
   id text not null,                    -- Shopify X-Shopify-Webhook-Id
@@ -13,13 +13,10 @@ create table if not exists public.processed_webhooks (
   primary key (id, shop_domain)        -- composite for true idempotency per store
 );
 
--- extend dead_letter with reason (if not present)
-do $$
-begin
-  if not exists (
-    select 1 from information_schema.columns
-    where table_schema='public' and table_name='dead_letter' and column_name='reason'
-  ) then
-    alter table public.dead_letter add column reason text;
-  end if;
-end$$;
+-- create dead_letter table if not exists
+create table if not exists public.dead_letter (
+  id bigserial primary key,
+  created_at timestamptz not null default now(),
+  payload jsonb,
+  reason text
+);
