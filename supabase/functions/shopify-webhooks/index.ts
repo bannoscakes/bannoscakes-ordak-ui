@@ -92,7 +92,7 @@ serve(async (req) => {
           apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
-          Prefer: "resolution=ignore-duplicates",
+          Prefer: "resolution=ignore-duplicates,return=representation",
         },
         body: JSON.stringify({
           id: hookId,
@@ -103,16 +103,19 @@ serve(async (req) => {
       }
     );
 
-    // 201 = we claimed it, 200/204 = duplicate (ignored), 4xx/5xx = error
-    if (claimRes.status === 409 || (claimRes.ok && claimRes.status !== 201)) {
-      // Duplicate: already claimed by another request or already processed
-      return new Response("ok", { status: 200 });
-    }
     if (!claimRes.ok) {
       throw new Error(`Failed to claim webhook: ${claimRes.status}`);
     }
 
-    // We successfully claimed it (201) → read body and process
+    // With ignore-duplicates: 201 always, but check response body
+    // New insert = body contains row, Duplicate = empty array []
+    const claimData = await claimRes.json();
+    if (Array.isArray(claimData) && claimData.length === 0) {
+      // Duplicate: already claimed by another request or already processed
+      return new Response("ok", { status: 200 });
+    }
+
+    // We successfully claimed it (non-empty response) → read body and process
     const raw = await req.text();
 
     const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
