@@ -46,12 +46,18 @@
 
 ## ❌ NOT STARTED - CRITICAL
 
-### Phase 5: Shopify Integration & Webhooks ❌ 0% COMPLETE
-- ❌ No webhook handlers created
-- ❌ No Edge Functions exist
-- ❌ HMAC verification not implemented
-- ❌ Order ingestion pipeline not built
-- ✅ Documentation exists (webhook-ingest.md, task-splitting.md)
+### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~40%)
+
+- ✅ Edge Function `shopify-webhooks` created and deployed
+- ✅ HMAC verification with `SHOPIFY_APP_SECRET`
+- ✅ Per-store idempotency: `processed_webhooks` (PK: `(id, shop_domain)`) + `status` CHECK (`ok|rejected|error`)
+- ✅ Dead-letter `reason` column and early rejection for missing headers (`X-Shopify-Webhook-Id`, `X-Shopify-Shop-Domain`)
+- ✅ Docs exist (webhook-ingest.md, task-splitting.md)
+
+- ⏳ Order ingestion pipeline (split to `orders_*` tables) — next task
+- ⏳ Enqueue to queue/RPC for post-ingest splitting — next
+- ⏳ Shopify admin: confirm webhooks registered per store (Bannos, Flourlane)
+- ⏳ Optional UI: admin monitor (processed/dead_letter) and health badge
 
 ### Phase 7: Production Deployment ⚠️ SIMPLIFIED APPROACH
 - ❌ Mobile testing needed (production floor uses tablets)
@@ -162,7 +168,7 @@
 - **Phase 2 (Queue/Orders):** ✅ 100% Complete  
 - **Phase 3 (Staff Management):** ✅ 100% Complete
 - **Phase 4 (Inventory):** ⚠️ 80% Complete (UI integration needed)
-- **Phase 5 (Webhooks):** ❌ 0% Complete (Critical blocker)
+- **Phase 5 (Webhooks):** 🚧 40% Complete (Baseline done, ingestion next)
 - **Phase 6 (UI Integration):** ✅ 85% Complete (Inventory tabs needed)
 - **Phase 7 (Production):** ⚠️ Simplified approach (RLS deferred)
 

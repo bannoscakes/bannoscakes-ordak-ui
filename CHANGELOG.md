@@ -1,3 +1,15 @@
+## v0.9.0-beta — Webhooks Baseline (2025-01-24)
+### Added
+- Edge Function `shopify-webhooks` with Shopify HMAC verification.
+- Store-aware idempotency via `processed_webhooks` (composite PK `(id, shop_domain)`).
+- `status` CHECK constraint (`pending|ok|rejected|error`) and `dead_letter.reason`.
+- Early validation: reject missing `X-Shopify-Webhook-Id` or `X-Shopify-Shop-Domain`.
+- Safer idempotency: fail fast if REST check errors; removed random UUID fallbacks.
+
+### Notes
+- Order ingestion/splitting to `orders_*` remains **next** in Phase 5.
+- Webhooks must be registered separately for Bannos and Flourlane.
+
 ## [v0.9.0-beta] – 2025-10-21
 ### Major
 - **Analytics UI Refactor & Cleanup**
