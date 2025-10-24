@@ -118,14 +118,19 @@ serve(async (req) => {
     const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
     if (!hmacOk) {
       // Update status to rejected (don't leak expected HMAC)
+      // Use URLSearchParams to safely build query (prevents injection)
+      const rejectParams = new URLSearchParams();
+      rejectParams.set("id", `eq.${hookId}`);
+      rejectParams.set("shop_domain", `eq.${shopDomain}`);
       const rejectRes = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId)}&shop_domain=eq.${encodeURIComponent(shopDomain)}`,
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${rejectParams}`,
         {
           method: "PATCH",
           headers: {
             apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
             "Content-Type": "application/json",
+            "Prefer": "return=minimal",
           },
           body: JSON.stringify({
             status: "rejected",
@@ -147,14 +152,19 @@ serve(async (req) => {
     // TODO (next step): enqueue splitting work here.
 
     // Update status to ok
+    // Use URLSearchParams to safely build query (prevents injection)
+    const markParams = new URLSearchParams();
+    markParams.set("id", `eq.${hookId}`);
+    markParams.set("shop_domain", `eq.${shopDomain}`);
     const markRes = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?id=eq.${encodeURIComponent(hookId)}&shop_domain=eq.${encodeURIComponent(shopDomain)}`,
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${markParams}`,
       {
         method: "PATCH",
         headers: {
           apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
+          "Prefer": "return=minimal",
         },
         body: JSON.stringify({
           status: "ok",
@@ -168,7 +178,30 @@ serve(async (req) => {
 
     return new Response("ok", { status: 200 });
   } catch (e) {
-    // dead_letter fallback
+    // Mark webhook as error before logging to dead_letter
+    if (hookId) {
+      const errorParams = new URLSearchParams();
+      errorParams.set("id", `eq.${hookId}`);
+      errorParams.set("shop_domain", `eq.${shopDomain}`);
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${errorParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "error",
+            note: String(e).substring(0, 500),
+          }),
+        }
+      ).catch(() => {}); // best effort
+    }
+
+    // dead_letter fallback with hookId for correlation
     await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`,
       {
@@ -180,7 +213,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           created_at: new Date().toISOString(),
-          payload: { topic, shop_domain: shopDomain, error: String(e) },
+          payload: { webhook_id: hookId, topic, shop_domain: shopDomain, error: String(e) },
           reason: "webhook_unhandled",
         }),
       }
