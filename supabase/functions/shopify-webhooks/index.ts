@@ -152,7 +152,41 @@ serve(async (req) => {
     let body: unknown = {};
     try { body = JSON.parse(raw); } catch { /* ignore */ }
 
-    // TODO (next step): enqueue splitting work here.
+    // Enqueue split work (SECURITY DEFINER RPC)
+    const rpcRes = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/enqueue_order_split`,
+      {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_shop_domain: shopDomain,
+          p_topic: topic,
+          p_hook_id: hookId,
+          p_body: body as unknown as Record<string, unknown>,
+        }),
+      }
+    );
+
+    if (!rpcRes.ok) {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: { topic, shop_domain: shopDomain, hook_id: hookId, rpc_status: rpcRes.status },
+          reason: "enqueue_failed",
+        }),
+      });
+      return new Response("enqueue failed", { status: 500 });
+    }
 
     // Update status to ok
     // Use URLSearchParams to safely build query (prevents injection)
