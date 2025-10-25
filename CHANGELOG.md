@@ -1,14 +1,13 @@
-## v0.9.0-beta — Webhooks Baseline (2025-01-24)
+## v0.9.0-beta — Webhooks Baseline & Enqueue (2025-01-24)
 ### Added
 - Edge Function `shopify-webhooks` with Shopify HMAC verification.
-- Store-aware idempotency via `processed_webhooks` (composite PK `(id, shop_domain)`).
-- `status` CHECK constraint (`pending|ok|rejected|error`) and `dead_letter.reason`.
-- Early validation: reject missing `X-Shopify-Webhook-Id` or `X-Shopify-Shop-Domain`.
-- Safer idempotency: fail fast if REST check errors; removed random UUID fallbacks.
+- Per-store idempotency via `processed_webhooks` (PK: (id, shop_domain)), status CHECK (`ok|rejected|error`).
+- Early validation & consistent failure paths (missing headers → 400, HMAC fail → rejected, RPC fail → error + dead_letter).
+- SECURITY DEFINER RPC `enqueue_order_split(...)` and `work_queue` table (+ index).
+- `supabase/config.toml` declaration for auto-deploy.
 
-### Notes
-- Order ingestion/splitting to `orders_*` remains **next** in Phase 5.
-- Webhooks must be registered separately for Bannos and Flourlane.
+### Next
+- Worker that consumes `work_queue` and creates A/B/C tasks per `orders-splitting.md` (accessories on -A, stable suffixes).
 
 ## [v0.9.0-beta] – 2025-10-21
 ### Major

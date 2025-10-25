@@ -46,18 +46,17 @@
 
 ## ❌ NOT STARTED - CRITICAL
 
-### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~40%)
+### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~60%)
 
-- ✅ Edge Function `shopify-webhooks` created and deployed
-- ✅ HMAC verification with `SHOPIFY_APP_SECRET`
-- ✅ Per-store idempotency: `processed_webhooks` (PK: `(id, shop_domain)`) + `status` CHECK (`ok|rejected|error`)
-- ✅ Dead-letter `reason` column and early rejection for missing headers (`X-Shopify-Webhook-Id`, `X-Shopify-Shop-Domain`)
-- ✅ Docs exist (webhook-ingest.md, task-splitting.md)
+- ✅ Edge Function `shopify-webhooks` (HMAC verify, per-store idempotency)
+- ✅ `processed_webhooks` + `dead_letter` with consistent statuses
+- ✅ SECURITY DEFINER RPC `enqueue_order_split` + `work_queue` table
+- ✅ Auto-deploy wiring (`supabase/config.toml`)
+- ✅ Docs available (webhook-ingest.md, orders-splitting.md)
 
-- ⏳ Order ingestion pipeline (split to `orders_*` tables) — next task
-- ⏳ Enqueue to queue/RPC for post-ingest splitting — next
-- ⏳ Shopify admin: confirm webhooks registered per store (Bannos, Flourlane)
-- ⏳ Optional UI: admin monitor (processed/dead_letter) and health badge
+- ⏳ Implement worker to read `work_queue` and create A/B/C tasks (split logic)
+- ⏳ Register webhooks per store (Bannos, Flourlane) when switching to ordak.com.au
+- ⏳ (Optional) Admin monitor page for processed/dead_letter
 
 ### Phase 7: Production Deployment ⚠️ SIMPLIFIED APPROACH
 - ❌ Mobile testing needed (production floor uses tablets)
@@ -168,7 +167,7 @@
 - **Phase 2 (Queue/Orders):** ✅ 100% Complete  
 - **Phase 3 (Staff Management):** ✅ 100% Complete
 - **Phase 4 (Inventory):** ⚠️ 80% Complete (UI integration needed)
-- **Phase 5 (Webhooks):** 🚧 40% Complete (Baseline done, ingestion next)
+- **Phase 5 (Webhooks):** 🚧 60% Complete (Enqueue done, worker next)
 - **Phase 6 (UI Integration):** ✅ 85% Complete (Inventory tabs needed)
 - **Phase 7 (Production):** ⚠️ Simplified approach (RLS deferred)
 
