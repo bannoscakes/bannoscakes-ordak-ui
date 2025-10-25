@@ -172,6 +172,26 @@ serve(async (req) => {
     );
 
     if (!rpcRes.ok) {
+      // 1) mark processed_webhooks as error (per-store idempotency row)
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates",
+        },
+        body: JSON.stringify({
+          id: hookId,
+          shop_domain: shopDomain,
+          topic,
+          status: "error",
+          http_hmac: hmac,
+          note: `enqueue_failed: status ${rpcRes.status}`,
+        }),
+      });
+
+      // 2) dead-letter for investigation
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
         method: "POST",
         headers: {
@@ -185,6 +205,7 @@ serve(async (req) => {
           reason: "enqueue_failed",
         }),
       });
+
       return new Response("enqueue failed", { status: 500 });
     }
 
