@@ -4,8 +4,10 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
@@ -13,5 +15,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src_restore", "node_modules", "dist", "supabase/functions/**/*"]
+  "exclude": ["supabase/functions/**/*"]
 }
