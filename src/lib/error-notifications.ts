@@ -151,9 +151,11 @@ export const updateLoadingNotification = (
     case 'success':
       showSuccessNotification(title, description);
       break;
-    case 'error':
-      showErrorNotification(new Error(description || title), { title: 'Error' });
+    case 'error': {
+      const message = (title?.trim() || description?.trim() || 'Error');
+      showErrorNotification(new Error(message), { title: 'Error', description });
       break;
+    }
     case 'info':
       showInfoNotification(title, description);
       break;
