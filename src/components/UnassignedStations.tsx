@@ -57,10 +57,10 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
         
         // Transform the RPC data to our expected format
         const counts = {
-          filling: data.find(d => d.stage === 'Filling')?.count || 0,
-          covering: data.find(d => d.stage === 'Covering')?.count || 0,
-          decorating: data.find(d => d.stage === 'Decorating')?.count || 0,
-          packing: data.find(d => d.stage === 'Packing')?.count || 0
+          filling: data.find((d: { stage: string; count: number }) => d.stage === 'Filling')?.count || 0,
+          covering: data.find((d: { stage: string; count: number }) => d.stage === 'Covering')?.count || 0,
+          decorating: data.find((d: { stage: string; count: number }) => d.stage === 'Decorating')?.count || 0,
+          packing: data.find((d: { stage: string; count: number }) => d.stage === 'Packing')?.count || 0
         };
         
         const stationData: Station[] = [

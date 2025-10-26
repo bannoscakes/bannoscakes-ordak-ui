@@ -256,7 +256,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         flavour: formData.flavor || "Other",
         storage: formData.storage,
         due_date: formData.dueDate,
-        notes: formData.writingOnCake || null,
+        notes: formData.writingOnCake || undefined,
       });
 
       // Create updated order for UI

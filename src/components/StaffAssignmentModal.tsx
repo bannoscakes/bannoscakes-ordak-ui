@@ -90,7 +90,7 @@ export function StaffAssignmentModal({
         // Assign to staff
         await assignStaff(order.id, store, selectedStaffId);
         
-        const assignedStaff = staffList.find(s => s.id === selectedStaffId);
+        const assignedStaff = staffList.find(s => s.user_id === selectedStaffId);
         toast.success(`Order assigned to ${assignedStaff?.full_name || 'staff member'}`);
         
         const updatedOrder = {
@@ -173,7 +173,7 @@ export function StaffAssignmentModal({
                     </div>
                   </SelectItem>
                   {staffList.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>
+                    <SelectItem key={staff.user_id} value={staff.user_id}>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
                           <AvatarFallback className="text-xs">

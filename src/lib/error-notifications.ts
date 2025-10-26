@@ -72,7 +72,7 @@ export const showErrorNotification = (
 
   // Show technical details in development
   if (showTechnicalDetails && isAppError) {
-    description += `\n\nTechnical Details:\nError ID: ${error.correlationId.slice(-8)}\nCode: ${error.code}`;
+    description += `\n\nTechnical Details:\nError ID: ${error.correlationId?.slice(-8) || 'N/A'}\nCode: ${error.code}`;
   }
 
   // Show toast based on type
@@ -151,9 +151,11 @@ export const updateLoadingNotification = (
     case 'success':
       showSuccessNotification(title, description);
       break;
-    case 'error':
-      showErrorNotification(new Error(title), { title: 'Error', description });
+    case 'error': {
+      const message = (title?.trim() || description?.trim() || 'Error');
+      showErrorNotification(new Error(message), { title: 'Error', description });
       break;
+    }
     case 'info':
       showInfoNotification(title, description);
       break;

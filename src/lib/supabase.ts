@@ -22,16 +22,14 @@ export function getSupabase(): SupabaseClient {
         ? window.localStorage
         : undefined
       : undefined;
-  const authOptions: Parameters<typeof createClient>[2]['auth'] = {
-    persistSession,                                 // ✅ keep session on reload
-    storage,                                        // ✅ where to keep it
-    storageKey: config.supabaseStorageKey,         // ✅ stable key
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  };
-
   _client = createClient(url, anon, {
-    auth: authOptions,
+    auth: {
+      persistSession,                                 // ✅ keep session on reload
+      storage,                                        // ✅ where to keep it
+      storageKey: config.supabaseStorageKey,         // ✅ stable key
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   });
   return _client;
 }

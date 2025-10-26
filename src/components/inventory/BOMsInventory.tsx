@@ -92,7 +92,7 @@ export function BOMsInventory() {
         return;
       }
       
-      if (!editingBOM.description.trim()) {
+      if (!editingBOM.description?.trim()) {
         toast.error("Please enter a BOM description");
         return;
       }
