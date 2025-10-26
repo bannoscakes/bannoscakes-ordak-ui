@@ -13,5 +13,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src_restore", "node_modules", "dist"]
+  "exclude": ["src_restore", "node_modules", "dist", "supabase/functions/**/*"]
 }
