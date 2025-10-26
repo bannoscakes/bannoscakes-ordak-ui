@@ -16,6 +16,30 @@ as $$
                 or (p_item->>'title') ilike '%cake%', false )
 $$;
 
+-- Helper: convert 0-based index to A..Z, then AA..AZ, BA..BZ, etc.
+create or replace function public.alpha_suffix(p_idx int)
+returns text
+language plpgsql
+immutable
+as $$
+declare
+  n int := p_idx;
+  s text := '';
+  r int;
+begin
+  if n < 0 then
+    return 'A';
+  end if;
+  loop
+    r := n % 26;
+    s := chr(65 + r) || s;   -- 65 = 'A'
+    n := (n / 26) - 1;       -- 0-based to Excel-like
+    exit when n < 0;
+  end loop;
+  return s;
+end;
+$$;
+
 -- 3) The worker: grabs N pending jobs, locks them, emits child jobs, completes or errors.
 create or replace function public.process_webhook_order_split(p_limit int default 10, p_lock_secs int default 60)
 returns int
@@ -63,6 +87,11 @@ begin
       v_hook    := (v_payload->>'hook_id');
       v_body    := (v_payload->'body');
 
+      -- Validate required fields
+      if v_shop is null or v_topic is null or v_hook is null or v_body is null then
+        raise exception 'Missing required payload fields (shop_domain/topic/hook_id/body)';
+      end if;
+
       -- Expect Shopify order payload with line_items array
       v_items := coalesce(v_body->'line_items', '[]'::jsonb);
 
@@ -80,9 +109,15 @@ begin
         end if;
       end loop;
 
-      -- Emit one child job per cake with A/B/C… suffix; accessories only on A
+      if jsonb_array_length(v_cakes) = 0 then
+        update public.work_queue set status = 'done', updated_at = now() where id = v_job.id;
+        v_count := v_count + 1;
+        continue;
+      end if;
+
+      -- Emit one child job per cake with A/B/C…; accessories only on A
       for i in 0 .. coalesce(jsonb_array_length(v_cakes), 0)-1 loop
-        v_suffix := chr(65 + i); -- 65 = 'A'
+        v_suffix := public.alpha_suffix(i);
         insert into public.work_queue (topic, payload, status)
         values (
           'kitchen_task_create',
