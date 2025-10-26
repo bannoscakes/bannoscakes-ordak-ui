@@ -258,7 +258,7 @@ export function StaffAnalyticsPage() {
             "raw";
 
           return (
-            <Card key={metric.key}>
+            <Card key={metric.title}>
               <div className="flex items-center justify-between p-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{metric.title}</p>

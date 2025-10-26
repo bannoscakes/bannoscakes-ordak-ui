@@ -145,7 +145,7 @@ export const ErrorTest: React.FC = () => {
           Test Error Boundary (Simulate Crash)
         </Button>
 
-        {testError && (
+        {!!testError && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Error Display Test</h3>

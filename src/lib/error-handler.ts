@@ -37,15 +37,6 @@ export enum ErrorCode {
   VAL004 = 'VAL004', // Business rule violation
 }
 
-export interface AppError {
-  code: ErrorCode;
-  message: string;
-  details?: any;
-  correlationId?: string;
-  timestamp: string;
-  context?: Record<string, any>;
-}
-
 export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly details?: any;
@@ -77,7 +68,7 @@ export class AppError extends Error {
     return `${this.code}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  toJSON(): AppError {
+  toJSON() {
     return {
       code: this.code,
       message: this.message,

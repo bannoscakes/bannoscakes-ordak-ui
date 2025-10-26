@@ -28,7 +28,7 @@ export const toId = (v: unknown) => (v == null ? '' : String(v));
 export const CURRENT_USER_SENTINEL = 'current-user';
 
 export function toUIMessage(msg: RPCMessage, currentUserId?: string): UIMessage {
-  const isOwn = Boolean((msg as any).is_own_message) || (currentUserId && msg.authorId === currentUserId);
+  const isOwn = Boolean((msg as any).is_own_message) || Boolean(currentUserId && msg.authorId === currentUserId);
   return {
     id: toId(msg.id),
     text: msg.body ?? '',
