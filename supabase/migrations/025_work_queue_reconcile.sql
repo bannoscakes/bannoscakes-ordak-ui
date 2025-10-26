@@ -52,15 +52,22 @@ begin
     alter table public.work_queue add primary key (id);
   end if;
 
-  -- Handle legacy schema: job_type → topic
+end$$;
+
+-- Backfill topic from legacy job_type for ALL legacy rows, then drop job_type
+do $$
+begin
   if exists (
     select 1 from information_schema.columns
     where table_schema='public' and table_name='work_queue' and column_name='job_type'
   ) then
-    -- If topic doesn't exist we already added it above; now backfill and drop job_type
     update public.work_queue
-       set topic = coalesce(nullif(trim(topic), ''), job_type)
-     where topic is null or length(trim(topic)) = 0;
+       set topic = job_type
+     where (topic is null
+            or length(trim(topic)) = 0
+            or topic = 'unknown')
+       and job_type is not null
+       and length(trim(job_type)) > 0;
 
     alter table public.work_queue drop column job_type;
   end if;
