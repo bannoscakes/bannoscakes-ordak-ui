@@ -31,7 +31,9 @@
     "security:validate": "npm run guard:no-direct-writes && npm run type-check",
     "test:e2e": "playwright test --reporter=line",
     "fn:dev:webhooks": "supabase functions serve shopify-webhooks --no-verify-jwt",
-    "fn:deploy:webhooks": "supabase functions deploy shopify-webhooks --no-verify-jwt"
+    "fn:deploy:webhooks": "supabase functions deploy shopify-webhooks --no-verify-jwt",
+    "fn:dev:worker": "supabase functions serve queue-worker --no-verify-jwt",
+    "fn:deploy:worker": "supabase functions deploy queue-worker --no-verify-jwt"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",

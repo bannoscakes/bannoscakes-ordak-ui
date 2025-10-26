@@ -348,3 +348,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.shopify-webhooks]
 verify_jwt = false
+
+[functions.queue-worker]
+verify_jwt = false
