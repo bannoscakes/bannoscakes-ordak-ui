@@ -5,9 +5,7 @@
 create index if not exists work_queue_status_topic_created_idx2
   on public.work_queue (status, topic, created_at desc);
 
--- Idempotency key for Filling tickets: one row per (order, shop, stage, suffix)
-create unique index if not exists stage_events_order_shop_stage_suffix_uidx
-  on public.stage_events(order_id, shop_domain, stage, task_suffix);
+-- Note: stage_events table and its unique index are created in migration 028/031
 
 create or replace function public.process_kitchen_task_create(p_limit int default 20, p_lock_secs int default 60)
 returns int
