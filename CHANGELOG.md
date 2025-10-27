@@ -1,3 +1,23 @@
+## v0.9.4-beta — Inventory System Complete (2025-10-27)
+
+### Added
+- SECURITY DEFINER write-side RPCs:
+  - `tx_component_adjust(uuid,numeric,text,uuid,jsonb)` — Generic adjustment (+/-)
+  - `tx_component_receive(uuid,numeric,uuid,jsonb)` — Receive/purchase (inbound)
+  - `tx_component_consume(uuid,numeric,uuid,jsonb)` — Consume (outbound)
+  - `tx_component_reserve(uuid,numeric,uuid,jsonb)` — Reserve stock for order
+  - `tx_component_release(uuid,numeric,uuid,jsonb)` — Release reserved stock
+- Internal `_log_component_txn()` wrapper for dynamic logger compatibility (tries existing logger, falls back to direct insert)
+- All read-side RPCs from migration 034 now stable and preview-safe
+
+### Status
+- **Phase 4 Inventory & BOMs = Fully Complete ✅**
+- All five inventory tabs now live-connected to Supabase
+- No mock data required
+- All CI checks passing
+
+---
+
 ## v0.9.2-beta — Webhook → Queue → Workers stabilized (2025-10-27)
 
 ### Added
