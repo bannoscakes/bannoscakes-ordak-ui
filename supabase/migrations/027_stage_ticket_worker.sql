@@ -19,7 +19,7 @@ declare
   v_job record;
   v_p jsonb;
   v_shop text;
-  v_order text;
+  v_order uuid := gen_random_uuid(); -- internal Ordak order UUID placeholder
   v_suffix text;
   v_line jsonb;
 begin
@@ -48,11 +48,11 @@ begin
 
       v_p      := v_job.payload;
       v_shop   := v_p->>'shop_domain';
-      v_order  := v_p->>'order_id';
       v_suffix := v_p->>'task_suffix';
       v_line   := v_p->'line_item';
+      -- Note: v_order is a generated UUID placeholder; Shopify order_id is in v_p->'body'
 
-      if v_shop is null or v_order is null or v_suffix is null then
+      if v_shop is null or v_suffix is null then
         raise exception 'missing payload fields';
       end if;
 

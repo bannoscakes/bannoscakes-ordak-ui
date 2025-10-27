@@ -9,7 +9,7 @@
 create table if not exists public.stage_events (
   id bigserial primary key,
   created_at timestamptz not null default now(),
-  order_id text not null,
+  order_id uuid not null,
   shop_domain text not null,
   stage text not null,
   status text not null,
@@ -24,11 +24,11 @@ begin
     select 1 from information_schema.columns
     where table_schema='public' and table_name='stage_events' and column_name='order_id'
   ) then
-    alter table public.stage_events add column order_id text;
+    alter table public.stage_events add column order_id uuid;
   end if;
   update public.stage_events
-     set order_id = coalesce(nullif(order_id,''), 'unknown-' || id)
-   where order_id is null or order_id = '';
+     set order_id = coalesce(order_id, gen_random_uuid())
+   where order_id is null;
   alter table public.stage_events alter column order_id set not null;
 
   -- shop_domain
