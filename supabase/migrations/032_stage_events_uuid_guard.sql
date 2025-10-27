@@ -39,10 +39,28 @@ begin
     alter table public.stage_events rename column _order_id_uuid to order_id;
 
   else
-    -- Unknown type: ensure there's at least some uuid column to proceed
-    alter table public.stage_events add column if not exists order_id uuid;
-    update public.stage_events set order_id = coalesce(order_id, gen_random_uuid());
-    alter table public.stage_events alter column order_id set not null;
+    -- Incompatible existing type: swap to UUID without losing rows
+    -- 1) Add temp UUID column
+    alter table public.stage_events
+      add column if not exists _order_id_uuid uuid;
+
+    -- 2) Backfill (always safe)
+    update public.stage_events
+       set _order_id_uuid = coalesce(_order_id_uuid, gen_random_uuid());
+
+    -- 3) Ensure NOT NULL on temp
+    alter table public.stage_events
+      alter column _order_id_uuid set not null;
+
+    -- 4) Rename old column out of the way, promote the UUID
+    alter table public.stage_events
+      rename column order_id to order_id_legacy;
+    alter table public.stage_events
+      rename column _order_id_uuid to order_id;
+
+    -- 5) Drop legacy column (idempotent guard)
+    alter table public.stage_events
+      drop column if exists order_id_legacy;
   end if;
 end$$;
 
