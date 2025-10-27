@@ -21,6 +21,14 @@ declare
   v_suffix text;
   v_line jsonb;
 begin
+  -- Validate inputs (defensive)
+  if p_limit < 1 or p_limit > 100 then
+    raise exception 'p_limit must be between 1 and 100';
+  end if;
+  if p_lock_secs < 1 or p_lock_secs > 3600 then
+    raise exception 'p_lock_secs must be between 1 and 3600';
+  end if;
+
   for v_job in
     select *
       from public.work_queue
@@ -48,15 +56,19 @@ begin
         raise exception 'missing payload: shop_domain';
       end if;
 
+      -- Extract and validate task suffix (A/B/C…)
+      v_suffix := nullif(v_p->>'task_suffix','');
+      if v_suffix is null then
+        raise exception 'missing payload: task_suffix';
+      end if;
+      -- Optional: enforce letters only (A–Z, AA…)
+      if v_suffix !~ '^[A-Z]+$' then
+        raise exception 'invalid task_suffix: %', v_suffix;
+      end if;
+
       -- Insert Filling_pending ticket (idempotent by unique key)
       insert into public.stage_events(order_id, shop_domain, stage, status, task_suffix)
-      values (
-        v_order,
-        v_shop,
-        'Filling',
-        'pending',
-        v_p->>'task_suffix'    -- suffix comes from payload (A/B/C…)
-      )
+      values (v_order, v_shop, 'Filling', 'pending', v_suffix)
       on conflict (order_id, shop_domain, stage, task_suffix) do nothing;
 
       update public.work_queue set status='done', updated_at=now() where id=v_job.id;
