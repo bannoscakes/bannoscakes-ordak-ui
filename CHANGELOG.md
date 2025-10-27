@@ -19,6 +19,13 @@
   - Columns: `order_id uuid not null`, `shop_domain text not null`, `stage text not null`, `status text not null`, `task_suffix text not null`, `created_at`.
   - Composite unique index `stage_events(order_id, shop_domain, stage, task_suffix)`.
   - Forward-fix migrations (028, 031–033) ensure table creation, backfill, NOT NULL, and UUID correctness across envs.
+- Inventory read-side RPCs:
+  - `get_components` (bounded, active/all)
+  - `get_boms` (optional store filter; returns items with component details)
+  - `get_accessory_keywords` (joined to component)
+  - `get_product_requirements` (joined to component)
+  - `get_stock_transactions` (preview-safe; bounded; filters for since/component/order/type)
+- Bootstrap guards for missing tables (`components`, `boms`, `bom_components`, `accessory_keywords`, `product_requirements`) using `CREATE TABLE IF NOT EXISTS` for fresh preview environments.
 
 ### Notes
 - No mock data introduced; all workers are no-op until real Shopify webhooks arrive.
