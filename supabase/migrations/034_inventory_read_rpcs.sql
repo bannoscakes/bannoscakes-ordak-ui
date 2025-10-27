@@ -218,31 +218,68 @@ comment on function public.get_product_requirements is
   'Returns product requirements; p_is_active: null=all.';
 
 -- =============================================
--- 5) GET_STOCK_TRANSACTIONS  (bounded; extra filters later)
+-- 5) GET_STOCK_TRANSACTIONS  (preview-safe, bounded, extra filters)
+--    - Compiles even if public.component_txns does not exist
+--    - Returns 0 rows when table missing (preview), real rows otherwise
 -- =============================================
-drop function if exists public.get_stock_transactions(uuid, timestamptz, int);
+drop function if exists public.get_stock_transactions(uuid, timestamptz, uuid, text, int);
 
 create or replace function public.get_stock_transactions(
-  p_component  uuid        default null,
-  p_since      timestamptz default (now() - interval '30 days'),
-  p_limit      int         default 200
+  p_component       uuid        default null,
+  p_since           timestamptz default (now() - interval '30 days'),
+  p_order_id        uuid        default null,
+  p_transaction_type text       default null,
+  p_limit           int         default 200
 )
-returns setof public.component_txns
-language sql
+returns table (
+  id                uuid,
+  created_at        timestamptz,
+  component_id      uuid,
+  qty               numeric,
+  transaction_type  text,
+  order_id          uuid,
+  payload           jsonb
+)
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select *
-  from public.component_txns t
-  where (p_component is null or t.component_id = p_component)
-    and t.created_at >= p_since
-  order by t.created_at desc
-  limit p_limit
+declare
+  sql text;
+begin
+  -- If the underlying table doesn't exist (fresh preview env), return no rows.
+  if to_regclass('public.component_txns') is null then
+    return;
+  end if;
+
+  sql := '
+    select
+      t.id,
+      t.created_at,
+      t.component_id,
+      t.qty,
+      t.transaction_type,
+      t.order_id,
+      t.payload
+    from public.component_txns t
+    where t.created_at >= $1
+      and ($2 is null or t.component_id = $2)
+      and ($3 is null or t.order_id = $3)
+      and ($4 is null or t.transaction_type = $4)
+    order by t.created_at desc
+    limit $5
+  ';
+
+  return query execute sql
+    using p_since, p_component, p_order_id, p_transaction_type, p_limit;
+end;
 $$;
 
-grant execute on function public.get_stock_transactions(uuid, timestamptz, int) to authenticated;
+grant execute on function public.get_stock_transactions(
+  uuid, timestamptz, uuid, text, int
+) to authenticated;
 
 comment on function public.get_stock_transactions is
-  'Returns stock transactions; default: last 30 days, max 200 rows.';
+  'Returns stock transactions; preview-safe with dynamic SQL; default: last 30 days, max 200 rows.';
 
 commit;
