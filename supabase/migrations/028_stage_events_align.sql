@@ -5,7 +5,7 @@
 create table if not exists public.stage_events (
   id bigserial primary key,
   created_at timestamptz not null default now(),
-  order_id text not null,
+  order_id uuid not null,
   shop_domain text not null,
   stage text not null,
   status text not null,

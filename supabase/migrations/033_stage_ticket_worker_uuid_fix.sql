@@ -1,13 +1,11 @@
--- 027_stage_ticket_worker.sql
--- Consume work_queue(topic='kitchen_task_create') and create Filling_pending tickets per A/B/C suffix.
--- No mock/seed; only acts when real jobs exist. SECURITY DEFINER + idempotent.
+-- 033_stage_ticket_worker_uuid_fix.sql
+-- Fix: use deterministic order UUID from parent_hook_id (Shopify webhook ID)
+-- All A/B/C tasks from the same order share this UUID; retries are idempotent.
 
-create index if not exists work_queue_status_topic_created_idx2
-  on public.work_queue (status, topic, created_at desc);
-
--- Note: stage_events table and its unique index are created in migration 028/031
-
-create or replace function public.process_kitchen_task_create(p_limit int default 20, p_lock_secs int default 60)
+create or replace function public.process_kitchen_task_create(
+  p_limit int default 20,
+  p_lock_secs int default 60
+)
 returns int
 language plpgsql
 security definer
@@ -19,9 +17,8 @@ declare
   v_job record;
   v_p jsonb;
   v_shop text;
-  v_order uuid := gen_random_uuid(); -- internal Ordak order UUID placeholder
+  v_order uuid;   -- set per job, deterministically
   v_suffix text;
-  v_line jsonb;
 begin
   -- Validate inputs (defensive)
   if p_limit < 1 or p_limit > 100 then
@@ -46,17 +43,29 @@ begin
          set locked_at = v_now, locked_by = 'stage-ticket-worker', status='processing'
        where id = v_job.id;
 
-      v_p      := v_job.payload;
-      v_shop   := v_p->>'shop_domain';
-      v_suffix := v_p->>'task_suffix';
-      v_line   := v_p->'line_item';
-      -- Note: v_order is a generated UUID placeholder; Shopify order_id is in v_p->'body'
-
-      if v_shop is null or v_suffix is null then
-        raise exception 'missing payload fields';
+      v_p    := v_job.payload;
+      v_shop := v_p->>'shop_domain';
+      if v_shop is null then
+        raise exception 'missing payload: shop_domain';
       end if;
 
-      -- Insert a Filling_pending ticket; rely on existing unique key if present (on conflict no-op)
+      -- Deterministic order UUID: use parent webhook id (Shopify header) we stored in worker #1.
+      -- All A/B/C tasks from the same order share this UUID; retries reuse it exactly.
+      v_order := nullif(v_p->>'parent_hook_id','')::uuid;
+      if v_order is null then
+        -- fallback (rare): stable per job id
+        v_order := v_job.id; -- requires work_queue.id to be uuid (it is in your DB)
+      end if;
+
+      -- Extract and validate suffix (A/B/C…)
+      v_suffix := nullif(v_p->>'task_suffix','');
+      if v_suffix is null then
+        raise exception 'missing payload: task_suffix';
+      end if;
+      if v_suffix !~ '^[A-Z]+$' then
+        raise exception 'invalid task_suffix: %', v_suffix;
+      end if;
+
       insert into public.stage_events(order_id, shop_domain, stage, status, task_suffix)
       values (v_order, v_shop, 'Filling', 'pending', v_suffix)
       on conflict (order_id, shop_domain, stage, task_suffix) do nothing;
@@ -66,10 +75,11 @@ begin
 
     exception when others then
       insert into public.dead_letter(created_at, payload, reason)
-      values (now(),
-              jsonb_build_object('worker','process_kitchen_task_create','job_id',v_job.id,'error',SQLERRM),
-              'stage_ticket_failed');
-
+      values (
+        now(),
+        jsonb_build_object('worker','process_kitchen_task_create','job_id',v_job.id,'error',SQLERRM),
+        'stage_ticket_failed'
+      );
       update public.work_queue set status='error', updated_at=now() where id=v_job.id;
     end;
   end loop;
@@ -79,5 +89,5 @@ end;
 $$;
 
 comment on function public.process_kitchen_task_create is
-  'Consumes kitchen_task_create jobs; creates Filling_pending tickets per task_suffix; no-op unless real jobs exist.';
+  'Consumes kitchen_task_create jobs; creates Filling_pending tickets; uses deterministic UUID from parent_hook_id.';
 
