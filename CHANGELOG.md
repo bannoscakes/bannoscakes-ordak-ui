@@ -1,3 +1,29 @@
+## v0.9.2-beta — Webhook → Queue → Workers stabilized (2025-10-27)
+
+### Added
+- Edge Function `shopify-webhooks` (per-store HMAC verify, idempotency by (id, shop_domain)).
+- RPC `enqueue_order_split(...)` → writes to `work_queue(topic,payload,status)` (no mock data).
+- Worker #1 `process_webhook_order_split(limit)`:
+  - Splits verified orders to `kitchen_task_create` child jobs (one per cake unit).
+  - Suffixing A–Z, then AA, AB…; accessories only on A.
+  - Deterministic store routing via `payload.shop_domain`.
+- Worker #2 `process_kitchen_task_create(limit)`:
+  - Materializes Filling_pending tickets in `stage_events`.
+  - Deterministic idempotency: order UUID derived from webhook/job (stable on retry).
+  - Validates inputs + payload (`task_suffix`, bounds for `p_limit`/`p_lock_secs`).
+
+### Schema
+- `processed_webhooks`: (id, shop_domain, topic, received_at, status, http_hmac, note).
+- `work_queue`: (id uuid, created_at, topic, payload jsonb, status, …); indexes on `(status, topic, created_at desc)` and `(topic, created_at desc)`.
+- `stage_events` hardened:
+  - Columns: `order_id uuid not null`, `shop_domain text not null`, `stage text not null`, `status text not null`, `task_suffix text not null`, `created_at`.
+  - Composite unique index `stage_events(order_id, shop_domain, stage, task_suffix)`.
+  - Forward-fix migrations (028, 031–033) ensure table creation, backfill, NOT NULL, and UUID correctness across envs.
+
+### Notes
+- No mock data introduced; all workers are no-op until real Shopify webhooks arrive.
+- Functions declared in `supabase/config.toml` for auto-deploy; Node TS excludes Deno functions to keep CI noise low.
+
 ## v0.9.1-beta — Webhook Enqueue + Split Worker + Stage-Ticket Worker (2025-01-27)
 ### Added
 - **Enqueue RPC**: `enqueue_order_split` → `work_queue(topic, payload, status)`
