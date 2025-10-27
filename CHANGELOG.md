@@ -1,3 +1,28 @@
+## v0.9.1-beta — Webhook Enqueue + Split Worker + Stage-Ticket Worker (2025-01-27)
+### Added
+- **Enqueue RPC**: `enqueue_order_split` → `work_queue(topic, payload, status)`
+- **Worker #1**: `process_webhook_order_split` → `kitchen_task_create` (A-Z, AA…; accessories on A)
+  - Robust alpha suffix helper (`public.alpha_suffix`) for Excel-like column naming
+  - Input validation for payload fields
+  - Early exit for orders with no cake items
+- **Worker #2**: `process_kitchen_task_create` → `stage_events` Filling_pending (idempotent)
+  - Bounds checking for SECURITY DEFINER inputs (p_limit: 1-100, p_lock_secs: 1-3600)
+  - Unique index `stage_events_order_shop_stage_suffix_uidx` for guaranteed idempotency
+  - Explicit `ON CONFLICT` target for stage ticket insertion
+- **Queue Worker Edge Function**: URL switch `?task=kitchen` triggers stage-ticket RPC
+- **Indexes**: `work_queue_status_topic_created_idx`, `work_queue_status_topic_created_idx2`
+- **TypeScript Config**: Deno functions excluded from Node TS checks (`tsconfig.json`)
+- **CI Improvements**: `.eslintignore` for Deno functions, audits, SQL files
+
+### Fixed
+- React list keys (missing `key` props in mapped arrays)
+- TypeScript hard errors (implicit `any` types, type mismatches)
+- Error notification handling (preserve description in toast options)
+
+### Next
+- Connect Shopify webhooks per store (when ready with ordak.com.au)
+- (Optional) Admin monitor for `processed_webhooks`, `work_queue`, `dead_letter`
+
 ## v0.9.0-beta — Webhooks Baseline & Enqueue (2025-01-24)
 ### Added
 - Edge Function `shopify-webhooks` with Shopify HMAC verification.
