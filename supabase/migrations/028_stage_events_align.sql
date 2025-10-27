@@ -1,6 +1,6 @@
 -- 028_stage_events_align.sql
--- SAFE bootstrap only: create stage_events if it doesn't exist.
--- No column alters and NO indexes here. 029 will reconcile/ backfill/ index.
+-- SAFE bootstrap: create stage_events table + unique index.
+-- (Index must exist here so 027's ON CONFLICT works correctly)
 
 create table if not exists public.stage_events (
   id bigserial primary key,
@@ -11,3 +11,7 @@ create table if not exists public.stage_events (
   status text not null,
   task_suffix text not null
 );
+
+-- Idempotency key for process_kitchen_task_create ON CONFLICT
+create unique index if not exists stage_events_order_shop_stage_suffix_uidx
+  on public.stage_events(order_id, shop_domain, stage, task_suffix);
