@@ -36,7 +36,7 @@ comment on function public.get_components is
 -- =============================================
 -- 2) GET_BOMS  (store-aware, bounded, active filter optional)
 -- =============================================
-drop function if exists public.get_boms(text, boolean, int);
+drop function if exists public.get_boms(text, boolean, text, int);
 
 create or replace function public.get_boms(
   p_store      text    default null,
