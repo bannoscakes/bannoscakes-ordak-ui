@@ -2,7 +2,7 @@
 -- Ensure stage_events exists with NOT NULL columns and idempotency index.
 -- Fixes ordering issue (index before table) and nullable columns from 028.
 
--- A) Create table if missing (full shape)
+-- Guard: if 028 didn't run yet in preview, make sure the table exists
 create table if not exists public.stage_events (
   id bigserial primary key,
   created_at timestamptz not null default now(),
@@ -23,8 +23,9 @@ begin
   ) then
     alter table public.stage_events add column order_id text;
   end if;
+  -- order_id: unique placeholder per row to avoid tuple collisions
   update public.stage_events
-     set order_id = coalesce(nullif(order_id, ''), 'unknown')
+     set order_id = coalesce(nullif(order_id, ''), 'unknown-' || id)
    where order_id is null or order_id = '';
   alter table public.stage_events alter column order_id set not null;
 
@@ -35,8 +36,9 @@ begin
   ) then
     alter table public.stage_events add column shop_domain text;
   end if;
+  -- shop_domain: unique placeholder per row to avoid tuple collisions
   update public.stage_events
-     set shop_domain = coalesce(nullif(shop_domain, ''), 'unknown')
+     set shop_domain = coalesce(nullif(shop_domain, ''), 'unknown-' || id)
    where shop_domain is null or shop_domain = '';
   alter table public.stage_events alter column shop_domain set not null;
 
@@ -47,6 +49,7 @@ begin
   ) then
     alter table public.stage_events add column stage text;
   end if;
+  -- stage/status/suffix: safe defaults (no tuple collisions once order_id/shop_domain are unique per row)
   update public.stage_events
      set stage = coalesce(nullif(stage, ''), 'Filling')
    where stage is null or stage = '';
