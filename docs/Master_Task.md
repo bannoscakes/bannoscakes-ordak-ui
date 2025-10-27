@@ -25,20 +25,17 @@
 - ✅ Barcode printing system operational
 - ✅ Scanner hardware integration complete
 
-### Phase 4: Inventory & BOMs 🚧 IN PROGRESS (~75%)
-- ✅ Read-side RPCs merged: `get_components`, `get_boms` (store-aware), `get_accessory_keywords` (with component info), `get_product_requirements` (with component info), `get_stock_transactions` (preview-safe; bounded; filters)
-- ✅ Schema bootstrap guards for missing tables in fresh envs (IF NOT EXISTS) — idempotent
-- ❗ Write-side actions (recording stock changes) still pending via wrappers around component_txns
+### Phase 4: Inventory & BOMs ✅ 100% COMPLETE (v0.9.4-beta)
 
-**Next (Task 3–5 refinement):**
-- **Task 3a (NEW)**: Add write-side RPC wrappers for actions:
-  - `tx_component_adjust(...)` (generic wrapper)
-  - `tx_component_receive(...)` (receive/purchase)
-  - `tx_component_consume(...)` (consume)
-  - `tx_component_reserve(...)` / `tx_component_release(...)`
-  - All `SECURITY DEFINER`, call underlying logger or insert into `component_txns`
-- **Task 3b (UI wire-up)**: Connect Tools & actions to these RPCs, keep read RPCs as-is
-- **Task 4**: (Optional) add extra filters to `get_stock_transactions` once we confirm final `component_txns` columns across envs
+- ✅ Table bootstrap guards added for components / boms / bom_components / accessory_keywords / product_requirements  
+- ✅ Read-side RPCs implemented (get_components, get_boms, get_accessory_keywords, get_product_requirements, get_stock_transactions)  
+- ✅ Write-side SECURITY DEFINER wrappers implemented (tx_component_adjust / receive / consume / reserve / release)  
+- ✅ Integrated successfully with existing UI — all five inventory tabs now live-connected  
+- ✅ All Supabase Preview / CI checks passing  
+- ✅ No mock data required  
+
+**Next:**  
+→ Move to **Phase 5 – Shopify Integration & Webhooks** (Edge Functions already in place, connect when domain ordak.com.au is live)
 
 ### Phase 6: UI Integration ✅ 85% COMPLETE (v0.6.0-beta, v0.7.0-beta)
 - ✅ Most UI connected to RPCs (v0.4.0-beta)
