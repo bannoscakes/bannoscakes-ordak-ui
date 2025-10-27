@@ -1,9 +1,85 @@
 -- 034_inventory_read_rpcs.sql
 -- Read-only SECURITY DEFINER RPCs for Inventory UI tabs
--- No schema changes; uses existing tables (boms, components, accessory_keywords, product_requirements, component_txns)
+-- Creates minimal tables if missing (safe bootstrap); adds RPCs on top
 -- Standard pattern: p_search, p_is_active (null=all), p_limit, bounded results
 
 begin;
+
+-- =============================================
+-- TABLE BOOTSTRAP (safe guards if tables don't exist yet)
+-- =============================================
+
+-- 1) Components table
+create table if not exists public.components (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  sku        text,
+  category   text,
+  unit       text default 'unit',
+  min_stock  numeric default 0,
+  unit_cost  numeric default 0,
+  is_active  boolean default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists components_sku_uidx on public.components(sku) where sku is not null;
+
+-- 2) BOMs table
+create table if not exists public.boms (
+  id                  uuid primary key default gen_random_uuid(),
+  product_title       text not null,
+  description         text,
+  store               text,
+  shopify_product_id  text,
+  is_active           boolean default true,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+-- 3) BOM Components (junction table)
+create table if not exists public.bom_components (
+  id           uuid primary key default gen_random_uuid(),
+  bom_id       uuid not null references public.boms(id) on delete cascade,
+  component_id uuid not null references public.components(id) on delete restrict,
+  qty          numeric not null default 1,
+  created_at   timestamptz not null default now()
+);
+
+create unique index if not exists bom_components_bom_component_uidx 
+  on public.bom_components(bom_id, component_id);
+
+-- 4) Accessory Keywords table
+create table if not exists public.accessory_keywords (
+  id           uuid primary key default gen_random_uuid(),
+  keyword      text not null,
+  component_id uuid not null references public.components(id) on delete cascade,
+  priority     int default 0,
+  match_type   text default 'contains',
+  is_active    boolean default true,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists accessory_keywords_keyword_idx on public.accessory_keywords(keyword);
+
+-- 5) Product Requirements table
+create table if not exists public.product_requirements (
+  id                   uuid primary key default gen_random_uuid(),
+  shopify_product_id   text not null,
+  shopify_variant_id   text,
+  product_title        text not null,
+  component_id         uuid not null references public.components(id) on delete restrict,
+  quantity_per_unit    numeric not null default 1,
+  is_optional          boolean default false,
+  auto_deduct          boolean default true,
+  is_active            boolean default true,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+create index if not exists product_requirements_shopify_product_id_idx 
+  on public.product_requirements(shopify_product_id);
 
 -- =============================================
 -- 1) GET_COMPONENTS  (read-only, bounded, no view dependency)
