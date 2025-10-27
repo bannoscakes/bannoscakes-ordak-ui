@@ -46,18 +46,24 @@
 
 ## ❌ NOT STARTED - CRITICAL
 
-### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~85%)
+### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~90%)
 
 - ✅ Edge Function `shopify-webhooks` (HMAC verify, per-store idempotency)
-- ✅ `processed_webhooks` + `dead_letter` with consistent statuses
-- ✅ SECURITY DEFINER RPC `enqueue_order_split` + `work_queue` table
-- ✅ Auto-deploy wiring (`supabase/config.toml`)
-- ✅ Docs available (webhook-ingest.md, orders-splitting.md)
-- ✅ Worker #1: `process_webhook_order_split` → `kitchen_task_create` (A-Z, AA…; accessories on A)
-- ✅ Worker #2: `process_kitchen_task_create` → `stage_events` Filling_pending (idempotent)
+- ✅ `processed_webhooks` + `dead_letter` wired with consistent statuses (`ok|rejected|error`)
+- ✅ RPC `enqueue_order_split` → `work_queue(topic,payload,status)`
+- ✅ Worker #1: `process_webhook_order_split` → emits `kitchen_task_create` (A–Z, AA…, accessories on A)
+- ✅ Worker #2: `process_kitchen_task_create` → creates `stage_events` (Filling_pending) with deterministic UUID per order
+- ✅ Queue & stage schemas hardened; unique keys & NOT NULL enforced; preview-safe migrations
 
-- 🔜 Register webhooks per store (Bannos, Flourlane) when switching to ordak.com.au
-- 🔜 (Optional) Admin monitor page for processed/dead_letter
+**Next (finalizing Phase 5):**
+- 🔜 Connect Shopify webhooks for **Bannos** and **Flourlane** (when switching to ordak.com.au).
+- 🔜 Quick live smoke: see rows in `processed_webhooks` → `work_queue` → `stage_events`.
+- (Optional) Add a read-only admin monitor for `processed_webhooks / work_queue / dead_letter`.
+
+**Go/No-Go checklist:**
+- Supabase secrets set: `SHOPIFY_APP_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_URL`
+- Functions deployed: `shopify-webhooks`, `queue-worker`
+- Sanity curl: `queue-worker?task=split` and `?task=kitchen` return `{"ok":true,"processed":0}`
 
 ### Phase 7: Production Deployment ⚠️ SIMPLIFIED APPROACH
 - ❌ Mobile testing needed (production floor uses tablets)
