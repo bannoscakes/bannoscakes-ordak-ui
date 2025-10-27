@@ -5,6 +5,10 @@
 create index if not exists work_queue_status_topic_created_idx2
   on public.work_queue (status, topic, created_at desc);
 
+-- Idempotency key for Filling tickets: one row per (order, shop, stage, suffix)
+create unique index if not exists stage_events_order_shop_stage_suffix_uidx
+  on public.stage_events(order_id, shop_domain, stage, task_suffix);
+
 create or replace function public.process_kitchen_task_create(p_limit int default 20, p_lock_secs int default 60)
 returns int
 language plpgsql
@@ -21,6 +25,14 @@ declare
   v_suffix text;
   v_line jsonb;
 begin
+  -- Validate inputs (defensive)
+  if p_limit < 1 or p_limit > 100 then
+    raise exception 'p_limit must be between 1 and 100';
+  end if;
+  if p_lock_secs < 1 or p_lock_secs > 3600 then
+    raise exception 'p_lock_secs must be between 1 and 3600';
+  end if;
+
   for v_job in
     select *
       from public.work_queue
@@ -49,7 +61,7 @@ begin
       -- Insert a Filling_pending ticket; rely on existing unique key if present (on conflict no-op)
       insert into public.stage_events(order_id, shop_domain, stage, status, task_suffix)
       values (v_order, v_shop, 'Filling', 'pending', v_suffix)
-      on conflict do nothing;
+      on conflict (order_id, shop_domain, stage, task_suffix) do nothing;
 
       update public.work_queue set status='done', updated_at=now() where id=v_job.id;
       v_count := v_count + 1;
