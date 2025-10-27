@@ -9,10 +9,13 @@ function json(status: number, body: unknown) {
 serve(async (req) => {
   if (req.method !== "POST") return json(405, { ok: false, reason: "method_not_allowed" });
 
-  // optional: ?limit=10
+  // optional: ?limit=10&task=kitchen
   const url = new URL(req.url);
+  const task = url.searchParams.get("task") ?? "split";
   const limit = Number(url.searchParams.get("limit") ?? "10");
-  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/process_webhook_order_split`, {
+  const rpc = task === "kitchen" ? "process_kitchen_task_create" : "process_webhook_order_split";
+
+  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/${rpc}`, {
     method: "POST",
     headers: {
       apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
