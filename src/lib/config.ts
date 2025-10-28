@@ -8,6 +8,8 @@ export type AppConfig = Readonly<{
   supabaseAnonKey?: string;
   appUrl?: string;
   useMocks: boolean;
+  persistSupabaseSession: boolean;
+  supabaseStorageKey: string;
 }>;
 
 export const config: AppConfig = {
@@ -16,4 +18,7 @@ export const config: AppConfig = {
   appUrl: import.meta.env.VITE_APP_URL as string | undefined,
   // Default to true so mocks work out of the box in local dev
   useMocks: String(import.meta.env.VITE_USE_MOCKS ?? "true").toLowerCase() === "true",
+  persistSupabaseSession:
+    String(import.meta.env.VITE_SUPABASE_PERSIST_SESSION ?? "true").toLowerCase() === "true",
+  supabaseStorageKey: (import.meta.env.VITE_SUPABASE_STORAGE_KEY as string | undefined) ?? "ordak-auth-token",
 } as const;

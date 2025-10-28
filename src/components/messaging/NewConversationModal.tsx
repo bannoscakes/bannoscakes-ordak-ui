@@ -1,183 +1,256 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Button } from "../ui/button";
+import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogContent } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Checkbox } from "../ui/checkbox";
-import { Avatar, AvatarFallback } from "../ui/avatar";
-import { Users, User } from "lucide-react";
+import { Button } from "../ui/button";
+import { getStaffList, getStaffMe } from "../../lib/rpc-client";
+import { toId } from "../../lib/messaging-adapters";
 
-interface Staff {
-  id: string;
-  name: string;
-  email: string;
+interface StaffRow {
+  user_id: string;   // MUST be UUID
+  full_name: string;
   role: string;
-  isOnline: boolean;
+  email?: string | null;
 }
 
 interface NewConversationModalProps {
   open: boolean;
   onClose: () => void;
-  onCreateConversation: (participants: string[], isGroup: boolean) => void;
+  // Parent will do the actual RPC (your MessagesPage/MainDashboardMessaging already implements this)
+  onCreateConversation: (participantIds: string[], isGroup: boolean) => Promise<void> | void;
 }
 
-export function NewConversationModal({
-  open,
-  onClose,
-  onCreateConversation
-}: NewConversationModalProps) {
-  // TODO: Replace with real staff data from API
-  const [staffList, setStaffList] = useState<Staff[]>([]);
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
-  const [conversationType, setConversationType] = useState<"direct" | "group">("direct");
-  const [groupName, setGroupName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+export function NewConversationModal({ open, onClose, onCreateConversation }: NewConversationModalProps) {
+  const [isGroup, setIsGroup] = useState(false);
+  const [search, setSearch] = useState("");
+  const [staff, setStaff] = useState<StaffRow[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // TODO: Implement real data fetching
+  // Load staff once when opened (or when search changes if you support server-side filtering)
   useEffect(() => {
-    if (open) {
-      // This will be replaced with actual API call
-      // fetchStaffList();
-    }
+    if (!open) return;
+    let cancelled = false;
+    const run = async () => {
+      setLoadingStaff(true);
+      setErrorMsg(null);
+      try {
+        // Get current user and staff list in parallel with better error handling
+        const [me, rows] = await Promise.allSettled([
+          getStaffMe(),
+          getStaffList(null, true)
+        ]);
+
+        if (cancelled) return;
+
+        const currentUser = me.status === "fulfilled" ? me.value : null;
+        const list = rows.status === "fulfilled" ? rows.value : [];
+
+        const myUserId = toId(currentUser?.user_id);
+        setCurrentUserId(myUserId);
+
+        // If we couldn't get current user, show error and prevent conversation creation
+        if (!myUserId) {
+          setErrorMsg("Unable to identify current user. Please refresh and try again.");
+          return;
+        }
+
+        // Map to a shape with user_id (UUID) — DO NOT pass email here
+        // EXCLUDE current user from the list
+        const mapped = (list || [])
+          .filter((r: any) => toId(r.user_id) !== myUserId) // Exclude self
+          .map((r: any) => ({
+            user_id: toId(r.user_id),
+            full_name: r.full_name ?? "Unknown",
+            role: r.role ?? "Staff",
+            email: r.email ?? null
+          })) as StaffRow[];
+        setStaff(mapped);
+      } catch (e: any) {
+        if (!cancelled) {
+          console.error("Staff load error:", e);
+          setErrorMsg(e?.message ?? "Failed to load staff");
+          setStaff([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingStaff(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
   }, [open]);
 
-  const handleParticipantToggle = (staffId: string) => {
-    setSelectedParticipants(prev =>
-      prev.includes(staffId)
-        ? prev.filter(id => id !== staffId)
-        : [...prev, staffId]
-    );
-  };
-
-  const handleCreateConversation = () => {
-    if (selectedParticipants.length === 0) return;
-
-    const isGroup = conversationType === "group" || selectedParticipants.length > 1;
-    onCreateConversation(selectedParticipants, isGroup);
+  // Auto-refresh staff list when window regains focus
+  useEffect(() => {
+    if (!open) return;
     
-    // Reset form
-    setSelectedParticipants([]);
-    setConversationType("direct");
-    setGroupName("");
-    setSearchTerm("");
+    const onFocus = () => {
+      // Reload staff on window focus if modal is open
+      const run = async () => {
+        try {
+          const [me, rows] = await Promise.allSettled([
+            getStaffMe(),
+            getStaffList(null, true)
+          ]);
+
+          const currentUser = me.status === "fulfilled" ? me.value : null;
+          const list = rows.status === "fulfilled" ? rows.value : [];
+
+          const myUserId = toId(currentUser?.user_id);
+          setCurrentUserId(myUserId);
+
+          const mapped = (list || [])
+            .filter((r: any) => toId(r.user_id) !== myUserId)
+            .map((r: any) => ({
+              user_id: toId(r.user_id),
+              full_name: r.full_name ?? "Unknown",
+              role: r.role ?? "Staff",
+              email: r.email ?? null
+            })) as StaffRow[];
+          setStaff(mapped);
+        } catch (e) {
+          console.error("Staff refresh error:", e);
+        }
+      };
+      run();
+    };
+
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [open]);
+
+  // Client-side filter
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return staff;
+    return staff.filter(s =>
+      s.full_name.toLowerCase().includes(q) ||
+      (s.email ?? "").toLowerCase().includes(q)
+    );
+  }, [search, staff]);
+
+  const toggle = (id: string) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const filteredStaff = staffList.filter(staff =>
-    staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    staff.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setErrorMsg(null);
+
+      // Guard: ensure we have current user ID
+      if (!currentUserId) {
+        setErrorMsg("Unable to identify current user. Please refresh and try again.");
+        return;
+      }
+
+      // Extra guard: filter out current user from selected participants
+      const ids = selected.filter(id => id !== currentUserId);
+      
+      // Guard: require exactly 1 participant for direct, >=2 for group (excluding self)
+      if (!isGroup && ids.length !== 1) {
+        setErrorMsg("Select exactly one person for a direct message.");
+        return;
+      }
+      if (isGroup && ids.length < 2) {
+        setErrorMsg("Select at least two people for a group.");
+        return;
+      }
+
+      // DEBUG: make sure we pass UUIDs (and no self)
+      console.log("Creating conversation with IDs:", ids);
+      console.log("Current user ID (excluded):", currentUserId);
+
+      await onCreateConversation(ids, isGroup); // parent awaits RPC + selects convo
+      setSelected([]); // clear only after success
+      onClose();
+    } catch (e: any) {
+      setErrorMsg(e?.message ?? "Failed to create conversation");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>New Conversation</DialogTitle>
-        </DialogHeader>
-
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="md:max-w-[700px] max-h-[85vh] overflow-hidden">
         <div className="space-y-4">
-          {/* Conversation Type */}
-          <div className="space-y-2">
-            <Label>Conversation Type</Label>
-            <Select
-              value={conversationType}
-              onValueChange={(value: "direct" | "group") => setConversationType(value)}
+          <div>
+            <h2 className="text-xl font-semibold">New Conversation</h2>
+            <p className="text-sm text-muted-foreground">
+              Start a direct message or group chat.
+            </p>
+          </div>
+
+          {/* Type selector (optional - lock to Direct if you want) */}
+          <div className="flex gap-4">
+            <Button
+              variant={!isGroup ? "default" : "outline"}
+              onClick={() => setIsGroup(false)}
+              size="sm"
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="direct">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Direct Message
-                  </div>
-                </SelectItem>
-                <SelectItem value="group">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Group Chat
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Group Name (for group chats) */}
-          {conversationType === "group" && (
-            <div className="space-y-2">
-              <Label htmlFor="groupName">Group Name</Label>
-              <Input
-                id="groupName"
-                placeholder="Enter group name..."
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-              />
-            </div>
-          )}
-
-          {/* Search Staff */}
-          <div className="space-y-2">
-            <Label htmlFor="search">Search Staff</Label>
-            <Input
-              id="search"
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Staff List */}
-          <div className="space-y-2">
-            <Label>Select Participants</Label>
-            <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
-              {filteredStaff.length === 0 ? (
-                <div className="text-center text-muted-foreground py-4">
-                  {staffList.length === 0 ? "No staff available" : "No staff found"}
-                </div>
-              ) : (
-                filteredStaff.map((staff) => (
-                  <div
-                    key={staff.id}
-                    className="flex items-center space-x-2 p-2 hover:bg-accent rounded-lg cursor-pointer"
-                    onClick={() => handleParticipantToggle(staff.id)}
-                  >
-                    <Checkbox
-                      checked={selectedParticipants.includes(staff.id)}
-                      onChange={() => handleParticipantToggle(staff.id)}
-                    />
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {staff.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate">{staff.name}</p>
-                        {staff.isOnline && (
-                          <div className="w-2 h-2 bg-green-500 rounded-full" />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {staff.role} • {staff.email}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
+              Direct Message
             </Button>
             <Button
-              onClick={handleCreateConversation}
-              disabled={selectedParticipants.length === 0}
+              variant={isGroup ? "default" : "outline"}
+              onClick={() => setIsGroup(true)}
+              size="sm"
             >
-              Create Conversation
+              Group Chat
+            </Button>
+          </div>
+
+          <Input
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          <div className="border rounded-lg h-64 overflow-y-auto">
+            {loadingStaff ? (
+              <div className="p-4 text-sm text-muted-foreground">Loading staff…</div>
+            ) : filtered.length === 0 ? (
+              <div className="p-10 text-center text-muted-foreground">No staff available</div>
+            ) : (
+              <ul className="divide-y">
+                {filtered.map((s) => {
+                  const checked = selected.includes(s.user_id);
+                  return (
+                    <li
+                      key={s.user_id}
+                      className="flex items-center gap-3 p-3 hover:bg-accent/40 cursor-pointer"
+                      onClick={() => toggle(s.user_id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggle(s.user_id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{s.full_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {s.role}{s.email ? ` • ${s.email}` : ""}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {errorMsg && <div className="text-sm text-destructive">{errorMsg}</div>}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || (!isGroup && selected.filter(id => id !== currentUserId).length < 1) || (isGroup && selected.filter(id => id !== currentUserId).length < 2)}
+            >
+              {isSubmitting ? "Creating…" : "Create Conversation"}
             </Button>
           </div>
         </div>
