@@ -30,92 +30,98 @@ Choose table by shop domain:
 | `shopify_order_id` | `order.id` |
 | `shopify_order_gid` | `order.admin_graphql_api_id` |
 | `shopify_order_number` | `order.order_number` |
-| `customer_name` | `order.shipping_address.name` else `order.customer.name` |
-| `product_title` | **Primary** line item title (see “Primary line item”) |
-| `flavour` | From **Flavour Extraction Rules** (below) |
-| `notes` | `order.note` + (optional) **Delivery Instructions** attribute |
-| `currency` | `order.presentment_currency` else `order.currency` |
-| `total_amount` | `order.current_total_price` else `order.total_price` |
-| `order_json` | full raw payload (`jsonb`) |
-| `stage` | `'Filling'` |
-| `priority` | Derived from `due_date`: High (today/overdue), Medium (tomorrow), Low (later) |
-| timestamps | start as `NULL`; Filling starts on **barcode print** |
+| `customer_name` | Use `order.shipping_address.name`; if blank, use `order.customer.name`. |
+| `product_title` | Title of the primary line item. |
+| `flavour` | Extract using the flavour rules below. |
+| `notes` | Concatenate `order.note` and the delivery instructions attribute (see below). Join parts with •. |
+| `currency` | `order.presentment_currency` if present; otherwise `order.currency`. |
+| `total_amount` | `order.current_total_price` if present; otherwise `order.total_price`. |
+| `order_json` | The full raw JSON payload stored as jsonb for auditing and reprocessing. |
+| `stage` | Initialise as 'Filling'. Subsequent stage updates are driven by barcode scans. |
+| `priority` | Derived from due_date: High if the due date is today or overdue; Medium if tomorrow; Low for later dates. |
+| Timestamps | All process timestamps are initialised to NULL. The Filling timestamp is set when the barcode is printed. |
 
 ---
 
-## Due Date & Delivery Method (Attributes-first, docket-parity)
+## Due Date & Delivery Method
 
-- **Due date attribute:** `order.attributes['Local Delivery Date and Time']`  
-  - Take the part **before** the word **“between”**, then `trim` (e.g., `"2025-09-16"`).
-- **Delivery method attribute:** `order.attributes['Delivery Method']` (lowercased)  
-  - If it contains `"pickup"` / `"pick up"` → `delivery_method='pickup'`  
-  - Otherwise → `delivery_method='delivery'`
+Dates and methods are derived from order attributes so that the system behaves exactly like the kitchen docket. The attribute keys are case insensitive and may come from either `order.attributes` or `order.note_attributes`.
 
-**Fallbacks** (only if the attribute is missing): parse note attributes or tags like `DEL:YYYY-MM-DD`, `PICKUP:YYYY-MM-DD`.  
-**Timezone:** interpret dates in **Australia/Sydney**.
+Due date: read Local Delivery Date and Time. Take the portion before the word "between" (if present) and trim whitespace. For example, if the attribute is "2025-09-16 between 13:00 and 15:00", then the due date is 2025-09-16. If the attribute is missing, fall back to parsing tags such as DEL:YYYY-MM-DD or PICKUP:YYYY-MM-DD.
+
+Delivery method: read Delivery Method. If the value contains "pickup" or "pick up" (case insensitive), set delivery_method = 'pickup'. Otherwise set delivery_method = 'delivery'. If the attribute is missing, infer from tags or leave blank.
+
+Dates are interpreted in the Australia/Sydney timezone.
 
 ---
 
 ## Notes Aggregation
 
-- Start with `order.note` if present
-- If present, append **Delivery Instructions** from a known attribute key, e.g. `order.attributes['Delivery Instructions']`
-- Join parts with ` • `
+Kitchen staff need to see all notes on one line. To construct the notes column:
+
+Start with `order.note` if present.
+
+Append the value of Delivery Instructions (case insensitive) from `order.attributes` or `order.note_attributes` if present.
+
+Join the two parts with • if both are non‑empty.
 
 ---
 
 ## Primary Line Item
 
-For DB fields like `product_title`, use the **first non-gift** line item with `quantity > 0`.  
-(The docket prints all items; DB needs one “primary” for summary.)
+When storing summary fields like product_title and flavour, only the first non‑gift, positive‑quantity line item is considered. This primary line item is used to derive the main product title, size and base flavour. The full item list remains in order_json for reference.
 
 ---
 
-## Flavour Extraction Rules (Kitchen Parity)
+## Flavour Extraction Rules
 
-**Priority order (first hit wins):**
+Flavour extraction mirrors the logic used on your paper dockets. For the primary line item only:
 
-1) **Line item properties** on the primary item (case-insensitive name match):  
-   - Keys that include **“gelato flavour”** or **“gelato flavours”**  
-   - Value can be multi-line or comma/`/` separated → split and trim → join with `, `
+Line item properties: search the properties array for keys containing "gelato flavour" or "gelato flavours" (case insensitive). Use the associated value, splitting on newlines, commas or / to handle multiple flavours. Trim and join with ", ".
 
-2) **Variant/options fallback** for the primary item:  
-   - Use the first token of `variant_title` if that token is a flavour label
+Variant/Options fallback: if no matching property is found, split variant_title on newlines, commas or / and take the first token. This supports cakes where the flavour is encoded in the variant (e.g. "Chocolate / 10").
 
-**Property blacklist (skip these names exactly like the docket):**
-
-- Names that **start with `_`**  
-- Names that **contain** `_origin`, `_raw`, `gwp`, `_LocalDeliveryID`
-
-> If nothing yields a flavour, leave `flavour` empty and log a warning (non-fatal).
+Any property whose name starts with _ or contains _origin, _raw, gwp or _LocalDeliveryID is ignored (blacklisted), matching the original docket behaviour. If no flavour can be found, leave the flavour column empty and log a warning for manual review.
 
 ---
 
-## Persist Logic (Edge Function using Service Role)
+## Persist Logic (Edge Function)
 
-1) Verify HMAC with `SHOPIFY_WEBHOOK_SECRET`  
-2) Deduplicate by `order_gid` (if exists → **no-op**, return 200)  
-3) Normalize payload (fields above)  
-4) Insert into `orders_<store>`  
-5) Call `deduct_on_order_create(order_gid, payload)` to write stock txns and enqueue `work_queue`  
-6) (Optional) Append `order_ingested` event
+In the ingestion endpoint:
 
-**On errors**
+Verify HMAC: compute the HMAC using SHOPIFY_WEBHOOK_SECRET and compare to X-Shopify-Hmac-Sha256. Reject with 401 if mismatched so Shopify will retry.
 
-- Invalid HMAC → 401 (Shopify won’t count as delivered)  
-- Unexpected exception → 500 (Shopify retries; we remain idempotent)
+Idempotency: check if a record with the same shopify_order_gid already exists. If so, return 200 without inserting a new row or deducting stock.
+
+Normalise: convert the raw payload into your internal schema using a pure function (see below). This function handles date/method extraction, flavour rules and attribute fallbacks.
+
+Insert: write the normalised row into the appropriate table (orders_bannos or orders_flourlane), and store the raw order_json. Initialise all timestamps to NULL and set stage = 'Filling'.
+
+Stock deduction: call deduct_on_order_create(order_gid, payload) to write a stock transaction for each cake line item and enqueue the new order in the work queue.
+
+Emit event: optionally, emit an order_ingested event to notify downstream systems or Slack.
+
+If any step fails, return 500 to let Shopify retry. All writes should be wrapped in a transaction.
+
+## Post‑Ingest: Task Splitting
+
+The ingestion pipeline does not split multi‑cake orders into separate records. Instead, splitting happens after ingestion when generating tasks for the kitchen. See `orders-splitting.md` for details on how to create suffixed tasks (A, B, C) and assign accessories to the first ticket. By separating splitting from ingestion, you avoid duplicate records and keep the webhook logic simple and idempotent.
 
 ---
 
-## Test Fixtures (must pass)
+## Test Fixtures
 
-Prepare real (redacted) JSON examples for:
+Prepare redacted JSON payloads covering edge cases and validate that normalisation produces the expected results:
 
-- Bannos gelato cake with flavours in **line item properties** (`Gelato Flavours`)  
-- Flourlane order with flavours in **note attributes** or variant title fallback  
-- Orders containing **internal** properties (blacklist must skip them)  
-- Due date from **Local Delivery Date and Time** attribute; method from **Delivery Method** attribute  
-- Tag-based due date as fallback
+Gelato cake with flavours in properties: ensure multiple flavours split correctly and variant fallback is not used.
+
+Standard cake with flavours in variant title: confirm the variant fallback extracts the flavour.
+
+Orders with internal properties: verify blacklisted properties are ignored and do not contaminate flavours.
+
+Missing delivery date attribute: ensure tags fallback is used.
+
+Pickup orders: confirm is_pickup is set and due date still extracted.
 
 ---
 

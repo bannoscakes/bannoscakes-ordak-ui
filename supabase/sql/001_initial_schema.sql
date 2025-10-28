@@ -1,1 +1,0 @@
--- TODO: write initial schema (orders, views, RLS). Placeholder for Phase 2.

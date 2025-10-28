@@ -7,13 +7,16 @@ import {
   Package,
   Settings,
   Clock,
+  QrCode,
   ChevronLeft,
   ChevronRight,
   Cake,
-  Wheat
+  Wheat,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
+import { safePushState } from "@/lib/safeNavigate";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -32,8 +35,12 @@ const navigationItems = [
   { icon: TallCakeIcon, label: "Flourlane Analytics", id: "flourlane-analytics", isAnalytics: true },
   { icon: Users, label: "Staff Analytics", id: "staff-analytics", isAnalytics: true },
   { icon: Users, label: "Staff", id: "staff", badge: "6", isStaff: true },
+  { icon: Users, label: "Staff Workspace", id: "staff-workspace", isStaff: true },
+  { icon: Users, label: "Supervisor Workspace", id: "supervisor-workspace", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
   { icon: Package, label: "Inventory", id: "inventory", badge: "3" },
+  { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true },
+  { icon: AlertTriangle, label: "Error Test", id: "error-test", isSettings: true, devOnly: true },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
   { icon: Settings, label: "Flourlane Settings", id: "flourlane-settings", isSettings: true },
 ];
@@ -64,9 +71,15 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
       </div>
       
       <nav className="p-4 space-y-2">
-        {navigationItems.filter(item => !item.adminOnly || isAdmin).map((item, index) => {
+        {navigationItems.filter(item => {
+          // Filter by admin role
+          if (item.adminOnly && !isAdmin) return false;
+          // Filter dev-only items in production
+          if (item.devOnly && process.env.NODE_ENV === 'production') return false;
+          return true;
+        }).map((item, index) => {
           const isActive = activeView === item.id;
-          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "time-payroll" || item.id === "inventory" || item.id === "bannos-settings" || item.id === "flourlane-settings";
+          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "staff-workspace" || item.id === "supervisor-workspace" || item.id === "time-payroll" || item.id === "inventory" || item.id === "barcode-test" || item.id === "error-test" || item.id === "bannos-settings" || item.id === "flourlane-settings";
           
           return (
             <div key={index} className="relative">
@@ -102,14 +115,22 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
                 } ${(item.isProduction || item.isMonitor || item.isAnalytics || item.isStaff || item.isSettings) && !collapsed ? 'ml-4 w-[calc(100%-1rem)]' : ''} ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90' : 'hover:bg-sidebar-accent text-sidebar-foreground'} ${!isClickable ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => {
                   if (isClickable) {
+                    // Single URL architecture - all navigation stays on "/" with query params
                     if (item.id === "staff") {
-                      window.history.pushState({}, '', '/staff');
+                      safePushState('/?view=staff');
+                    } else if (item.id === "staff-workspace") {
+                      safePushState('/?view=staff-workspace');
+                    } else if (item.id === "supervisor-workspace") {
+                      safePushState('/?view=supervisor-workspace');
                     } else if (item.id === "time-payroll") {
-                      window.history.pushState({}, '', '/admin/time');
+                      safePushState('/?view=time-payroll');
                     } else if (item.id === "bannos-settings") {
-                      window.history.pushState({}, '', '/bannos/settings');
+                      safePushState('/?view=bannos-settings');
                     } else if (item.id === "flourlane-settings") {
-                      window.history.pushState({}, '', '/flourlane/settings');
+                      safePushState('/?view=flourlane-settings');
+                    } else {
+                      // Default to root with view parameter
+                      safePushState(`/?view=${item.id}`);
                     }
                     onViewChange(item.id);
                   }

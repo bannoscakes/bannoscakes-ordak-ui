@@ -1,0 +1,49 @@
+---
+alwaysApply: true
+---
+# Project Rules (Ordak)
+
+## Workflow Rule — One small task = one PR
+- For every small new task, create a new *feature branch* from `dev` and open a PR.
+- Do not push directly to `dev` or `main` under any circumstance.ß
+- Panos reviews each PR and performs a **squash & merge**.
+- If a PR touches CI/workflows, call it out in the PR title with the prefix `[WORKFLOW]`.
+
+## Branch naming
+- feature/short-task-name  (e.g., `feature/webhook-hmac-verify`)
+- fix/short-bug-name      (e.g., `fix/orders-list-sort`)
+
+## PR title & scope
+- Title: `<type>: <short summary>` (e.g., `feat: add HMAC verify for Shopify webhook`)
+- Scope: one task only. If it’s more than ~50 lines or mixes concerns, split into multiple PRs.
+
+## Commit messages
+- Keep small & clear. Conventional style is fine (`feat:`, `fix:`, `docs:`), but not required.
+- No secrets, no keys, no hardcoded URLs.
+
+## Database & writes
+- All DB writes go through SECURITY DEFINER RPCs. No direct table writes from client.
+- No soft-deletes in scripts. Use `admin_delete_order` RPC if a delete is required.
+
+## Local checks before PR
+- `npm ci`
+- `npm run type-check`
+- `npm run build` (if applicable)
+
+## What to include in the PR description
+- One-line “What/Why”
+- “How to verify” steps (1–3 lines)
+
+.github/PULL_REQUEST_TEMPLATE.md
+
+## What / Why
+<!-- one or two sentences -->
+
+## How to verify
+<!-- steps or brief notes -->
+
+## Checklist
+- [ ] One small task only (no mixed changes)
+- [ ] No direct writes from client; RPCs only
+- [ ] No secrets/keys leaked
+- [ ] `npm run type-check` passes locally
