@@ -50,13 +50,37 @@ export interface ConversationParticipant {
 // =============================================
 
 /**
- * Wraps RPC calls with standardized error handling
+ * Check if error is related to JWT/auth token expiration
+ */
+function isJWTError(error: any): boolean {
+  if (!error) return false;
+  
+  const errorString = JSON.stringify(error).toLowerCase();
+  const message = error.message?.toLowerCase() || '';
+  const code = error.code?.toString() || '';
+  
+  return (
+    code === '401' ||
+    code === 'PGRST301' ||
+    message.includes('jwt') ||
+    message.includes('expired') ||
+    message.includes('invalid claim') ||
+    message.includes('token') ||
+    errorString.includes('jwt') ||
+    errorString.includes('expired')
+  );
+}
+
+/**
+ * Wraps RPC calls with standardized error handling and JWT retry logic
  */
 async function withErrorHandling<T>(
   rpcCall: () => Promise<T>,
-  context: { operation: string; rpcName: string; params?: any }
+  context: { operation: string; rpcName: string; params?: any; retryCount?: number }
 ): Promise<T> {
   const startTime = Date.now();
+  const maxRetries = 1; // Retry once on JWT errors
+  const retryCount = context.retryCount || 0;
   
   try {
     const result = await rpcCall();
@@ -70,6 +94,36 @@ async function withErrorHandling<T>(
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
+    
+    // Check for JWT/auth errors first
+    if (isJWTError(error) && retryCount < maxRetries) {
+      console.warn(`🔄 JWT error detected, retrying ${context.rpcName}... (attempt ${retryCount + 1}/${maxRetries})`);
+      
+      // Wait a bit before retry to allow token refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Retry the RPC call
+      return withErrorHandling(rpcCall, { ...context, retryCount: retryCount + 1 });
+    }
+    
+    // If JWT error and out of retries, create specific auth error
+    if (isJWTError(error)) {
+      const appError = createError(
+        ErrorCode.AUTH003,
+        'Your session has expired. Please refresh the page or log in again.',
+        { rpcName: context.rpcName, params: context.params },
+        { operation: context.operation, duration, retries: retryCount }
+      );
+      
+      logError(appError, {
+        operation: context.operation,
+        rpcName: context.rpcName,
+        params: context.params,
+        duration
+      });
+      
+      throw appError;
+    }
     
     // Handle different types of errors
     let appError;

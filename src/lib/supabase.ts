@@ -27,11 +27,32 @@ export function getSupabase(): SupabaseClient {
       persistSession,                                 // ✅ keep session on reload
       storage,                                        // ✅ where to keep it
       storageKey: config.supabaseStorageKey,         // ✅ stable key
-      autoRefreshToken: true,
+      autoRefreshToken: true,                        // ✅ auto-refresh JWT before expiration
       detectSessionInUrl: true,
     },
   });
   return _client;
+}
+
+/**
+ * Helper to manually recover session from storage
+ * Useful for debugging and manual recovery attempts
+ */
+export async function recoverStoredSession(): Promise<boolean> {
+  try {
+    const client = getSupabase();
+    const { data: { session }, error } = await client.auth.getSession();
+    
+    if (error) {
+      console.error('Session recovery error:', error);
+      return false;
+    }
+    
+    return !!session;
+  } catch (error) {
+    console.error('Failed to recover session:', error);
+    return false;
+  }
 }
 
 // Back-compat: export an instance-like object that lazily initializes on first property access

@@ -25,6 +25,7 @@ class AuthService {
     loading: true
   };
   private listeners: ((state: AuthState) => void)[] = [];
+  private isRecoveringSession = false;
 
   constructor() {
     this.initializeAuth();
@@ -47,19 +48,91 @@ class AuthService {
         this.updateAuthState({ user: null, session: null, loading: false });
       }
 
-      // Listen for auth changes
+      // Listen for auth changes with explicit event handling
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('🔐 Auth event:', event, session?.user?.email || 'no user');
         
+        // CRITICAL: Only logout on explicit SIGNED_OUT event
+        if (event === 'SIGNED_OUT') {
+          console.log('🚪 Explicit sign out detected');
+          this.updateAuthState({ user: null, session: null, loading: false });
+          return;
+        }
+
+        // Handle token refresh
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('🔄 Token refreshed successfully');
+          if (session?.user) {
+            await this.loadUserProfile(session.user, session);
+          }
+          return;
+        }
+
+        // Handle initial session with no data - try to recover
+        if (event === 'INITIAL_SESSION' && !session) {
+          console.warn('⚠️ INITIAL_SESSION with no session data - attempting recovery');
+          const recovered = await this.recoverSession();
+          if (!recovered) {
+            console.log('❌ Session recovery failed - logging out');
+            this.updateAuthState({ user: null, session: null, loading: false });
+          }
+          return;
+        }
+
+        // Handle signed in event
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('✅ Sign in successful');
+          await this.loadUserProfile(session.user, session);
+          return;
+        }
+
+        // For any other case with valid session, load profile
         if (session?.user) {
           await this.loadUserProfile(session.user, session);
-        } else {
-          this.updateAuthState({ user: null, session: null, loading: false });
         }
       });
     } catch (error) {
       console.error('Auth initialization error:', error);
       this.updateAuthState({ user: null, session: null, loading: false });
+    }
+  }
+
+  /**
+   * Attempt to recover session from storage
+   * Prevents random logouts due to transient session loss
+   */
+  private async recoverSession(): Promise<boolean> {
+    if (this.isRecoveringSession) {
+      console.log('⏳ Session recovery already in progress');
+      return false;
+    }
+
+    this.isRecoveringSession = true;
+
+    try {
+      console.log('🔧 Attempting session recovery...');
+      
+      // Try to get session again
+      const { data: { session }, error } = await this.supabase.auth.getSession();
+      
+      if (error) {
+        console.error('❌ Session recovery failed:', error);
+        return false;
+      }
+
+      if (session?.user) {
+        console.log('✅ Session recovered successfully');
+        await this.loadUserProfile(session.user, session);
+        return true;
+      }
+
+      console.log('❌ No session found during recovery');
+      return false;
+    } catch (error) {
+      console.error('❌ Session recovery error:', error);
+      return false;
+    } finally {
+      this.isRecoveringSession = false;
     }
   }
 

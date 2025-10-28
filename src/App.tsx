@@ -23,6 +23,21 @@ function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
 
+// Reconnecting indicator for auth recovery
+function ReconnectingIndicator() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <div className="flex items-center gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-lg text-muted-foreground">Reconnecting...</p>
+      </div>
+      <p className="text-sm text-muted-foreground max-w-md text-center">
+        Session temporarily unavailable. Attempting to restore your connection...
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -33,6 +48,22 @@ export default function App() {
 
 function RootApp() {
   const { user, loading } = useAuth();
+  const [showReconnecting, setShowReconnecting] = useState(false);
+
+  // ✅ CRITICAL: Hooks must be called unconditionally at the top level
+  // If loading takes too long (> 3s), show reconnecting indicator
+  useEffect(() => {
+    if (!loading) {
+      setShowReconnecting(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowReconnecting(true);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   // Handle panic logout route
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
@@ -40,7 +71,9 @@ function RootApp() {
   }
   
   // Show loading while auth is initializing
-  if (loading) return <Spinner />;
+  if (loading) {
+    return showReconnecting ? <ReconnectingIndicator /> : <Spinner />;
+  }
   
   // Show login form if not authenticated
   if (!user) return <LoginForm onSuccess={() => {}} />;
