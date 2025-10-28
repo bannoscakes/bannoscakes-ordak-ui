@@ -50,6 +50,21 @@ function RootApp() {
   const { user, loading } = useAuth();
   const [showReconnecting, setShowReconnecting] = useState(false);
 
+  // ✅ CRITICAL: Hooks must be called unconditionally at the top level
+  // If loading takes too long (> 3s), show reconnecting indicator
+  useEffect(() => {
+    if (!loading) {
+      setShowReconnecting(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowReconnecting(true);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   // Handle panic logout route
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
     return <Logout />;
@@ -57,15 +72,6 @@ function RootApp() {
   
   // Show loading while auth is initializing
   if (loading) {
-    // If loading takes too long (> 3s), show reconnecting indicator
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        setShowReconnecting(true);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }, []);
-    
     return showReconnecting ? <ReconnectingIndicator /> : <Spinner />;
   }
   
