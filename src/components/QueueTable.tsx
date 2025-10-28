@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -16,12 +17,6 @@ import { Clock, Users, Search, X } from "lucide-react";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
-import { StaffAssignmentModal } from "./StaffAssignmentModal";
-import { ErrorDisplay } from "./ErrorDisplay";
-// import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getUnassignedCounts } from "../lib/rpc-client";
-import { useErrorNotifications } from "../lib/error-notifications";
-import type { Stage } from "../types/db";
 
 interface QueueItem {
   id: string;
@@ -37,8 +32,6 @@ interface QueueItem {
   dueTime: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
-  assigneeId?: string;
-  assigneeName?: string;
 }
 
 interface QueueTableProps {
@@ -47,6 +40,7 @@ interface QueueTableProps {
 }
 
 export function QueueTable({ store, initialFilter }: QueueTableProps) {
+  // TODO: Replace with real queue data from API
   const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -55,83 +49,15 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [selectedStage, setSelectedStage] = useState("unassigned");
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [isAssigningStaff, setIsAssigningStaff] = useState(false);
-  const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [error, setError] = useState<unknown>(null);
 
-  const { showError, showErrorWithRetry } = useErrorNotifications();
-
-  // Fetch real queue data from Supabase
+  // TODO: Implement real data fetching
   useEffect(() => {
-    fetchQueueData();
+    // This will be replaced with actual API calls
+    // fetchQueueData(store).then(setQueueData);
+    setLoading(false);
   }, [store]);
-
-  const fetchQueueData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch queue data using the new RPC
-      const orders = await getQueue({
-        store,
-        limit: 200,
-      });
-      
-      // Group orders by stage
-      const grouped: { [key: string]: QueueItem[] } = {
-        unassigned: [],
-        filling: [],
-        covering: [],
-        decorating: [],
-        packaging: [],
-        quality: [],
-        ready: [],
-      };
-      
-      orders.forEach((order: any) => {
-        const item: QueueItem = {
-          id: order.id,
-          orderNumber: order.human_id || order.id,
-          customerName: order.customer_name || 'Unknown',
-          product: order.product_title || 'Unknown',
-          size: order.size || 'M',
-          quantity: order.item_qty || 1,
-          deliveryTime: order.due_date || '',
-          priority: order.priority || 'Medium',
-          status: order.assignee_id ? 'In Production' : 'Pending',
-          flavor: order.flavour || '',
-          dueTime: order.due_date || '',
-          method: order.delivery_method === 'delivery' ? 'Delivery' : 'Pickup',
-          storage: order.storage || '',
-        };
-        
-        // Group by stage
-        const stageKey = order.stage?.toLowerCase() || 'unassigned';
-        if (!order.assignee_id && stageKey === 'filling') {
-          grouped.unassigned.push(item);
-        } else if (stageKey === 'packing') {
-          grouped.packaging.push(item);
-        } else if (stageKey === 'complete') {
-          grouped.ready.push(item);
-        } else if (grouped[stageKey]) {
-          grouped[stageKey].push(item);
-        }
-      });
-      
-      setQueueData(grouped);
-    } catch (error) {
-      console.error('Failed to fetch queue:', error);
-      setError(error);
-      showErrorWithRetry(error, fetchQueueData, {
-        title: 'Failed to Load Queue',
-        showRecoveryActions: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Set initial filter if provided
   useEffect(() => {
@@ -227,24 +153,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     );
   }
 
-  if (error) {
-    return (
-      <div className="space-y-4">
-        <ErrorDisplay error={error} onRetry={fetchQueueData} />
-        <ErrorDisplay
-          error={error}
-          title="Failed to Load Queue"
-          onRetry={fetchQueueData}
-          variant="card"
-          showDetails={process.env.NODE_ENV === 'development'}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <Card className="overflow-x-auto">
+      <Card>
         {/* Header */}
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -400,17 +311,17 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                             <p className="truncate">{item.customerName}</p>
                           </div>
                           
-                          <div className="hidden md:block">
+                          <div>
                             <p className="text-sm text-muted-foreground">Product</p>
                             <p className="truncate">{item.product}</p>
                           </div>
                           
-                          <div className="hidden lg:block">
+                          <div>
                             <p className="text-sm text-muted-foreground">Due Time</p>
                             <p>{item.dueTime}</p>
                           </div>
                           
-                          <div className="hidden md:block">
+                          <div>
                             <p className="text-sm text-muted-foreground">Priority</p>
                             <Badge className={getPriorityColor(item.priority)} variant="secondary">
                               {item.priority}
@@ -425,22 +336,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                               </Badge>
                             </div>
                             <OrderOverflowMenu
-                              item={item}
-                              variant="queue"
-                              onAssignToStaff={(item) => {
-                                setSelectedOrder(item);
-                                setIsAssigningStaff(true);
-                              }}
-                              onEditOrder={(item) => {
+                              onEdit={() => {
                                 setSelectedOrder(item);
                                 setIsEditingOrder(true);
                               }}
-                              onOpenOrder={(item) => {
-                                setSelectedOrder(item);
-                                setIsOrderDetailOpen(true);
-                              }}
-                              onViewDetails={(item) => {
-                                window.open(`https://admin.shopify.com/orders/${item.orderNumber}`, '_blank');
+                              onDelete={() => {
+                                // TODO: Implement delete functionality
                               }}
                             />
                           </div>
@@ -458,51 +359,21 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       {/* Order Detail Drawer */}
       <OrderDetailDrawer
         order={selectedOrder}
-        isOpen={isOrderDetailOpen && !isEditingOrder}
-        onClose={() => {
-          setIsOrderDetailOpen(false);
-          setSelectedOrder(null);
-        }}
-        store={store}
+        open={!!selectedOrder && !isEditingOrder}
+        onClose={() => setSelectedOrder(null)}
       />
 
       {/* Edit Order Drawer */}
       <EditOrderDrawer
         order={selectedOrder}
-        isOpen={isEditingOrder}
+        open={isEditingOrder}
         onClose={() => {
           setIsEditingOrder(false);
           setSelectedOrder(null);
         }}
-        onSaved={(updatedOrder) => {
+        onSave={(updatedOrder) => {
           // TODO: Implement order update functionality
           setIsEditingOrder(false);
-          setSelectedOrder(null);
-        }}
-        store={store}
-      />
-
-      {/* Staff Assignment Modal */}
-      <StaffAssignmentModal
-        isOpen={isAssigningStaff}
-        onClose={() => {
-          setIsAssigningStaff(false);
-          setSelectedOrder(null);
-        }}
-        order={selectedOrder}
-        store={store}
-        onAssigned={(updatedOrder) => {
-          // Update the order in the queue data
-          setQueueData(prev => {
-            const newData = { ...prev };
-            Object.keys(newData).forEach(stage => {
-              newData[stage] = newData[stage].map(item => 
-                item.id === updatedOrder.id ? updatedOrder : item
-              );
-            });
-            return newData;
-          });
-          setIsAssigningStaff(false);
           setSelectedOrder(null);
         }}
       />

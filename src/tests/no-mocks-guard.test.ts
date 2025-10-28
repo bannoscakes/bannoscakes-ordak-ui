@@ -8,16 +8,15 @@ describe("repo has no mocks", () => {
   });
   it("no '@/mocks/rpc' imports in src/", () => {
     try {
+
       execSync(`grep -R "@/mocks/rpc" -n src`, { stdio: "pipe" });
       throw new Error("Found '@/mocks/rpc' import");
     } catch (err: any) {
       // grep exits non-zero when not found; that's what we want
-      try {
-        execSync(`grep -R "from\\s*['\\"]@/mocks/rpc['\\"]" -n src`, { stdio: "pipe" });
-        throw new Error("Found '@/mocks/rpc' import");
-      } catch (err2: any) {
-        expect(String(err2.stdout || "")).toBe("");
-      }
+      execSync(`grep -R "from\\s*['\\"]@/mocks/rpc['\\"]" -n src`, { stdio: "pipe" });
+      throw new Error("Found '@/mocks/rpc' import");
+    } catch (err: any) {
+      expect(String(err.stdout || "")).toBe("");
     }
   });
 });

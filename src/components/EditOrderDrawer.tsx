@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { X, RotateCcw, Upload, Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -13,14 +14,13 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { ProductCombobox } from "./ProductCombobox";
 import { Product, findProductByTitle, convertLegacySizeToVariant } from "./ProductData";
 import { toast } from "sonner";
-import { updateOrderCore, getFlavours } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
   orderNumber: string;
   customerName: string;
   product: string;
-  size: string;
+  size: 'S' | 'M' | 'L';
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -73,7 +73,7 @@ const getExtendedOrderData = (order: QueueItem | null) => {
       : order.product.toLowerCase().includes("cupcake")
       ? ["Cupcake Liners", "Decorative Picks"]
       : [],
-    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
+    deliveryDate: "2024-12-03",
     notes: order.priority === "High" 
       ? "Customer requested early morning pickup. Handle with extra care - VIP client."
       : order.method === "Delivery"
@@ -89,26 +89,6 @@ const formatDate = (dateStr: string) => {
 
 const parseDate = (dateStr: string) => {
   return new Date(dateStr + 'T00:00:00');
-};
-
-// Calculate priority based on due date (same logic as database)
-const calculatePriority = (dueDate: string): 'High' | 'Medium' | 'Low' => {
-  const today = new Date();
-  const due = new Date(dueDate);
-  const deltaDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (deltaDays <= 1) return 'High';     // today/overdue/tomorrow
-  if (deltaDays <= 3) return 'Medium';   // within 3 days
-  return 'Low';                          // more than 3 days
-};
-
-const getPriorityColor = (priority: string) => {
-  const colors = {
-    "High": "bg-red-100 text-red-700 border-red-200",
-    "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "Low": "bg-green-100 text-green-700 border-green-200"
-  };
-  return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-700";
 };
 
 export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: EditOrderDrawerProps) {
@@ -149,8 +129,6 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [sizeRequiresConfirmation, setSizeRequiresConfirmation] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [availableFlavours, setAvailableFlavours] = useState<string[]>([]);
 
   // Calculate hasChanges from dirtyFields
   const hasChanges = Object.values(dirtyFields).some(Boolean);
@@ -164,7 +142,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
       
       // Convert legacy size to variant if possible
       const initialSize = product && product.variants 
-        ? convertLegacySizeToVariant(extendedOrder.size as 'S' | 'M' | 'L', product)
+        ? convertLegacySizeToVariant(extendedOrder.size, product)
         : extendedOrder.size;
       
       const initialData: FormData = {
@@ -201,23 +179,6 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     }
   }, [isOpen, handleKeyDown]);
 
-  // Load available flavours from settings
-  useEffect(() => {
-    async function loadFlavours() {
-      try {
-        const flavours = await getFlavours(store);
-        setAvailableFlavours(flavours);
-      } catch (error) {
-        console.error('Error loading flavours:', error);
-        // Fallback to hardcoded flavours
-        setAvailableFlavours(['Vanilla', 'Chocolate', 'Strawberry', 'Caramel']);
-      }
-    }
-    if (isOpen) {
-      loadFlavours();
-    }
-  }, [store, isOpen]);
-
   const updateField = useCallback((field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -237,7 +198,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     setDirtyFields(prev => ({ ...prev, [field]: false }));
   }, [originalData]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (!formData.dueDate) {
       toast.error("Due Date is required");
       return;
@@ -245,41 +206,21 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
 
     if (!extendedOrder) return;
 
-    try {
-      setSaving(true);
-      
-      // Update order in database
-      await updateOrderCore(extendedOrder.id, store, {
-        product_title: formData.product,
-        size: formData.size,
-        delivery_method: formData.method.toLowerCase(),
-        flavour: formData.flavor || "Other",
-        storage: formData.storage,
-        due_date: formData.dueDate,
-        notes: formData.writingOnCake || undefined,
-      });
+    // Simulate saving changes
+    const updatedOrder = {
+      ...extendedOrder,
+      product: formData.product,
+      size: formData.size,
+      priority: formData.priority,
+      method: formData.method,
+      flavor: formData.flavor || "Other",
+      storage: formData.storage,
+      deliveryDate: formData.dueDate,
+    };
 
-      // Create updated order for UI
-      const updatedOrder = {
-        ...extendedOrder,
-        product: formData.product,
-        size: formData.size,
-        priority: calculatePriority(formData.dueDate),
-        method: formData.method,
-        flavor: formData.flavor || "Other",
-        storage: formData.storage,
-        deliveryDate: formData.dueDate,
-      };
-
-      toast.success("Changes saved successfully");
-      onSaved(updatedOrder);
-    } catch (error) {
-      console.error('Error saving order:', error);
-      toast.error("Failed to save changes");
-    } finally {
-      setSaving(false);
-    }
-  }, [formData, extendedOrder, onSaved, store]);
+    toast.success("Changes saved");
+    onSaved(updatedOrder);
+  }, [formData, extendedOrder, onSaved]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -577,30 +518,42 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No specific flavour</SelectItem>
-                    {availableFlavours.map(flavour => (
-                      <SelectItem key={flavour} value={flavour}>{flavour}</SelectItem>
-                    ))}
+                    <SelectItem value="Vanilla">Vanilla</SelectItem>
+                    <SelectItem value="Chocolate">Chocolate</SelectItem>
+                    <SelectItem value="Strawberry">Strawberry</SelectItem>
+                    <SelectItem value="Caramel">Caramel</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {/* Priority - Auto-calculated from due date */}
+            {/* Priority */}
             <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Priority (Auto-calculated from due date)
-              </label>
-              <div className="p-3 bg-muted/30 rounded-lg border">
-                <Badge className={`text-xs ${getPriorityColor(calculatePriority(formData.dueDate))}`}>
-                  {calculatePriority(formData.dueDate)}
-                </Badge>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Priority is automatically calculated based on due date:
-                  <br />• High: Today, overdue, or tomorrow
-                  <br />• Medium: Within 3 days
-                  <br />• Low: More than 3 days
-                </p>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-foreground">
+                  Priority
+                </label>
+                {dirtyFields.priority && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => resetField('priority')}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
+              <Select value={formData.priority} onValueChange={(value: 'High' | 'Medium' | 'Low') => updateField('priority', value)}>
+                <SelectTrigger className={dirtyFields.priority ? 'border-orange-300 bg-orange-50' : ''}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Storage */}
@@ -812,10 +765,10 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             <div className="flex gap-2">
               <Button
                 onClick={handleSave}
-                disabled={!hasChanges || !formData.dueDate || !formData.product || !formData.size || sizeRequiresConfirmation || saving}
+                disabled={!hasChanges || !formData.dueDate || !formData.product || !formData.size || sizeRequiresConfirmation}
                 className="flex-1"
               >
-                {saving ? "Saving..." : "Save Changes"}
+                Save Changes
               </Button>
               <Button
                 variant="outline"

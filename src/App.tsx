@@ -1,202 +1,190 @@
-import React, { useEffect, useState } from "react";
-
-// ✅ real auth system (from the audit)
-import { AuthProvider } from "./contexts/AuthContext";
-import { useAuth } from "./hooks/useAuth";
-import type { AuthUser } from "./lib/auth";
-import { safePushState } from "./lib/safeNavigate";
-
-// ✅ real login screen
-import { LoginForm } from "./components/Auth/LoginForm";
-
-// ✅ panic sign-out route
-import Logout from "./components/Logout";
-
-// ⛳ your existing stuff (keep these)
+import { useState, useEffect } from "react";
 import { Dashboard } from "./components/Dashboard";
+import { StaffSignInPage } from "./components/StaffSignInPage";
 import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
+import { SupervisorSignInPage } from "./components/SupervisorSignInPage";
 import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
-// Tiny spinner (fallback if you don't have one)
-function Spinner() {
-  return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+type AppView = 'dashboard' | 'staff-signin' | 'staff-workspace' | 'supervisor-signin' | 'supervisor-workspace';
+
+interface StaffSession {
+  email: string;
+  name: string;
 }
 
-// Reconnecting indicator for auth recovery
-function ReconnectingIndicator() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-      <div className="flex items-center gap-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-lg text-muted-foreground">Reconnecting...</p>
-      </div>
-      <p className="text-sm text-muted-foreground max-w-md text-center">
-        Session temporarily unavailable. Attempting to restore your connection...
-      </p>
-    </div>
-  );
+interface SupervisorSession {
+  email: string;
+  name: string;
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <RootApp />
-    </AuthProvider>
-  );
-}
+  const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
+  const [supervisorSession, setSupervisorSession] = useState<SupervisorSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-function RootApp() {
-  const { user, loading } = useAuth();
-  const [showReconnecting, setShowReconnecting] = useState(false);
-
-  // ✅ CRITICAL: Hooks must be called unconditionally at the top level
-  // If loading takes too long (> 3s), show reconnecting indicator
+  // Check URL on mount and set initial view
   useEffect(() => {
-    if (!loading) {
-      setShowReconnecting(false);
-      return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pathname = window.location.pathname;
+      const viewParam = urlParams.get('view');
+      
+      const isStaffWorkspace = pathname === '/workspace/staff' || viewParam === 'staff';
+      const isSupervisorWorkspace = pathname === '/workspace/supervisor' || viewParam === 'supervisor';
+
+      if (isStaffWorkspace) {
+        setCurrentView('staff-signin');
+      } else if (isSupervisorWorkspace) {
+        setCurrentView('supervisor-signin');
+      } else {
+        setCurrentView('dashboard');
+      }
+    } catch (error) {
+      console.error('Error parsing URL:', error);
+      setCurrentView('dashboard');
+    } finally {
+      setIsLoading(false);
     }
-
-    const timer = setTimeout(() => {
-      setShowReconnecting(true);
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  // Handle panic logout route
-  if (typeof window !== "undefined" && window.location.pathname === "/logout") {
-    return <Logout />;
-  }
-  
-  // Show loading while auth is initializing
-  if (loading) {
-    return showReconnecting ? <ReconnectingIndicator /> : <Spinner />;
-  }
-  
-  // Show login form if not authenticated
-  if (!user) return <LoginForm onSuccess={() => {}} />;
-
-  // User is authenticated - route by role
-  return <RoleBasedRouter />;
-}
-
-/**
- * Role-based routing system
- * Routes users to appropriate landing page based on their role
- */
-function RoleBasedRouter() {
-  // ✅ All hooks declared unconditionally at the top
-  const { user, signOut } = useAuth();
-  const [currentUrl, setCurrentUrl] = useState(window.location.href);
-  const [didRoute, setDidRoute] = useState(false);
-
-  // Listen for URL changes (including browser back/forward)
-  useEffect(() => {
-    const handleUrlChange = () => {
-      setCurrentUrl(window.location.href);
-    };
-
-    // Listen for popstate events (browser back/forward)
-    window.addEventListener('popstate', handleUrlChange);
-    
-    // Also listen for programmatic navigation
-    const originalPushState = window.history.pushState;
-    window.history.pushState = function(...args) {
-      originalPushState.apply(window.history, args);
-      handleUrlChange();
-    };
-
-    return () => {
-      window.removeEventListener('popstate', handleUrlChange);
-      window.history.pushState = originalPushState;
-    };
   }, []);
 
-  // Single URL architecture - all users use "/" and route internally by role
-  const getCurrentWorkspace = () => {
-    const pathname = window.location.pathname;
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // All users use the root path "/" - no role-specific URLs
-    const isRootPath = pathname === "/";
-    
-    return {
-      pathname,
-      urlParams,
-      isRootPath,
-      // These are determined by user role, not URL
-      isStaffWorkspace: false, // Will be determined by user role
-      isSupervisorWorkspace: false, // Will be determined by user role  
-      isDashboard: false // Will be determined by user role
-    };
+  const handleStaffSignIn = (email: string, pin: string) => {
+    try {
+      // TODO: Implement real authentication
+      // This will be replaced with actual API call to authenticate staff
+      const name = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      setStaffSession({ email, name });
+      setCurrentView('staff-workspace');
+      
+      window.history.pushState({}, '', '/workspace/staff');
+    } catch (error) {
+      console.error('Staff sign in error:', error);
+    }
   };
 
-  // Single URL architecture - all users stay on "/"
-  const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
-    // Always redirect to root path "/" - role-based routing is internal
-    safePushState('/');
+  const handleStaffSignOut = () => {
+    try {
+      setStaffSession(null);
+      setCurrentView('dashboard');
+      
+      window.history.pushState({}, '', '/');
+    } catch (error) {
+      console.error('Staff sign out error:', error);
+    }
   };
 
-  // ✅ Single effect that handles all routing logic - ROLE-BASED, not URL-based
-  useEffect(() => {
-    if (!user) {
-      setDidRoute(true);
-      return;
+  const handleSupervisorSignIn = (email: string, pin: string) => {
+    try {
+      // TODO: Implement real authentication
+      // This will be replaced with actual API call to authenticate supervisor
+      const name = email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase());
+      setSupervisorSession({ email, name });
+      setCurrentView('supervisor-workspace');
+      
+      window.history.pushState({}, '', '/workspace/supervisor');
+    } catch (error) {
+      console.error('Supervisor sign in error:', error);
     }
+  };
 
-    // Single URL architecture - ensure all users are on "/"
-    const workspace = getCurrentWorkspace();
-    if (!workspace.isRootPath) {
-      // Redirect to root path if not already there
-      redirectToRoleLanding((user as AuthUser).role);
+  const handleSupervisorSignOut = () => {
+    try {
+      setSupervisorSession(null);
+      setCurrentView('dashboard');
+      
+      window.history.pushState({}, '', '/');
+    } catch (error) {
+      console.error('Supervisor sign out error:', error);
     }
+  };
 
-    console.log(`User ${(user as AuthUser).fullName} (${(user as AuthUser).role}) accessing single URL architecture`);
+  const handleNavigateToBannosQueue = () => {
+    try {
+      window.history.pushState({}, '', '/?page=bannos-production&view=unassigned');
+      setCurrentView('dashboard');
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  };
 
-    setDidRoute(true);
-  }, [user, currentUrl]); // Re-evaluate on user or URL changes
+  const handleNavigateToFlourlaneQueue = () => {
+    try {
+      window.history.pushState({}, '', '/?page=flourlane-production&view=unassigned');
+      setCurrentView('dashboard');
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  };
 
-  // ✅ Early returns AFTER all hooks have been declared
-  if (!user) {
-    return <LoginForm onSuccess={() => {}} />;
-  }
-
-  // Single URL architecture - route by USER ROLE, not URL
-  // All users access "/" but see different interfaces based on their role
-  
-  if (user.role === 'Staff') {
-    return <StaffWorkspacePage onSignOut={signOut} />;
-  }
-
-  if (user.role === 'Supervisor') {
-    return <SupervisorWorkspacePage 
-      onSignOut={signOut}
-      onNavigateToBannosQueue={() => navigateToQueue('bannos')}
-      onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
-    />;
-  }
-
-  if (user.role === 'Admin') {
+  // Show loading state while initializing
+  if (isLoading) {
     return (
-      <ErrorBoundary>
-        <Dashboard onSignOut={signOut} />
-      </ErrorBoundary>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse">
+          <div className="w-12 h-12 bg-muted rounded-lg mb-4 mx-auto"></div>
+          <div className="h-4 bg-muted rounded w-32"></div>
+        </div>
+      </div>
     );
   }
 
-  // Fallback - shouldn't reach here
-  return <Spinner />;
-}
+  const renderMainContent = () => {
+    // Show staff signin for staff workspace access without session
+    if (currentView === 'staff-signin' && !staffSession) {
+      return (
+        <div className="min-h-screen bg-background">
+          <StaffSignInPage onSignIn={handleStaffSignIn} />
+        </div>
+      );
+    }
 
-/**
- * Queue navigation helper - SPA compatible
- */
-function navigateToQueue(queueType: 'bannos' | 'flourlane') {
-  const url = `/?page=${queueType}-production&view=unassigned`;
-  // Use safe navigation to prevent /false routes
-  safePushState(url);
-}
+    // Show staff workspace if signed in
+    if (currentView === 'staff-workspace' && staffSession) {
+      return (
+        <div className="min-h-screen bg-background">
+          <StaffWorkspacePage 
+            staffName={staffSession.name}
+            onSignOut={handleStaffSignOut}
+          />
+        </div>
+      );
+    }
 
-// UnauthorizedAccess component removed - not needed with single URL architecture
+    // Show supervisor signin for supervisor workspace access without session
+    if (currentView === 'supervisor-signin' && !supervisorSession) {
+      return (
+        <div className="min-h-screen bg-background">
+          <SupervisorSignInPage onSignIn={handleSupervisorSignIn} />
+        </div>
+      );
+    }
+
+    // Show supervisor workspace if signed in
+    if (currentView === 'supervisor-workspace' && supervisorSession) {
+      return (
+        <div className="min-h-screen bg-background">
+          <SupervisorWorkspacePage 
+            supervisorName={supervisorSession.name}
+            onSignOut={handleSupervisorSignOut}
+            onNavigateToBannosQueue={handleNavigateToBannosQueue}
+            onNavigateToFlourlaneQueue={handleNavigateToFlourlaneQueue}
+          />
+        </div>
+      );
+    }
+
+    // Default to dashboard
+    return (
+      <div className="min-h-screen bg-background">
+        <Dashboard />
+      </div>
+    );
+  };
+
+  return (
+    <ErrorBoundary>
+      {renderMainContent()}
+    </ErrorBoundary>
+  );
+}

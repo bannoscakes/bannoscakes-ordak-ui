@@ -1,9 +1,0 @@
-{
-  "tasks": {
-    "start": "deno run -A --watch=static/,routes/ index.ts"
-  },
-  "imports": {
-    "std/": "https://deno.land/std@0.224.0/"
-  }
-}
-

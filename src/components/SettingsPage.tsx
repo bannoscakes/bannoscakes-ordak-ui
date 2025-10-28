@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -11,18 +11,6 @@ import { Separator } from "./ui/separator";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { 
-  getSettings, 
-  setSetting, 
-  getFlavours, 
-  setFlavours, 
-  getStorageLocations, 
-  setStorageLocations, 
-  getPrintingSettings, 
-  setPrintingSettings, 
-  getMonitorDensity, 
-  setMonitorDensity 
-} from "../lib/rpc-client";
 
 interface SettingsPageProps {
   store: "bannos" | "flourlane";
@@ -95,80 +83,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  // Fetch settings from database
-  useEffect(() => {
-    async function fetchSettings() {
-      try {
-        setLoading(true);
-        
-        // Fetch all settings for this store
-        const [flavours, storage, printing, monitor, allSettings] = await Promise.all([
-          getFlavours(store),
-          getStorageLocations(store),
-          getPrintingSettings(store),
-          getMonitorDensity(store),
-          getSettings(store)
-        ]);
-
-        // Extract specific settings from the allSettings array
-        const dueDateDefault = allSettings?.find((s: any) => s.key === 'dueDates.defaultDue')?.value;
-        const dueDateDays = allSettings?.find((s: any) => s.key === 'dueDates.allowedDays')?.value;
-        const dueDateBlackouts = allSettings?.find((s: any) => s.key === 'dueDates.blackoutDates')?.value;
-        const autoRefresh = allSettings?.find((s: any) => s.key === 'monitor.autoRefresh')?.value;
-        const shopifyToken = allSettings?.find((s: any) => s.key === 'shopifyToken')?.value;
-
-        console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
-        console.log('Storage locations details:', { 
-          storage, 
-          isArray: Array.isArray(storage), 
-          type: typeof storage,
-          length: storage?.length 
-        });
-        console.log('Monitor density details:', { 
-          monitor, 
-          type: typeof monitor,
-          isString: typeof monitor === 'string'
-        });
-
-        // Update settings with real data
-        setSettings(prev => {
-          const newSettings = {
-            ...prev,
-            shopifyToken: shopifyToken || prev.shopifyToken,
-            flavours: Array.isArray(flavours) ? flavours : prev.flavours,
-            storage: Array.isArray(storage) ? storage : prev.storage,
-            printing: {
-              ...prev.printing,
-              ...(typeof printing === 'object' && printing ? printing : {})
-            },
-            dueDates: {
-              ...prev.dueDates,
-              defaultDue: dueDateDefault || prev.dueDates.defaultDue,
-              allowedDays: dueDateDays ? JSON.parse(dueDateDays) : prev.dueDates.allowedDays,
-              blackoutDates: dueDateBlackouts ? JSON.parse(dueDateBlackouts) : prev.dueDates.blackoutDates
-            },
-            monitor: {
-              ...prev.monitor,
-              density: typeof monitor === 'string' ? monitor : prev.monitor.density,
-              autoRefresh: autoRefresh ? parseInt(autoRefresh) : prev.monitor.autoRefresh
-            }
-          };
-          
-          
-          return newSettings;
-        });
-
-      } catch (error) {
-        console.error('Error fetching settings:', error);
-        toast.error('Failed to load settings');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchSettings();
-  }, [store]);
 
   const handleSettingsChange = (path: string, value: any) => {
     setSettings(prev => {
@@ -257,15 +171,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     handleSettingsChange('flavours', newFlavours);
   };
 
-  const handleAddStorageLocation = () => {
-    handleSettingsChange('storage', [...settings.storage, `New Location ${settings.storage.length + 1}`]);
-  };
-
-  const handleRemoveStorageLocation = (index: number) => {
-    const newStorage = settings.storage.filter((_, i) => i !== index);
-    handleSettingsChange('storage', newStorage);
-  };
-
   const handleAddBlackoutDate = () => {
     if (newBlackoutDate && !settings.dueDates.blackoutDates.includes(newBlackoutDate)) {
       handleSettingsChange('dueDates.blackoutDates', [...settings.dueDates.blackoutDates, newBlackoutDate]);
@@ -278,38 +183,9 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     handleSettingsChange('dueDates.blackoutDates', newDates);
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      
-      console.log('Saving settings for store:', store);
-      console.log('Storage locations to save:', settings.storage);
-      
-      // Save all settings to database
-      await Promise.all([
-        setFlavours(store, settings.flavours),
-        setStorageLocations(store, settings.storage),
-        setPrintingSettings(store, settings.printing),
-        setMonitorDensity(store, settings.monitor.density),
-        // Save due date settings
-        setSetting(store, 'dueDates.defaultDue', settings.dueDates.defaultDue),
-        setSetting(store, 'dueDates.allowedDays', JSON.stringify(settings.dueDates.allowedDays)),
-        setSetting(store, 'dueDates.blackoutDates', JSON.stringify(settings.dueDates.blackoutDates)),
-        // Save monitor auto-refresh
-        setSetting(store, 'monitor.autoRefresh', settings.monitor.autoRefresh),
-        // Save Shopify token
-        setSetting(store, 'shopifyToken', settings.shopifyToken)
-      ]);
-
-      console.log('Settings saved successfully');
-      setHasUnsavedChanges(false);
-      toast.success("Settings saved successfully");
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error('Failed to save settings');
-    } finally {
-      setLoading(false);
-    }
+  const handleSave = () => {
+    setHasUnsavedChanges(false);
+    toast.success("Settings saved successfully");
   };
 
   const handleCancel = () => {
@@ -338,11 +214,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto p-6 pb-32 space-y-6">
-        {loading && (
-          <div className="text-center py-8 text-muted-foreground">
-            Loading settings...
-          </div>
-        )}
         
         {/* Shopify Integration Section */}
         <div className="space-y-4">
@@ -672,21 +543,15 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
         {/* Storage locations */}
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-medium text-foreground">Storage locations</h3>
-              <p className="text-sm text-muted-foreground">Shown as a chip on cards; used by the Storage filter.</p>
-            </div>
-            <Button size="sm" variant="outline" onClick={handleAddStorageLocation}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add location
-            </Button>
+          <div className="mb-4">
+            <h3 className="font-medium text-foreground">Storage locations</h3>
+            <p className="text-sm text-muted-foreground">Shown as a chip on cards; used by the Storage filter.</p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {settings.storage.map((location, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              <div key={index}>
+                <Label>Storage location {index + 1}</Label>
                 <Input 
                   value={location}
                   onChange={(e) => {
@@ -694,16 +559,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
                     newStorage[index] = e.target.value;
                     handleSettingsChange('storage', newStorage);
                   }}
-                  className="flex-1"
                 />
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleRemoveStorageLocation(index)}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             ))}
           </div>
@@ -752,8 +608,8 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+            <Button onClick={handleSave}>
+              Save
             </Button>
           </div>
         </div>

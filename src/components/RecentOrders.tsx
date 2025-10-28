@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
-import { getQueue } from "../lib/rpc-client";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
@@ -171,46 +170,9 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function RecentOrders({ store }: RecentOrdersProps) {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const orders = storeOrders[store];
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
-
-  useEffect(() => {
-    fetchRecentOrders();
-  }, [store]);
-
-  const fetchRecentOrders = async () => {
-    try {
-      setLoading(true);
-      // Get recent orders (limit to last 5)
-      const data = await getQueue({
-        store,
-        limit: 5,
-        sort_by: 'due_date',
-        sort_order: 'ASC'
-      });
-      
-      // Map to expected format
-      const mapped = data.map((order: any) => ({
-        id: order.id,
-        customer: order.customer_name || 'Unknown',
-        product: order.product_title || 'Unknown',
-        quantity: order.item_qty || 1,
-        status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
-        priority: order.priority || 'Medium',
-        dueDate: order.due_date || 'N/A',
-        progress: order.stage === 'Complete' ? 100 : order.stage === 'Packing' ? 75 : order.stage === 'Decorating' ? 50 : order.stage === 'Covering' ? 25 : 0
-      }));
-      
-      setOrders(mapped);
-    } catch (error) {
-      console.error('Failed to fetch recent orders:', error);
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleOpenOrder = (order: any) => {
     const queueItem = convertToQueueItem(order);

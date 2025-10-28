@@ -2,18 +2,6 @@
 
 How we configure Ordak across **dev / staging / production**. Keep secrets out of the client; only publish variables that begin with `VITE_`.
 
-## Quick Start
-
-**For new developers:** Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
-
-```bash
-cp .env.example .env.local
-# Edit .env.local with your Supabase project URL and anon key
-npm run dev
-```
-
-See `.env.example` at the repo root for a complete list of all environment variables with descriptions and default values.
-
 ---
 
 ## Matrix
@@ -33,34 +21,22 @@ See `.env.example` at the repo root for a complete list of all environment varia
 
 > Exposed to the browser. Must start with `VITE_`.
 
-### Required Variables
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-- `VITE_APP_URL` - Application URL (e.g., `http://localhost:3000`)
-
-### Optional Variables
-- `VITE_DEV_PORT` - Development server port (default: 3000)
-- `VITE_SUPABASE_PERSIST_SESSION` - Enable session persistence (default: true)
-- `VITE_SUPABASE_STORAGE_KEY` - localStorage key for auth (default: ordak-auth-token)
-- `VITE_USE_MOCKS` - Enable mock data for offline dev (default: false)
-- `VITE_SUPERVISOR_DEMO_LOGIN` - Demo mode flag (should be empty/false)
-- `VITE_SENTRY_DSN` - Sentry error monitoring DSN
-- `VITE_ENABLE_SHOPIFY_SYNC` - Enable Shopify integration (default: false)
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_APP_URL` (e.g., `http://localhost:5173`)
+- `VITE_SENTRY_DSN` *(optional)*
+- `VITE_POSTHOG_KEY` *(optional)*
 
 **Local example** (`.env.local`):
 ```dotenv
-# --- Required ---
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-VITE_APP_URL=http://localhost:3000
+# --- Vite app (frontend) ---
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_APP_URL=http://localhost:5173
 
-# --- Optional (with defaults) ---
-VITE_DEV_PORT=3000
-VITE_SUPABASE_PERSIST_SESSION=true
-VITE_USE_MOCKS=false
-
-# --- Production Only ---
+# Optional analytics/monitoring
 VITE_SENTRY_DSN=
+VITE_POSTHOG_KEY=
 Edge Functions (server-only) variables
 Do not expose these to the client.
 

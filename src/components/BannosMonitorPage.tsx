@@ -11,8 +11,6 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { Stage } from "@/types/stage";
-import { useEffect, useState } from "react";
-import { getQueue } from "../lib/rpc-client";
 
 interface OrderItem {
   id: string;
@@ -220,76 +218,6 @@ interface BannosMonitorPageProps {
 }
 
 export function BannosMonitorPage({ stats }: BannosMonitorPageProps) {
-  const [weekData, setWeekData] = useState<DaySchedule[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchWeeklyOrders();
-  }, []);
-
-  const fetchWeeklyOrders = async () => {
-    try {
-      setLoading(true);
-      const orders = await getQueue({
-        store: 'bannos',
-        limit: 100,
-        sort_by: 'due_date',
-        sort_order: 'ASC'
-      });
-
-      const groupedByDate: Record<string, any[]> = {};
-      orders.forEach((order: any) => {
-        const dueDate = order.due_date || 'No Date';
-        if (!groupedByDate[dueDate]) {
-          groupedByDate[dueDate] = [];
-        }
-        groupedByDate[dueDate].push({
-          id: order.id,
-          customerName: order.customer_name || 'Unknown',
-          items: [order.product_title || 'Unknown'],
-          quantity: order.item_qty || 1,
-          deliveryTime: '10:00 AM',
-          priority: (order.priority?.toLowerCase() || 'medium') as 'high' | 'medium' | 'low',
-          status: (order.stage === 'Complete' ? 'completed' : order.assignee_id ? 'in-progress' : 'pending') as 'pending' | 'in-progress' | 'completed',
-          specialNotes: order.notes || undefined
-        });
-      });
-
-      const weekSchedule = Object.entries(groupedByDate).slice(0, 6).map(([date, dayOrders]) => ({
-        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
-        dayName: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-        orders: dayOrders,
-        totalOrders: dayOrders.length
-      }));
-
-      setWeekData(weekSchedule);
-    } catch (error) {
-      console.error('Failed to fetch weekly orders:', error);
-      setWeekData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <Card className="h-full">
-          <CardContent className="p-6">
-            <div className="animate-pulse">
-              <div className="h-8 bg-muted rounded w-64 mb-6"></div>
-              <div className="grid grid-cols-6 gap-4">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-96 bg-muted rounded-lg"></div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6">
       <Card className="h-full">
@@ -322,7 +250,7 @@ export function BannosMonitorPage({ stats }: BannosMonitorPageProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-6 gap-4 h-[600px]">
-            {weekData.map((day, index) => (
+            {bannosWeekData.map((day, index) => (
               <div key={index} className="flex flex-col">
                 {/* Day Header */}
                 <div className="mb-4 text-center">

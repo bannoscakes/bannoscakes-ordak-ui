@@ -4,7 +4,6 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { useAuth } from "@/hooks/useAuth";
 import {
   Tabs,
   TabsContent,
@@ -18,17 +17,18 @@ import {
   Square,
   Coffee,
   Clock,
-  Briefcase,
   MessageSquare,
+  Briefcase,
 } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
+import { MessagesPage } from "./messaging/MessagesPage";
 import { toast } from "sonner";
-import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
-// Import real RPCs
-import { getQueue } from "../lib/rpc-client";
+// Import mock RPCs
+import { get_queue } from "@/lib/rpc";
+import type { MockOrder } from "@/mocks/mock-data";
 
 interface QueueItem {
   id: string;
@@ -54,11 +54,48 @@ interface QueueItem {
 }
 
 interface StaffWorkspacePageProps {
+  staffName: string;
   onSignOut: () => void;
 }
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
 
+// Convert MockOrder to QueueItem
+function mapMockOrderToQueueItem(order: MockOrder): QueueItem {
+  const store = order.id.startsWith("bannos") ? "bannos" : "flourlane";
+  return {
+    id: order.id,
+    orderNumber: order.id,
+    customerName: `Customer ${order.id.split('-')[1]}`,
+    product: order.product_title,
+    size: 'M' as const,
+    quantity: 1,
+    // deliveryTime: undefined, // time window not used in this system
+    priority: order.priority,
+    status: mapStageToStatus(order.stage),
+    flavor: "Chocolate",
+    dueTime: "10:00 AM",
+    method: 'Delivery' as const,
+    storage: order.storage || undefined,
+    store: store,
+    stage: order.stage.toLowerCase(),
+  };
+}
+
+function mapStageToStatus(stage: MockOrder["stage"]): QueueItem["status"] {
+  switch(stage) {
+    case "Filling": 
+    case "Covering": 
+    case "Decorating": 
+      return "In Production";
+    case "Packing": 
+      return "Quality Check";
+    case "Complete": 
+      return "Completed";
+    default: 
+      return "Pending";
+  }
+}
 
 // Convert legacy size to realistic display
 const getRealisticSize = (
@@ -102,11 +139,9 @@ const getRealisticSize = (
 };
 
 export function StaffWorkspacePage({
+  staffName,
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
-  const displayName = user?.fullName || user?.email || "Signed in";
-
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -122,67 +157,32 @@ export function StaffWorkspacePage({
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
-  const [showMessaging, setShowMessaging] = useState(false);
 
   // Mock unread message count
+  const unreadMessageCount = 3;
 
   // Load orders from mock
   async function loadStaffOrders() {
     setLoading(true);
     try {
-      // Fetch orders from both stores
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 100 }),
-        getQueue({ store: "flourlane", limit: 100 })
-      ]);
+      const mockOrders = await get_queue();
+      // Filter for assigned orders (simulate staff assignment)
+      // For now, let's show orders that have assignee_id not null OR the first 3 orders
+      const assignedOrders = mockOrders.filter(o => o.assignee_id !== null);
       
-      // Combine all orders
-      const allOrders = [...bannosOrders, ...flourlaneOrders];
+      // If no assigned orders, simulate by assigning the first few
+      if (assignedOrders.length === 0) {
+        assignedOrders.push(...mockOrders.slice(0, 3));
+      }
       
-      // Filter for assigned orders (orders with assignee_id not null)
-      const assignedOrders = allOrders.filter(o => o.assignee_id !== null);
-      
-      // If no assigned orders, show unassigned orders for staff to pick up
-      const ordersToShow = assignedOrders.length > 0 ? assignedOrders : allOrders.slice(0, 5);
-      
-      // Map database orders to UI format
-      const mappedOrders = ordersToShow.map((order: any) => ({
-        id: order.id,
-        orderNumber: order.human_id || order.shopify_order_number || order.id,
-        customerName: order.customer_name || "Unknown Customer",
-        product: order.product_title || "Unknown Product",
-        size: order.size || "M",
-        quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || new Date().toISOString(),
-        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
-        status: mapStageToStatus(order.stage),
-        flavor: order.flavour || "Unknown",
-        dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
-        storage: order.storage || "Default",
-        store: order.store || "bannos",
-        stage: order.stage || "Filling"
-      }));
-      
+      const mappedOrders = assignedOrders.map(mapMockOrderToQueueItem);
       setOrders(mappedOrders);
     } catch (error) {
-      console.error("Error loading staff orders:", error);
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
     }
   }
-
-  const mapStageToStatus = (stage: string) => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
-    }
-  };
 
   // Load orders on mount
   useEffect(() => {
@@ -305,23 +305,6 @@ export function StaffWorkspacePage({
     return "bg-purple-100 text-purple-700 border-purple-200";
   };
 
-  // Block UI until auth is ready
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading authentication...</div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-sm text-destructive">Please sign in to access the staff workspace.</div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">
@@ -344,7 +327,7 @@ export function StaffWorkspacePage({
             </h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-foreground font-medium">
-                {displayName}
+                {staffName}
               </span>
               <Button
                 variant="outline"
@@ -440,6 +423,11 @@ export function StaffWorkspacePage({
             >
               <MessageSquare className="h-4 w-4" />
               Messages
+              {unreadMessageCount > 0 && (
+                <Badge className="bg-red-500 text-white text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center ml-1">
+                  {unreadMessageCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -588,13 +576,11 @@ export function StaffWorkspacePage({
             </div>
           </TabsContent>
 
-          <TabsContent
-            value="messages"
-            className="space-y-6 mt-6"
-          >
-            <MainDashboardMessaging />
+          <TabsContent value="messages" className="mt-6">
+            <Card className="h-[600px]">
+              <MessagesPage staffName={staffName} />
+            </Card>
           </TabsContent>
-
         </Tabs>
       </div>
 

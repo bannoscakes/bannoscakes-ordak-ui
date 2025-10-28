@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -19,22 +18,8 @@ import {
   Activity
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
-import { getStaffList } from "../lib/rpc-client";
-import { toast } from "sonner";
-import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
-import ChartContainer from "@/components/analytics/ChartContainer";
-import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
-import KpiValue from "@/components/analytics/KpiValue";
-import { toNumberOrNull } from "@/lib/metrics";
 
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Productivity tracking
-// - Attendance system
-// - Skills/Training management
-// - Shift scheduling
-// =============================================================================
-
+// Mock data for Staff Analytics
 const staffProductivity = [
   { month: "Jan", productivity: 92.3, hours: 1580, overtime: 120 },
   { month: "Feb", productivity: 94.1, hours: 1620, overtime: 95 },
@@ -54,7 +39,6 @@ const departmentPerformance = [
   { department: "Maintenance", members: 2, efficiency: 89.3, satisfaction: 82, color: "#8b5cf6" }
 ];
 
-// TODO: Replace with real staff from database and actual performance metrics
 const topPerformers = [
   { 
     name: "Sarah Johnson", 
@@ -173,52 +157,6 @@ const kpiMetrics = [
 ];
 
 export function StaffAnalyticsPage() {
-  const [loading, setLoading] = useState(true);
-  const [totalStaff, setTotalStaff] = useState(0);
-  const [activeStaff, setActiveStaff] = useState(0);
-  const isEnabled = useAnalyticsEnabled();
-  
-  // Fetch real staff data
-  useEffect(() => {
-    async function fetchStaffStats() {
-      try {
-        const staffList = await getStaffList(null, true); // Get all active staff
-        setTotalStaff(staffList.length);
-        setActiveStaff(staffList.filter(s => s.is_active).length);
-      } catch (error) {
-        console.error('Error fetching staff stats:', error);
-        toast.error('Failed to load staff analytics');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchStaffStats();
-  }, []);
-  
-  // Update KPI metrics with real data where available
-  const kpiMetricsWithRealData = [
-    {
-      title: "Total Staff",
-      value: loading ? "..." : totalStaff.toString(),
-      change: "+2",
-      trend: "up",
-      icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-50"
-    },
-    ...kpiMetrics.slice(1) // Keep other mock metrics for now
-  ];
-
-  // Gate all mock datasets behind feature flag
-  const staffProductivityData = isEnabled ? staffProductivity : [];
-  const attendanceDataUse = isEnabled ? attendanceData : [];
-  const departmentPerformanceData = isEnabled ? departmentPerformance : [];
-  const skillsDistributionData = isEnabled ? skillsDistribution : [];
-  const trainingProgressData = isEnabled ? trainingProgress : [];
-  const shiftDistributionUse = isEnabled ? shiftDistribution : [];
-  const topPerformersData = isEnabled ? topPerformers : [];
-  const metrics = kpiMetricsWithRealData;
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -243,37 +181,33 @@ export function StaffAnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI tiles */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => {
-          const raw = metric?.value;
-          const num = toNumberOrNull(raw);
-          const isEnabled = useAnalyticsEnabled();
-          const isEmpty = num == null;
-
-          const unit =
-            /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
-            /Revenue|\$|Amount/i.test(metric.title) ? "currency" :
-            /Total|Staff|Orders|Hours|Count/i.test(metric.title) ? "count" :
-            "raw";
-
-          return (
-            <Card key={metric.title}>
-              <div className="flex items-center justify-between p-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpiMetrics.map((metric, index) => (
+          <Card key={index} className="p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="font-medium text-muted-foreground">{metric.title}</p>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{metric.title}</p>
-                  <p className="text-3xl font-semibold text-foreground">
-                    <KpiValue value={num} unit={unit as any} />
-                  </p>
-                  {isEmpty && !isEnabled && (
-                    <p className="text-xs text-muted-foreground">No data yet</p>
-                  )}
+                  <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
+                  <div className="flex items-center gap-1">
+                    {metric.trend === "up" ? (
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className={`text-sm ${metric.trend === "up" ? "text-green-600" : "text-red-600"}`}>
+                      {metric.change}
+                    </span>
+                  </div>
                 </div>
+              </div>
+              <div className={`p-3 rounded-xl ${metric.bg}`}>
                 <metric.icon className={`h-6 w-6 ${metric.color}`} />
               </div>
-            </Card>
-          );
-        })}
+            </div>
+          </Card>
+        ))}
       </div>
 
       {/* Analytics Tabs */}
@@ -297,17 +231,15 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={staffProductivityData.length > 0}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={staffProductivityData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[85, 100]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={staffProductivity}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="month" />
+                    <YAxis domain={[85, 100]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
@@ -320,19 +252,17 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={staffProductivityData.length > 0}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={staffProductivityData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="hours" fill="#8b5cf6" name="Regular Hours" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="overtime" fill="#f59e0b" name="Overtime" radius={[2, 2, 0, 0]} />
-                      <Legend />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={staffProductivity}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="hours" fill="#8b5cf6" name="Regular Hours" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="overtime" fill="#f59e0b" name="Overtime" radius={[2, 2, 0, 0]} />
+                    <Legend />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
@@ -347,9 +277,7 @@ export function StaffAnalyticsPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-4">
-                {topPerformersData.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No data to display</div>
-                ) : topPerformersData.map((performer, index) => (
+                {topPerformers.map((performer, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
@@ -459,20 +387,18 @@ export function StaffAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={attendanceDataUse.length > 0}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={attendanceDataUse}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="week" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="present" fill="#10b981" name="Present" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[2, 2, 0, 0]} />
-                      <Legend />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={attendanceData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="week" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="present" fill="#10b981" name="Present" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[2, 2, 0, 0]} />
+                    <Legend />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
@@ -484,34 +410,23 @@ export function StaffAnalyticsPage() {
               <CardContent className="p-0">
                 <div className="space-y-6">
                   <div className="text-center">
-                    {isEnabled ? (
-                      <>
-                        <p className="text-4xl font-semibold text-green-600">96.8%</p>
-                        <p className="text-muted-foreground">Overall Attendance Rate</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-4xl font-semibold text-foreground">—</p>
-                        <p className="text-sm text-muted-foreground">No data yet</p>
-                      </>
-                    )}
+                    <p className="text-4xl font-semibold text-green-600">96.8%</p>
+                    <p className="text-muted-foreground">Overall Attendance Rate</p>
                   </div>
-                  {isEnabled ? (
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-green-600">88</p>
-                        <p className="text-sm text-muted-foreground">Present</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-red-600">4</p>
-                        <p className="text-sm text-muted-foreground">Absent</p>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-orange-600">2</p>
-                        <p className="text-sm text-muted-foreground">Late</p>
-                      </div>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="space-y-2">
+                      <p className="text-2xl font-semibold text-green-600">88</p>
+                      <p className="text-sm text-muted-foreground">Present</p>
                     </div>
-                  ) : null}
+                    <div className="space-y-2">
+                      <p className="text-2xl font-semibold text-red-600">4</p>
+                      <p className="text-sm text-muted-foreground">Absent</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-2xl font-semibold text-orange-600">2</p>
+                      <p className="text-sm text-muted-foreground">Late</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -527,9 +442,7 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-4">
-                  {skillsDistributionData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
-                  ) : skillsDistributionData.map((skill, index) => (
+                  {skillsDistribution.map((skill, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex justify-between">
                         <span className="font-medium text-foreground">{skill.skill}</span>
@@ -569,9 +482,7 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-6">
-                  {trainingProgressData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
-                  ) : trainingProgressData.map((training, index) => (
+                  {trainingProgress.map((training, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex justify-between">
                         <span className="font-medium text-foreground">{training.name}</span>
@@ -604,25 +515,23 @@ export function StaffAnalyticsPage() {
                 <CardTitle>Shift Distribution</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={shiftDistributionUse.length > 0}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={shiftDistributionUse}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        dataKey="value"
-                        label={({name, value}) => `${name}: ${value}%`}
-                      >
-                        {shiftDistributionUse.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={shiftDistribution}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      label={({name, value}) => `${name}: ${value}%`}
+                    >
+                      {shiftDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
@@ -633,9 +542,7 @@ export function StaffAnalyticsPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-4">
-                  {shiftDistributionUse.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
-                  ) : shiftDistributionUse.map((shift, index) => (
+                  {shiftDistribution.map((shift, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 rounded-full" style={{ backgroundColor: shift.color }}></div>

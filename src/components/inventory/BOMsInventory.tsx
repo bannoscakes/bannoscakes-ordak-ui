@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -9,133 +9,108 @@ import { Switch } from "../ui/switch";
 import { Search, Plus, Edit, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
-import { getBoms, upsertBom, getComponents, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
+
+interface BOMItem {
+  id: string;
+  componentId: string;
+  componentName: string;
+  qtyPer: number;
+  stage?: "Filling" | "Decorating" | "Packing";
+}
+
+interface BOM {
+  id: string;
+  productTitle: string;
+  variant?: string;
+  active: boolean;
+  store: "bannos" | "flourlane";
+  items: BOMItem[];
+}
+
+const mockComponents = [
+  { id: "C001", name: "6-inch Round Cake Base" },
+  { id: "C002", name: "6-inch White Cake Box" },
+  { id: "C003", name: "Spiderman Cake Topper" },
+  { id: "C004", name: "8-inch Round Cake Board" },
+  { id: "C005", name: "Number Candles Set" },
+  { id: "C006", name: "Chocolate Filling" },
+  { id: "C007", name: "Vanilla Buttercream" },
+  { id: "C008", name: "Food Coloring - Blue" }
+];
+
+const mockBOMs: BOM[] = [
+  {
+    id: "BOM001",
+    productTitle: "Chocolate Birthday Cake",
+    variant: "6-inch Round",
+    active: true,
+    store: "bannos",
+    items: [
+      { id: "BI001", componentId: "C001", componentName: "6-inch Round Cake Base", qtyPer: 1 },
+      { id: "BI002", componentId: "C006", componentName: "Chocolate Filling", qtyPer: 200, stage: "Filling" },
+      { id: "BI003", componentId: "C007", componentName: "Vanilla Buttercream", qtyPer: 150, stage: "Decorating" },
+      { id: "BI004", componentId: "C002", componentName: "6-inch White Cake Box", qtyPer: 1, stage: "Packing" }
+    ]
+  },
+  {
+    id: "BOM002",
+    productTitle: "Spiderman Theme Cake",
+    active: true,
+    store: "bannos",
+    items: [
+      { id: "BI005", componentId: "C001", componentName: "6-inch Round Cake Base", qtyPer: 1 },
+      { id: "BI006", componentId: "C003", componentName: "Spiderman Cake Topper", qtyPer: 1, stage: "Decorating" },
+      { id: "BI007", componentId: "C008", componentName: "Food Coloring - Blue", qtyPer: 5, stage: "Decorating" },
+      { id: "BI008", componentId: "C002", componentName: "6-inch White Cake Box", qtyPer: 1, stage: "Packing" }
+    ]
+  },
+  {
+    id: "BOM003",
+    productTitle: "Artisan Sourdough Bread",
+    variant: "Large Loaf",
+    active: false,
+    store: "flourlane",
+    items: [
+      { id: "BI009", componentId: "C004", componentName: "8-inch Round Cake Board", qtyPer: 1, stage: "Packing" }
+    ]
+  }
+];
 
 export function BOMsInventory() {
-  const [boms, setBOMs] = useState<BOM[]>([]);
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [boms, setBOMs] = useState<BOM[]>(mockBOMs);
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("All");
   const [editingBOM, setEditingBOM] = useState<BOM | null>(null);
   const [isBOMEditorOpen, setIsBOMEditorOpen] = useState(false);
 
-  // Fetch components from Supabase
-  useEffect(() => {
-    async function fetchComponents() {
-      try {
-        const componentsData = await getComponents();
-        console.log('Fetched Components:', componentsData); // Debug log
-        setComponents(componentsData);
-      } catch (error) {
-        console.error('Error fetching components:', error);
-        toast.error('Failed to load components');
-      }
-    }
-    fetchComponents();
-  }, []);
-
-  // Fetch BOMs from Supabase
-  useEffect(() => {
-    async function fetchBOMs() {
-      try {
-        const storeFilterValue = storeFilter === "All" ? null : (storeFilter.toLowerCase() as "bannos" | "flourlane");
-        const searchValue = searchQuery.trim() || null;
-        
-        const bomsData = await getBoms(storeFilterValue, true, searchValue);
-        console.log('Fetched BOMs:', bomsData); // Debug log
-        
-        setBOMs(bomsData);
-      } catch (error) {
-        console.error('Error fetching BOMs:', error);
-        toast.error('Failed to load BOMs');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchBOMs();
-  }, [storeFilter, searchQuery]);
-
-  // Filtering is now handled by the RPC call, so we can use boms directly
-  const filteredBOMs = boms;
+  const filteredBOMs = boms.filter(bom => {
+    const matchesSearch = searchQuery === "" || 
+      bom.productTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (bom.variant && bom.variant.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesStore = storeFilter === "All" || bom.store === storeFilter.toLowerCase();
+    
+    return matchesSearch && matchesStore;
+  });
 
   const handleOpenBOM = (bom: BOM) => {
     setEditingBOM({ ...bom });
     setIsBOMEditorOpen(true);
   };
 
-  const handleCreateNewBOM = () => {
-    const newBOM: BOM = {
-      id: `bom-${Date.now()}`, // Temporary ID for new BOM
-      product_title: "",
-      description: "",
-      store: "bannos",
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      items: []
-    };
-    console.log('Creating new BOM:', newBOM);
-    setEditingBOM(newBOM);
-    setIsBOMEditorOpen(true);
-  };
-
-  const handleSaveBOM = async () => {
+  const handleSaveBOM = () => {
     if (!editingBOM) return;
     
-    try {
-      // Validate required fields
-      if (!editingBOM.product_title.trim()) {
-        toast.error("Please enter a BOM product title");
-        return;
-      }
-      
-      if (!editingBOM.description?.trim()) {
-        toast.error("Please enter a BOM description");
-        return;
-      }
-      
-      if (editingBOM.items.length === 0) {
-        toast.error("Please add at least one component to the BOM");
-        return;
-      }
-      
-      // Save to database using RPC
-      const bomId = await upsertBom({
-        product_title: editingBOM.product_title,
-        store: editingBOM.store,
-        bom_id: editingBOM.id.startsWith('bom-') ? undefined : editingBOM.id, // Only pass ID if it's not a temporary one
-        description: editingBOM.description,
-        shopify_product_id: editingBOM.shopify_product_id
-      });
-      console.log('Saved BOM ID:', bomId);
-      
-      // Update the BOM with the real ID from database
-      const updatedBOM = { ...editingBOM, id: bomId };
-      
-      // Update local state
-      setBOMs(prev => {
-        const existingIndex = prev.findIndex(b => b.id === editingBOM.id);
-        if (existingIndex >= 0) {
-          // Update existing BOM
-          const updated = [...prev];
-          updated[existingIndex] = updatedBOM;
-          return updated;
-        } else {
-          // Add new BOM
-          return [...prev, updatedBOM];
-        }
-      });
-      
-      setIsBOMEditorOpen(false);
-      setEditingBOM(null);
-      toast.success("BOM saved successfully");
-    } catch (error) {
-      console.error('Error saving BOM:', error);
-      toast.error("Failed to save BOM");
-    }
+    setBOMs(prev => prev.map(b => 
+      b.id === editingBOM.id ? editingBOM : b
+    ));
+    
+    setIsBOMEditorOpen(false);
+    setEditingBOM(null);
+    toast.success("BOM saved successfully");
   };
 
   const handleAddBOMItem = () => {
@@ -143,22 +118,14 @@ export function BOMsInventory() {
     
     const newItem: BOMItem = {
       id: `BI${Date.now()}`,
-      bom_id: editingBOM.id,
-      component_id: "",
-      component_name: "",
-      component_sku: "",
-      quantity_per_unit: 1,
-      is_optional: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      componentId: "",
+      componentName: "",
+      qtyPer: 1
     };
-    
-    console.log('Adding BOM item:', newItem);
-    console.log('Current BOM items before:', editingBOM.items);
     
     setEditingBOM({
       ...editingBOM,
-      items: [...(editingBOM.items || []), newItem]
+      items: [...editingBOM.items, newItem]
     });
   };
 
@@ -167,7 +134,7 @@ export function BOMsInventory() {
     
     setEditingBOM({
       ...editingBOM,
-      items: (editingBOM.items || []).map(item => 
+      items: editingBOM.items.map(item => 
         item.id === itemId ? { ...item, ...updates } : item
       )
     });
@@ -178,7 +145,7 @@ export function BOMsInventory() {
     
     setEditingBOM({
       ...editingBOM,
-      items: (editingBOM.items || []).filter(item => item.id !== itemId)
+      items: editingBOM.items.filter(item => item.id !== itemId)
     });
   };
 
@@ -223,7 +190,7 @@ export function BOMsInventory() {
             />
           </div>
 
-          <Button onClick={handleCreateNewBOM}>
+          <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add BOM
           </Button>
@@ -244,50 +211,36 @@ export function BOMsInventory() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Loading BOMs...
+            {filteredBOMs.map((bom) => (
+              <TableRow key={bom.id}>
+                <TableCell className="font-medium">{bom.productTitle}</TableCell>
+                <TableCell>{bom.variant || "—"}</TableCell>
+                <TableCell>
+                  <Badge className={`text-xs ${getStoreColor(bom.store)}`}>
+                    {bom.store === 'bannos' ? 'Bannos' : 'Flourlane'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={bom.active ? "default" : "secondary"}>
+                    {bom.active ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">
+                    {bom.items.length} components
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenBOM(bom)}
+                  >
+                    Open BOM
+                  </Button>
                 </TableCell>
               </TableRow>
-            ) : filteredBOMs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No BOMs found matching your filters
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredBOMs.map((bom) => (
-                <TableRow key={bom.id}>
-                  <TableCell className="font-medium">{bom.product_title}</TableCell>
-                  <TableCell>{bom.description || "—"}</TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs ${getStoreColor(bom.store)}`}>
-                      {bom.store === 'bannos' ? 'Bannos' : 'Flourlane'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={bom.is_active ? "default" : "secondary"}>
-                      {bom.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {bom.items?.length || 0} components
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenBOM(bom)}
-                    >
-                      Open BOM
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
 
@@ -298,39 +251,40 @@ export function BOMsInventory() {
         )}
       </Card>
 
-      {/* BOM Editor Dialog */}
-      <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>BOM Editor</DialogTitle>
-          </DialogHeader>
+      {/* BOM Editor Sheet */}
+      <Sheet open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
+        <SheetContent className="w-[600px] sm:w-[800px]">
+          <SheetHeader>
+            <SheetTitle>BOM Editor</SheetTitle>
+          </SheetHeader>
 
           {editingBOM && (
-            <div className="space-y-4">
+            <div className="space-y-6 mt-6">
               {/* Product Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="product-title">Product Title</Label>
                   <Input
                     id="product-title"
-                    placeholder="e.g., Spiderman Theme Cake"
-                    value={editingBOM.product_title}
+                    value={editingBOM.productTitle}
                     onChange={(e) => setEditingBOM({
                       ...editingBOM,
-                      product_title: e.target.value
+                      productTitle: e.target.value
                     })}
+                    readOnly
+                    className="bg-muted/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description (optional)</Label>
+                  <Label htmlFor="variant">Variant (optional)</Label>
                   <Input
-                    id="description"
+                    id="variant"
                     placeholder="e.g., 6-inch Round, Large Loaf"
-                    value={editingBOM.description || ""}
+                    value={editingBOM.variant || ""}
                     onChange={(e) => setEditingBOM({
                       ...editingBOM,
-                      description: e.target.value || undefined
+                      variant: e.target.value || undefined
                     })}
                   />
                 </div>
@@ -339,10 +293,10 @@ export function BOMsInventory() {
               <div className="flex items-center space-x-2">
                 <Switch 
                   id="active"
-                  checked={editingBOM.is_active}
+                  checked={editingBOM.active}
                   onCheckedChange={(checked) => setEditingBOM({
                     ...editingBOM,
-                    is_active: checked
+                    active: checked
                   })}
                 />
                 <Label htmlFor="active">Active BOM</Label>
@@ -361,21 +315,18 @@ export function BOMsInventory() {
                 </div>
 
                 <div className="space-y-3">
-                  {editingBOM.items?.map((item) => {
-                    console.log('Rendering BOM item:', item);
-                    return (
+                  {editingBOM.items.map((item) => (
                     <Card key={item.id} className="p-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                        <div className="sm:col-span-1">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
                           <Label className="text-xs text-muted-foreground">Component</Label>
                           <Select
-                            value={item.component_id}
+                            value={item.componentId}
                             onValueChange={(value) => {
-                              const component = components.find(c => c.id === value);
+                              const component = mockComponents.find(c => c.id === value);
                               handleUpdateBOMItem(item.id, {
-                                component_id: value,
-                                component_name: component?.name || "",
-                                component_sku: component?.sku || ""
+                                componentId: value,
+                                componentName: component?.name || ""
                               });
                             }}
                           >
@@ -383,36 +334,30 @@ export function BOMsInventory() {
                               <SelectValue placeholder="Select component" />
                             </SelectTrigger>
                             <SelectContent>
-                              {components.length === 0 ? (
-                                <SelectItem value="no-components" disabled>
-                                  No components available
+                              {mockComponents.map(component => (
+                                <SelectItem key={component.id} value={component.id}>
+                                  {component.name}
                                 </SelectItem>
-                              ) : (
-                                components.map(component => (
-                                  <SelectItem key={component.id} value={component.id}>
-                                    {component.name} ({component.sku})
-                                  </SelectItem>
-                                ))
-                              )}
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div>
+                        <div className="w-24">
                           <Label className="text-xs text-muted-foreground">Qty per</Label>
                           <Input
                             type="number"
                             min="0"
                             step="0.1"
-                            value={item.quantity_per_unit}
+                            value={item.qtyPer}
                             onChange={(e) => handleUpdateBOMItem(item.id, {
-                              quantity_per_unit: parseFloat(e.target.value) || 0
+                              qtyPer: parseFloat(e.target.value) || 0
                             })}
                             className="mt-1"
                           />
                         </div>
 
-                        <div>
+                        <div className="w-32">
                           <Label className="text-xs text-muted-foreground">Stage (optional)</Label>
                           <Select
                             value={item.stage || ""}
@@ -424,7 +369,7 @@ export function BOMsInventory() {
                               <SelectValue placeholder="Select stage" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="">None</SelectItem>
                               <SelectItem value="Filling">Filling</SelectItem>
                               <SelectItem value="Decorating">Decorating</SelectItem>
                               <SelectItem value="Packing">Packing</SelectItem>
@@ -432,16 +377,14 @@ export function BOMsInventory() {
                           </Select>
                         </div>
 
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveBOMItem(item.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveBOMItem(item.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
 
                       {item.stage && (
@@ -452,10 +395,9 @@ export function BOMsInventory() {
                         </div>
                       )}
                     </Card>
-                    );
-                  })}
+                  ))}
 
-                  {(editingBOM.items?.length || 0) === 0 && (
+                  {editingBOM.items.length === 0 && (
                     <div className="p-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
                       No components added yet. Click "Add Component" to get started.
                     </div>
@@ -480,8 +422,8 @@ export function BOMsInventory() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

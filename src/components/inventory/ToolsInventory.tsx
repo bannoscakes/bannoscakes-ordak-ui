@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card } from "../ui/card";
@@ -8,7 +8,14 @@ import { Textarea } from "../ui/textarea";
 import { RotateCcw, Settings, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
-import { restockOrder, updateComponentStock, getComponents, type Component } from "../../lib/rpc-client";
+
+const mockComponents = [
+  { id: "C001", name: "6-inch Round Cake Base", sku: "CAKE-BASE-6IN", onHand: 45 },
+  { id: "C002", name: "6-inch White Cake Box", sku: "CAKE-BOX-6IN", onHand: 8 },
+  { id: "C003", name: "Spiderman Cake Topper", sku: "TOPPER-SPIDER", onHand: 2 },
+  { id: "C004", name: "8-inch Round Cake Board", sku: "BOARD-ROUND-8IN", onHand: 67 },
+  { id: "C005", name: "Number Candles Set", sku: "ACC-CANDLE-NUM", onHand: 24 }
+];
 
 export function ToolsInventory() {
   // Restock Order states
@@ -20,27 +27,6 @@ export function ToolsInventory() {
   const [adjustDelta, setAdjustDelta] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [adjustLoading, setAdjustLoading] = useState(false);
-
-  // Real components from database
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch components from Supabase
-  useEffect(() => {
-    async function fetchComponents() {
-      try {
-        const componentsData = await getComponents({});
-        console.log('Fetched components for tools:', componentsData); // Debug log
-        setComponents(componentsData);
-      } catch (error) {
-        console.error('Error fetching components:', error);
-        toast.error('Failed to load components');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchComponents();
-  }, []);
 
   const handleRestockOrder = async () => {
     if (!restockOrderNumber.trim()) {
@@ -54,16 +40,12 @@ export function ToolsInventory() {
 
     setRestockLoading(true);
     
-    try {
-      await restockOrder(restockOrderNumber);
-      setRestockOrderNumber("");
-      toast.success("Order restocked successfully");
-    } catch (error) {
-      console.error('Error restocking order:', error);
-      toast.error('Failed to restock order');
-    } finally {
-      setRestockLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setRestockLoading(false);
+    setRestockOrderNumber("");
+    toast.success("Restocked");
   };
 
   const handleManualAdjust = async () => {
@@ -78,10 +60,10 @@ export function ToolsInventory() {
       return;
     }
 
-    const component = components.find(c => c.id === adjustComponentId);
+    const component = mockComponents.find(c => c.id === adjustComponentId);
     if (!component) return;
 
-    const newStock = component.current_stock + delta;
+    const newStock = component.onHand + delta;
     if (newStock < 0) {
       toast.error("Adjustment would result in negative stock");
       return;
@@ -89,27 +71,18 @@ export function ToolsInventory() {
 
     setAdjustLoading(true);
     
-    try {
-      await updateComponentStock({
-        component_id: adjustComponentId,
-        delta: delta,
-        reason: adjustReason,
-      });
-      
-      setAdjustComponentId("");
-      setAdjustDelta("");
-      setAdjustReason("");
-      toast.success("Stock updated successfully");
-    } catch (error) {
-      console.error('Error adjusting stock:', error);
-      toast.error('Failed to adjust stock');
-    } finally {
-      setAdjustLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setAdjustLoading(false);
+    setAdjustComponentId("");
+    setAdjustDelta("");
+    setAdjustReason("");
+    toast.success("Stock updated");
   };
 
   const getSelectedComponent = () => {
-    return components.find(c => c.id === adjustComponentId);
+    return mockComponents.find(c => c.id === adjustComponentId);
   };
 
   const calculateNewStock = () => {
@@ -119,7 +92,7 @@ export function ToolsInventory() {
     const delta = parseInt(adjustDelta);
     if (isNaN(delta)) return null;
     
-    return component.current_stock + delta;
+    return component.onHand + delta;
   };
 
   return (
@@ -207,22 +180,16 @@ export function ToolsInventory() {
                     <SelectValue placeholder="Select component to adjust" />
                   </SelectTrigger>
                   <SelectContent>
-                    {loading ? (
-                      <SelectItem value="loading" disabled>Loading components...</SelectItem>
-                    ) : components.length === 0 ? (
-                      <SelectItem value="no-components" disabled>No components found</SelectItem>
-                    ) : (
-                      components.map(component => (
-                        <SelectItem key={component.id} value={component.id}>
-                          <div className="flex flex-col items-start">
-                            <span>{component.name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {component.sku} • Current: {component.current_stock}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
+                    {mockComponents.map(component => (
+                      <SelectItem key={component.id} value={component.id}>
+                        <div className="flex flex-col items-start">
+                          <span>{component.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {component.sku} • Current: {component.onHand}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

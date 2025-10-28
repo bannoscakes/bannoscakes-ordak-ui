@@ -77,12 +77,6 @@ Create **SECURITY DEFINER** functions (no direct writes):
 ### M6 — Messaging (optional)
 - `conversations`, `conversation_participants`, `messages` + indexes.
 
-### 20250114_verify_realtime_publication.sql
-- **Purpose:** Verify and create supabase_realtime publication for messaging
-- **Tables:** conversations, messages, conversation_participants
-- **Idempotent:** Yes - safe to run multiple times
-- **Dependencies:** Requires messaging tables (20241008_fix_messaging_system_final.sql)
-
 ### M7 — Media / QC (optional)
 - `order_photos (order_id, url, taken_at, meta)` + signed URL RPCs; storage policies.
 

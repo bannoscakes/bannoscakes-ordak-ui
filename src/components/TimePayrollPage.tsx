@@ -9,7 +9,6 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { getStaffList, type StaffMember as RpcStaffMember } from "../lib/rpc-client";
 import { 
   Calendar,
   Search, 
@@ -45,7 +44,98 @@ interface StaffTimeRecord {
   timeEntries: TimeEntry[];
 }
 
-// Real staff data will be fetched from Supabase
+// Mock time data for the week
+const mockTimeData: StaffTimeRecord[] = [
+  {
+    id: "STF-001",
+    name: "Sarah Chen",
+    avatar: "SC",
+    daysWorked: 5,
+    totalShiftHours: 40.0,
+    totalBreakMinutes: 150,
+    totalNetHours: 37.5,
+    hourlyRate: 28.50,
+    totalPay: 1068.75,
+    timeEntries: [
+      { date: "2024-12-16", shiftStart: "06:00", shiftEnd: "14:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-17", shiftStart: "06:00", shiftEnd: "14:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-18", shiftStart: "06:00", shiftEnd: "14:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-19", shiftStart: "06:00", shiftEnd: "14:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-20", shiftStart: "06:00", shiftEnd: "14:00", breakMinutes: 30, netHours: 7.5 }
+    ]
+  },
+  {
+    id: "STF-002",
+    name: "Marcus Rodriguez",
+    avatar: "MR",
+    daysWorked: 5,
+    totalShiftHours: 40.0,
+    totalBreakMinutes: 150,
+    totalNetHours: 37.5,
+    hourlyRate: 24.75,
+    totalPay: 928.13,
+    timeEntries: [
+      { date: "2024-12-16", shiftStart: "04:00", shiftEnd: "12:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-17", shiftStart: "04:00", shiftEnd: "12:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-18", shiftStart: "04:00", shiftEnd: "12:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-19", shiftStart: "04:00", shiftEnd: "12:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-20", shiftStart: "04:00", shiftEnd: "12:00", breakMinutes: 30, netHours: 7.5 }
+    ]
+  },
+  {
+    id: "STF-003",
+    name: "Emma Thompson",
+    avatar: "ET",
+    daysWorked: 4,
+    totalShiftHours: 32.0,
+    totalBreakMinutes: 120,
+    totalNetHours: 30.0,
+    hourlyRate: 22.00,
+    totalPay: 660.00,
+    timeEntries: [
+      { date: "2024-12-16", shiftStart: "08:00", shiftEnd: "16:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-17", shiftStart: "08:00", shiftEnd: "16:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-19", shiftStart: "08:00", shiftEnd: "16:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-20", shiftStart: "08:00", shiftEnd: "16:00", breakMinutes: 30, netHours: 7.5 }
+    ]
+  },
+  {
+    id: "STF-004",
+    name: "David Kim",
+    avatar: "DK",
+    daysWorked: 5,
+    totalShiftHours: 40.0,
+    totalBreakMinutes: 150,
+    totalNetHours: 37.5,
+    hourlyRate: 26.25,
+    totalPay: 984.38,
+    timeEntries: [
+      { date: "2024-12-16", shiftStart: "09:00", shiftEnd: "17:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-17", shiftStart: "09:00", shiftEnd: "17:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-18", shiftStart: "09:00", shiftEnd: "17:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-19", shiftStart: "09:00", shiftEnd: "17:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-20", shiftStart: "09:00", shiftEnd: "17:00", breakMinutes: 30, netHours: 7.5 }
+    ]
+  },
+  {
+    id: "STF-005",
+    name: "Lisa Park",
+    avatar: "LP",
+    daysWorked: 5,
+    totalShiftHours: 40.0,
+    totalBreakMinutes: 150,
+    totalNetHours: 37.5,
+    hourlyRate: 23.50,
+    totalPay: 881.25,
+    timeEntries: [
+      { date: "2024-12-16", shiftStart: "13:00", shiftEnd: "21:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-17", shiftStart: "13:00", shiftEnd: "21:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-18", shiftStart: "13:00", shiftEnd: "21:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-19", shiftStart: "13:00", shiftEnd: "21:00", breakMinutes: 30, netHours: 7.5 },
+      { date: "2024-12-20", shiftStart: "13:00", shiftEnd: "21:00", breakMinutes: 30, netHours: 7.5 }
+    ]
+  }
+];
 
 interface TimePayrollPageProps {
   initialStaffFilter?: string;
@@ -53,47 +143,13 @@ interface TimePayrollPageProps {
 }
 
 export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageProps) {
-  const [timeData, setTimeData] = useState<StaffTimeRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [timeData, setTimeData] = useState<StaffTimeRecord[]>(mockTimeData);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState("this-week");
   const [storeFilter, setStoreFilter] = useState("all");
   const [selectedStaff, setSelectedStaff] = useState<StaffTimeRecord | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
-
-  // Fetch real staff data
-  useEffect(() => {
-    async function fetchStaffData() {
-      try {
-        setLoading(true);
-        const staffList = await getStaffList();
-        
-        // Convert real staff to time records (with mock time data for now)
-        const staffTimeRecords: StaffTimeRecord[] = staffList.map((staff) => ({
-          id: staff.user_id,
-          name: staff.full_name || 'Unknown Staff',
-          avatar: (staff.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase(),
-          daysWorked: 0, // TODO: Get real time tracking data
-          totalShiftHours: 0,
-          totalBreakMinutes: 0,
-          totalNetHours: 0,
-          hourlyRate: 20.00, // TODO: Get from staff_shared if we add this column
-          totalPay: 0,
-          timeEntries: [] // TODO: Get real time entries
-        }));
-        
-        setTimeData(staffTimeRecords);
-      } catch (error) {
-        console.error('Error fetching staff data:', error);
-        toast.error('Failed to load staff data');
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchStaffData();
-  }, []);
 
   // Filter by initial staff if provided
   useEffect(() => {
@@ -178,19 +234,6 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
       day: 'numeric' 
     });
   };
-
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading staff data...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 space-y-6">

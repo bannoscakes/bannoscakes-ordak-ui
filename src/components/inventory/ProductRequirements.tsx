@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -9,12 +9,68 @@ import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
-import { getProductRequirements, upsertProductRequirement, getComponents, type ProductRequirement, type Component } from "../../lib/rpc-client";
+
+interface ProductRequirement {
+  id: string;
+  productTitle: string;
+  variant?: string;
+  store: "bannos" | "flourlane";
+  requiredComponentId: string;
+  requiredComponentName: string;
+}
+
+const mockComponents = [
+  { id: "C003", name: "Spiderman Cake Topper" },
+  { id: "C009", name: "Batman Cake Topper" },
+  { id: "C010", name: "Princess Crown Topper" },
+  { id: "C011", name: "Wedding Cake Flowers" },
+  { id: "C012", name: "Birthday Banner" },
+  { id: "C013", name: "Chocolate Drip" },
+  { id: "C014", name: "Gold Leaf Decoration" }
+];
+
+const mockRequirements: ProductRequirement[] = [
+  {
+    id: "PR001",
+    productTitle: "Spiderman Theme Cake",
+    store: "bannos",
+    requiredComponentId: "C003",
+    requiredComponentName: "Spiderman Cake Topper"
+  },
+  {
+    id: "PR002",
+    productTitle: "Batman Birthday Cake",
+    variant: "6-inch Round",
+    store: "bannos",
+    requiredComponentId: "C009",
+    requiredComponentName: "Batman Cake Topper"
+  },
+  {
+    id: "PR003",
+    productTitle: "Princess Castle Cake",
+    store: "bannos",
+    requiredComponentId: "C010",
+    requiredComponentName: "Princess Crown Topper"
+  },
+  {
+    id: "PR004",
+    productTitle: "Elegant Wedding Cake",
+    variant: "3-Tier",
+    store: "bannos",
+    requiredComponentId: "C011",
+    requiredComponentName: "Wedding Cake Flowers"
+  },
+  {
+    id: "PR005",
+    productTitle: "Premium Birthday Celebration",
+    store: "flourlane",
+    requiredComponentId: "C014",
+    requiredComponentName: "Gold Leaf Decoration"
+  }
+];
 
 export function ProductRequirements() {
-  const [requirements, setRequirements] = useState<ProductRequirement[]>([]);
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [requirements, setRequirements] = useState<ProductRequirement[]>(mockRequirements);
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("All");
   const [componentFilter, setComponentFilter] = useState("All");
@@ -28,87 +84,40 @@ export function ProductRequirements() {
   const [newStore, setNewStore] = useState<"bannos" | "flourlane">("bannos");
   const [newRequiredComponentId, setNewRequiredComponentId] = useState("");
 
-  // Fetch components from Supabase
-  useEffect(() => {
-    async function fetchComponents() {
-      try {
-        const componentsData = await getComponents();
-        console.log('Fetched Components:', componentsData); // Debug log
-        setComponents(componentsData);
-      } catch (error) {
-        console.error('Error fetching components:', error);
-        toast.error('Failed to load components');
-      }
-    }
-    fetchComponents();
-  }, []);
+  const filteredRequirements = requirements.filter(requirement => {
+    const matchesSearch = searchQuery === "" || 
+      requirement.productTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (requirement.variant && requirement.variant.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      requirement.requiredComponentName.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStore = storeFilter === "All" || requirement.store === storeFilter.toLowerCase();
+    const matchesComponent = componentFilter === "All" || requirement.requiredComponentId === componentFilter;
+    
+    return matchesSearch && matchesStore && matchesComponent;
+  });
 
-  // Fetch requirements from Supabase
-  useEffect(() => {
-    async function fetchRequirements() {
-      try {
-        const searchValue = searchQuery.trim() || null;
-        
-        const requirementsData = await getProductRequirements(null, searchValue);
-        console.log('Fetched requirements:', requirementsData); // Debug log
-        
-        setRequirements(requirementsData);
-      } catch (error) {
-        console.error('Error fetching requirements:', error);
-        toast.error('Failed to load requirements');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchRequirements();
-  }, [componentFilter, searchQuery]);
-
-  // Filtering is now handled by the RPC call, so we can use requirements directly
-  const filteredRequirements = requirements;
-
-  const handleAddRequirement = async () => {
+  const handleAddRequirement = () => {
     if (!newProductTitle || !newRequiredComponentId) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const component = components.find(c => c.id === newRequiredComponentId);
+    const component = mockComponents.find(c => c.id === newRequiredComponentId);
     if (!component) return;
 
-    try {
-      const requirementId = await upsertProductRequirement({
-        shopify_product_id: `${newStore}-${newProductTitle.toLowerCase().replace(/\s+/g, '-')}`,
-        shopify_variant_id: newVariant || "",
-        product_title: newProductTitle,
-        component_id: newRequiredComponentId,
-        quantity_per_unit: 1,
-        is_optional: false,
-        auto_deduct: true
-      });
+    const requirement: ProductRequirement = {
+      id: `PR${Date.now()}`,
+      productTitle: newProductTitle,
+      variant: newVariant || undefined,
+      store: newStore,
+      requiredComponentId: newRequiredComponentId,
+      requiredComponentName: component.name
+    };
 
-      const requirement: ProductRequirement = {
-        id: requirementId,
-        shopify_product_id: `${newStore}-${newProductTitle.toLowerCase().replace(/\s+/g, '-')}`,
-        shopify_variant_id: newVariant || "",
-        product_title: newProductTitle,
-        component_id: newRequiredComponentId,
-        component_name: component.name,
-        component_sku: component.sku,
-        quantity_per_unit: 1,
-        is_optional: false,
-        auto_deduct: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      setRequirements(prev => [...prev, requirement]);
-      setIsAddDialogOpen(false);
-      resetForm();
-      toast.success("Product requirement added successfully");
-    } catch (error) {
-      console.error('Error adding requirement:', error);
-      toast.error('Failed to add requirement');
-    }
+    setRequirements(prev => [...prev, requirement]);
+    setIsAddDialogOpen(false);
+    resetForm();
+    toast.success("Product requirement added successfully");
   };
 
   const handleEditRequirement = (requirement: ProductRequirement) => {
@@ -116,46 +125,22 @@ export function ProductRequirements() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateRequirement = async () => {
+  const handleUpdateRequirement = () => {
     if (!editingRequirement) return;
 
-    try {
-      await upsertProductRequirement({
-        id: editingRequirement.id,
-        shopify_product_id: editingRequirement.shopify_product_id,
-        shopify_variant_id: editingRequirement.shopify_variant_id,
-        product_title: editingRequirement.product_title,
-        component_id: editingRequirement.component_id,
-        quantity_per_unit: editingRequirement.quantity_per_unit,
-        is_optional: editingRequirement.is_optional,
-        auto_deduct: editingRequirement.auto_deduct
-      });
-
-      setRequirements(prev => prev.map(r => 
-        r.id === editingRequirement.id ? editingRequirement : r
-      ));
-      
-      setIsEditDialogOpen(false);
-      setEditingRequirement(null);
-      toast.success("Product requirement updated successfully");
-    } catch (error) {
-      console.error('Error updating requirement:', error);
-      toast.error('Failed to update requirement');
-    }
+    setRequirements(prev => prev.map(r => 
+      r.id === editingRequirement.id ? editingRequirement : r
+    ));
+    
+    setIsEditDialogOpen(false);
+    setEditingRequirement(null);
+    toast.success("Product requirement updated successfully");
   };
 
-  const handleDeleteRequirement = async (id: string) => {
+  const handleDeleteRequirement = (id: string) => {
     if (confirm("Are you sure you want to delete this product requirement?")) {
-      try {
-        // TODO: Implement actual delete RPC when available
-        // For now, we'll just remove from local state
-        // This should be replaced with a proper delete RPC call
-        setRequirements(prev => prev.filter(r => r.id !== id));
-        toast.success("Product requirement deleted");
-      } catch (error) {
-        console.error('Error deleting requirement:', error);
-        toast.error('Failed to delete requirement');
-      }
+      setRequirements(prev => prev.filter(r => r.id !== id));
+      toast.success("Product requirement deleted");
     }
   };
 
@@ -204,9 +189,9 @@ export function ProductRequirements() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Components</SelectItem>
-              {components.map(component => (
+              {mockComponents.map(component => (
                 <SelectItem key={component.id} value={component.id}>
-                  {component.name} ({component.sku})
+                  {component.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -232,62 +217,41 @@ export function ProductRequirements() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Loading requirements...
+            {filteredRequirements.map((requirement) => (
+              <TableRow key={requirement.id}>
+                <TableCell className="font-medium">{requirement.productTitle}</TableCell>
+                <TableCell>{requirement.variant || "—"}</TableCell>
+                <TableCell>
+                  <Badge className={`text-xs ${getStoreColor(requirement.store)}`}>
+                    {requirement.store === 'bannos' ? 'Bannos' : 'Flourlane'}
+                  </Badge>
+                </TableCell>
+                <TableCell>{requirement.requiredComponentName}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditRequirement(requirement)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteRequirement(requirement.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : requirements.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No product requirements found matching your filters
-                </TableCell>
-              </TableRow>
-            ) : (
-              requirements.map((requirement) => (
-                <TableRow key={requirement.id}>
-                  <TableCell className="font-medium">{requirement.product_title}</TableCell>
-                  <TableCell>{requirement.shopify_variant_id || "—"}</TableCell>
-                  <TableCell>
-                    <Badge className={`text-xs ${getStoreColor(requirement.shopify_product_id.includes('bannos') ? 'bannos' : 'flourlane')}`}>
-                      {requirement.shopify_product_id.includes('bannos') ? 'Bannos' : 'Flourlane'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{requirement.component_name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Qty: {requirement.quantity_per_unit} {requirement.is_optional ? '(Optional)' : ''}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditRequirement(requirement)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteRequirement(requirement.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
 
-        {!loading && requirements.length === 0 && (
+        {filteredRequirements.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             No product requirements found matching your filters
           </div>
@@ -341,9 +305,9 @@ export function ProductRequirements() {
                   <SelectValue placeholder="Select required component" />
                 </SelectTrigger>
                 <SelectContent>
-                  {components.map(component => (
+                  {mockComponents.map(component => (
                     <SelectItem key={component.id} value={component.id}>
-                      {component.name} ({component.sku})
+                      {component.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -381,10 +345,10 @@ export function ProductRequirements() {
                 <Label htmlFor="edit-product-title">Product Title</Label>
                 <Input
                   id="edit-product-title"
-                  value={editingRequirement.product_title}
+                  value={editingRequirement.productTitle}
                   onChange={(e) => setEditingRequirement({
                     ...editingRequirement,
-                    product_title: e.target.value
+                    productTitle: e.target.value
                   })}
                 />
               </div>
@@ -393,10 +357,10 @@ export function ProductRequirements() {
                 <Label htmlFor="edit-variant">Variant (optional)</Label>
                 <Input
                   id="edit-variant"
-                  value={editingRequirement.shopify_variant_id || ""}
+                  value={editingRequirement.variant || ""}
                   onChange={(e) => setEditingRequirement({
                     ...editingRequirement,
-                    shopify_variant_id: e.target.value
+                    variant: e.target.value || undefined
                   })}
                 />
               </div>
@@ -404,10 +368,10 @@ export function ProductRequirements() {
               <div className="space-y-2">
                 <Label htmlFor="edit-store">Store</Label>
                 <Select 
-                  value={editingRequirement.shopify_product_id.includes('bannos') ? 'bannos' : 'flourlane'} 
+                  value={editingRequirement.store} 
                   onValueChange={(value: any) => setEditingRequirement({
                     ...editingRequirement,
-                    shopify_product_id: `${value}-${editingRequirement.product_title.toLowerCase().replace(/\s+/g, '-')}`
+                    store: value
                   })}
                 >
                   <SelectTrigger>
@@ -423,14 +387,13 @@ export function ProductRequirements() {
               <div className="space-y-2">
                 <Label htmlFor="edit-required-component">Required Component</Label>
                 <Select 
-                  value={editingRequirement.component_id} 
+                  value={editingRequirement.requiredComponentId} 
                   onValueChange={(value) => {
-                    const component = components.find(c => c.id === value);
+                    const component = mockComponents.find(c => c.id === value);
                     setEditingRequirement({
                       ...editingRequirement,
-                      component_id: value,
-                      component_name: component?.name || "",
-                      component_sku: component?.sku || ""
+                      requiredComponentId: value,
+                      requiredComponentName: component?.name || ""
                     });
                   }}
                 >
@@ -438,9 +401,9 @@ export function ProductRequirements() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {components.map(component => (
+                    {mockComponents.map(component => (
                       <SelectItem key={component.id} value={component.id}>
-                        {component.name} ({component.sku})
+                        {component.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

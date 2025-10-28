@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card } from "../ui/card";
@@ -9,115 +9,134 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getAccessoryKeywords, upsertAccessoryKeyword, getComponents, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
 
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Accessory Keywords management (add/remove keywords)
-// =============================================================================
+interface AccessoryKeyword {
+  id: string;
+  keyword: string;
+  componentId: string;
+  componentName: string;
+  notes?: string;
+}
 
-const mockKeywords: AccessoryKeyword[] = []; // Using real data from database
+const mockComponents = [
+  { id: "C003", name: "Spiderman Cake Topper" },
+  { id: "C005", name: "Number Candles Set" },
+  { id: "C009", name: "Batman Cake Topper" },
+  { id: "C010", name: "Princess Crown Topper" },
+  { id: "C011", name: "Wedding Cake Flowers" },
+  { id: "C012", name: "Birthday Banner" }
+];
+
+const mockKeywords: AccessoryKeyword[] = [
+  {
+    id: "AK001",
+    keyword: "Spiderman",
+    componentId: "C003",
+    componentName: "Spiderman Cake Topper",
+    notes: "Official Marvel character"
+  },
+  {
+    id: "AK002",
+    keyword: "Spider-Man",
+    componentId: "C003",
+    componentName: "Spiderman Cake Topper",
+    notes: "Alternative spelling with hyphen"
+  },
+  {
+    id: "AK003",
+    keyword: "Marvel Spidey",
+    componentId: "C003",
+    componentName: "Spiderman Cake Topper"
+  },
+  {
+    id: "AK004",
+    keyword: "Web Slinger",
+    componentId: "C003",
+    componentName: "Spiderman Cake Topper"
+  },
+  {
+    id: "AK005",
+    keyword: "Number candles",
+    componentId: "C005",
+    componentName: "Number Candles Set"
+  },
+  {
+    id: "AK006",
+    keyword: "Age candles",
+    componentId: "C005",
+    componentName: "Number Candles Set"
+  },
+  {
+    id: "AK007",
+    keyword: "Batman",
+    componentId: "C009",
+    componentName: "Batman Cake Topper",
+    notes: "DC Comics character"
+  },
+  {
+    id: "AK008",
+    keyword: "Dark Knight",
+    componentId: "C009",
+    componentName: "Batman Cake Topper"
+  },
+  {
+    id: "AK009",
+    keyword: "Princess",
+    componentId: "C010",
+    componentName: "Princess Crown Topper"
+  },
+  {
+    id: "AK010",
+    keyword: "Crown",
+    componentId: "C010",
+    componentName: "Princess Crown Topper"
+  }
+];
 
 export function AccessoryKeywords() {
-  const [keywords, setKeywords] = useState<AccessoryKeyword[]>([]);
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [keywords, setKeywords] = useState<AccessoryKeyword[]>(mockKeywords);
   const [searchQuery, setSearchQuery] = useState("");
   const [componentFilter, setComponentFilter] = useState("All");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-
-  // Fetch components from Supabase
-  useEffect(() => {
-    async function fetchComponents() {
-      try {
-        const componentsData = await getComponents();
-        console.log('Fetched Components:', componentsData); // Debug log
-        setComponents(componentsData);
-      } catch (error) {
-        console.error('Error fetching components:', error);
-        toast.error('Failed to load components');
-      }
-    }
-    fetchComponents();
-  }, []);
-
-  // Fetch keywords from Supabase
-  useEffect(() => {
-    async function fetchKeywords() {
-      try {
-        const searchValue = searchQuery.trim() || null;
-        
-        const keywordsData = await getAccessoryKeywords(searchValue, true);
-        console.log('Fetched keywords:', keywordsData); // Debug log
-        
-        setKeywords(keywordsData);
-      } catch (error) {
-        console.error('Error fetching keywords:', error);
-        toast.error('Failed to load keywords');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchKeywords();
-  }, [componentFilter, searchQuery]);
   const [editingKeyword, setEditingKeyword] = useState<AccessoryKeyword | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Form states
   const [newKeyword, setNewKeyword] = useState("");
   const [newComponentId, setNewComponentId] = useState("");
-  const [newPriority, setNewPriority] = useState(0);
-  const [newMatchType, setNewMatchType] = useState<'contains' | 'exact' | 'starts_with' | 'ends_with'>('contains');
+  const [newNotes, setNewNotes] = useState("");
 
   const filteredKeywords = keywords.filter(keyword => {
     const matchesSearch = searchQuery === "" || 
       keyword.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      keyword.component_name.toLowerCase().includes(searchQuery.toLowerCase());
+      keyword.componentName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesComponent = componentFilter === "All" || keyword.component_id === componentFilter;
+    const matchesComponent = componentFilter === "All" || keyword.componentId === componentFilter;
     
     return matchesSearch && matchesComponent;
   });
 
-  const handleAddKeyword = async () => {
+  const handleAddKeyword = () => {
     if (!newKeyword || !newComponentId) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    const component = components.find(c => c.id === newComponentId);
+    const component = mockComponents.find(c => c.id === newComponentId);
     if (!component) return;
 
-    try {
-      const keywordId = await upsertAccessoryKeyword({
-        keyword: newKeyword,
-        component_id: newComponentId,
-        priority: newPriority,
-        match_type: newMatchType,
-        is_active: true
-      });
+    const keyword: AccessoryKeyword = {
+      id: `AK${Date.now()}`,
+      keyword: newKeyword,
+      componentId: newComponentId,
+      componentName: component.name,
+      notes: newNotes || undefined
+    };
 
-      const newAccessoryKeyword: AccessoryKeyword = {
-        id: keywordId,
-        keyword: newKeyword,
-        component_id: newComponentId,
-        component_name: component.name,
-        component_sku: component.sku,
-        priority: newPriority,
-        match_type: newMatchType,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      setKeywords(prev => [...prev, newAccessoryKeyword]);
-      setIsAddDialogOpen(false);
-      resetForm();
-      toast.success("Keyword added successfully");
-    } catch (error) {
-      console.error('Error adding keyword:', error);
-      toast.error('Failed to add keyword');
-    }
+    setKeywords(prev => [...prev, keyword]);
+    setIsAddDialogOpen(false);
+    resetForm();
+    toast.success("Keyword added successfully");
   };
 
   const handleEditKeyword = (keyword: AccessoryKeyword) => {
@@ -125,58 +144,29 @@ export function AccessoryKeywords() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateKeyword = async () => {
+  const handleUpdateKeyword = () => {
     if (!editingKeyword) return;
 
-    try {
-      await upsertAccessoryKeyword({
-        id: editingKeyword.id,
-        keyword: editingKeyword.keyword,
-        component_id: editingKeyword.component_id,
-        priority: editingKeyword.priority,
-        match_type: editingKeyword.match_type,
-        is_active: editingKeyword.is_active
-      });
-
-      setKeywords(prev => prev.map(k => 
-        k.id === editingKeyword.id ? editingKeyword : k
-      ));
-      
-      setIsEditDialogOpen(false);
-      setEditingKeyword(null);
-      toast.success("Keyword updated successfully");
-    } catch (error) {
-      console.error('Error updating keyword:', error);
-      toast.error('Failed to update keyword');
-    }
+    setKeywords(prev => prev.map(k => 
+      k.id === editingKeyword.id ? editingKeyword : k
+    ));
+    
+    setIsEditDialogOpen(false);
+    setEditingKeyword(null);
+    toast.success("Keyword updated successfully");
   };
 
-  const handleDeleteKeyword = async (id: string) => {
+  const handleDeleteKeyword = (id: string) => {
     if (confirm("Are you sure you want to delete this keyword?")) {
-      try {
-        // For now, we'll deactivate the keyword instead of deleting
-        // TODO: Implement actual delete RPC when available
-        await upsertAccessoryKeyword({
-          id: id,
-          keyword: '', // Required field, but not used for deactivation
-          component_id: '', // Required field, but not used for deactivation
-          is_active: false
-        });
-
-        setKeywords(prev => prev.filter(k => k.id !== id));
-        toast.success("Keyword deleted");
-      } catch (error) {
-        console.error('Error deleting keyword:', error);
-        toast.error('Failed to delete keyword');
-      }
+      setKeywords(prev => prev.filter(k => k.id !== id));
+      toast.success("Keyword deleted");
     }
   };
 
   const resetForm = () => {
     setNewKeyword("");
     setNewComponentId("");
-    setNewPriority(0);
-    setNewMatchType('contains');
+    setNewNotes("");
   };
 
   return (
@@ -200,9 +190,9 @@ export function AccessoryKeywords() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Components</SelectItem>
-              {components.map(component => (
+              {mockComponents.map(component => (
                 <SelectItem key={component.id} value={component.id}>
-                  {component.name} ({component.sku})
+                  {component.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -227,56 +217,40 @@ export function AccessoryKeywords() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  Loading keywords...
+            {filteredKeywords.map((keyword) => (
+              <TableRow key={keyword.id}>
+                <TableCell className="font-medium">{keyword.keyword}</TableCell>
+                <TableCell>{keyword.componentName}</TableCell>
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">
+                    {keyword.notes || "—"}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditKeyword(keyword)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteKeyword(keyword.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : keywords.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  No keywords found matching your filters
-                </TableCell>
-              </TableRow>
-            ) : (
-              keywords.map((keyword) => (
-                <TableRow key={keyword.id}>
-                  <TableCell className="font-medium">{keyword.keyword}</TableCell>
-                  <TableCell>{keyword.component_name}</TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium">{keyword.match_type}</div>
-                      <div className="text-xs text-muted-foreground">Priority: {keyword.priority}</div>
-                      <div className="text-xs text-muted-foreground">SKU: {keyword.component_sku}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditKeyword(keyword)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteKeyword(keyword.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
 
-        {!loading && keywords.length === 0 && (
+        {filteredKeywords.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             No keywords found matching your filters
           </div>
@@ -307,42 +281,24 @@ export function AccessoryKeywords() {
                   <SelectValue placeholder="Select component" />
                 </SelectTrigger>
                 <SelectContent>
-                  {components.map(component => (
+                  {mockComponents.map(component => (
                     <SelectItem key={component.id} value={component.id}>
-                      {component.name} ({component.sku})
+                      {component.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Input
-                  id="priority"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={newPriority}
-                  onChange={(e) => setNewPriority(parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="match-type">Match Type</Label>
-                <Select value={newMatchType} onValueChange={(value: any) => setNewMatchType(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contains">Contains</SelectItem>
-                    <SelectItem value="exact">Exact</SelectItem>
-                    <SelectItem value="starts_with">Starts With</SelectItem>
-                    <SelectItem value="ends_with">Ends With</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Additional context or notes..."
+                value={newNotes}
+                onChange={(e) => setNewNotes(e.target.value)}
+                className="min-h-20"
+              />
             </div>
 
             <div className="flex gap-2 pt-4">
@@ -387,13 +343,13 @@ export function AccessoryKeywords() {
               <div className="space-y-2">
                 <Label htmlFor="edit-component">Component</Label>
                 <Select 
-                  value={editingKeyword.component_id} 
+                  value={editingKeyword.componentId} 
                   onValueChange={(value) => {
-                    const component = components.find(c => c.id === value);
+                    const component = mockComponents.find(c => c.id === value);
                     setEditingKeyword({
                       ...editingKeyword,
-                      component_id: value,
-                      component_name: component?.name || ""
+                      componentId: value,
+                      componentName: component?.name || ""
                     });
                   }}
                 >
@@ -401,51 +357,26 @@ export function AccessoryKeywords() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {components.map(component => (
+                    {mockComponents.map(component => (
                       <SelectItem key={component.id} value={component.id}>
-                        {component.name} ({component.sku})
+                        {component.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-priority">Priority</Label>
-                  <Input
-                    id="edit-priority"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={editingKeyword.priority}
-                    onChange={(e) => setEditingKeyword({
-                      ...editingKeyword,
-                      priority: parseInt(e.target.value) || 0
-                    })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-match-type">Match Type</Label>
-                  <Select 
-                    value={editingKeyword.match_type} 
-                    onValueChange={(value: any) => setEditingKeyword({
-                      ...editingKeyword,
-                      match_type: value
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="contains">Contains</SelectItem>
-                      <SelectItem value="exact">Exact</SelectItem>
-                      <SelectItem value="starts_with">Starts With</SelectItem>
-                      <SelectItem value="ends_with">Ends With</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-notes">Notes (optional)</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={editingKeyword.notes || ""}
+                  onChange={(e) => setEditingKeyword({
+                    ...editingKeyword,
+                    notes: e.target.value || undefined
+                  })}
+                  className="min-h-20"
+                />
               </div>
 
               <div className="flex gap-2 pt-4">

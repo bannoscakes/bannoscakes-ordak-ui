@@ -5,10 +5,9 @@ import { Badge } from "./ui/badge";
 
 interface HeaderProps {
   onRefresh?: () => Promise<void>;
-  onSignOut?: () => void;
 }
 
-export function Header({ onRefresh, onSignOut }: HeaderProps) {
+export function Header({ onRefresh }: HeaderProps) {
   return (
     <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
@@ -42,11 +41,6 @@ export function Header({ onRefresh, onSignOut }: HeaderProps) {
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
             </Button>
-            {onSignOut && (
-              <Button variant="outline" size="sm" onClick={onSignOut}>
-                Sign Out
-              </Button>
-            )}
           </div>
         </div>
       </div>

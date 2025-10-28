@@ -1,7 +1,5 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { useEffect, useState } from "react";
-import { getQueueStats } from "../lib/rpc-client";
 
 interface ProductionStatusProps {
   store: "bannos" | "flourlane";
@@ -152,64 +150,7 @@ const getStatusColor = (status: string) => {
 };
 
 export function ProductionStatus({ store }: ProductionStatusProps) {
-  const [storeData, setStoreData] = useState(storeProductionData[store]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchProductionStats();
-  }, [store]);
-
-  const fetchProductionStats = async () => {
-    try {
-      setLoading(true);
-      const stats = await getQueueStats(store);
-      
-      if (stats) {
-        // Update only the counts with real data, keep everything else the same
-        const updatedData = {
-          ...storeProductionData[store],
-          stations: storeProductionData[store].stations.map(station => {
-            let count = 0;
-            switch (station.name) {
-              case 'Filling':
-                count = Number(stats.filling_count) || 0;
-                break;
-              case 'Covering':
-                count = Number(stats.covering_count) || 0;
-                break;
-              case 'Decoration':
-                count = Number(stats.decorating_count) || 0;
-                break;
-              case 'Packing':
-                count = Number(stats.packing_count) || 0;
-                break;
-            }
-            return { ...station, count };
-          })
-        };
-        setStoreData(updatedData);
-      }
-    } catch (error) {
-      console.error('Failed to fetch production stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Card className="p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-muted rounded w-48 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-48 bg-muted rounded-lg"></div>
-            ))}
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  const storeData = storeProductionData[store];
 
   return (
     <Card className="p-6">

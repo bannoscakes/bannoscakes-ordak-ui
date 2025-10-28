@@ -4,21 +4,12 @@ import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "./ui/tabs";
-import { useAuth } from "@/hooks/useAuth";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare, Briefcase } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
-import { MainDashboardMessaging } from "./MainDashboardMessaging";
-import { getQueue } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -39,6 +30,7 @@ interface QueueItem {
 }
 
 interface SupervisorWorkspacePageProps {
+  supervisorName: string;
   onSignOut: () => void;
   onNavigateToBannosQueue: () => void;
   onNavigateToFlourlaneQueue: () => void;
@@ -97,15 +89,12 @@ const getRealisticSize = (originalSize: string, product: string, store: string) 
 };
 
 export function SupervisorWorkspacePage({ 
+  supervisorName, 
   onSignOut, 
   onNavigateToBannosQueue, 
   onNavigateToFlourlaneQueue 
 }: SupervisorWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
-  const displayName = user?.fullName || user?.email || "Signed in";
-
-  const [orders, setOrders] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<QueueItem[]>(getSupervisorAssignedOrders());
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] = useState<ShiftStatus>('not-started');
   const [shiftStartTime, setShiftStartTime] = useState<Date | null>(null);
@@ -115,7 +104,6 @@ export function SupervisorWorkspacePage({
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(true);
-  const [activeTab, setActiveTab] = useState("orders");
 
   // Update elapsed time
   useEffect(() => {
@@ -138,67 +126,11 @@ export function SupervisorWorkspacePage({
     return () => clearInterval(interval);
   }, [shiftStatus, shiftStartTime, breakStartTime]);
 
-  const filteredOrders = orders.filter(order =>
+  const filteredOrders = orders.filter(order => 
     order.orderNumber.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.customerName.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.product.toLowerCase().includes(searchValue.toLowerCase())
   );
-
-  // Load orders from database
-  useEffect(() => {
-    loadSupervisorOrders();
-  }, []);
-
-  const loadSupervisorOrders = async () => {
-    setLoading(true);
-    try {
-      // Fetch orders from both stores
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 100 }),
-        getQueue({ store: "flourlane", limit: 100 })
-      ]);
-      
-      // Combine all orders
-      const allOrders = [...bannosOrders, ...flourlaneOrders];
-      
-      // Map database orders to UI format
-      const mappedOrders = allOrders.map((order: any) => ({
-        id: order.id,
-        orderNumber: order.human_id || order.shopify_order_number || order.id,
-        customerName: order.customer_name || "Unknown Customer",
-        product: order.product_title || "Unknown Product",
-        size: order.size || "M",
-        quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || new Date().toISOString(),
-        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
-        status: mapStageToStatus(order.stage),
-        flavor: order.flavour || "Unknown",
-        dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
-        storage: order.storage || "Default",
-        store: order.store || "bannos",
-        stage: order.stage || "Filling"
-      }));
-      
-      setOrders(mappedOrders);
-    } catch (error) {
-      console.error("Error loading supervisor orders:", error);
-      toast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const mapStageToStatus = (stage: string) => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
-    }
-  };
 
   const handleStartShift = () => {
     setShiftStatus('on-shift');
@@ -271,23 +203,6 @@ export function SupervisorWorkspacePage({
     return "bg-purple-100 text-purple-700 border-purple-200";
   };
 
-  // Block UI until auth is ready
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading authentication...</div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-sm text-destructive">Please sign in to access the supervisor workspace.</div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
@@ -296,7 +211,7 @@ export function SupervisorWorkspacePage({
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-medium text-foreground">Supervisor Workspace</h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-foreground font-medium">{displayName}</span>
+              <span className="text-sm text-foreground font-medium">{supervisorName}</span>
               
               {/* Shift Controls */}
               {shiftStatus === 'not-started' ? (
@@ -343,58 +258,42 @@ export function SupervisorWorkspacePage({
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Queue Shortcuts */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Bannos Queue Shortcut */}
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 px-4 py-2"
-            onClick={onNavigateToBannosQueue}
-          >
-            <Users className="h-4 w-4" />
-            Open Bannos Queue
-          </Button>
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={onNavigateToBannosQueue}>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <h3 className="font-medium text-foreground">Open Bannos Queue</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">Assign orders</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </Card>
 
           {/* Flourlane Queue Shortcut */}
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 px-4 py-2"
-            onClick={onNavigateToFlourlaneQueue}
-          >
-            <TallCakeIcon className="h-4 w-4" />
-            Open Flourlane Queue
-          </Button>
-
+          <Card className="p-6 hover:bg-muted/30 transition-colors cursor-pointer" onClick={onNavigateToFlourlaneQueue}>
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+                    <TallCakeIcon className="h-4 w-4 text-pink-600" />
+                  </div>
+                  <h3 className="font-medium text-foreground">Open Flourlane Queue</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">Assign orders</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-6"
-        >
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger
-              value="orders"
-              className="flex items-center gap-2"
-            >
-              <Briefcase className="h-4 w-4" />
-              My Orders ({orders.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="messages"
-              className="flex items-center gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Messages
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="orders"
-            className="space-y-6 mt-6"
-          >
-            {/* My Tasks Section (Optional) */}
-            {showMyTasks && (
+        {/* My Tasks Section (Optional) */}
+        {showMyTasks && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium text-foreground">Assigned to me (Today)</h2>
@@ -432,13 +331,8 @@ export function SupervisorWorkspacePage({
                 </div>
               )}
 
-              {loading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading orders...
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredOrders.map((order) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredOrders.map((order) => (
                   <Card key={order.id} className="p-4 hover:bg-muted/30 transition-colors">
                     <div className="space-y-3">
                       {/* Header with Store and Overflow Menu */}
@@ -515,10 +409,9 @@ export function SupervisorWorkspacePage({
                     </div>
                   </Card>
                 ))}
-                </div>
-              )}
+              </div>
 
-              {!loading && filteredOrders.length === 0 && (
+              {filteredOrders.length === 0 && (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">No assigned orders found</p>
                 </Card>
@@ -538,17 +431,7 @@ export function SupervisorWorkspacePage({
               Show My Tasks
             </Button>
           </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent
-            value="messages"
-            className="space-y-6 mt-6"
-          >
-            <MainDashboardMessaging />
-          </TabsContent>
-
-        </Tabs>
+        )}
       </div>
 
       {/* Order Detail Drawer */}
