@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,6 +23,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
+import { getStaffList, type StaffMember as RpcStaffMember } from "../lib/rpc-client";
 
 interface StaffMember {
   id: string;
@@ -38,103 +39,40 @@ interface StaffMember {
   lastLogin?: string;
 }
 
-// Enhanced staff data matching the current overview
-const staffData: StaffMember[] = [
-  {
-    id: "STF-001",
-    fullName: "Sarah Chen",
-    email: "sarah.chen@manufactory.com",
-    role: "Supervisor",
-    status: "Active",
-    onShift: true,
-    hourlyRate: 28.50,
-    phone: "+1 (555) 0123",
-    avatar: "SC",
-    hireDate: "2019-03-15",
-    lastLogin: "2024-12-19 08:30:00"
-  },
-  {
-    id: "STF-002",
-    fullName: "Marcus Rodriguez",
-    email: "marcus.rodriguez@manufactory.com",
-    role: "Staff",
-    status: "Active",
-    onShift: true,
-    hourlyRate: 24.75,
-    phone: "+1 (555) 0124",
-    avatar: "MR",
-    hireDate: "2016-08-22",
-    lastLogin: "2024-12-19 04:00:00"
-  },
-  {
-    id: "STF-003",
-    fullName: "Emma Thompson",
-    email: "emma.thompson@manufactory.com",
-    role: "Staff",
-    status: "Active",
-    onShift: false,
-    hourlyRate: 22.00,
-    phone: "+1 (555) 0125",
-    avatar: "ET",
-    hireDate: "2021-06-10",
-    lastLogin: "2024-12-19 08:00:00"
-  },
-  {
-    id: "STF-004",
-    fullName: "David Kim",
-    email: "david.kim@manufactory.com",
-    role: "Supervisor",
-    status: "Active",
-    onShift: true,
-    hourlyRate: 26.25,
-    phone: "+1 (555) 0126",
-    avatar: "DK",
-    hireDate: "2020-01-08",
-    lastLogin: "2024-12-19 09:00:00"
-  },
-  {
-    id: "STF-005",
-    fullName: "Lisa Park",
-    email: "lisa.park@manufactory.com",
-    role: "Staff",
-    status: "Active",
-    onShift: false,
-    hourlyRate: 23.50,
-    phone: "+1 (555) 0127",
-    avatar: "LP",
-    hireDate: "2018-11-20",
-    lastLogin: "2024-12-18 21:00:00"
-  },
-  {
-    id: "STF-006",
-    fullName: "James Wilson",
-    email: "james.wilson@manufactory.com",
-    role: "Staff",
-    status: "Active",
-    onShift: false,
-    hourlyRate: 25.00,
-    phone: "+1 (555) 0128",
-    avatar: "JW",
-    hireDate: "2017-04-03",
-    lastLogin: "2024-12-19 10:30:00"
-  },
-  {
-    id: "STF-007",
-    fullName: "Admin User",
-    email: "admin@manufactory.com",
-    role: "Admin",
-    status: "Active",
-    onShift: false,
-    hourlyRate: 35.00,
-    avatar: "AU",
-    hireDate: "2015-01-01",
-    lastLogin: "2024-12-19 11:45:00"
-  }
-];
-
 export function StaffPage() {
-  const [staff, setStaff] = useState<StaffMember[]>(staffData);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Fetch staff from Supabase
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const staffList = await getStaffList();
+        // Map Supabase staff to UI format
+        const mappedStaff: StaffMember[] = staffList.map((s) => ({
+          id: s.user_id,
+          fullName: s.full_name,
+          email: s.email || '',
+          role: s.role,
+          status: s.is_active ? "Active" : "Approved",
+          onShift: false, // TODO: Get from shift data
+          hourlyRate: 20.00, // TODO: Get from staff_shared if we add this column
+          phone: s.phone || undefined,
+          avatar: s.full_name.split(' ').map(n => n[0]).join('').toUpperCase(),
+          hireDate: new Date(s.created_at).toISOString().split('T')[0],
+          lastLogin: s.last_login || undefined,
+        }));
+        setStaff(mappedStaff);
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        toast.error('Failed to load staff data');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStaff();
+  }, []);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -267,7 +205,20 @@ export function StaffPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStaff.map((staffMember) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  Loading staff...
+                </TableCell>
+              </TableRow>
+            ) : filteredStaff.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No staff members found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredStaff.map((staffMember) => (
               <TableRow key={staffMember.id}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
@@ -318,7 +269,7 @@ export function StaffPage() {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            )))}
           </TableBody>
         </Table>
       </Card>

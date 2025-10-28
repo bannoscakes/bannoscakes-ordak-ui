@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -9,160 +9,40 @@ import { Search, Calendar, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
-
-interface Transaction {
-  id: string;
-  timestamp: string;
-  orderNumber?: string;
-  componentId: string;
-  componentName: string;
-  componentSku: string;
-  delta: number;
-  source: "Webhook" | "Restock" | "Manual";
-  note?: string;
-  performedBy?: string;
-}
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "T001",
-    timestamp: "2024-12-03T14:30:00Z",
-    orderNumber: "BAN-001",
-    componentId: "C001",
-    componentName: "6-inch Round Cake Base",
-    componentSku: "CAKE-BASE-6IN",
-    delta: -2,
-    source: "Webhook",
-    note: "Order production completed"
-  },
-  {
-    id: "T002",
-    timestamp: "2024-12-03T14:28:00Z",
-    orderNumber: "BAN-001",
-    componentId: "C002",
-    componentName: "6-inch White Cake Box",
-    componentSku: "CAKE-BOX-6IN",
-    delta: -2,
-    source: "Webhook",
-    note: "Order production completed"
-  },
-  {
-    id: "T003",
-    timestamp: "2024-12-03T13:45:00Z",
-    componentId: "C003",
-    componentName: "Spiderman Cake Topper",
-    componentSku: "TOPPER-SPIDER",
-    delta: +10,
-    source: "Restock",
-    note: "Weekly delivery from supplier",
-    performedBy: "admin@bannos.com"
-  },
-  {
-    id: "T004",
-    timestamp: "2024-12-03T12:15:00Z",
-    componentId: "C002",
-    componentName: "6-inch White Cake Box",
-    componentSku: "CAKE-BOX-6IN",
-    delta: -5,
-    source: "Manual",
-    note: "Damaged boxes discarded during inspection",
-    performedBy: "manager@bannos.com"
-  },
-  {
-    id: "T005",
-    timestamp: "2024-12-03T11:30:00Z",
-    orderNumber: "FLR-007",
-    componentId: "C004",
-    componentName: "8-inch Round Cake Board",
-    componentSku: "BOARD-ROUND-8IN",
-    delta: -1,
-    source: "Webhook",
-    note: "Order production completed"
-  },
-  {
-    id: "T006",
-    timestamp: "2024-12-03T10:45:00Z",
-    componentId: "C005",
-    componentName: "Number Candles Set",
-    componentSku: "ACC-CANDLE-NUM",
-    delta: +50,
-    source: "Restock",
-    note: "Bulk order from new supplier",
-    performedBy: "admin@bannos.com"
-  },
-  {
-    id: "T007",
-    timestamp: "2024-12-03T09:20:00Z",
-    orderNumber: "BAN-004",
-    componentId: "C001",
-    componentName: "6-inch Round Cake Base",
-    componentSku: "CAKE-BASE-6IN",
-    delta: -1,
-    source: "Webhook",
-    note: "Order production completed"
-  },
-  {
-    id: "T008",
-    timestamp: "2024-12-03T08:30:00Z",
-    componentId: "C002",
-    componentName: "6-inch White Cake Box",
-    componentSku: "CAKE-BOX-6IN",
-    delta: +25,
-    source: "Restock",
-    note: "Regular weekly stock replenishment",
-    performedBy: "staff@bannos.com"
-  },
-  {
-    id: "T009",
-    timestamp: "2024-12-02T16:45:00Z",
-    componentId: "C003",
-    componentName: "Spiderman Cake Topper",
-    componentSku: "TOPPER-SPIDER",
-    delta: +2,
-    source: "Manual",
-    note: "Inventory correction after physical count",
-    performedBy: "admin@bannos.com"
-  },
-  {
-    id: "T010",
-    timestamp: "2024-12-02T15:20:00Z",
-    orderNumber: "BAN-008",
-    componentId: "C005",
-    componentName: "Number Candles Set",
-    componentSku: "ACC-CANDLE-NUM",
-    delta: -3,
-    source: "Webhook",
-    note: "Order production completed"
-  }
-];
+import { getStockTransactions, getComponents, type StockTransaction } from "../../lib/rpc-client";
+import { toast } from "sonner";
 
 export function TransactionsInventory() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<StockTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("7"); // Days
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<StockTransaction | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = searchQuery === "" || 
-      (transaction.orderNumber && transaction.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      transaction.componentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.componentSku.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = typeFilter === "All" || transaction.source === typeFilter;
-    
-    // Simple date filtering (in real app, would be more sophisticated)
-    const transactionDate = new Date(transaction.timestamp);
-    const daysAgo = parseInt(dateFilter);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-    const matchesDate = transactionDate >= cutoffDate;
-    
-    return matchesSearch && matchesType && matchesDate;
-  });
+  // Fetch transactions from Supabase
+  useEffect(() => {
+    async function fetchTransactions() {
+      try {
+        const transactionsData = await getStockTransactions(null, null, null);
+        console.log('Fetched transactions:', transactionsData); // Debug log
+        
+        setTransactions(transactionsData);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+        toast.error('Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTransactions();
+  }, []);
 
-  const handleViewDetail = (transaction: Transaction) => {
+  // Filtering is now handled by the RPC call, so we can use transactions directly
+  const filteredTransactions = transactions;
+
+  const handleViewDetail = (transaction: StockTransaction) => {
     setSelectedTransaction(transaction);
     setIsDetailDialogOpen(true);
   };
@@ -248,13 +128,13 @@ export function TransactionsInventory() {
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Restocks</div>
           <div className="text-2xl font-semibold text-green-600">
-            {filteredTransactions.filter(t => t.delta > 0 && t.source === 'Restock').length}
+            {filteredTransactions.filter(t => t.delta > 0 && t.reason === 'Restock').length}
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Adjustments</div>
           <div className="text-2xl font-semibold text-orange-600">
-            {filteredTransactions.filter(t => t.source === 'Manual').length}
+            {filteredTransactions.filter(t => t.reason === 'Manual').length}
           </div>
         </Card>
       </div>
@@ -274,63 +154,74 @@ export function TransactionsInventory() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-mono text-xs">
-                  {formatDateTime(transaction.timestamp)}
-                </TableCell>
-                <TableCell>
-                  {transaction.orderNumber ? (
-                    <Button 
-                      variant="link" 
-                      className="h-auto p-0 font-mono text-xs"
-                      onClick={() => {/* Would open order details */}}
-                    >
-                      {transaction.orderNumber}
-                    </Button>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="font-medium text-sm">{transaction.componentName}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{transaction.componentSku}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className={`font-medium ${getDeltaColor(transaction.delta)}`}>
-                    {transaction.delta > 0 ? '+' : ''}{transaction.delta}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Badge className={`text-xs ${getSourceColor(transaction.source)}`}>
-                    {transaction.source}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {transaction.note ? 
-                      (transaction.note.length > 40 ? `${transaction.note.substring(0, 40)}...` : transaction.note) 
-                      : '—'
-                    }
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewDetail(transaction)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  Loading transactions...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : transactions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  No transactions found
+                </TableCell>
+              </TableRow>
+            ) : (
+              transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-mono text-xs">
+                    {formatDateTime(transaction.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.order_id ? (
+                      <Button 
+                        variant="link" 
+                        className="h-auto p-0 font-mono text-xs"
+                        onClick={() => {/* Would open order details */}}
+                      >
+                        {transaction.order_id}
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium text-sm">{transaction.component_name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{transaction.component_sku}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`font-medium ${getDeltaColor(transaction.delta)}`}>
+                      {transaction.delta > 0 ? '+' : ''}{transaction.delta}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`text-xs ${getSourceColor(transaction.reason)}`}>
+                      {transaction.reason}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {transaction.performer_name || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDetail(transaction)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
-        {filteredTransactions.length === 0 && (
+        {!loading && transactions.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             No transactions found matching your filters
           </div>
@@ -352,14 +243,14 @@ export function TransactionsInventory() {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Timestamp</Label>
-                  <p className="font-mono text-sm">{formatDateTime(selectedTransaction.timestamp)}</p>
+                  <p className="font-mono text-sm">{formatDateTime(selectedTransaction.created_at)}</p>
                 </div>
               </div>
 
-              {selectedTransaction.orderNumber && (
+              {selectedTransaction.order_id && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Order Number</Label>
-                  <p className="font-mono text-sm">{selectedTransaction.orderNumber}</p>
+                  <p className="font-mono text-sm">{selectedTransaction.order_id}</p>
                 </div>
               )}
 
@@ -368,8 +259,8 @@ export function TransactionsInventory() {
               <div>
                 <Label className="text-xs text-muted-foreground">Component</Label>
                 <div className="space-y-1">
-                  <p className="font-medium">{selectedTransaction.componentName}</p>
-                  <p className="font-mono text-sm text-muted-foreground">{selectedTransaction.componentSku}</p>
+                  <p className="font-medium">{selectedTransaction.component_name}</p>
+                  <p className="font-mono text-sm text-muted-foreground">{selectedTransaction.component_sku}</p>
                 </div>
               </div>
 
@@ -382,24 +273,24 @@ export function TransactionsInventory() {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Source</Label>
-                  <Badge className={`text-xs ${getSourceColor(selectedTransaction.source)} mt-1`}>
-                    {selectedTransaction.source}
+                  <Badge className={`text-xs ${getSourceColor(selectedTransaction.reason)} mt-1`}>
+                    {selectedTransaction.reason}
                   </Badge>
                 </div>
               </div>
 
-              {selectedTransaction.performedBy && (
+              {selectedTransaction.performer_name && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Performed By</Label>
-                  <p className="text-sm">{selectedTransaction.performedBy}</p>
+                  <p className="text-sm">{selectedTransaction.performer_name}</p>
                 </div>
               )}
 
-              {selectedTransaction.note && (
+              {selectedTransaction.reason && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Note</Label>
                   <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm">{selectedTransaction.note}</p>
+                    <p className="text-sm">{selectedTransaction.reason}</p>
                   </div>
                 </div>
               )}

@@ -1,10 +1,68 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { config } from './config';
+import { clearSupabaseAuthStorage } from './supabase-storage';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+let _client: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (_client) return _client;
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anon) {
+    // Do not initialize at import time; throw only when someone tries to use the client
+    throw new Error('Supabase env not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
+  }
+  const persistSession = config.persistSupabaseSession;
+  if (!persistSession) {
+    clearSupabaseAuthStorage();
+  }
+  const storage =
+    typeof window !== 'undefined'
+      ? persistSession
+        ? window.localStorage
+        : undefined
+      : undefined;
+  _client = createClient(url, anon, {
+    auth: {
+      persistSession,                                 // ✅ keep session on reload
+      storage,                                        // ✅ where to keep it
+      storageKey: config.supabaseStorageKey,         // ✅ stable key
+      autoRefreshToken: true,                        // ✅ auto-refresh JWT before expiration
+      detectSessionInUrl: true,
+    },
+  });
+  return _client;
+}
 
 /**
- * Returns a configured client when envs exist; otherwise a dummy value.
- * Call sites must handle the client possibly being undefined.
+ * Helper to manually recover session from storage
+ * Useful for debugging and manual recovery attempts
  */
-export const supabase = (url && anon) ? createClient(url, anon) : undefined;
+export async function recoverStoredSession(): Promise<boolean> {
+  try {
+    const client = getSupabase();
+    const { data: { session }, error } = await client.auth.getSession();
+    
+    if (error) {
+      console.error('Session recovery error:', error);
+      return false;
+    }
+    
+    return !!session;
+  } catch (error) {
+    console.error('Failed to recover session:', error);
+    return false;
+  }
+}
+
+// Back-compat: export an instance-like object that lazily initializes on first property access
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_t, prop) {
+    const c = getSupabase();
+    // @ts-ignore
+    const v = c[prop];
+    return typeof v === 'function' ? v.bind(c) : v;
+  }
+}) as SupabaseClient;
+
+export default supabase;

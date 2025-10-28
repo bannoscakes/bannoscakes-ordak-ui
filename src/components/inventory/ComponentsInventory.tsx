@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -12,6 +12,7 @@ import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
+import { getComponents, updateComponentStock, upsertComponent } from "../../lib/rpc-client";
 
 interface Component {
   id: string;
@@ -25,73 +26,59 @@ interface Component {
   isLowStock: boolean;
 }
 
-const mockComponents: Component[] = [
-  {
-    id: "C001",
-    sku: "CAKE-BASE-6IN",
-    name: "6-inch Round Cake Base",
-    type: "Base",
-    onHand: 45,
-    reorderPoint: 20,
-    shopifyVariant: "gid://shopify/ProductVariant/123456789",
-    oosAction: "Also block cakes",
-    isLowStock: false
-  },
-  {
-    id: "C002", 
-    sku: "CAKE-BOX-6IN",
-    name: "6-inch White Cake Box",
-    type: "Box",
-    onHand: 8,
-    reorderPoint: 15,
-    oosAction: "Component only",
-    isLowStock: true
-  },
-  {
-    id: "C003",
-    sku: "TOPPER-SPIDER",
-    name: "Spiderman Cake Topper",
-    type: "Topper",
-    onHand: 2,
-    reorderPoint: 5,
-    shopifyVariant: "gid://shopify/ProductVariant/987654321",
-    oosAction: "Also block cakes",
-    isLowStock: true
-  },
-  {
-    id: "C004",
-    sku: "BOARD-ROUND-8IN",
-    name: "8-inch Round Cake Board",
-    type: "Board",
-    onHand: 67,
-    reorderPoint: 25,
-    oosAction: "Component only",
-    isLowStock: false
-  },
-  {
-    id: "C005",
-    sku: "ACC-CANDLE-NUM",
-    name: "Number Candles Set",
-    type: "Accessory",
-    onHand: 24,
-    reorderPoint: 10,
-    shopifyVariant: "gid://shopify/ProductVariant/456789123",
-    oosAction: "Component only",
-    isLowStock: false
-  }
-];
-
 export function ComponentsInventory() {
-  const [components, setComponents] = useState<Component[]>(mockComponents);
+  const [components, setComponents] = useState<Component[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [editingComponent, setEditingComponent] = useState<Component | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
   const [adjustingComponent, setAdjustingComponent] = useState<Component | null>(null);
   const [adjustmentDelta, setAdjustmentDelta] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [newComponent, setNewComponent] = useState<Partial<Component>>({
+    sku: "",
+    name: "",
+    type: "Accessory",
+    onHand: 0,
+    reorderPoint: 0,
+    oosAction: "Component only"
+  });
+
+  // Fetch components from Supabase
+  useEffect(() => {
+    async function fetchComponents() {
+      try {
+        const dbComponents = await getComponents({});
+        console.log('Fetched components:', dbComponents); // Debug log
+        
+        // Map database components to UI format
+        const mappedComponents: Component[] = dbComponents.map((c: any) => ({
+          id: c.id,
+          sku: c.sku,
+          name: c.name,
+          type: (c.category || "Accessory") as Component["type"], // Map category to type
+          onHand: Number(c.current_stock || 0),
+          reorderPoint: Number(c.min_stock || 0),
+          shopifyVariant: undefined, // TODO: Add when Shopify integration is ready
+          oosAction: "Component only", // TODO: Add to database schema if needed
+          isLowStock: Number(c.current_stock || 0) <= Number(c.min_stock || 0),
+        }));
+        
+        console.log('Mapped components:', mappedComponents); // Debug log
+        setComponents(mappedComponents);
+      } catch (error) {
+        console.error('Error fetching components:', error);
+        toast.error('Failed to load components');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchComponents();
+  }, []);
 
   const filteredComponents = components.filter(component => {
     const matchesSearch = searchQuery === "" || 
@@ -104,9 +91,67 @@ export function ComponentsInventory() {
     return matchesSearch && matchesType && matchesLowStock;
   });
 
+  const handleAddComponent = () => {
+    setNewComponent({
+      sku: "",
+      name: "",
+      type: "Accessory",
+      onHand: 0,
+      reorderPoint: 0,
+      oosAction: "Component only"
+    });
+    setIsAddDialogOpen(true);
+  };
+
   const handleEditComponent = (component: Component) => {
     setEditingComponent({ ...component });
     setIsEditDialogOpen(true);
+  };
+
+  const handleSaveNewComponent = async () => {
+    if (!newComponent.sku || !newComponent.name) {
+      toast.error("Please fill in SKU and Name");
+      return;
+    }
+
+    try {
+      const componentId = await upsertComponent({
+        sku: newComponent.sku,
+        name: newComponent.name,
+        category: newComponent.type,
+        current_stock: newComponent.onHand || 0,
+        min_stock: newComponent.reorderPoint || 0,
+        is_active: true
+      });
+
+      // Add to local state
+      const newComponentData: Component = {
+        id: componentId,
+        sku: newComponent.sku,
+        name: newComponent.name,
+        type: newComponent.type as Component["type"],
+        onHand: newComponent.onHand || 0,
+        reorderPoint: newComponent.reorderPoint || 0,
+        shopifyVariant: undefined,
+        oosAction: newComponent.oosAction as Component["oosAction"],
+        isLowStock: (newComponent.onHand || 0) <= (newComponent.reorderPoint || 0)
+      };
+
+      setComponents(prev => [...prev, newComponentData]);
+      setIsAddDialogOpen(false);
+      setNewComponent({
+        sku: "",
+        name: "",
+        type: "Accessory",
+        onHand: 0,
+        reorderPoint: 0,
+        oosAction: "Component only"
+      });
+      toast.success("Component added successfully");
+    } catch (error) {
+      console.error('Error adding component:', error);
+      toast.error('Failed to add component');
+    }
   };
 
   const handleSaveComponent = () => {
@@ -131,7 +176,7 @@ export function ComponentsInventory() {
     setIsAdjustDialogOpen(true);
   };
 
-  const handleSaveAdjustment = () => {
+  const handleSaveAdjustment = async () => {
     if (!adjustingComponent || !adjustmentDelta || !adjustmentReason) return;
     
     const delta = parseInt(adjustmentDelta);
@@ -142,17 +187,30 @@ export function ComponentsInventory() {
       return;
     }
 
-    setComponents(prev => prev.map(c => 
-      c.id === adjustingComponent.id ? {
-        ...c,
-        onHand: newStock,
-        isLowStock: newStock <= c.reorderPoint
-      } : c
-    ));
-    
-    setIsAdjustDialogOpen(false);
-    setAdjustingComponent(null);
-    toast.success("Stock updated");
+    try {
+      // Update stock in database
+      await updateComponentStock({
+        component_id: adjustingComponent.id,
+        delta: delta,
+        reason: adjustmentReason,
+      });
+
+      // Update local state
+      setComponents(prev => prev.map(c => 
+        c.id === adjustingComponent.id ? {
+          ...c,
+          onHand: newStock,
+          isLowStock: newStock <= c.reorderPoint
+        } : c
+      ));
+      
+      setIsAdjustDialogOpen(false);
+      setAdjustingComponent(null);
+      toast.success("Stock updated successfully");
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      toast.error('Failed to update stock');
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -204,7 +262,7 @@ export function ComponentsInventory() {
             <Label htmlFor="low-stock" className="text-sm">Low stock only</Label>
           </div>
 
-          <Button>
+          <Button onClick={handleAddComponent}>
             <Plus className="mr-2 h-4 w-4" />
             Add Component
           </Button>
@@ -227,7 +285,20 @@ export function ComponentsInventory() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredComponents.map((component) => (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  Loading components...
+                </TableCell>
+              </TableRow>
+            ) : filteredComponents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  No components found matching your filters
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredComponents.map((component) => (
               <TableRow key={component.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
@@ -281,15 +352,9 @@ export function ComponentsInventory() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )))}
           </TableBody>
         </Table>
-
-        {filteredComponents.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground">
-            No components found matching your filters
-          </div>
-        )}
       </Card>
 
       {/* Edit Component Dialog */}
@@ -479,6 +544,110 @@ export function ComponentsInventory() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Component Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Component</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-sku">SKU *</Label>
+              <Input
+                id="add-sku"
+                value={newComponent.sku || ""}
+                onChange={(e) => setNewComponent(prev => ({ ...prev, sku: e.target.value }))}
+                placeholder="e.g., FLOUR-001"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="add-name">Name *</Label>
+              <Input
+                id="add-name"
+                value={newComponent.name || ""}
+                onChange={(e) => setNewComponent(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., All Purpose Flour"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-type">Type</Label>
+              <Select
+                value={newComponent.type || "Accessory"}
+                onValueChange={(value) => setNewComponent(prev => ({ ...prev, type: value as Component["type"] }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Board">Board</SelectItem>
+                  <SelectItem value="Base">Base</SelectItem>
+                  <SelectItem value="Box">Box</SelectItem>
+                  <SelectItem value="Topper">Topper</SelectItem>
+                  <SelectItem value="Accessory">Accessory</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-onhand">On Hand</Label>
+                <Input
+                  id="add-onhand"
+                  type="number"
+                  value={newComponent.onHand || 0}
+                  onChange={(e) => setNewComponent(prev => ({ ...prev, onHand: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="add-reorder">Reorder Point</Label>
+                <Input
+                  id="add-reorder"
+                  type="number"
+                  value={newComponent.reorderPoint || 0}
+                  onChange={(e) => setNewComponent(prev => ({ ...prev, reorderPoint: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="add-oos">Out of Stock Action</Label>
+              <RadioGroup
+                value={newComponent.oosAction || "Component only"}
+                onValueChange={(value) => setNewComponent(prev => ({ ...prev, oosAction: value as Component["oosAction"] }))}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Component only" id="oos-component" />
+                  <Label htmlFor="oos-component">Component only</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Also block cakes" id="oos-block" />
+                  <Label htmlFor="oos-block">Also block cakes</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleSaveNewComponent}
+                className="flex-1"
+              >
+                Add Component
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

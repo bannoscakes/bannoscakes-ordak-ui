@@ -3,8 +3,10 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card } from "./ui/card";
-import { X, Camera, AlertCircle, CheckCircle } from "lucide-react";
+import { X, Camera, AlertCircle, CheckCircle, Scan } from "lucide-react";
 import { toast } from "sonner";
+import { CameraScanner } from "./CameraScanner";
+import { completeFilling, completeCovering, completeDecorating, completePacking } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -38,6 +40,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   const [manualInput, setManualInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [useCamera, setUseCamera] = useState(true);
 
   if (!isOpen || !order) return null;
 
@@ -59,16 +62,48 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     }, 1000);
   };
 
+  const handleCameraScan = (result: string) => {
+    console.log('Camera scan result:', result);
+    handleScan(result);
+  };
+
+  const handleCameraError = (error: string) => {
+    console.error('Camera error:', error);
+    setErrorMessage(error);
+    setScanState('error');
+  };
+
   const handleManualScan = () => {
     if (!manualInput.trim()) return;
     handleScan(manualInput.trim());
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (!order) return;
+    
     setIsProcessing(true);
     
-    // Simulate completion processing
-    setTimeout(() => {
+    try {
+      // Call appropriate stage completion RPC based on current stage
+      let result;
+      const store = order.store || 'bannos'; // Default to bannos if store not found
+      switch (order.stage) {
+        case 'Filling':
+          result = await completeFilling(order.id, store);
+          break;
+        case 'Covering':
+          result = await completeCovering(order.id, store);
+          break;
+        case 'Decorating':
+          result = await completeDecorating(order.id, store);
+          break;
+        case 'Packing':
+          result = await completePacking(order.id, store);
+          break;
+        default:
+          throw new Error(`Unknown stage: ${order.stage}`);
+      }
+      
       setScanState('success');
       setIsProcessing(false);
       
@@ -77,7 +112,13 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         onOrderCompleted(order.id);
         handleClose();
       }, 1500);
-    }, 1000);
+      
+    } catch (error) {
+      console.error('Error completing stage:', error);
+      setIsProcessing(false);
+      setScanState('error');
+      setErrorMessage(`Failed to complete ${order.stage} stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleClose = () => {
@@ -172,33 +213,47 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         </div>
       </div>
 
-      {/* Camera View Simulation */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-        <div className="text-center space-y-8">
-          <Camera className="h-24 w-24 text-white/60 mx-auto" />
-          <div className="text-white/80">
-            <p className="text-lg mb-2">Position the barcode in the camera view</p>
-            <p className="text-sm">Or use manual entry below</p>
+      {/* Camera View */}
+      <div className="absolute inset-0 bg-black flex items-center justify-center">
+        {useCamera ? (
+          <div className="w-full h-full flex items-center justify-center p-4">
+            <CameraScanner
+              onScan={handleCameraScan}
+              onError={handleCameraError}
+              isActive={isOpen && scanState === 'scanning'}
+              className="w-full max-w-2xl"
+            />
           </div>
-          
-          {/* Demo Scan Button */}
-          <Button 
-            onClick={simulatedScan}
-            disabled={isProcessing}
-            className="bg-white/20 hover:bg-white/30 text-white"
-          >
-            {isProcessing ? "Scanning..." : "Simulate Scan (Demo)"}
-          </Button>
-        </div>
+        ) : (
+          <div className="text-center space-y-8">
+            <Camera className="h-24 w-24 text-white/60 mx-auto" />
+            <div className="text-white/80">
+              <p className="text-lg mb-2">Position the barcode in the camera view</p>
+              <p className="text-sm">Or use manual entry below</p>
+            </div>
+            
+            {/* Demo Scan Button */}
+            <Button 
+              onClick={simulatedScan}
+              disabled={isProcessing}
+              className="bg-white/20 hover:bg-white/30 text-white"
+            >
+              {isProcessing ? "Scanning..." : "Simulate Scan (Demo)"}
+            </Button>
+          </div>
+        )}
 
-        {/* Scan Target Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-64 h-32 border-2 border-white/50 rounded-lg relative">
-            <div className="absolute -top-1 -left-1 w-8 h-8 border-l-2 border-t-2 border-white"></div>
-            <div className="absolute -top-1 -right-1 w-8 h-8 border-r-2 border-t-2 border-white"></div>
-            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-l-2 border-b-2 border-white"></div>
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 border-r-2 border-b-2 border-white"></div>
-          </div>
+        {/* Toggle Button */}
+        <div className="absolute top-20 right-6">
+          <Button
+            onClick={() => setUseCamera(!useCamera)}
+            variant="outline"
+            size="sm"
+            className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+          >
+            {useCamera ? <Scan className="h-4 w-4 mr-2" /> : <Camera className="h-4 w-4 mr-2" />}
+            {useCamera ? 'Manual Entry' : 'Camera Scan'}
+          </Button>
         </div>
       </div>
 
