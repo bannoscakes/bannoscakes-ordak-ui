@@ -2,6 +2,8 @@
 // Topics handled now: orders/create, orders/updated (no-op body save; real splitting later).
 
 import { serve } from "std/http/server.ts";
+import { timingSafeEqual } from "https://deno.land/std@0.224.0/crypto/timing_safe_equal.ts";
+import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const APP_SECRET = Deno.env.get("SHOPIFY_APP_SECRET") ?? ""; // legacy (fallback)
 // Per-store secrets (set in Supabase PROD)
@@ -39,15 +41,17 @@ async function verifyHmac(body: string, provided: string | null, secret: string)
   if (!secret)     return { ok: false, expected: "(no secret)" };
   const expected = await signHmac(body, secret);
   
-  // timingSafeEqual requires same length; return false early if different
-  if (provided.length !== expected.length) {
-    return { ok: false, expected };
+  // Deno-safe: compare HMACs in constant time using std timingSafeEqual
+  let ok = false;
+  try {
+    const providedBytes = b64decode(provided);
+    const expectedBytes = b64decode(expected);
+    ok = providedBytes.length === expectedBytes.length
+      ? timingSafeEqual(providedBytes, expectedBytes)
+      : false;
+  } catch {
+    ok = false;
   }
-  
-  const ok = crypto.timingSafeEqual(
-    new TextEncoder().encode(provided),
-    new TextEncoder().encode(expected),
-  );
   return { ok, expected };
 }
 
