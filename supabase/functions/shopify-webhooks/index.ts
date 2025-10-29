@@ -2,6 +2,8 @@
 // Topics handled now: orders/create, orders/updated (no-op body save; real splitting later).
 
 import { serve } from "std/http/server.ts";
+import { timingSafeEqual } from "https://deno.land/std@0.224.0/crypto/timing_safe_equal.ts";
+import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const APP_SECRET = Deno.env.get("SHOPIFY_APP_SECRET") ?? ""; // legacy (fallback)
 // Per-store secrets (set in Supabase PROD)
@@ -34,21 +36,45 @@ function resolveStoreSecret(req: Request, shopDomainHeader: string) {
   return { store: "unknown", secret: "" };
 }
 
-async function verifyHmac(body: string, provided: string | null, secret: string) {
-  if (!provided) return { ok: false, expected: "(missing)" };
-  if (!secret)     return { ok: false, expected: "(no secret)" };
-  const expected = await signHmac(body, secret);
-  
-  // timingSafeEqual requires same length; return false early if different
-  if (provided.length !== expected.length) {
-    return { ok: false, expected };
+// --- HMAC helpers (Deno-safe) -----------------------------------------------
+async function computeShopifyHmacB64(bodyBytes: Uint8Array, secret: string): Promise<string> {
+  const keyData = new TextEncoder().encode(secret);
+  const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, bodyBytes));
+  let bin = ""; for (let i = 0; i < sig.length; i++) bin += String.fromCharCode(sig[i]);
+  return btoa(bin);
+}
+
+function timingSafeEqualB64(
+  providedB64: string | null | undefined,
+  expectedB64: string
+): { ok: true } | { ok: false; note: string } {
+  if (!providedB64 || typeof providedB64 !== "string") {
+    return { ok: false, note: "missing or invalid X-Shopify-Hmac-Sha256" };
   }
-  
-  const ok = crypto.timingSafeEqual(
-    new TextEncoder().encode(provided),
-    new TextEncoder().encode(expected),
-  );
-  return { ok, expected };
+  let provided: Uint8Array;
+  let expected: Uint8Array;
+  try {
+    // Trim in case Shopify adds whitespace
+    provided = b64decode(providedB64.trim());
+    expected = b64decode(expectedB64);
+  } catch {
+    // Don’t throw → avoid 500; mark unauthorized cleanly
+    return { ok: false, note: "invalid base64 in HMAC" };
+  }
+  if (provided.length !== expected.length) {
+    return { ok: false, note: "HMAC length mismatch" };
+  }
+  const ok = timingSafeEqual(provided, expected);
+  return ok ? { ok: true } : { ok: false, note: "HMAC invalid" };
+}
+
+async function verifyHmac(bodyBytes: Uint8Array, provided: string | null, secret: string) {
+  if (!provided) return { ok: false, expected: "(missing)", note: "missing or invalid X-Shopify-Hmac-Sha256" };
+  if (!secret)     return { ok: false, expected: "(no secret)", note: "missing shop secret" };
+  const expected = await computeShopifyHmacB64(bodyBytes, secret);
+  const { ok, note } = timingSafeEqualB64(provided, expected);
+  return { ok, expected, note };
 }
 
 serve(async (req) => {
@@ -131,9 +157,9 @@ serve(async (req) => {
     }
 
     // We successfully claimed it (non-empty response) → read body and process
-    const raw = await req.text();
+    const bodyBytes = new Uint8Array(await req.arrayBuffer());
 
-    const { ok: hmacOk, expected } = await verifyHmac(raw, hmac, secret);
+    const { ok: hmacOk, expected, note: hmacNote } = await verifyHmac(bodyBytes, hmac, secret);
     if (!hmacOk) {
       // Update status to rejected (don't leak expected HMAC)
       // Use URLSearchParams to safely build query (prevents injection)
@@ -153,7 +179,7 @@ serve(async (req) => {
           body: JSON.stringify({
             status: "rejected",
             http_hmac: hmac,
-            note: "HMAC invalid",
+            note: hmacNote ?? "HMAC invalid",
           }),
         }
       );
@@ -165,7 +191,7 @@ serve(async (req) => {
 
     // Parse JSON only after HMAC ok (kept for future splitting)
     let body: unknown = {};
-    try { body = JSON.parse(raw); } catch { /* ignore */ }
+    try { body = JSON.parse(new TextDecoder().decode(bodyBytes)); } catch { /* ignore */ }
 
     // Enqueue split work (SECURITY DEFINER RPC)
     const rpcRes = await fetch(
