@@ -45,14 +45,28 @@ async function computeShopifyHmacB64(bodyBytes: Uint8Array, secret: string): Pro
   return btoa(bin);
 }
 
-function timingSafeEqualB64(providedB64: string | null | undefined, expectedB64: string) {
+function timingSafeEqualB64(
+  providedB64: string | null | undefined,
+  expectedB64: string
+): { ok: true } | { ok: false; note: string } {
   if (!providedB64 || typeof providedB64 !== "string") {
     return { ok: false, note: "missing or invalid X-Shopify-Hmac-Sha256" };
   }
-  const provided = b64decode(providedB64.trim());
-  const expected = b64decode(expectedB64);
-  if (provided.length !== expected.length) return { ok: false, note: "HMAC length mismatch" };
-  return { ok: timingSafeEqual(provided, expected), note: "HMAC invalid" };
+  let provided: Uint8Array;
+  let expected: Uint8Array;
+  try {
+    // Trim in case Shopify adds whitespace
+    provided = b64decode(providedB64.trim());
+    expected = b64decode(expectedB64);
+  } catch {
+    // Don’t throw → avoid 500; mark unauthorized cleanly
+    return { ok: false, note: "invalid base64 in HMAC" };
+  }
+  if (provided.length !== expected.length) {
+    return { ok: false, note: "HMAC length mismatch" };
+  }
+  const ok = timingSafeEqual(provided, expected);
+  return ok ? { ok: true } : { ok: false, note: "HMAC invalid" };
 }
 
 async function verifyHmac(bodyBytes: Uint8Array, provided: string | null, secret: string) {
