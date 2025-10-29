@@ -67,7 +67,7 @@ serve(async (req) => {
     await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
       method: "POST",
       headers: {
-        apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
         "Content-Type": "application/json",
       },
@@ -83,7 +83,7 @@ serve(async (req) => {
     await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
       method: "POST",
       headers: {
-        apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
         "Content-Type": "application/json",
       },
@@ -104,7 +104,7 @@ serve(async (req) => {
       {
         method: "POST",
         headers: {
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
           Prefer: "resolution=ignore-duplicates,return=representation",
@@ -145,7 +145,7 @@ serve(async (req) => {
         {
           method: "PATCH",
           headers: {
-            apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
             "Content-Type": "application/json",
             "Prefer": "return=minimal",
@@ -173,7 +173,7 @@ serve(async (req) => {
       {
         method: "POST",
         headers: {
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
         },
@@ -190,8 +190,8 @@ serve(async (req) => {
       // 1) mark processed_webhooks as error (per-store idempotency row)
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`, {
         method: "POST",
-        headers: {
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      headers: {
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
           Prefer: "resolution=merge-duplicates",
@@ -209,8 +209,8 @@ serve(async (req) => {
       // 2) dead-letter for investigation
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
         method: "POST",
-        headers: {
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      headers: {
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
         },
@@ -234,7 +234,7 @@ serve(async (req) => {
       {
         method: "PATCH",
         headers: {
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
           "Prefer": "return=minimal",
@@ -280,7 +280,7 @@ serve(async (req) => {
       {
         method: "POST",
         headers: {
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
         },
