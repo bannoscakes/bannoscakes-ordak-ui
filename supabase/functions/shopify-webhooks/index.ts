@@ -3,7 +3,10 @@
 
 import { serve } from "std/http/server.ts";
 
-const APP_SECRET = Deno.env.get("SHOPIFY_APP_SECRET") ?? ""; // set in Supabase secrets
+const APP_SECRET = Deno.env.get("SHOPIFY_APP_SECRET") ?? ""; // legacy (fallback)
+// Per-store secrets (set in Supabase PROD)
+const SECRET_BANNOS = Deno.env.get("SHOPIFY_APP_SECRET_BANNOS") ?? "";
+const SECRET_FLOUR  = Deno.env.get("SHOPIFY_APP_SECRET_FLOUR")  ?? "";
 
 function signHmac(body: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -20,10 +23,21 @@ function signHmac(body: string, secret: string): Promise<string> {
   );
 }
 
-async function verifyHmac(body: string, provided: string | null) {
+function resolveStoreSecret(req: Request, shopDomainHeader: string) {
+  const url = new URL(req.url);
+  const qs = (url.searchParams.get("store") ?? "").toLowerCase();
+  if (qs === "bannos") return { store: "bannos", secret: SECRET_BANNOS };
+  if (qs === "flour")  return { store: "flour",  secret: SECRET_FLOUR  };
+  const domain = (shopDomainHeader || "").toLowerCase();
+  if (domain.includes("bannos")) return { store: "bannos", secret: SECRET_BANNOS };
+  if (domain.includes("flour"))  return { store: "flour",  secret: SECRET_FLOUR  };
+  return { store: "unknown", secret: "" };
+}
+
+async function verifyHmac(body: string, provided: string | null, secret: string) {
   if (!provided) return { ok: false, expected: "(missing)" };
-  if (!APP_SECRET) return { ok: false, expected: "(no secret)" };
-  const expected = await signHmac(body, APP_SECRET);
+  if (!secret)     return { ok: false, expected: "(no secret)" };
+  const expected = await signHmac(body, secret);
   
   // timingSafeEqual requires same length; return false early if different
   if (provided.length !== expected.length) {
@@ -46,6 +60,7 @@ serve(async (req) => {
   const hookId = req.headers.get("X-Shopify-Webhook-Id");
   const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
   const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
+  const { store, secret } = resolveStoreSecret(req, shopDomain);
 
   // Early validation: must have webhook id and shop domain
   if (!hookId) {
@@ -118,7 +133,7 @@ serve(async (req) => {
     // We successfully claimed it (non-empty response) → read body and process
     const raw = await req.text();
 
-    const { ok: hmacOk, expected } = await verifyHmac(raw, hmac);
+    const { ok: hmacOk, expected } = await verifyHmac(raw, hmac, secret);
     if (!hmacOk) {
       // Update status to rejected (don't leak expected HMAC)
       // Use URLSearchParams to safely build query (prevents injection)
