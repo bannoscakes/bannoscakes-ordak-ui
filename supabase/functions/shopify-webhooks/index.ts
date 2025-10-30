@@ -77,52 +77,61 @@ async function verifyHmac(bodyBytes: Uint8Array, provided: string | null, secret
   return { ok, expected, note };
 }
 
+// Optional: restrict to supported topics
+function isTopicAllowed(topic: string): boolean {
+  return topic === "orders/create" || topic === "orders/updated";
+}
+
 serve(async (req) => {
-  if (req.method === "GET") {
-    return new Response("ok", { status: 200 });
-  }
-
-  const topic = req.headers.get("X-Shopify-Topic") ?? "unknown";
-  const hookId = req.headers.get("X-Shopify-Webhook-Id");
-  const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
-  const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
-  const { store, secret } = resolveStoreSecret(req, shopDomain);
-
-  // Early validation: must have webhook id and shop domain
-  if (!hookId) {
-    await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
-      method: "POST",
-      headers: {
-        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        created_at: new Date().toISOString(),
-        payload: { topic, shop_domain: shopDomain },
-        reason: "missing_webhook_id",
-      }),
-    });
-    return new Response("missing webhook id", { status: 400 });
-  }
-  if (shopDomain === "unknown") {
-    await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
-      method: "POST",
-      headers: {
-        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        created_at: new Date().toISOString(),
-        payload: { topic },
-        reason: "missing_shop_domain",
-      }),
-    });
-    return new Response("missing shop domain", { status: 400 });
-  }
-
   try {
+    const method = req.method.toUpperCase();
+    if (method === "GET") {
+      return new Response("ok", { status: 200 });
+    }
+    if (method !== "POST") {
+      return new Response("method not allowed", { status: 405 });
+    }
+
+    const topic = req.headers.get("X-Shopify-Topic") ?? "unknown";
+    const hookId = req.headers.get("X-Shopify-Webhook-Id");
+    const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
+    const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
+    const { store, secret } = resolveStoreSecret(req, shopDomain);
+
+    // Early validation: must have webhook id and shop domain
+    if (!hookId) {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: { topic, shop_domain: shopDomain },
+          reason: "missing_webhook_id",
+        }),
+      });
+      return new Response("missing webhook id", { status: 400 });
+    }
+    if (shopDomain === "unknown") {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: { topic },
+          reason: "missing_shop_domain",
+        }),
+      });
+      return new Response("missing shop domain", { status: 400 });
+    }
+
     // Atomic idempotency: try to INSERT first (race-condition safe via PRIMARY KEY).
     // If duplicate → already processing/processed → return 200 immediately.
     const claimRes = await fetch(
@@ -156,11 +165,14 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    // We successfully claimed it (non-empty response) → read body and process
+    // We successfully claimed it (non-empty response) → SINGLE read of body and process
     const bodyBytes = new Uint8Array(await req.arrayBuffer());
+    const bodyText = new TextDecoder().decode(bodyBytes);
+    let body: unknown = {};
+    try { body = JSON.parse(bodyText); } catch { /* ignore */ }
 
-    const { ok: hmacOk, expected, note: hmacNote } = await verifyHmac(bodyBytes, hmac, secret);
-    if (!hmacOk) {
+    const { ok: hmacOk, note: hmacNote } = await verifyHmac(bodyBytes, hmac, secret);
+    if (!hmacOk || !isTopicAllowed(topic)) {
       // Update status to rejected (don't leak expected HMAC)
       // Use URLSearchParams to safely build query (prevents injection)
       const rejectParams = new URLSearchParams();
@@ -179,7 +191,7 @@ serve(async (req) => {
           body: JSON.stringify({
             status: "rejected",
             http_hmac: hmac,
-            note: hmacNote ?? "HMAC invalid",
+            note: hmacOk ? "topic not allowed" : (hmacNote ?? "HMAC invalid"),
           }),
         }
       );
@@ -188,10 +200,6 @@ serve(async (req) => {
       }
       return new Response("unauthorized", { status: 401 });
     }
-
-    // Parse JSON only after HMAC ok (kept for future splitting)
-    let body: unknown = {};
-    try { body = JSON.parse(new TextDecoder().decode(bodyBytes)); } catch { /* ignore */ }
 
     // Enqueue split work (SECURITY DEFINER RPC)
     const rpcRes = await fetch(
@@ -278,6 +286,10 @@ serve(async (req) => {
     return new Response("ok", { status: 200 });
   } catch (e) {
     // Mark webhook as error before logging to dead_letter
+    const topic = req.headers.get("X-Shopify-Topic") ?? "unknown";
+    const hookId = req.headers.get("X-Shopify-Webhook-Id");
+    const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
+
     if (hookId) {
       const errorParams = new URLSearchParams();
       errorParams.set("id", `eq.${hookId}`);
@@ -297,10 +309,9 @@ serve(async (req) => {
             note: String(e).substring(0, 500),
           }),
         }
-      ).catch(() => {}); // best effort
+      ).catch(() => {});
     }
 
-    // dead_letter fallback with hookId for correlation
     await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`,
       {
@@ -312,11 +323,11 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           created_at: new Date().toISOString(),
-          payload: { webhook_id: hookId, topic, shop_domain: shopDomain, error: String(e) },
+          payload: { webhook_id: hookId ?? "unknown", topic, shop_domain: shopDomain, error: String(e) },
           reason: "webhook_unhandled",
         }),
       }
-    );
+    ).catch(() => {});
     return new Response("error", { status: 500 });
   }
 });
