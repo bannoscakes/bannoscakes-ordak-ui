@@ -112,7 +112,7 @@ serve(async (req) => {
     const hookId = req.headers.get("X-Shopify-Webhook-Id");
     const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
     const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
-    const { secret } = resolveStoreSecret(req, shopDomain);
+    const { store, secret } = resolveStoreSecret(req, shopDomain);
 
     // Early validation: must have webhook id and shop domain
     if (!hookId) {
@@ -181,39 +181,11 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    // Fast-fail: topic allowlist BEFORE reading body/HMAC
-    if (!isTopicAllowed(topic)) {
-      const rejectParams = new URLSearchParams();
-      rejectParams.set("id", `eq.${hookId}`);
-      rejectParams.set("shop_domain", `eq.${shopDomain}`);
-      const rejectRes = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${rejectParams}`,
-        {
-          method: "PATCH",
-          headers: {
-            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal",
-          },
-          body: JSON.stringify({
-            status: "rejected",
-            http_hmac: "n/a",
-            note: "topic not allowed",
-          }),
-        }
-      );
-      if (!rejectRes.ok) {
-        throw new Error(`Failed to record rejected webhook (topic): ${rejectRes.status}`);
-      }
-      return new Response("unauthorized", { status: 401 });
-    }
-
-    // We successfully claimed it (non-empty response) → SINGLE read of body and process
+    // We successfully claimed it (non-empty response) → SINGLE read of body
     const bodyBytes = new Uint8Array(await req.arrayBuffer());
 
     const { ok: hmacOk, note: hmacNote } = await verifyHmac(bodyBytes, hmac, secret);
-    if (!hmacOk) {
+    if (!hmacOk || !isTopicAllowed(topic)) {
       // Update status to rejected (don't leak expected HMAC)
       // Use URLSearchParams to safely build query (prevents injection)
       const rejectParams = new URLSearchParams();
@@ -231,8 +203,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             status: "rejected",
-            http_hmac: "invalid",
-            note: hmacNote ?? "HMAC invalid",
+            http_hmac: hmac,
+            note: hmacOk ? "topic not allowed" : (hmacNote ?? "HMAC invalid"),
           }),
         }
       );
@@ -243,8 +215,57 @@ serve(async (req) => {
     }
 
     // Parse JSON only AFTER HMAC ok
-    let body: unknown = {};
-    try { body = JSON.parse(new TextDecoder().decode(bodyBytes)); } catch { /* ignore */ }
+    let body: unknown;
+    try {
+      body = JSON.parse(new TextDecoder().decode(bodyBytes));
+    } catch {
+      // JSON parse failed: record as our error, skip enqueue, and return 200 to prevent retries
+      const errorParams = new URLSearchParams();
+      errorParams.set("id", `eq.${hookId}`);
+      errorParams.set("shop_domain", `eq.${shopDomain}`);
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${errorParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "error",
+            http_hmac: "valid",
+            note: "invalid JSON payload",
+          }),
+        }
+      ).catch(() => {});
+
+      // Optional: dead-letter excerpt (best-effort)
+      try {
+        await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+          method: "POST",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            created_at: new Date().toISOString(),
+            payload: {
+              hook_id: hookId,
+              topic,
+              shop_domain: shopDomain,
+              error: "invalid JSON payload",
+              excerpt: new TextDecoder().decode(bodyBytes).slice(0, 500),
+            },
+            reason: "invalid_json",
+          }),
+        });
+      } catch {}
+
+      return new Response("ok", { status: 200 });
+    }
 
     // Enqueue split work (SECURITY DEFINER RPC)
     const rpcRes = await fetch(
