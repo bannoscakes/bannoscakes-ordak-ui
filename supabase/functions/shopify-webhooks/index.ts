@@ -69,6 +69,17 @@ function timingSafeEqualB64(
   return ok ? { ok: true } : { ok: false, note: "HMAC invalid" };
 }
 
+/**
+ * Verify a provided Shopify HMAC against the computed HMAC for the raw request body.
+ *
+ * @param bodyBytes - Raw request body bytes used to compute the expected HMAC
+ * @param provided - Value of the `X-Shopify-Hmac-Sha256` header (may be null)
+ * @param secret - Per-store secret used to compute the HMAC
+ * @returns An object with:
+ *  - `ok`: `true` if the provided HMAC matches the computed HMAC, `false` otherwise.
+ *  - `expected`: the computed HMAC as a base64 string, or a marker string when missing secret or header.
+ *  - `note`: a short explanation when verification fails or input is missing.
+ */
 async function verifyHmac(bodyBytes: Uint8Array, provided: string | null, secret: string) {
   if (!provided) return { ok: false, expected: "(missing)", note: "missing or invalid X-Shopify-Hmac-Sha256" };
   if (!secret)     return { ok: false, expected: "(no secret)", note: "missing shop secret" };
@@ -77,7 +88,12 @@ async function verifyHmac(bodyBytes: Uint8Array, provided: string | null, secret
   return { ok, expected, note };
 }
 
-// Optional: restrict to supported topics
+/**
+ * Check whether a Shopify webhook topic is supported for processing.
+ *
+ * @param topic - The Shopify webhook topic header value (e.g., "orders/create")
+ * @returns `true` if `topic` is "orders/create" or "orders/updated", `false` otherwise.
+ */
 function isTopicAllowed(topic: string): boolean {
   return topic === "orders/create" || topic === "orders/updated";
 }
