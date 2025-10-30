@@ -1,7 +1,7 @@
 // Deno/Edge function: verify Shopify HMAC and store idempotency marker (per shop).
 // Topics handled now: orders/create, orders/updated (no-op body save; real splitting later).
 
-import { serve } from "std/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { timingSafeEqual } from "https://deno.land/std@0.224.0/crypto/timing_safe_equal.ts";
 import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
