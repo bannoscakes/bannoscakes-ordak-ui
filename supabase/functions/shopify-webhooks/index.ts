@@ -96,7 +96,7 @@ serve(async (req) => {
     const hookId = req.headers.get("X-Shopify-Webhook-Id");
     const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
     const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
-    const { store, secret } = resolveStoreSecret(req, shopDomain);
+    const { secret } = resolveStoreSecret(req, shopDomain);
 
     // Early validation: must have webhook id and shop domain
     if (!hookId) {
@@ -165,14 +165,39 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
+    // Fast-fail: topic allowlist BEFORE reading body/HMAC
+    if (!isTopicAllowed(topic)) {
+      const rejectParams = new URLSearchParams();
+      rejectParams.set("id", `eq.${hookId}`);
+      rejectParams.set("shop_domain", `eq.${shopDomain}`);
+      const rejectRes = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${rejectParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "rejected",
+            http_hmac: "n/a",
+            note: "topic not allowed",
+          }),
+        }
+      );
+      if (!rejectRes.ok) {
+        throw new Error(`Failed to record rejected webhook (topic): ${rejectRes.status}`);
+      }
+      return new Response("unauthorized", { status: 401 });
+    }
+
     // We successfully claimed it (non-empty response) → SINGLE read of body and process
     const bodyBytes = new Uint8Array(await req.arrayBuffer());
-    const bodyText = new TextDecoder().decode(bodyBytes);
-    let body: unknown = {};
-    try { body = JSON.parse(bodyText); } catch { /* ignore */ }
 
     const { ok: hmacOk, note: hmacNote } = await verifyHmac(bodyBytes, hmac, secret);
-    if (!hmacOk || !isTopicAllowed(topic)) {
+    if (!hmacOk) {
       // Update status to rejected (don't leak expected HMAC)
       // Use URLSearchParams to safely build query (prevents injection)
       const rejectParams = new URLSearchParams();
@@ -190,8 +215,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             status: "rejected",
-            http_hmac: hmac,
-            note: hmacOk ? "topic not allowed" : (hmacNote ?? "HMAC invalid"),
+            http_hmac: "invalid",
+            note: hmacNote ?? "HMAC invalid",
           }),
         }
       );
@@ -200,6 +225,10 @@ serve(async (req) => {
       }
       return new Response("unauthorized", { status: 401 });
     }
+
+    // Parse JSON only AFTER HMAC ok
+    let body: unknown = {};
+    try { body = JSON.parse(new TextDecoder().decode(bodyBytes)); } catch { /* ignore */ }
 
     // Enqueue split work (SECURITY DEFINER RPC)
     const rpcRes = await fetch(
