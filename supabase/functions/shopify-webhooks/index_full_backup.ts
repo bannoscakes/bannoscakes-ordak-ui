@@ -105,7 +105,10 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
     if (method !== "POST") {
-      return new Response("method not allowed", { status: 405 });
+      return new Response("method not allowed", {
+        status: 405,
+        headers: { "Allow": "GET, POST" },
+      });
     }
 
     const topic = req.headers.get("X-Shopify-Topic") ?? "unknown";
