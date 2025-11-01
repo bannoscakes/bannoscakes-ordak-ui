@@ -1,9 +1,9 @@
 # Master Task
 # Master Task List - Ordak Production System
 
-**Current Version:** v0.9.4-beta (~92% complete)  
+**Current Version:** v0.9.5-beta (~90% complete)  
 **Target:** v1.0.0 Production Ready  
-**Last Updated:** 2025-10-27
+**Last Updated:** 2025-11-01
 
 ## ✅ COMPLETED PHASES
 
@@ -33,16 +33,18 @@
 - ✅ All Supabase Preview / CI checks passing  
 - ✅ No mock data required  
 
-### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~95%)
-- ✅ Edge Function `shopify-webhooks` (HMAC verify, per-store idempotency)
-- ✅ `processed_webhooks` + `dead_letter` wired with consistent statuses (`ok|rejected|error`)
+### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~90%)
+- ✅ Edge Function `shopify-webhooks` infrastructure deployed and responding (v0.9.5-beta)
+- ⚠️ Full HMAC verification logic temporarily disabled (backed up to `index_full_backup.ts`)
+- ✅ `processed_webhooks` + `dead_letter` tables created with consistent statuses (`ok|rejected|error`)
 - ✅ RPC `enqueue_order_split` → `work_queue(topic,payload,status)`
 - ✅ Worker #1: `process_webhook_order_split` → emits `kitchen_task_create` (A–Z, AA…, accessories on A)
 - ✅ Worker #2: `process_kitchen_task_create` → creates `stage_events` (Filling_pending) with deterministic UUID per order
 - ✅ Queue & stage schemas hardened; unique keys & NOT NULL enforced; preview-safe migrations
 
-**Final Step (blocked - waiting for ordak.com.au domain):**
-- 🔜 Connect Shopify webhooks for **Bannos** and **Flourlane** 
+**Immediate Next Steps:**
+- 🔜 **Task 7b:** Debug and restore full webhook handler from `index_full_backup.ts` (HMAC verify, idempotency)
+- 🔜 **Task 8:** Connect Shopify webhooks for **Bannos** and **Flourlane** (blocked - waiting for ordak.com.au domain)
 - 🔜 Quick live smoke test: verify rows in `processed_webhooks` → `work_queue` → `stage_events`
 - 🔜 (Optional) Add read-only admin monitor for webhook health
 
@@ -66,20 +68,47 @@
 - **Phase 2 (Queue/Orders):** ✅ 100% Complete  
 - **Phase 3 (Staff Management):** ✅ 100% Complete
 - **Phase 4 (Inventory):** ✅ 100% Complete
-- **Phase 5 (Webhooks):** 🚧 95% Complete (waiting for domain to connect)
+- **Phase 5 (Webhooks):** 🚧 90% Complete (infrastructure working, full logic needs restoration)
 - **Phase 6 (UI Integration):** ✅ 100% Complete
 - **Phase 7 (Production Readiness):** ⚠️ 0% Complete (not started)
 
-**Overall Progress:** ~92% Complete
+**Overall Progress:** ~90% Complete
 
 ---
 
 ## 📋 WHAT'S LEFT TO DO
 
-### ✅ COMPLETED TASKS (v0.9.0 - v0.9.4)
+### ✅ COMPLETED TASKS (v0.9.0 - v0.9.5)
 - ✅ **Task 1:** Clean Mock Order Data (v0.9.0-beta, PR #117)
 - ✅ **Tasks 2-6:** Complete Inventory UI (All 5 tabs connected, v0.9.4-beta)
 - ✅ **Task 7:** Shopify Edge Functions (v0.9.2-beta)
+- ✅ **Task 7a:** Fix Shopify Webhooks Boot Error (v0.9.5-beta, PR #157)
+  - Resolved 503 errors in `shopify-webhooks` Edge Function
+  - Deployed minimal working version
+  - Backed up full logic to `index_full_backup.ts` for restoration
+
+### 🔜 PRIORITY 1: FINALIZE PHASE 5
+
+#### Task 7b: Restore Full Webhook Handler Logic
+**Status:** NEXT UP (unblocks Task 8)  
+**Effort:** ~2-3 hours (debugging + testing)
+
+**Description:**
+- Debug the original full webhook handler code (currently in `index_full_backup.ts`)
+- Identify and fix the runtime error causing boot failures
+- Restore HMAC verification, idempotency checking, and order splitting logic
+- Test thoroughly in Supabase Edge Functions environment
+
+**Steps:**
+1. Review `index_full_backup.ts` for syntax/runtime errors
+2. Test individual components (HMAC verify, base64 decode, timingSafeEqual)
+3. Gradually restore functionality to minimal handler
+4. Deploy and test each addition incrementally
+5. Verify end-to-end flow works
+
+**Workflow:** ONE PR, merge to dev
+
+---
 
 ### 🔜 PRIORITY 1: FINALIZE PHASE 5 (Blocked - Waiting for Domain)
 
