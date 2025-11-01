@@ -18,8 +18,12 @@
 ### Status
 - ✅ Edge Function deployed and responding correctly
 - ✅ Infrastructure validated (Deno imports, Supabase runtime working)
-- ⚠️ Full webhook processing logic temporarily disabled (backed up for restoration)
-- 🔜 Restore full HMAC validation and order splitting workflow
+- ✅ Shopify webhooks connected for Bannos and Flourlane stores
+- ⚠️ **CRITICAL**: Full webhook processing logic temporarily disabled (backed up for restoration)
+- 🔴 **URGENT**: Restore full HMAC validation and order splitting workflow (Task 7b)
+
+### Security Note
+**Current minimal handler accepts all POST requests without validation.** This is a temporary state to unblock infrastructure. Task 7b (restore full handler) is now HIGHEST PRIORITY since webhooks are actively sending data.
 
 **Branch:** `fix/shopify-webhooks-boot-error`  
 **PR:** #157  

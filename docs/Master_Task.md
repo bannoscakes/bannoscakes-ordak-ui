@@ -44,8 +44,8 @@
 
 **Immediate Next Steps:**
 - 🔜 **Task 7b:** Debug and restore full webhook handler from `index_full_backup.ts` (HMAC verify, idempotency)
-- 🔜 **Task 8:** Connect Shopify webhooks for **Bannos** and **Flourlane** (blocked - waiting for ordak.com.au domain)
-- 🔜 Quick live smoke test: verify rows in `processed_webhooks` → `work_queue` → `stage_events`
+- ✅ **Task 8:** Shopify webhooks already connected for **Bannos** and **Flourlane**
+- 🔜 Quick live smoke test: verify rows in `processed_webhooks` → `work_queue` → `stage_events` (once full handler restored)
 - 🔜 (Optional) Add read-only admin monitor for webhook health
 
 **Go/No-Go checklist:**
@@ -90,7 +90,8 @@
 ### 🔜 PRIORITY 1: FINALIZE PHASE 5
 
 #### Task 7b: Restore Full Webhook Handler Logic
-**Status:** NEXT UP (unblocks Task 8)  
+**Status:** NEXT UP (CRITICAL - webhooks are live but handler is minimal)  
+**Priority:** 🔴 HIGHEST  
 **Effort:** ~2-3 hours (debugging + testing)
 
 **Description:**
@@ -99,30 +100,32 @@
 - Restore HMAC verification, idempotency checking, and order splitting logic
 - Test thoroughly in Supabase Edge Functions environment
 
+**Why Critical:**
+- Shopify webhooks are already connected and sending data
+- Current minimal handler accepts all requests without validation
+- No HMAC verification = security risk
+- No idempotency = potential duplicate orders
+- No order splitting = orders not entering production queue
+
 **Steps:**
 1. Review `index_full_backup.ts` for syntax/runtime errors
 2. Test individual components (HMAC verify, base64 decode, timingSafeEqual)
 3. Gradually restore functionality to minimal handler
 4. Deploy and test each addition incrementally
-5. Verify end-to-end flow works
+5. Verify end-to-end flow works with real webhooks
 
 **Workflow:** ONE PR, merge to dev
 
 ---
 
-### 🔜 PRIORITY 1: FINALIZE PHASE 5 (Blocked - Waiting for Domain)
+#### ✅ Task 8: Connect Shopify Webhooks (COMPLETED)
+**Status:** ✅ COMPLETE  
+**Completion Date:** Before 2025-11-01
 
-#### Task 8: Connect Shopify Webhooks
-**Status:** BLOCKED (waiting for ordak.com.au domain to go live)  
-**Effort:** ~1 hour (configuration only)
-
-**Steps:**
-1. Register webhook URLs in Shopify admin for both stores (Bannos + Flourlane)
-2. Verify Supabase secrets are set
-3. Smoke test end-to-end flow (webhook → processed_webhooks → work_queue → stage_events)
-4. Monitor first real orders
-
-**Workflow:** ONE PR to document the setup, merge to dev
+**Details:**
+- Webhook URLs registered in Shopify admin for both stores (Bannos + Flourlane)
+- Supabase secrets configured
+- Webhooks actively sending data to Edge Function
 
 #### Task 8b (Optional): Webhook Monitoring UI
 **Status:** Optional enhancement  
