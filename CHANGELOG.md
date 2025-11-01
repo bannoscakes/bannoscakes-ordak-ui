@@ -1,3 +1,36 @@
+## v0.9.5-beta — Shopify Webhooks Edge Function Stabilized (2025-11-01)
+
+### Fixed
+- **Shopify Webhooks Edge Function Boot Error**: Resolved 503 Service Unavailable errors caused by complex logic in the full webhook handler
+- **Import Resolution**: Switched from import map aliases (`std/`) to direct Deno URLs for reliable Edge Function deployment
+- **RFC 9110 Compliance**: Added `Allow: GET, POST` header to 405 Method Not Allowed responses
+
+### Changed
+- Replaced full `shopify-webhooks` Edge Function with minimal working version
+- Backed up original full implementation to `index_full_backup.ts` for future restoration
+- Added comprehensive JSDoc documentation to meet 80% coverage requirement
+
+### Technical Details
+- **Root Cause**: Worker boot error in Supabase Edge Functions due to syntax/runtime error in complex HMAC validation logic
+- **Solution**: Deployed minimal handler (GET/POST → 200 OK, others → 405) to unblock infrastructure
+- **Next Steps**: Debug and restore full HMAC verification, idempotency, and order splitting logic from backup
+
+### Status
+- ✅ Edge Function deployed and responding correctly
+- ✅ Infrastructure validated (Deno imports, Supabase runtime working)
+- ✅ Shopify webhooks connected for Bannos and Flourlane stores
+- ⚠️ **CRITICAL**: Full webhook processing logic temporarily disabled (backed up for restoration)
+- 🔴 **URGENT**: Restore full HMAC validation and order splitting workflow (Task 7b)
+
+### Security Note
+**Current minimal handler accepts all POST requests without validation.** This is a temporary state to unblock infrastructure. Task 7b (restore full handler) is now HIGHEST PRIORITY since webhooks are actively sending data.
+
+**Branch:** `fix/shopify-webhooks-boot-error`  
+**PR:** #157  
+**Merged:** 2025-11-01
+
+---
+
 ## v0.9.4-beta — Inventory System Complete (2025-10-27)
 
 ### Added
