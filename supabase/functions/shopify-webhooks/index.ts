@@ -435,7 +435,7 @@ serve(async (req) => {
     // Stock deduction + queue work (only if actually inserted)
     await deductOnCreate(norm.shopify_order_gid, norm.order_json);
 
-    // Enqueue split work (optional: legacy compatibility)
+    // Enqueue split work (best-effort: order already persisted above)
     const rpcRes = await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/enqueue_order_split`,
       {
@@ -452,32 +452,10 @@ serve(async (req) => {
           p_body: body as unknown as Record<string, unknown>,
         }),
       }
-    );
+    ).catch(() => null);
 
-    if (!rpcRes.ok) {
-      // 1) mark processed_webhooks as error (per-store idempotency row)
-      const errorParams = new URLSearchParams();
-      errorParams.set("id", `eq.${hookId}`);
-      errorParams.set("shop_domain", `eq.${shopDomain}`);
-      await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${errorParams}`,
-        {
-          method: "PATCH",
-          headers: {
-            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal",
-          },
-          body: JSON.stringify({
-            status: "error",
-            http_hmac: hmac,
-            note: `enqueue_failed: status ${rpcRes.status}`,
-          }),
-        }
-      ).catch(() => {}); // best-effort update
-
-      // 2) dead-letter for investigation
+    if (!rpcRes || !rpcRes.ok) {
+      // Best-effort: log failure but don't fail the webhook (order already inserted)
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
         method: "POST",
         headers: {
@@ -487,12 +465,12 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           created_at: new Date().toISOString(),
-          payload: { topic, shop_domain: shopDomain, hook_id: hookId, rpc_status: rpcRes.status },
+          payload: { topic, shop_domain: shopDomain, hook_id: hookId, rpc_status: rpcRes?.status },
           reason: "enqueue_failed",
         }),
       }).catch(() => {}); // best-effort logging
-
-      return new Response("enqueue failed", { status: 500 });
+      // Note: we don't update processed_webhooks to "error" or return 500
+      // because the order was successfully ingested (the critical operation succeeded)
     }
 
     // Update status to ok
