@@ -140,6 +140,7 @@ async function insertOrder(table: "orders_bannos" | "orders_flourlane", row: any
  * 
  * @param order_gid - Shopify order GID
  * @param payload - Full order JSON payload
+ * @param topic - Actual webhook topic (orders/create or orders/updated)
  * @param hookId - Webhook ID for dead_letter logging
  * @param shopDomain - Shop domain for dead_letter logging
  * @returns Promise<boolean> - true if successful, false if failed
@@ -147,6 +148,7 @@ async function insertOrder(table: "orders_bannos" | "orders_flourlane", row: any
 async function deductOnCreate(
   order_gid: string, 
   payload: unknown, 
+  topic: string,
   hookId: string, 
   shopDomain: string
 ): Promise<boolean> {
@@ -173,7 +175,7 @@ async function deductOnCreate(
         body: JSON.stringify({
           created_at: new Date().toISOString(),
           payload: { 
-            topic: "orders/create", 
+            topic,  // Use actual topic from webhook header
             shop_domain: shopDomain, 
             hook_id: hookId, 
             order_gid,
@@ -198,7 +200,7 @@ async function deductOnCreate(
       body: JSON.stringify({
         created_at: new Date().toISOString(),
         payload: { 
-          topic: "orders/create", 
+          topic,  // Use actual topic from webhook header
           shop_domain: shopDomain, 
           hook_id: hookId, 
           order_gid,
@@ -518,6 +520,7 @@ serve(async (req) => {
     const stockDeducted = await deductOnCreate(
       norm.shopify_order_gid, 
       norm.order_json, 
+      topic,  // Pass actual topic (orders/create or orders/updated)
       hookId, 
       shopDomain
     );
