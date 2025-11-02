@@ -1,6 +1,4 @@
-/// <reference lib="deno.ns" />
-/// <reference lib="dom" />
-
+// @ts-nocheck - Deno globals are available in Supabase Edge Functions runtime
 // supabase/functions/shopify-webhooks/resolve.ts
 
 export function resolveStoreSecret(slugOrDomain?: string | null): string | undefined {
