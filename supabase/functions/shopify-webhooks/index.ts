@@ -242,7 +242,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             status: "error",
-            http_hmac: "valid",
+            http_hmac: hmac,
             note: "invalid JSON payload",
           }),
         }
