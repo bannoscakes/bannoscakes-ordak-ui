@@ -16,6 +16,13 @@ import { resolveStoreSecrets } from "./resolve.ts";
 import { normalizeShopifyOrder } from "./normalize.ts";
 
 // --- HMAC helpers (Deno-safe) -----------------------------------------------
+
+/**
+ * Computes HMAC-SHA256 signature for Shopify webhook verification.
+ * @param bodyBytes - Raw request body as Uint8Array
+ * @param secret - Shopify app secret for HMAC signing
+ * @returns Base64-encoded HMAC signature
+ */
 async function computeShopifyHmacB64(bodyBytes: Uint8Array, secret: string): Promise<string> {
   const keyData = new TextEncoder().encode(secret);
   const key = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -24,6 +31,12 @@ async function computeShopifyHmacB64(bodyBytes: Uint8Array, secret: string): Pro
   return btoa(bin);
 }
 
+/**
+ * Timing-safe comparison of base64-encoded HMAC signatures.
+ * @param providedB64 - HMAC from X-Shopify-Hmac-Sha256 header
+ * @param expectedB64 - Computed HMAC signature
+ * @returns Result object with ok status and optional error note
+ */
 function timingSafeEqualB64(
   providedB64: string | null | undefined,
   expectedB64: string
