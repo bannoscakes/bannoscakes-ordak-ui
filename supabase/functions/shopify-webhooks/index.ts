@@ -322,6 +322,33 @@ serve(async (req) => {
 
     const { ok: hmacOk, note: hmacNote } = await verifyHmac(bodyBytes, hmac, secret ?? "");
     if (!hmacOk || !isTopicAllowed(topic)) {
+      // 🔍 DIAGNOSTIC: Log HMAC failure details to dead_letter for troubleshooting
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: {
+            hook_id: hookId,
+            topic,
+            shop_domain: shopDomain,
+            hmac_ok: hmacOk,
+            topic_allowed: isTopicAllowed(topic),
+            hmac_note: hmacNote,
+            secret_resolved: !!secret,
+            secret_length: secret?.length ?? 0,
+            hmac_header_present: !!hmac,
+            hmac_header_length: hmac?.length ?? 0,
+            body_size_bytes: bodyBytes.length,
+          },
+          reason: "hmac_debug",
+        }),
+      }).catch(() => {}); // best-effort diagnostic logging
+
       // Update status to rejected (don't leak expected HMAC)
       // Use URLSearchParams to safely build query (prevents injection)
       const rejectParams = new URLSearchParams();
