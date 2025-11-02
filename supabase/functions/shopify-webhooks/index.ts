@@ -1,5 +1,4 @@
-/// <reference lib="deno.ns" />
-/// <reference lib="dom" />
+// @ts-nocheck - Deno globals are available in Supabase Edge Functions runtime
 
 /**
  * Shopify webhook handler for Edge Functions.
