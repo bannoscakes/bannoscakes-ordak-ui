@@ -12,7 +12,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { timingSafeEqual } from "https://deno.land/std@0.224.0/crypto/timing_safe_equal.ts";
 import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-import { resolveStoreSecret } from "./resolve.ts";
+import { resolveStoreSecrets } from "./resolve.ts";
 import { normalizeShopifyOrder } from "./normalize.ts";
 
 // --- HMAC helpers (Deno-safe) -----------------------------------------------
@@ -232,7 +232,7 @@ serve(async (req) => {
     const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
 
     // Resolve store secret - MUST use shopDomain from header, not query param (security)
-    const secret = resolveStoreSecret(shopDomain);
+    const { hmacSecret: secret } = resolveStoreSecrets(shopDomain);
 
     // Early validation: must have secret, webhook id, and shop domain
     if (!secret) {
