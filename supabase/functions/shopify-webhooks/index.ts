@@ -13,6 +13,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { timingSafeEqual } from "https://deno.land/std@0.224.0/crypto/timing_safe_equal.ts";
 import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { resolveStoreSecret } from "./resolve.ts";
+import { normalizeShopifyOrder } from "./normalize.ts";
 
 // --- HMAC helpers (Deno-safe) -----------------------------------------------
 async function computeShopifyHmacB64(bodyBytes: Uint8Array, secret: string): Promise<string> {
@@ -79,6 +80,72 @@ function isTopicAllowed(topic: string): boolean {
   const allowlistRaw = Deno.env.get("WEBHOOK_ALLOWLIST") ?? "orders/create,orders/updated";
   const allowlist = allowlistRaw.toLowerCase().split(",").map(t => t.trim());
   return allowlist.includes(topic.toLowerCase());
+}
+
+// --- Order ingestion helpers -----------------------------------------------
+
+/**
+ * Check if an order with the given GID already exists (idempotency).
+ * 
+ * @param table - Target table (orders_bannos or orders_flourlane)
+ * @param gid - Shopify order GID (admin_graphql_api_id)
+ * @returns true if order already exists
+ */
+async function existsByGid(table: "orders_bannos" | "orders_flourlane", gid: string): Promise<boolean> {
+  const params = new URLSearchParams({ 
+    select: "shopify_order_gid", 
+    shopify_order_gid: `eq.${gid}`, 
+    limit: "1" 
+  });
+  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/${table}?${params}`, {
+    headers: {
+      apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+      Accept: "application/json",
+    },
+  });
+  const data = await res.json().catch(() => []);
+  return Array.isArray(data) && data.length > 0;
+}
+
+/**
+ * Insert normalized order into the appropriate table.
+ * 
+ * @param table - Target table (orders_bannos or orders_flourlane)
+ * @param row - Normalized order data
+ */
+async function insertOrder(table: "orders_bannos" | "orders_flourlane", row: any) {
+  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/${table}`, {
+    method: "POST",
+    headers: {
+      apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify(row),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to insert order: ${res.status}`);
+  }
+}
+
+/**
+ * Call the stock deduction RPC after order insert.
+ * 
+ * @param order_gid - Shopify order GID
+ * @param payload - Full order JSON payload
+ */
+async function deductOnCreate(order_gid: string, payload: unknown) {
+  await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/deduct_on_order_create`, {
+    method: "POST",
+    headers: {
+      apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ order_gid, payload }),
+  }).catch(() => {}); // best-effort
 }
 
 serve(async (req) => {
@@ -268,7 +335,57 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    // Enqueue split work (SECURITY DEFINER RPC)
+    // --- Order Ingestion Pipeline -------------------------------------------
+    // Normalize order using kitchen-docket parity rules
+    const norm = normalizeShopifyOrder(body);
+    const table = norm.shopPrefix === "bannos" ? "orders_bannos" : "orders_flourlane";
+
+    // Idempotency: check if order already exists by GID
+    if (!norm.shopify_order_gid) {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: { topic, shop_domain: shopDomain, hook_id: hookId },
+          reason: "missing_order_gid",
+        }),
+      }).catch(() => {});
+      return new Response("missing order_gid", { status: 400 });
+    }
+
+    if (await existsByGid(table, norm.shopify_order_gid)) {
+      // Order already ingested, no-op (idempotent)
+      return new Response("ok", { status: 200 });
+    }
+
+    // Insert normalized order
+    await insertOrder(table, {
+      id: norm.id,
+      shopify_order_id: norm.shopify_order_id,
+      shopify_order_gid: norm.shopify_order_gid,
+      shopify_order_number: norm.shopify_order_number,
+      customer_name: norm.customer_name,
+      product_title: norm.product_title,
+      flavour: norm.flavour,
+      notes: norm.notes,
+      currency: norm.currency,
+      total_amount: norm.total_amount,
+      order_json: norm.order_json,
+      stage: "Filling",
+      priority: null,
+      due_date: norm.due_date,
+      delivery_method: norm.delivery_method
+    });
+
+    // Stock deduction + queue work
+    await deductOnCreate(norm.shopify_order_gid, norm.order_json);
+
+    // Enqueue split work (optional: legacy compatibility)
     const rpcRes = await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/enqueue_order_split`,
       {
