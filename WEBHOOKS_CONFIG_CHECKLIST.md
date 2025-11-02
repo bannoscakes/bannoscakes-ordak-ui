@@ -11,7 +11,7 @@
 **Location:** Supabase Dashboard → Edge Functions → shopify-webhooks → Settings
 
 - [-] `SHOPIFY_APP_SECRET_BANNOS` is set (for Bannos store HMAC validation)
-- [-] `SHOPIFY_APP_SECRET_FLOUR` is set (for Flourlane store HMAC validation)
+- [-] `SHOPIFY_APP_SECRET_FLOURLANE` is set (for Flourlane store HMAC validation)
 - [ ] `SUPABASE_URL` is set to: `https://iwavciibrspfjezujydc.supabase.co`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` is set (for RPC calls)
 - [ ] `SUPABASE_ANON_KEY` is set
@@ -148,7 +148,7 @@ AND routine_name = 'enqueue_order_split';
 ### Flourlane App Credentials
 - [ ] App has "Orders" read permission
 - [ ] Webhooks are configured in this app (not manually)
-- [ ] API secret key is recorded (matches `SHOPIFY_APP_SECRET_FLOUR` in Supabase)
+- [ ] API secret key is recorded (matches `SHOPIFY_APP_SECRET_FLOURLANE` in Supabase)
 
 ---
 
@@ -234,7 +234,7 @@ curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?s
 
 ### Flourlane Store
 - [ ] Copied HMAC secret from Shopify Flourlane app
-- [ ] Pasted into Supabase as `SHOPIFY_APP_SECRET_FLOUR`
+- [ ] Pasted into Supabase as `SHOPIFY_APP_SECRET_FLOURLANE`
 - [ ] Values match exactly (no extra spaces/newlines)
 - [ ] Secret is base64 encoded (if Shopify provides it that way)
 
