@@ -99,10 +99,8 @@ serve(async (req) => {
     const hmac = req.headers.get("X-Shopify-Hmac-Sha256");
     const shopDomain = req.headers.get("X-Shopify-Shop-Domain") ?? "unknown";
 
-    // Resolve store secret using new resolver
-    const url = new URL(req.url);
-    const hint = url.searchParams.get("store") ?? req.headers.get("X-Shopify-Shop-Domain");
-    const secret = resolveStoreSecret(hint);
+    // Resolve store secret - MUST use shopDomain from header, not query param (security)
+    const secret = resolveStoreSecret(shopDomain);
 
     // Early validation: must have secret, webhook id, and shop domain
     if (!secret) {
@@ -115,8 +113,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           created_at: new Date().toISOString(),
-          payload: { topic, shop_domain: shopDomain, hint },
-          reason: `missing_secret_for_${hint}`,
+          payload: { topic, shop_domain: shopDomain },
+          reason: `missing_secret_for_${shopDomain}`,
         }),
       }).catch(() => {}); // best-effort logging
       return new Response("missing secret", { status: 401 });
@@ -197,7 +195,7 @@ serve(async (req) => {
       const rejectParams = new URLSearchParams();
       rejectParams.set("id", `eq.${hookId}`);
       rejectParams.set("shop_domain", `eq.${shopDomain}`);
-      const rejectRes = await fetch(
+      await fetch(
         `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${rejectParams}`,
         {
           method: "PATCH",
@@ -213,10 +211,7 @@ serve(async (req) => {
             note: hmacOk ? "topic not allowed" : (hmacNote ?? "HMAC invalid"),
           }),
         }
-      );
-      if (!rejectRes.ok) {
-        throw new Error(`Failed to record rejected webhook: ${rejectRes.status}`);
-      }
+      ).catch(() => {}); // best-effort: webhook already rejected, don't retry
       return new Response("unauthorized", { status: 401 });
     }
 
@@ -338,7 +333,7 @@ serve(async (req) => {
     const markParams = new URLSearchParams();
     markParams.set("id", `eq.${hookId}`);
     markParams.set("shop_domain", `eq.${shopDomain}`);
-    const markRes = await fetch(
+    await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${markParams}`,
       {
         method: "PATCH",
@@ -353,10 +348,7 @@ serve(async (req) => {
           http_hmac: hmac,
         }),
       }
-    );
-    if (!markRes.ok) {
-      throw new Error(`Failed to mark processed: ${markRes.status}`);
-    }
+    ).catch(() => {}); // best-effort: processing already succeeded, don't retry
 
     return new Response("ok", { status: 200 });
   } catch (e) {
