@@ -10,10 +10,14 @@
  * - Flavour extraction (properties → variant fallback)
  * - Tag fallback for due dates
  * 
+ * SECURITY: Uses authenticatedShopDomain from the HMAC-verified request header
+ * for table routing, NOT the unvalidated order payload's shop_domain field.
+ * 
  * @param order - Raw Shopify order payload from webhook
+ * @param authenticatedShopDomain - Shop domain from X-Shopify-Shop-Domain header (HMAC-verified)
  * @returns Normalized order data ready for DB insertion
  */
-export function normalizeShopifyOrder(order: any) {
+export function normalizeShopifyOrder(order: any, authenticatedShopDomain: string) {
   const toStr = (v: any) => (v == null ? "" : String(v));
   const lc = (s: string) => toStr(s).toLowerCase();
 
@@ -100,7 +104,8 @@ export function normalizeShopifyOrder(order: any) {
   const notes = notesParts.filter(Boolean).join(" • ");
 
   // Shop prefix for table routing and human ID
-  const shopDomain = lc(order?.shop_domain || order?.domain || "");
+  // SECURITY: Use authenticated header domain, NOT payload's shop_domain
+  const shopDomain = lc(authenticatedShopDomain);
   const shopPrefix = shopDomain.includes("bannos") ? "bannos" : "flourlane";
   const humanId = `${shopPrefix}-${order?.order_number || order?.id}`;
 

@@ -342,11 +342,35 @@ serve(async (req) => {
 
     // --- Order Ingestion Pipeline -------------------------------------------
     // Normalize order using kitchen-docket parity rules
-    const norm = normalizeShopifyOrder(body);
+    // SECURITY: Pass authenticated shopDomain from header, not payload
+    const norm = normalizeShopifyOrder(body, shopDomain);
     const table = norm.shopPrefix === "bannos" ? "orders_bannos" : "orders_flourlane";
 
     // Idempotency: check if order already exists by GID
     if (!norm.shopify_order_gid) {
+      // Update webhook status to error before returning
+      const errorParams = new URLSearchParams();
+      errorParams.set("id", `eq.${hookId}`);
+      errorParams.set("shop_domain", `eq.${shopDomain}`);
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${errorParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "error",
+            http_hmac: hmac,
+            note: "missing_order_gid",
+          }),
+        }
+      ).catch(() => {}); // best-effort
+
+      // Also log to dead_letter for investigation
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
         method: "POST",
         headers: {
