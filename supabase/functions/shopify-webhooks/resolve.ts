@@ -1,3 +1,6 @@
+/// <reference lib="deno.ns" />
+/// <reference lib="dom" />
+
 // supabase/functions/shopify-webhooks/resolve.ts
 
 /**

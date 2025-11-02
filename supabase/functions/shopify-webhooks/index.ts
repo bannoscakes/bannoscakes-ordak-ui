@@ -1,3 +1,6 @@
+/// <reference lib="deno.ns" />
+/// <reference lib="dom" />
+
 /**
  * Shopify webhook handler for Edge Functions.
  * 
