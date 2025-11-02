@@ -1,9 +1,9 @@
 # Master Task
 # Master Task List - Ordak Production System
 
-**Current Version:** v0.9.5-beta (~90% complete)  
+**Current Version:** v0.9.6-beta (~95% complete)  
 **Target:** v1.0.0 Production Ready  
-**Last Updated:** 2025-11-01
+**Last Updated:** 2025-11-02
 
 ## ✅ COMPLETED PHASES
 
@@ -33,25 +33,20 @@
 - ✅ All Supabase Preview / CI checks passing  
 - ✅ No mock data required  
 
-### Phase 5: Shopify Integration & Webhooks 🚧 IN PROGRESS (~90%)
-- ✅ Edge Function `shopify-webhooks` infrastructure deployed and responding (v0.9.5-beta)
-- ⚠️ Full HMAC verification logic temporarily disabled (backed up to `index_full_backup.ts`)
-- ✅ `processed_webhooks` + `dead_letter` tables created with consistent statuses (`ok|rejected|error`)
+### Phase 5: Shopify Integration & Webhooks ✅ 100% COMPLETE (v0.9.6-beta)
+- ✅ Edge Function `shopify-webhooks` infrastructure deployed and responding
+- ✅ Full HMAC verification logic restored and production-ready
+- ✅ `processed_webhooks` + `dead_letter` tables with consistent statuses (`ok|rejected|error`)
 - ✅ RPC `enqueue_order_split` → `work_queue(topic,payload,status)`
-- ✅ Worker #1: `process_webhook_order_split` → emits `kitchen_task_create` (A–Z, AA…, accessories on A)
-- ✅ Worker #2: `process_kitchen_task_create` → creates `stage_events` (Filling_pending) with deterministic UUID per order
-- ✅ Queue & stage schemas hardened; unique keys & NOT NULL enforced; preview-safe migrations
-
-**Immediate Next Steps:**
-- 🔜 **Task 7b:** Debug and restore full webhook handler from `index_full_backup.ts` (HMAC verify, idempotency)
-- ✅ **Task 8:** Shopify webhooks already connected for **Bannos** and **Flourlane**
-- 🔜 Quick live smoke test: verify rows in `processed_webhooks` → `work_queue` → `stage_events` (once full handler restored)
-- 🔜 (Optional) Add read-only admin monitor for webhook health
-
-**Go/No-Go checklist:**
-- Supabase secrets set: `SHOPIFY_APP_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_URL`
-- Functions deployed: `shopify-webhooks`, `queue-worker`
-- Sanity curl: `queue-worker?task=split` and `?task=kitchen` return `{"ok":true,"processed":0}`
+- ✅ Worker #1: `process_webhook_order_split` → emits `kitchen_task_create`
+- ✅ Worker #2: `process_kitchen_task_create` → creates `stage_events`
+- ✅ Complete order ingestion pipeline with kitchen-docket parity
+- ✅ Order-level idempotency (race-condition safe)
+- ✅ Stock deduction integration with full error logging
+- ✅ Security hardening (authenticated domain routing, exact matching)
+- ✅ Complete observability (audit trails, dead_letter logging)
+- ✅ Shopify webhooks connected for **Bannos** and **Flourlane**
+- ✅ Production smoke tested: rows flow through `processed_webhooks` → `work_queue` → `stage_events`
 
 ### Phase 6: UI Integration ✅ 100% COMPLETE (v0.6.0-beta, v0.7.0-beta, v0.9.4-beta)
 - ✅ All UI connected to RPCs
@@ -68,79 +63,38 @@
 - **Phase 2 (Queue/Orders):** ✅ 100% Complete  
 - **Phase 3 (Staff Management):** ✅ 100% Complete
 - **Phase 4 (Inventory):** ✅ 100% Complete
-- **Phase 5 (Webhooks):** 🚧 90% Complete (infrastructure working, full logic needs restoration)
+- **Phase 5 (Webhooks):** ✅ 100% Complete
 - **Phase 6 (UI Integration):** ✅ 100% Complete
 - **Phase 7 (Production Readiness):** ⚠️ 0% Complete (not started)
 
-**Overall Progress:** ~90% Complete
+**Overall Progress:** ~95% Complete
 
 ---
 
 ## 📋 WHAT'S LEFT TO DO
 
-### ✅ COMPLETED TASKS (v0.9.0 - v0.9.5)
+### ✅ COMPLETED TASKS (v0.9.0 - v0.9.6)
 - ✅ **Task 1:** Clean Mock Order Data (v0.9.0-beta, PR #117)
 - ✅ **Tasks 2-6:** Complete Inventory UI (All 5 tabs connected, v0.9.4-beta)
 - ✅ **Task 7:** Shopify Edge Functions (v0.9.2-beta)
 - ✅ **Task 7a:** Fix Shopify Webhooks Boot Error (v0.9.5-beta, PR #157)
   - Resolved 503 errors in `shopify-webhooks` Edge Function
-  - Deployed minimal working version
-  - Backed up full logic to `index_full_backup.ts` for restoration
+  - Deployed minimal working version as temporary fix
+  - Full logic successfully restored in Task 7b
+- ✅ **Task 7b:** Complete Webhook Order Ingestion Pipeline (v0.9.6-beta, PR #160) **COMPLETED 2025-11-02**
+  - Implemented full order ingestion pipeline with kitchen-docket parity
+  - Added order-level idempotency (race-condition safe)
+  - Integrated stock deduction with error logging
+  - Applied security hardening (authenticated domain routing)
+  - Implemented complete observability (audit trails, dead_letter)
+  - Fixed 8 critical bugs identified during development
+- ✅ **Task 8:** Shopify Webhooks Connected (COMPLETED)
+  - Webhook URLs registered in Shopify admin for both stores (Bannos + Flourlane)
+  - Supabase secrets configured
+  - Webhooks actively sending data to Edge Function
+  - End-to-end flow verified: webhooks → processed_webhooks → work_queue → stage_events
 
-### 🔜 PRIORITY 1: FINALIZE PHASE 5
-
-#### Task 7b: Restore Full Webhook Handler Logic
-**Status:** NEXT UP (CRITICAL - webhooks are live but handler is minimal)  
-**Priority:** 🔴 HIGHEST  
-**Effort:** ~2-3 hours (debugging + testing)
-
-**Description:**
-- Debug the original full webhook handler code (currently in `index_full_backup.ts`)
-- Identify and fix the runtime error causing boot failures
-- Restore HMAC verification, idempotency checking, and order splitting logic
-- Test thoroughly in Supabase Edge Functions environment
-
-**Why Critical:**
-- Shopify webhooks are already connected and sending data
-- Current minimal handler accepts all requests without validation
-- No HMAC verification = security risk
-- No idempotency = potential duplicate orders
-- No order splitting = orders not entering production queue
-
-**Steps:**
-1. Review `index_full_backup.ts` for syntax/runtime errors
-2. Test individual components (HMAC verify, base64 decode, timingSafeEqual)
-3. Gradually restore functionality to minimal handler
-4. Deploy and test each addition incrementally
-5. Verify end-to-end flow works with real webhooks
-
-**Workflow:** ONE PR, merge to dev
-
----
-
-#### ✅ Task 8: Connect Shopify Webhooks (COMPLETED)
-**Status:** ✅ COMPLETE  
-**Completion Date:** Before 2025-11-01
-
-**Details:**
-- Webhook URLs registered in Shopify admin for both stores (Bannos + Flourlane)
-- Supabase secrets configured
-- Webhooks actively sending data to Edge Function
-
-#### Task 8b (Optional): Webhook Monitoring UI
-**Status:** Optional enhancement  
-**Effort:** ~2-3 hours
-
-**Description:**
-- Read-only admin page for `processed_webhooks`, `work_queue`, `dead_letter`
-- Show webhook health, processing stats, error rates
-- Useful for debugging and monitoring
-
-**Workflow:** ONE PR, merge to dev
-
----
-
-### 🔴 PRIORITY 2: PRODUCTION READINESS (Must Complete Before Go-Live)
+### 🔜 PRIORITY 1: PRODUCTION READINESS (Must Complete Before Go-Live)
 
 #### Task 9: Mobile Testing & Responsiveness 🔴 CRITICAL
 **Status:** NOT STARTED  
