@@ -176,14 +176,14 @@ curl -i -X POST https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-we
 - [ ] Response body: `ok`
 - [ ] No errors in response
 
-### Test 3: PUT Request (Should Reject)
+### Test 3: PUT Request (Non-Order Topic)
 ```bash
 curl -i -X PUT https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=bannos
 ```
 
-- [ ] Response status: 405 Method Not Allowed
-- [ ] Response body: `method not allowed`
-- [ ] Header includes: `Allow: GET, POST`
+- [ ] Response status: 200 OK
+- [ ] Response body: `ok`
+- [ ] Note: Simplified handler accepts all methods for non-order topics
 
 ### Test 4: Flourlane GET Request
 ```bash
