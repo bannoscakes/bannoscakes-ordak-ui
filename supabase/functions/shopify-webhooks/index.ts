@@ -140,17 +140,75 @@ async function insertOrder(table: "orders_bannos" | "orders_flourlane", row: any
  * 
  * @param order_gid - Shopify order GID
  * @param payload - Full order JSON payload
+ * @param hookId - Webhook ID for dead_letter logging
+ * @param shopDomain - Shop domain for dead_letter logging
+ * @returns Promise<boolean> - true if successful, false if failed
  */
-async function deductOnCreate(order_gid: string, payload: unknown) {
-  await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/deduct_on_order_create`, {
-    method: "POST",
-    headers: {
-      apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ order_gid, payload }),
-  }).catch(() => {}); // best-effort
+async function deductOnCreate(
+  order_gid: string, 
+  payload: unknown, 
+  hookId: string, 
+  shopDomain: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/deduct_on_order_create`, {
+      method: "POST",
+      headers: {
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ order_gid, payload }),
+    });
+    
+    if (!res.ok) {
+      // Log stock deduction failure to dead_letter for manual intervention
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: { 
+            topic: "orders/create", 
+            shop_domain: shopDomain, 
+            hook_id: hookId, 
+            order_gid,
+            rpc_status: res.status 
+          },
+          reason: "stock_deduction_failed",
+        }),
+      }).catch(() => {}); // best-effort logging
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    // Network error or other exception
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+      method: "POST",
+      headers: {
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        created_at: new Date().toISOString(),
+        payload: { 
+          topic: "orders/create", 
+          shop_domain: shopDomain, 
+          hook_id: hookId, 
+          order_gid,
+          error: String(error)
+        },
+        reason: "stock_deduction_exception",
+      }),
+    }).catch(() => {}); // best-effort logging
+    return false;
+  }
 }
 
 serve(async (req) => {
@@ -457,7 +515,12 @@ serve(async (req) => {
     }
 
     // Stock deduction + queue work (only if actually inserted)
-    await deductOnCreate(norm.shopify_order_gid, norm.order_json);
+    const stockDeducted = await deductOnCreate(
+      norm.shopify_order_gid, 
+      norm.order_json, 
+      hookId, 
+      shopDomain
+    );
 
     // Enqueue split work (best-effort: order already persisted above)
     const rpcRes = await fetch(
@@ -497,7 +560,7 @@ serve(async (req) => {
       // because the order was successfully ingested (the critical operation succeeded)
     }
 
-    // Update status to ok
+    // Update status to ok (or ok with warning if stock deduction failed)
     // Use URLSearchParams to safely build query (prevents injection)
     const markParams = new URLSearchParams();
     markParams.set("id", `eq.${hookId}`);
@@ -515,6 +578,7 @@ serve(async (req) => {
         body: JSON.stringify({
           status: "ok",
           http_hmac: hmac,
+          note: stockDeducted ? undefined : "warning: stock_deduction_failed (see dead_letter)",
         }),
       }
     ).catch(() => {}); // best-effort: processing already succeeded, don't retry
