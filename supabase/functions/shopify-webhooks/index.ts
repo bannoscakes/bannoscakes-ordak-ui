@@ -110,24 +110,29 @@ async function existsByGid(table: "orders_bannos" | "orders_flourlane", gid: str
 
 /**
  * Insert normalized order into the appropriate table.
+ * Uses resolution=ignore-duplicates to handle race conditions gracefully.
  * 
  * @param table - Target table (orders_bannos or orders_flourlane)
  * @param row - Normalized order data
+ * @returns true if inserted, false if duplicate (race condition)
  */
-async function insertOrder(table: "orders_bannos" | "orders_flourlane", row: any) {
+async function insertOrder(table: "orders_bannos" | "orders_flourlane", row: any): Promise<boolean> {
   const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/${table}`, {
     method: "POST",
     headers: {
       apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal",
+      Prefer: "return=representation,resolution=ignore-duplicates",
     },
     body: JSON.stringify(row),
   });
   if (!res.ok) {
     throw new Error(`Failed to insert order: ${res.status}`);
   }
+  // If response body is empty, it was a duplicate (gracefully ignored)
+  const data = await res.json().catch(() => null);
+  return data !== null && (Array.isArray(data) ? data.length > 0 : !!data);
 }
 
 /**
@@ -383,8 +388,8 @@ serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    // Insert normalized order
-    await insertOrder(table, {
+    // Insert normalized order (race-safe with resolution=ignore-duplicates)
+    const wasInserted = await insertOrder(table, {
       id: norm.id,
       shopify_order_id: norm.shopify_order_id,
       shopify_order_gid: norm.shopify_order_gid,
@@ -402,7 +407,32 @@ serve(async (req) => {
       delivery_method: norm.delivery_method
     });
 
-    // Stock deduction + queue work
+    // If duplicate detected at insert time (race condition), mark as processed and exit
+    if (!wasInserted) {
+      const raceParams = new URLSearchParams();
+      raceParams.set("id", `eq.${hookId}`);
+      raceParams.set("shop_domain", `eq.${shopDomain}`);
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${raceParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "ok",
+            http_hmac: hmac,
+            note: "duplicate_order_gid_race",
+          }),
+        }
+      ).catch(() => {}); // best-effort
+      return new Response("ok", { status: 200 });
+    }
+
+    // Stock deduction + queue work (only if actually inserted)
     await deductOnCreate(norm.shopify_order_gid, norm.order_json);
 
     // Enqueue split work (optional: legacy compatibility)
