@@ -17,9 +17,9 @@ export function resolveStoreSecret(slugOrDomain?: string | null): string | undef
     return Deno.env.get("SHOPIFY_APP_SECRET_BANNOS") ?? undefined;
   }
 
-  // Flour Lane
+  // Flour Lane - use exact matches or full domain only to avoid false positives
   if (
-    s.includes("flour-lane") || s.includes("flourlane") || s.includes("flour") ||
+    s === "flour-lane" || s === "flourlane" || s === "flour" ||
     s.endsWith("flour-lane.myshopify.com")
   ) {
     return (
