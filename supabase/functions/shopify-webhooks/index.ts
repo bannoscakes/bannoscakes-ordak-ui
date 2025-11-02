@@ -119,7 +119,7 @@ serve(async (req) => {
           payload: { topic, shop_domain: shopDomain, hint },
           reason: `missing_secret_for_${hint}`,
         }),
-      });
+      }).catch(() => {}); // best-effort logging
       return new Response("missing secret", { status: 401 });
     }
     if (!hookId) {
@@ -135,7 +135,7 @@ serve(async (req) => {
           payload: { topic, shop_domain: shopDomain },
           reason: "missing_webhook_id",
         }),
-      });
+      }).catch(() => {}); // best-effort logging
       return new Response("missing webhook id", { status: 400 });
     }
     if (shopDomain === "unknown") {
@@ -151,7 +151,7 @@ serve(async (req) => {
           payload: { topic },
           reason: "missing_shop_domain",
         }),
-      });
+      }).catch(() => {}); // best-effort logging
       return new Response("missing shop domain", { status: 400 });
     }
 
@@ -295,29 +295,32 @@ serve(async (req) => {
 
     if (!rpcRes.ok) {
       // 1) mark processed_webhooks as error (per-store idempotency row)
-      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks`, {
-        method: "POST",
-      headers: {
-        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-          "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates",
-        },
-        body: JSON.stringify({
-          id: hookId,
-          shop_domain: shopDomain,
-          topic,
-          status: "error",
-          http_hmac: hmac,
-          note: `enqueue_failed: status ${rpcRes.status}`,
-        }),
-      });
+      const errorParams = new URLSearchParams();
+      errorParams.set("id", `eq.${hookId}`);
+      errorParams.set("shop_domain", `eq.${shopDomain}`);
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${errorParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "error",
+            http_hmac: hmac,
+            note: `enqueue_failed: status ${rpcRes.status}`,
+          }),
+        }
+      ).catch(() => {}); // best-effort update
 
       // 2) dead-letter for investigation
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
         method: "POST",
-      headers: {
-        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
         },
@@ -326,7 +329,7 @@ serve(async (req) => {
           payload: { topic, shop_domain: shopDomain, hook_id: hookId, rpc_status: rpcRes.status },
           reason: "enqueue_failed",
         }),
-      });
+      }).catch(() => {}); // best-effort logging
 
       return new Response("enqueue failed", { status: 500 });
     }
