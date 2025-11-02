@@ -102,10 +102,26 @@ serve(async (req) => {
 
     // Resolve store secret using new resolver
     const url = new URL(req.url);
-    const hint = url.searchParams.get("store") ?? shopDomain;
+    const hint = url.searchParams.get("store") ?? req.headers.get("X-Shopify-Shop-Domain");
     const secret = resolveStoreSecret(hint);
 
-    // Early validation: must have webhook id and shop domain
+    // Early validation: must have secret, webhook id, and shop domain
+    if (!secret) {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
+        method: "POST",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          created_at: new Date().toISOString(),
+          payload: { topic, shop_domain: shopDomain, hint },
+          reason: `missing_secret_for_${hint}`,
+        }),
+      });
+      return new Response("missing secret", { status: 401 });
+    }
     if (!hookId) {
       await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/dead_letter`, {
         method: "POST",
