@@ -359,7 +359,27 @@ serve(async (req) => {
     }
 
     if (await existsByGid(table, norm.shopify_order_gid)) {
-      // Order already ingested, no-op (idempotent)
+      // Order already ingested, mark webhook as processed (idempotent)
+      const dupParams = new URLSearchParams();
+      dupParams.set("id", `eq.${hookId}`);
+      dupParams.set("shop_domain", `eq.${shopDomain}`);
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/rest/v1/processed_webhooks?${dupParams}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "ok",
+            http_hmac: hmac,
+            note: "duplicate_order_gid",
+          }),
+        }
+      ).catch(() => {}); // best-effort
       return new Response("ok", { status: 200 });
     }
 
