@@ -30,8 +30,10 @@
     "preflight": "bash scripts/preflight-no-dupes.sh",
     "security:validate": "npm run guard:no-direct-writes && npm run type-check",
     "test:e2e": "playwright test --reporter=line",
-    "fn:dev:webhooks": "supabase functions serve shopify-webhooks --no-verify-jwt",
-    "fn:deploy:webhooks": "supabase functions deploy shopify-webhooks --no-verify-jwt",
+    "fn:dev:bannos": "supabase functions serve shopify-webhooks-bannos --no-verify-jwt",
+    "fn:deploy:bannos": "supabase functions deploy shopify-webhooks-bannos --no-verify-jwt",
+    "fn:dev:flourlane": "supabase functions serve shopify-webhooks-flourlane --no-verify-jwt",
+    "fn:deploy:flourlane": "supabase functions deploy shopify-webhooks-flourlane --no-verify-jwt",
     "fn:dev:worker": "supabase functions serve queue-worker --no-verify-jwt",
     "fn:deploy:worker": "supabase functions deploy queue-worker --no-verify-jwt"
   },

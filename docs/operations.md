@@ -32,8 +32,9 @@ Copy code
 SUPABASE_SERVICE_ROLE_KEY=[SERVICE_ROLE]
 SHOPIFY_BANNOS_TOKEN=[ADMIN_API_TOKEN]
 SHOPIFY_FLOURLANE_TOKEN=[ADMIN_API_TOKEN]
-SHOPIFY_WEBHOOK_SECRET=[WEBHOOK_HMAC_SECRET]
 SLACK_WEBHOOK_URL=[SLACK_WEBHOOK]
+
+**Note:** HMAC verification has been removed. No webhook secrets needed.
 
 markdown
 Copy code
@@ -88,11 +89,22 @@ Copy code
 ---
 
 ## Shopify Webhook Setup
-- **Event**: `orders/create` (and `orders/cancel`)  
-- **URL**: `https://[your-domain]/api/v1/webhooks/shopify`  
+
+Each store has its own dedicated webhook endpoint:
+
+### Bannos Store
+- **Event**: `orders/create`  
+- **URL**: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos`  
 - **Format**: JSON  
-- **API Version**: `2024-01`  
-- **Verify**: HMAC with `SHOPIFY_WEBHOOK_SECRET` on every request
+- **API Version**: `2024-10` (or later)
+
+### Flourlane Store
+- **Event**: `orders/create`  
+- **URL**: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane`  
+- **Format**: JSON  
+- **API Version**: `2024-10` (or later)
+
+**Note:** No HMAC verification. Webhooks are metafield-driven.
 
 ---
 
@@ -105,7 +117,7 @@ Copy code
 
 ### Integration
 - DB transactions for orders/inventory flows  
-- Shopify webhook **HMAC verification** + **dedupe**  
+- Shopify webhook **idempotency** + **metafield processing**  
 - `work_queue` enqueue and retry backoff
 
 ### End-to-End

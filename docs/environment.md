@@ -70,8 +70,6 @@ SHOPIFY_BANNOS_TOKEN
 
 SHOPIFY_FLOURLANE_TOKEN
 
-SHOPIFY_WEBHOOK_SECRET
-
 SLACK_WEBHOOK_URL
 
 (optional) LOG_LEVEL=info|debug
@@ -84,20 +82,19 @@ Copy code
 SUPABASE_SERVICE_ROLE_KEY=
 SHOPIFY_BANNOS_TOKEN=
 SHOPIFY_FLOURLANE_TOKEN=
-SHOPIFY_WEBHOOK_SECRET=
 SLACK_WEBHOOK_URL=
 LOG_LEVEL=info
 Deploying secrets to Supabase (recommended):
 
 bash
 Copy code
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=... SHOPIFY_BANNOS_TOKEN=... SHOPIFY_FLOURLANE_TOKEN=... SHOPIFY_WEBHOOK_SECRET=... SLACK_WEBHOOK_URL=...
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=... SHOPIFY_BANNOS_TOKEN=... SHOPIFY_FLOURLANE_TOKEN=... SLACK_WEBHOOK_URL=...
 Store mapping (informational)
-Bannos: uses SHOPIFY_BANNOS_TOKEN, domain like bannos…
+Bannos: uses SHOPIFY_BANNOS_TOKEN
 
-Flourlane: uses SHOPIFY_FLOURLANE_TOKEN, domain like flourlane…
+Flourlane: uses SHOPIFY_FLOURLANE_TOKEN
 
-Edge routes pick the correct store by shop domain in the webhook payload.
+Each store has its own dedicated webhook Edge Function.
 
 Quick verification
 Frontend (in app code):
@@ -118,7 +115,7 @@ Add /edge/health that returns { up: true, db_ms: <ping> }.
 On boot, log which store tokens are present (never log their values).
 
 Rotations & hygiene
-Rotate service role, Shopify tokens, webhook secret, and Slack webhook every 90 days or on staff change.
+Rotate service role, Shopify tokens, and Slack webhook every 90 days or on staff change.
 
 After rotation:
 
@@ -133,11 +130,11 @@ Keep a secure notes record (who rotated, when, where updated).
 Gotchas
 Vite only exposes envs with the VITE_ prefix.
 
-Don’t reference service_role keys in the browser.
+Don't reference service_role keys in the browser.
 
-If webhook validation fails: re-check SHOPIFY_WEBHOOK_SECRET and shop domain mapping.
+If webhooks fail: check Supabase Edge Function logs and verify SUPABASE_SERVICE_ROLE_KEY is set.
 
-If the app can’t read from DB locally: verify VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY and that RLS allows select.
+If the app can't read from DB locally: verify VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY and that RLS allows select.
 
 Checklist (per environment)
 Dev
