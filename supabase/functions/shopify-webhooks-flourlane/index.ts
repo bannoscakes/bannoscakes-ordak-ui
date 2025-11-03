@@ -21,67 +21,44 @@ serve(async (req) => {
     
     const data = JSON.parse(metafield.value);
     
-    // Parse date: "Fri 28 Nov 2025" → "2025-11-28"
-    const parseDate = (dateStr: string): string => {
-      if (!dateStr) return "";
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return "";
-      return date.toISOString().split('T')[0];
-    };
-    
-    // Extract flavour from metafield line_items
-    const extractFlavourFromMetafield = (): string => {
-      const lineItems = data.line_items || [];
-      const primaryItem = lineItems[0];
-      if (!primaryItem) return "";
-      
-      // Check properties for gelato flavours
-      const props = primaryItem.properties || [];
-      const flavourProp = props.find((p: any) => 
-        /gelato flavour(s)?/i.test(p.name || "")
-      );
-      
-      if (flavourProp?.value) {
-        return String(flavourProp.value)
-          .split(/[\n,/]/)
-          .map(s => s.trim())
-          .filter(Boolean)
-          .join(", ");
+    // Check idempotency: if order already exists, skip
+    const checkRes = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/rest/v1/orders_flourlane?shopify_order_gid=eq.${order.admin_graphql_api_id}&select=id`,
+      {
+        method: "GET",
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+        },
       }
-      
-      // Fallback: extract from variant title if available in metafield
-      const variant = primaryItem.variant_title || "";
-      const parts = variant.split(/[/]/);
-      return parts[1]?.trim() || "";
-    };
+    );
     
-    // Parse due_date with fallbacks
-    let due_date = parseDate(data.delivery_date);
-    
-    // Fallback: use order created_at date if available
-    if (!due_date && order?.created_at) {
-      const createdDate = new Date(order.created_at);
-      if (!isNaN(createdDate.getTime())) {
-        due_date = createdDate.toISOString().split('T')[0];
+    if (checkRes.ok) {
+      const existing = await checkRes.json();
+      if (existing.length > 0) {
+        console.log("Order already exists, skipping");
+        return new Response("ok", { status: 200 });
       }
     }
     
-    // Final fallback: current UTC date
-    if (!due_date) {
-      due_date = new Date().toISOString().split('T')[0];
-    }
+    // Parse date
+    const due_date = data.delivery_date 
+      ? new Date(data.delivery_date).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
     
+    // Map fields directly from metafield
     const delivery_method = data.is_pickup ? "pickup" : "delivery";
+    const primaryItem = data.line_items?.[0] || {};
     
-    // Build row for database (use metafield data)
+    // Build row for database
     const row = {
       id: `flourlane-${order.order_number || order.id}`,
       shopify_order_id: order.id,
       shopify_order_gid: order.admin_graphql_api_id,
       shopify_order_number: order.order_number,
       customer_name: data.customer_name || "",
-      product_title: data.line_items?.[0]?.title || "",
-      flavour: extractFlavourFromMetafield(),
+      product_title: primaryItem.title || "",
+      flavour: primaryItem.properties?.["Gelato Flavours"] || "",
       notes: data.order_notes || "",
       currency: order.currency || "AUD",
       total_amount: Number(order.total_price || 0),

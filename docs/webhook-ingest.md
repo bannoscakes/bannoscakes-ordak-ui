@@ -1,202 +1,118 @@
-# Webhook Ingest (Orders → Ordak) — Kitchen-Docket Parity
+# Webhook Ingest (Orders → Ordak) — Metafield-Driven
 
-Purpose: make the webhook show the **exact same information** you trust on the kitchen docket.  
-All extraction rules below mirror your docket template.
+Purpose: Ingest orders from Shopify webhooks using the `ordak.kitchen_json` metafield created by Shopify Flow.
 
 ---
 
 ## Source & Idempotency
 
 - **Topic:** `orders/create` (per store)
-- **Idempotency key:** `order.admin_graphql_api_id` (`order_gid`)
-- If a payload with the same `order_gid` arrives again → **no-op** (return 200)
+- **Idempotency key:** `order.admin_graphql_api_id` (order_gid)
+- Check: Query database for existing `shopify_order_gid` before insert
+- If exists → return 200 (no-op, no duplicate processing)
 
 ---
 
-## Store Mapping
+## Store Separation
 
-Choose table by shop domain:
+Two separate Edge Functions handle webhooks independently:
 
-- `bannos…` → `orders_bannos`  
-- `flourlane…` → `orders_flourlane`
+- **Bannos:** `shopify-webhooks-bannos` → inserts to `orders_bannos`
+- **Flourlane:** `shopify-webhooks-flourlane` → inserts to `orders_flourlane`
+
+Each function:
+- Has its own deployment URL
+- Is completely independent
+- Can be deployed/tested separately
+- If one breaks, the other continues working
 
 ---
 
 ## Field Mapping (from Metafield)
 
-Orders are ingested from the `ordak.kitchen_json` metafield created by Shopify Flow. The metafield contains:
+All order data comes from the `ordak.kitchen_json` metafield created by Shopify Flow.
 
-- `order_number`: Order name (e.g., "#B24422")
-- `delivery_date`: Date string (parsed to YYYY-MM-DD format)
-- `is_pickup`: Boolean for pickup vs delivery
-- `customer_name`: Shipping or customer name
-- `order_notes`: Order note
-- `order_tags`: Comma-separated tags (cleaned to remove km, $, times)
-- `line_items[]`: Array with title, quantity, image_url, properties
-
-Flavour extraction reads from `data.line_items[].properties` for gelato cakes (from metafield).
-
-Notes are taken directly from `data.order_notes` (pre-aggregated by Shopify Flow).
-
----
-
-## Primary Line Item
-
-The first line item from `data.line_items[]` (metafield) is used for product_title and flavour extraction.
-
----
-
-## Flavour Extraction Rules
-
-Flavour extraction is performed on the metafield data. For the primary line item only:
-
-Line item properties: search `data.line_items[0].properties` for keys containing "gelato flavour" or "gelato flavours" (case insensitive). Use the associated value, splitting on newlines, commas or / to handle multiple flavours. Trim and join with ", ".
-
-Variant fallback: if no matching property is found, split `variant_title` on / and take the second token. This supports cakes where the flavour is encoded in the variant (e.g. "Chocolate / 10").
+| Target column | Source |
+|---|---|
+| `id` | `bannos-<order_number>` or `flourlane-<order_number>` |
+| `shopify_order_id` | `order.id` (from webhook) |
+| `shopify_order_gid` | `order.admin_graphql_api_id` (from webhook) |
+| `shopify_order_number` | `order.order_number` (from webhook) |
+| `customer_name` | `metafield.customer_name` |
+| `product_title` | `metafield.line_items[0].title` |
+| `flavour` | `metafield.line_items[0].properties["Gelato Flavours"]` or empty string |
+| `notes` | `metafield.order_notes` |
+| `currency` | `order.currency` (from webhook) |
+| `total_amount` | `order.total_price` (from webhook) |
+| `order_json` | Full raw webhook payload (jsonb) |
+| `stage` | 'Filling' (hardcoded) |
+| `due_date` | Parse `metafield.delivery_date` to YYYY-MM-DD format |
+| `delivery_method` | `metafield.is_pickup` ? "pickup" : "delivery" |
 
 ---
 
-## Persist Logic (Separate Edge Functions)
+## Date Parsing
 
-Two independent Edge Functions handle webhook ingestion:
-
-- `shopify-webhooks-bannos` → inserts to `orders_bannos`
-- `shopify-webhooks-flourlane` → inserts to `orders_flourlane`
-
-Each function:
-1. Reads `ordak.kitchen_json` metafield from webhook payload
-2. Parses delivery date to YYYY-MM-DD format
-3. Cleans order tags
-4. Extracts flavours from line item properties
-5. Inserts row with stage='Filling'
-6. Calls `deduct_on_order_create` RPC
-7. Calls `enqueue_order_split` RPC
-
-## Post‑Ingest: Task Splitting
-
-The ingestion pipeline does not split multi‑cake orders into separate records. Instead, splitting happens after ingestion when generating tasks for the kitchen. See `orders-splitting.md` for details on how to create suffixed tasks (A, B, C) and assign accessories to the first ticket. By separating splitting from ingestion, you avoid duplicate records and keep the webhook logic simple and idempotent.
+The metafield contains human-readable dates (e.g., "Fri 28 Nov 2025"). Convert to PostgreSQL date format:
+```typescript
+const due_date = new Date(data.delivery_date).toISOString().split('T')[0];
+// Input: "Fri 28 Nov 2025"
+// Output: "2025-11-28"
+```
 
 ---
 
-## Test Fixtures
+## Flavour Extraction
 
-Prepare redacted JSON payloads covering edge cases and validate that normalisation produces the expected results:
+Read from metafield line items properties:
+```typescript
+const flavour = data.line_items[0]?.properties?.["Gelato Flavours"] || "";
+```
 
-Gelato cake with flavours in properties: ensure multiple flavours split correctly and variant fallback is not used.
-
-Standard cake with flavours in variant title: confirm the variant fallback extracts the flavour.
-
-Orders with internal properties: verify blacklisted properties are ignored and do not contaminate flavours.
-
-Missing delivery date attribute: ensure tags fallback is used.
-
-Pickup orders: confirm is_pickup is set and due date still extracted.
+For sponge cakes, the properties object is empty, resulting in empty flavour (correct behavior).
 
 ---
 
-## Implementation Pointer (Pure Normalizer)
+## Persist Logic (Edge Function Flow)
 
-A pure function that mirrors the docket rules (attributes-first date/method, property blacklist, flavour extraction).  
-Use this in the Edge route **before** any DB writes.
+Each Edge Function follows this sequence:
 
-```ts
-// src/lib/normalizeShopifyOrder.ts
-export function normalizeShopifyOrder(order: any) {
-  const toStr = (v: any) => (v == null ? "" : String(v));
-  const lc = (s: string) => toStr(s).toLowerCase();
+1. **Read metafield:** Extract `ordak.kitchen_json` from webhook payload
+2. **Idempotency check:** Query database for existing `shopify_order_gid`
+   - If exists → return 200 immediately (skip all remaining steps)
+3. **Parse delivery date:** Convert string to YYYY-MM-DD format
+4. **Extract flavour:** Read from metafield line items properties
+5. **Build row:** Map all fields to database columns
+6. **Insert:** Write to appropriate table with `resolution=ignore-duplicates`
+7. **Stock deduction:** Call `deduct_on_order_create(order_gid, payload)` RPC (best-effort, non-blocking)
+8. **Order splitting:** Call `enqueue_order_split(order_gid, payload)` RPC (best-effort, non-blocking)
+9. **Return 200:** Acknowledge webhook to Shopify
 
-  // Read both note_attributes and attributes[]
-  const getAttr = (key: string): string => {
-    const fromNotes = (order?.note_attributes || []).find((a: any) => lc(a?.name) === lc(key));
-    if (fromNotes?.value) return toStr(fromNotes.value);
+If any step fails before insert → return 500 (Shopify will retry)
+If RPC calls fail → tolerate silently (best-effort)
 
-    const attrs = order?.attributes;
-    if (attrs && typeof attrs === "object") {
-      if (Array.isArray(attrs)) {
-        const hit = attrs.find((a: any) => lc(a?.name) === lc(key));
-        return hit?.value ? toStr(hit.value) : "";
-      }
-      if (attrs[key] != null) return toStr(attrs[key]);
-      const k = Object.keys(attrs).find((k) => lc(k) === lc(key));
-      if (k) return toStr(attrs[k]);
-    }
-    return "";
-  };
+---
 
-  const isInternal = (name = "") =>
-    !!name &&
-    (name.startsWith("_") ||
-      name.includes("_origin") ||
-      name.includes("_raw") ||
-      name.includes("gwp") ||
-      name.includes("_LocalDeliveryID"));
+## Post-Ingest: Task Splitting
 
-  const splitClean = (s: string) =>
-    toStr(s).split(/\r?\n|[,/]/).map(x => x.trim()).filter(Boolean);
+The ingestion pipeline does NOT split multi-cake orders into separate records. Splitting happens asynchronously via `enqueue_order_split` RPC. See `docs/orders-splitting.md` for task generation details.
 
-  // Primary line item for DB fields
-  const primary = (order?.line_items || []).find(
-    (li: any) => !li?.gift_card && Number(li?.quantity || 0) > 0
-  );
+---
 
-  // Flavour: properties → variant fallback
-  const fromProps = (): string => {
-    const props: any[] = primary?.properties || [];
-    const visible = props.filter((p) => !isInternal(p?.name || p?.first));
-    const hit = visible.find((p) => /gelato flavour(s)?/i.test(toStr(p?.name || p?.first)));
-    const val = toStr(hit?.value || hit?.last || "");
-    return splitClean(val).join(", ");
-  };
+## Deployment
 
-  const fromVariant = (): string => {
-    const vt = toStr(primary?.variant_title || "");
-    return splitClean(vt)[0] || "";
-  };
+Deploy each function independently:
+```bash
+# Deploy Bannos webhook
+npm run fn:deploy:bannos
 
-  const flavour = fromProps() || fromVariant();
+# Deploy Flourlane webhook
+npm run fn:deploy:flourlane
+```
 
-  // Human ID (barcode-friendly)
-  const shopPrefix = /bannos/i.test(order?.shop_domain || order?.domain || "") ? "bannos" : "flourlane";
-  const humanId = `${shopPrefix}-${order?.order_number || order?.id}`;
+Configure Shopify webhook URLs:
 
-  // Due date + method (attributes-first, docket parity)
-  const rawDue = getAttr("Local Delivery Date and Time");
-  let due_date = "";
-  if (rawDue) due_date = toStr(rawDue).split(/between/i)[0].trim();
+- **Bannos store:** `https://{project}.supabase.co/functions/v1/shopify-webhooks-bannos`
+- **Flourlane store:** `https://{project}.supabase.co/functions/v1/shopify-webhooks-flourlane`
 
-  const methodAttr = lc(getAttr("Delivery Method"));
-  const delivery_method = /pickup|pick up/.test(methodAttr) ? "pickup" : "delivery";
-
-  // Notes + delivery instructions
-  const notesParts: string[] = [];
-  if (order?.note) notesParts.push(toStr(order.note).trim());
-  const deliveryInstr = getAttr("Delivery Instructions");
-  if (deliveryInstr) notesParts.push(deliveryInstr.trim());
-  const notes = notesParts.filter(Boolean).join(" • ");
-
-  return {
-    id: humanId,
-    shopify_order_id: order?.id,
-    shopify_order_gid: order?.admin_graphql_api_id,
-    shopify_order_number: order?.order_number,
-    customer_name: toStr(order?.shipping_address?.name || order?.customer?.name || "").trim(),
-    product_title: toStr(primary?.title || ""),
-    flavour,
-    notes,
-    currency: toStr(order?.presentment_currency || order?.currency || ""),
-    total_amount: Number(order?.current_total_price || order?.total_price || 0),
-    order_json: order,
-    due_date,           // e.g., "2025-09-16" (string from attribute, parsed later in Sydney TZ)
-    delivery_method     // "pickup" | "delivery"
-  };
-}
-Summary
-Attributes-first for due date & delivery method (matches your docket)
-
-Property blacklist enforced
-
-Flavour comes from properties; variant is a safe fallback
-
-Idempotent ingest keyed by order_gid
-
-Inventory hold via deduct_on_order_create after insert
+---
