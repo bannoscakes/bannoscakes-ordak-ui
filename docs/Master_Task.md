@@ -124,7 +124,7 @@
 
 **Critical Flows to Test:**
 1. **Webhook → Queue → Completion:**
-   - Webhook arrives → `processed_webhooks` → `work_queue` → `stage_events`
+   - Webhook arrives → `orders_bannos/orders_flourlane` → `work_queue` → `stage_events`
    - Order appears in queue
    - Staff assigns order
    - Progress through stages (Filling → Covering → Decorating → Packing → Complete)
