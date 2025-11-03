@@ -73,8 +73,9 @@ export function normalizeShopifyOrder(order: any, authenticatedShopDomain: strin
   const flavour = fromProps() || fromVariant();
 
   // Due date: attributes first, then tag fallback (DEL:YYYY-MM-DD or PICKUP:YYYY-MM-DD)
+  // Fallback to order.created_at or current date if not found (all orders must have due_date)
   const rawDue = getAttr("Local Delivery Date and Time");
-  let due_date: string | null = null;
+  let due_date: string = "";
   if (rawDue) {
     const m = toStr(rawDue).split(/between/i)[0].trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(m)) due_date = m;
@@ -90,6 +91,21 @@ export function normalizeShopifyOrder(order: any, authenticatedShopDomain: strin
     // Tags as comma-separated string
     const m = String(order.tags).match(/(?:DEL:|PICKUP:)(\d{4}-\d{2}-\d{2})/i);
     if (m) due_date = m[1];
+  }
+  
+  // Fallback: use order created_at date if available, otherwise current UTC date
+  if (!due_date) {
+    if (order?.created_at) {
+      // Extract date part from ISO timestamp (YYYY-MM-DDTHH:mm:ssZ -> YYYY-MM-DD)
+      const createdDate = new Date(order.created_at);
+      if (!isNaN(createdDate.getTime())) {
+        due_date = createdDate.toISOString().split('T')[0];
+      }
+    }
+    // Final fallback: current UTC date (should not happen if all orders have due_date)
+    if (!due_date) {
+      due_date = new Date().toISOString().split('T')[0];
+    }
   }
 
   // Delivery method (attributes-first)
