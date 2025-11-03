@@ -53,6 +53,47 @@ serve(async (req) => {
       return parts[1]?.trim() || "";
     };
     
+    // Aggregate notes from order object
+    const aggregateNotes = (): string => {
+      const notesParts: string[] = [];
+      
+      // Start with order.note
+      if (order?.note) {
+        notesParts.push(String(order.note).trim());
+      }
+      
+      // Get "Delivery Instructions" from attributes or note_attributes
+      const getAttr = (key: string): string => {
+        const lc = (s: string) => String(s || "").toLowerCase();
+        
+        // Check note_attributes
+        const noteAttrs = order?.note_attributes || [];
+        const fromNotes = noteAttrs.find((a: any) => lc(a?.name) === lc(key));
+        if (fromNotes?.value) return String(fromNotes.value).trim();
+        
+        // Check attributes (can be array or object)
+        const attrs = order?.attributes;
+        if (attrs && typeof attrs === "object") {
+          if (Array.isArray(attrs)) {
+            const hit = attrs.find((a: any) => lc(a?.name) === lc(key));
+            if (hit?.value) return String(hit.value).trim();
+          } else {
+            const k = Object.keys(attrs).find((k) => lc(k) === lc(key));
+            if (k && attrs[k]) return String(attrs[k]).trim();
+          }
+        }
+        return "";
+      };
+      
+      const deliveryInstr = getAttr("Delivery Instructions");
+      if (deliveryInstr) {
+        notesParts.push(deliveryInstr);
+      }
+      
+      // Join with •
+      return notesParts.filter(Boolean).join(" • ");
+    };
+    
     const primaryItem = order.line_items?.[0];
     
     // Parse due_date with fallbacks
@@ -82,7 +123,7 @@ serve(async (req) => {
       customer_name: data.customer_name || "",
       product_title: primaryItem?.title || "",
       flavour: extractFlavour(primaryItem),
-      notes: data.order_notes || "",
+      notes: aggregateNotes(),
       currency: order.currency || "AUD",
       total_amount: Number(order.total_price || 0),
       order_json: order,
