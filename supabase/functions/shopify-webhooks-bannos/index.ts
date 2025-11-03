@@ -1,6 +1,10 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
+const SHOP_DOMAIN = "bannoscakes.myshopify.com"; // Update with actual domain
+
+const SHOPIFY_ACCESS_TOKEN = Deno.env.get("SHOPIFY_BANNOS_ACCESS_TOKEN");
+
 serve(async (req) => {
   if (req.method === "GET") {
     return new Response("ok", { status: 200 });
@@ -8,21 +12,83 @@ serve(async (req) => {
 
   try {
     const order = await req.json();
+    const hookId = req.headers.get("X-Shopify-Webhook-Id") || order.id.toString();
     
-    // Read metafield created by Shopify Flow
-    const metafield = order.metafields?.find(
-      (m: any) => m.namespace === "ordak" && m.key === "kitchen_json"
+    console.log("Processing order:", { 
+      order_id: order.id, 
+      order_number: order.order_number,
+      hook_id: hookId 
+    });
+    
+    // Fetch metafield via Shopify Admin API
+    const metafieldRes = await fetch(
+      `https://${SHOP_DOMAIN}/admin/api/2024-10/orders/${order.id}/metafields.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN ?? "",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    
+    if (!metafieldRes.ok) {
+      console.error("Failed to fetch metafields:", {
+        status: metafieldRes.status,
+        order_id: order.id,
+      });
+      return new Response("error: failed to fetch metafields", { status: 500 });
+    }
+    
+    const metafieldsData = await metafieldRes.json();
+    const metafield = metafieldsData.metafields?.find(
+      (m) => m.namespace === "ordak" && m.key === "kitchen_json"
     );
     
     if (!metafield?.value) {
-      console.log("Metafield not ready yet, will retry");
+      console.log("Metafield not ready yet, Shopify will retry", {
+        order_id: order.id,
+        metafields_found: metafieldsData.metafields?.length || 0,
+      });
       return new Response("retry: metafield not created yet", { status: 500 });
     }
     
-    const data = JSON.parse(metafield.value);
+    // Parse metafield data
+    let data;
+    try {
+      data = JSON.parse(metafield.value);
+    } catch (err) {
+      console.error("Invalid metafield JSON:", {
+        order_id: order.id,
+        error: err.message,
+        value: metafield.value,
+      });
+      return new Response("error: invalid metafield JSON", { status: 500 });
+    }
     
-    // Parse date from metafield
-    const due_date = new Date(data.delivery_date).toISOString().split('T')[0];
+    // Validate and parse date
+    if (!data.delivery_date) {
+      console.error("Missing delivery_date in metafield:", {
+        order_id: order.id,
+        data,
+      });
+      return new Response("error: missing delivery_date", { status: 500 });
+    }
+    
+    let due_date;
+    try {
+      const dateObj = new Date(data.delivery_date);
+      if (isNaN(dateObj.getTime())) {
+        throw new Error("Invalid date");
+      }
+      due_date = dateObj.toISOString().split('T')[0];
+    } catch (err) {
+      console.error("Invalid delivery_date format:", {
+        order_id: order.id,
+        delivery_date: data.delivery_date,
+        error: err.message,
+      });
+      return new Response("error: invalid date format", { status: 500 });
+    }
     
     // Extract data from metafield
     const delivery_method = data.is_pickup ? "pickup" : "delivery";
@@ -43,8 +109,10 @@ serve(async (req) => {
       order_json: order,
       stage: "Filling",
       due_date,
-      delivery_method
+      delivery_method,
     };
+    
+    console.log("Inserting order:", { id: row.id, due_date, delivery_method });
     
     // Insert with duplicate detection
     const insertRes = await fetch(
@@ -62,38 +130,28 @@ serve(async (req) => {
     );
     
     if (!insertRes.ok) {
-      console.error("Insert failed:", await insertRes.text());
-      return new Response("error", { status: 500 });
+      const errorText = await insertRes.text();
+      console.error("Insert failed:", {
+        order_id: order.id,
+        status: insertRes.status,
+        error: errorText,
+      });
+      return new Response("error: database insert failed", { status: 500 });
     }
     
     // Check if row was actually inserted
     const insertedRows = await insertRes.json();
     if (!insertedRows || insertedRows.length === 0) {
-      console.log("Order already exists, skipping RPCs");
+      console.log("Order already exists, skipping RPCs", { order_id: order.id });
       return new Response("ok", { status: 200 });
     }
     
-    // Call stock deduction RPC
-    if (order.admin_graphql_api_id) {
-      await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/deduct_on_order_create`,
-        {
-          method: "POST",
-          headers: {
-            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            order_gid: order.admin_graphql_api_id,
-            payload: order,
-          }),
-        }
-      ).catch(() => {});
-    }
+    console.log("Order inserted successfully", { id: row.id });
     
-    // Call order split RPC
+    // Call order split RPC (FIXED PARAMETERS)
     if (order.admin_graphql_api_id) {
+      console.log("Enqueueing order split", { order_gid: order.admin_graphql_api_id });
+      
       await fetch(
         `${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/enqueue_order_split`,
         {
@@ -104,16 +162,26 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            order_gid: order.admin_graphql_api_id,
-            payload: order,
+            p_shop_domain: SHOP_DOMAIN,
+            p_topic: "orders/create",
+            p_hook_id: hookId,
+            p_body: order,
           }),
         }
-      ).catch(() => {});
+      ).catch((err) => {
+        console.error("RPC enqueue_order_split failed:", {
+          order_id: order.id,
+          error: err.message || err,
+        });
+      });
     }
     
     return new Response("ok", { status: 200 });
   } catch (err) {
-    console.error("Webhook error:", err);
-    return new Response("error", { status: 500 });
+    console.error("Webhook error:", {
+      error: err.message || err,
+      stack: err.stack,
+    });
+    return new Response("error: internal server error", { status: 500 });
   }
 });
