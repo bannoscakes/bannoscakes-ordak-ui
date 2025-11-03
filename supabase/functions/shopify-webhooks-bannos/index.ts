@@ -21,26 +21,6 @@ serve(async (req) => {
     
     const data = JSON.parse(metafield.value);
     
-    // Check idempotency: if order already exists, skip
-    const checkRes = await fetch(
-      `${Deno.env.get("SUPABASE_URL")}/rest/v1/orders_bannos?shopify_order_gid=eq.${order.admin_graphql_api_id}&select=id`,
-      {
-        method: "GET",
-        headers: {
-          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
-        },
-      }
-    );
-    
-    if (checkRes.ok) {
-      const existing = await checkRes.json();
-      if (existing.length > 0) {
-        console.log("Order already exists, skipping");
-        return new Response("ok", { status: 200 });
-      }
-    }
-    
     // Parse date
     const due_date = data.delivery_date 
       ? new Date(data.delivery_date).toISOString().split('T')[0]
@@ -68,7 +48,7 @@ serve(async (req) => {
       delivery_method
     };
     
-    // Insert to orders_bannos
+    // Insert to orders_bannos with return=representation to detect duplicates
     const insertRes = await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/orders_bannos`,
       {
@@ -77,7 +57,7 @@ serve(async (req) => {
           apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
           "Content-Type": "application/json",
-          Prefer: "resolution=ignore-duplicates,return=minimal",
+          Prefer: "resolution=ignore-duplicates,return=representation",
         },
         body: JSON.stringify(row),
       }
@@ -86,6 +66,13 @@ serve(async (req) => {
     if (!insertRes.ok) {
       console.error("Insert failed:", await insertRes.text());
       return new Response("error", { status: 500 });
+    }
+    
+    // Check if row was actually inserted (empty response means duplicate was ignored)
+    const insertedRows = await insertRes.json();
+    if (!insertedRows || insertedRows.length === 0) {
+      console.log("Order already exists (duplicate ignored), skipping RPCs");
+      return new Response("ok", { status: 200 });
     }
     
     // Call stock deduction RPC

@@ -208,7 +208,7 @@ curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-f
 
 ## 9. Review Recent Webhook Activity
 
-**Check Supabase Edge Function Logs**
+### Check Supabase Edge Function Logs
 
 **Location:** Supabase Dashboard → Edge Functions → Logs (Last 1 hour)
 
