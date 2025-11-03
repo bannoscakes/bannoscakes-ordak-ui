@@ -29,12 +29,14 @@ serve(async (req) => {
       return date.toISOString().split('T')[0];
     };
     
-    // Extract flavour from line item properties
-    const extractFlavour = (lineItem: any): string => {
-      if (!lineItem) return "";
+    // Extract flavour from metafield line_items
+    const extractFlavourFromMetafield = (): string => {
+      const lineItems = data.line_items || [];
+      const primaryItem = lineItems[0];
+      if (!primaryItem) return "";
       
       // Check properties for gelato flavours
-      const props = lineItem.properties || [];
+      const props = primaryItem.properties || [];
       const flavourProp = props.find((p: any) => 
         /gelato flavour(s)?/i.test(p.name || "")
       );
@@ -47,54 +49,11 @@ serve(async (req) => {
           .join(", ");
       }
       
-      // Fallback: extract from variant title
-      const variant = lineItem.variant_title || "";
+      // Fallback: extract from variant title if available in metafield
+      const variant = primaryItem.variant_title || "";
       const parts = variant.split(/[/]/);
       return parts[1]?.trim() || "";
     };
-    
-    // Aggregate notes from order object
-    const aggregateNotes = (): string => {
-      const notesParts: string[] = [];
-      
-      // Start with order.note
-      if (order?.note) {
-        notesParts.push(String(order.note).trim());
-      }
-      
-      // Get "Delivery Instructions" from attributes or note_attributes
-      const getAttr = (key: string): string => {
-        const lc = (s: string) => String(s || "").toLowerCase();
-        
-        // Check note_attributes
-        const noteAttrs = order?.note_attributes || [];
-        const fromNotes = noteAttrs.find((a: any) => lc(a?.name) === lc(key));
-        if (fromNotes?.value) return String(fromNotes.value).trim();
-        
-        // Check attributes (can be array or object)
-        const attrs = order?.attributes;
-        if (attrs && typeof attrs === "object") {
-          if (Array.isArray(attrs)) {
-            const hit = attrs.find((a: any) => lc(a?.name) === lc(key));
-            if (hit?.value) return String(hit.value).trim();
-          } else {
-            const k = Object.keys(attrs).find((k) => lc(k) === lc(key));
-            if (k && attrs[k]) return String(attrs[k]).trim();
-          }
-        }
-        return "";
-      };
-      
-      const deliveryInstr = getAttr("Delivery Instructions");
-      if (deliveryInstr) {
-        notesParts.push(deliveryInstr);
-      }
-      
-      // Join with •
-      return notesParts.filter(Boolean).join(" • ");
-    };
-    
-    const primaryItem = order.line_items?.[0];
     
     // Parse due_date with fallbacks
     let due_date = parseDate(data.delivery_date);
@@ -114,16 +73,16 @@ serve(async (req) => {
     
     const delivery_method = data.is_pickup ? "pickup" : "delivery";
     
-    // Build row for database
+    // Build row for database (use metafield data)
     const row = {
       id: `flourlane-${order.order_number || order.id}`,
       shopify_order_id: order.id,
       shopify_order_gid: order.admin_graphql_api_id,
       shopify_order_number: order.order_number,
       customer_name: data.customer_name || "",
-      product_title: primaryItem?.title || "",
-      flavour: extractFlavour(primaryItem),
-      notes: aggregateNotes(),
+      product_title: data.line_items?.[0]?.title || "",
+      flavour: extractFlavourFromMetafield(),
+      notes: data.order_notes || "",
       currency: order.currency || "AUD",
       total_amount: Number(order.total_price || 0),
       order_json: order,

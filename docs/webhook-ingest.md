@@ -34,49 +34,25 @@ Orders are ingested from the `ordak.kitchen_json` metafield created by Shopify F
 - `order_tags`: Comma-separated tags (cleaned to remove km, $, times)
 - `line_items[]`: Array with title, quantity, image_url, properties
 
-Flavour extraction reads from `order.line_items[].properties` for gelato cakes.
+Flavour extraction reads from `data.line_items[].properties` for gelato cakes (from metafield).
 
----
-
-## Due Date & Delivery Method
-
-Dates and methods are derived from order attributes so that the system behaves exactly like the kitchen docket. The attribute keys are case insensitive and may come from either `order.attributes` or `order.note_attributes`.
-
-Due date: read Local Delivery Date and Time. Take the portion before the word "between" (if present) and trim whitespace. For example, if the attribute is "2025-09-16 between 13:00 and 15:00", then the due date is 2025-09-16. If the attribute is missing, fall back to parsing tags such as DEL:YYYY-MM-DD or PICKUP:YYYY-MM-DD.
-
-Delivery method: read Delivery Method. If the value contains "pickup" or "pick up" (case insensitive), set delivery_method = 'pickup'. Otherwise set delivery_method = 'delivery'. If the attribute is missing, infer from tags or leave blank.
-
-Dates are interpreted in the Australia/Sydney timezone.
-
----
-
-## Notes Aggregation
-
-Kitchen staff need to see all notes on one line. To construct the notes column:
-
-Start with `order.note` if present.
-
-Append the value of Delivery Instructions (case insensitive) from `order.attributes` or `order.note_attributes` if present.
-
-Join the two parts with • if both are non‑empty.
+Notes are taken directly from `data.order_notes` (pre-aggregated by Shopify Flow).
 
 ---
 
 ## Primary Line Item
 
-When storing summary fields like product_title and flavour, only the first non‑gift, positive‑quantity line item is considered. This primary line item is used to derive the main product title, size and base flavour. The full item list remains in order_json for reference.
+The first line item from `data.line_items[]` (metafield) is used for product_title and flavour extraction.
 
 ---
 
 ## Flavour Extraction Rules
 
-Flavour extraction mirrors the logic used on your paper dockets. For the primary line item only:
+Flavour extraction is performed on the metafield data. For the primary line item only:
 
-Line item properties: search the properties array for keys containing "gelato flavour" or "gelato flavours" (case insensitive). Use the associated value, splitting on newlines, commas or / to handle multiple flavours. Trim and join with ", ".
+Line item properties: search `data.line_items[0].properties` for keys containing "gelato flavour" or "gelato flavours" (case insensitive). Use the associated value, splitting on newlines, commas or / to handle multiple flavours. Trim and join with ", ".
 
-Variant/Options fallback: if no matching property is found, split variant_title on newlines, commas or / and take the first token. This supports cakes where the flavour is encoded in the variant (e.g. "Chocolate / 10").
-
-Any property whose name starts with _ or contains _origin, _raw, gwp or _LocalDeliveryID is ignored (blacklisted), matching the original docket behaviour. If no flavour can be found, leave the flavour column empty and log a warning for manual review.
+Variant fallback: if no matching property is found, split `variant_title` on / and take the second token. This supports cakes where the flavour is encoded in the variant (e.g. "Chocolate / 10").
 
 ---
 
