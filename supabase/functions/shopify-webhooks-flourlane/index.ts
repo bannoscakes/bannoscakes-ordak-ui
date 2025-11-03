@@ -23,19 +23,10 @@ serve(async (req) => {
     
     // Parse date: "Fri 28 Nov 2025" → "2025-11-28"
     const parseDate = (dateStr: string): string => {
+      if (!dateStr) return "";
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return "";
       return date.toISOString().split('T')[0];
-    };
-    
-    // Clean tags: remove km, $, time
-    const cleanTags = (tags: string): string => {
-      return tags
-        .replace(/\d+km/g, '')
-        .replace(/\(\$\d+\)/g, '')
-        .replace(/\d+:\d+\s*[AP]M[–-]\s*\d+:\d+\s*[AP]M/gi, '')
-        .replace(/,\s*,/g, ',')
-        .replace(/^,|,$/g, '')
-        .trim();
     };
     
     // Extract flavour from line item properties
@@ -63,7 +54,23 @@ serve(async (req) => {
     };
     
     const primaryItem = order.line_items?.[0];
-    const due_date = parseDate(data.delivery_date);
+    
+    // Parse due_date with fallbacks
+    let due_date = parseDate(data.delivery_date);
+    
+    // Fallback: use order created_at date if available
+    if (!due_date && order?.created_at) {
+      const createdDate = new Date(order.created_at);
+      if (!isNaN(createdDate.getTime())) {
+        due_date = createdDate.toISOString().split('T')[0];
+      }
+    }
+    
+    // Final fallback: current UTC date
+    if (!due_date) {
+      due_date = new Date().toISOString().split('T')[0];
+    }
+    
     const delivery_method = data.is_pickup ? "pickup" : "delivery";
     
     // Build row for database
