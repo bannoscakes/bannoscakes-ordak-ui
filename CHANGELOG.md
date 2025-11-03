@@ -1,101 +1,91 @@
-## v0.9.6-beta — Shopify Webhook Order Ingestion Pipeline Complete (2025-11-02)
+## v0.9.6-beta — Shopify Webhooks: Metafield-Driven Implementation (2025-11-03)
 
 ### Added
-- **Complete Order Ingestion Pipeline**: Full webhook-to-database order ingestion with kitchen-docket parity
-  - `normalizeShopifyOrder()` function implementing exact extraction rules from `webhook-ingest.md`
-  - Attributes-first logic for dates and delivery method
-  - Property blacklist enforcement (filters internal Shopify properties)
-  - Flavour extraction with properties → variant fallback
-  - Tag fallback for due dates (DEL:YYYY-MM-DD or PICKUP:YYYY-MM-DD format)
-  - Notes aggregation (order.note + Delivery Instructions)
-- **Order-Level Idempotency**: Prevents duplicate order insertion using `shopify_order_gid`
-  - Early check via `existsByGid()` for fast duplicate detection
-  - Race-condition safe insert with `resolution=ignore-duplicates`
-  - Dual-layer protection for concurrent webhook retries
-- **Stock Deduction Integration**: `deductOnCreate()` RPC call after successful order insert
-  - Full error logging to `dead_letter` table with context
-  - Returns boolean status for observability
-  - Best-effort execution (doesn't block order ingestion on failure)
-- **Complete Observability**: Full audit trail for debugging and manual intervention
-  - Stock deduction failures logged with reason `stock_deduction_failed` or `stock_deduction_exception`
-  - Webhook status notes include warnings: `warning: stock_deduction_failed (see dead_letter)`
-  - Accurate topic tracking in all logs (no hardcoded values)
+- **Metafield-Driven Webhooks**: Simplified order ingestion using Shopify Flow metafields
+  - Single source of truth: `ordak.kitchen_json` metafield
+  - No complex parsing of order attributes or properties
+  - Direct field mapping from structured JSON
+  - Simple date parsing: `new Date(data.delivery_date).toISOString().split('T')[0]`
+- **Separate Store Functions**: Independent Edge Functions for each store
+  - `shopify-webhooks-bannos` → `orders_bannos`
+  - `shopify-webhooks-flourlane` → `orders_flourlane`
+  - Complete isolation (if one fails, other continues)
+  - No shop domain routing logic needed
+- **Race-Condition-Proof Idempotency**: Atomic duplicate detection
+  - Uses `return=representation` to detect if row was actually inserted
+  - Empty response = duplicate ignored → skip RPCs
+  - Prevents duplicate stock deduction and order splits
+- **Stock Deduction & Order Split Integration**: Calls RPCs only if new order inserted
+  - `deduct_on_order_create(order_gid, payload)` - Best-effort, non-blocking
+  - `enqueue_order_split(order_gid, payload)` - Best-effort, non-blocking
+  - No cascading failures
+
+### Removed
+- ❌ HMAC verification (not needed with Shopify Flow)
+- ❌ `normalize.ts` function and complex extraction logic
+- ❌ Property blacklist enforcement
+- ❌ Tag fallbacks for dates
+- ❌ Notes aggregation logic
+- ❌ `processed_webhooks` table
+- ❌ Shop domain routing
+- ❌ Query parameters (`?store=`)
 
 ### Fixed
-- **Security: Authenticated Domain Routing**: Table routing now uses HMAC-verified `shopDomain` from header, NOT unvalidated payload field
-- **Security: Query Parameter Override**: Removed query parameter as source for secret resolution (header-only)
-- **Race Condition in Idempotency**: Check-then-insert pattern replaced with atomic `ignore-duplicates` at database level
-- **Incomplete Webhook Lifecycle (Duplicates)**: Status now updated to "ok" when duplicate order detected
-- **Incomplete Webhook Lifecycle (Missing GID)**: Status updated to "error" with dead_letter logging before returning 400
-- **Enqueue Failure Retry Loop**: Made `enqueue_order_split` best-effort (doesn't return 500 on failure)
-- **Silent Stock Deduction Failures**: All failures now logged to `dead_letter` with full context
-- **Misleading Audit Logs**: Dead-letter logs now use actual webhook topic instead of hardcoded "orders/create"
+- **Race Condition in Idempotency**: Eliminated separate GET check, uses atomic `return=representation`
+- **Metafield Missing Handling**: Returns 500 (not 400) to trigger Shopify retry
+- **Due Date Fallback**: Removed fallback logic - expects metafield to always have valid date
 
 ### Changed
-- **Store Secret Resolution**: Strict exact matching only (no fuzzy/includes matching)
-  - Accepts: `bannos`, `bannos.myshopify.com`, `flourlane`, `flour-lane.myshopify.com`
-  - Rejects everything else (prevents false positives)
-- **Error Handling**: Consistent best-effort pattern for non-critical operations
-  - All `dead_letter` writes wrapped in `.catch(() => {})`
-  - Status updates wrapped in `.catch(() => {})` to prevent cascading failures
-- **Module Structure**: Split into three files for maintainability
-  - `index.ts`: Main webhook handler with ingestion pipeline
-  - `normalize.ts`: Pure function for order normalization
-  - `resolve.ts`: Store secret resolution with security hardening
+- **Error Message for Missing Metafield**: Changed to "Metafield not ready yet, will retry"
+- **Comments**: Simplified to match ultra-simple implementation
+- **Module Structure**: Single file per store
+  - `shopify-webhooks-bannos/index.ts` - Bannos store handler
+  - `shopify-webhooks-flourlane/index.ts` - Flourlane store handler
 
 ### Technical Details
-- **Normalization Logic**: Implements kitchen-docket parity rules
-  - Human-readable IDs: `bannos-12345`, `flourlane-67890`
-  - Primary line item detection (first non-gift, positive quantity)
-  - Delivery method determination (pickup vs delivery)
-  - Due date extraction with multiple fallback sources
-- **Idempotency Strategy**: Three-layer protection
-  1. Webhook-level: `processed_webhooks` table (PK: id, shop_domain)
-  2. Order-level (early): `existsByGid()` check before insert
-  3. Order-level (race-safe): `resolution=ignore-duplicates` on POST
-- **Security Hardening**: Multiple attack vectors addressed
-  - No query parameter override for secret resolution
-  - No payload field used for table routing
-  - Authenticated header domain used throughout
-  - Exact matching only (no substring matching)
-- **Observability**: Complete audit trail
-  - Three webhook status notes: `duplicate_order_gid`, `duplicate_order_gid_race`, `warning: stock_deduction_failed`
-  - Five dead_letter reasons: `missing_order_gid`, `stock_deduction_failed`, `stock_deduction_exception`, `enqueue_failed`, `webhook_unhandled`
-  - All logs include: topic, shop_domain, hook_id, order_gid for correlation
+- **Data Source**: 100% from `ordak.kitchen_json` metafield
+  - `customer_name`: `data.customer_name`
+  - `notes`: `data.order_notes`
+  - `delivery_method`: `data.is_pickup ? "pickup" : "delivery"`
+  - `product_title`: `data.line_items[0].title`
+  - `flavour`: `data.line_items[0].properties["Gelato Flavours"]`
+  - `due_date`: Parse `data.delivery_date` to YYYY-MM-DD
+- **Idempotency**: Single-layer, atomic protection
+  - `Prefer: resolution=ignore-duplicates,return=representation`
+  - Check `insertedRows.length === 0` to detect duplicate
+  - Only call RPCs if row was actually inserted
+- **Deployment**: Two independent functions
+  - Bannos: `https://{project}.supabase.co/functions/v1/shopify-webhooks-bannos`
+  - Flourlane: `https://{project}.supabase.co/functions/v1/shopify-webhooks-flourlane`
 
 ### Status
 - ✅ **Phase 5 Shopify Integration = COMPLETE**
-- ✅ Full HMAC verification and idempotency restored
-- ✅ Order ingestion pipeline production-ready
-- ✅ Complete observability and error logging
-- ✅ Security hardening complete
-- ✅ All critical bugs fixed (8 total)
-- ✅ Ready for production deployment
+- ✅ Metafield-driven implementation deployed
+- ✅ Race condition eliminated
+- ✅ Ultra-simplified codebase (~50% less code)
+- ✅ No authentication secrets needed
+- ✅ Ready for production
 
 ### Deployment Notes
 **Required Environment Variables:**
-- `SHOPIFY_APP_SECRET_BANNOS` - Bannos store secret
-- `SHOPIFY_APP_SECRET_FLOURLANE` - Flour Lane store secret
-- `WEBHOOK_ALLOWLIST` - Comma-separated topics (defaults to "orders/create,orders/updated")
 - `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY` - Service role key for database operations
+- `SUPABASE_SERVICE_ROLE_KEY` - For RPC calls
+- `SUPABASE_ANON_KEY` - For PostgREST
 
-**Database Requirements:**
-- Tables: `processed_webhooks`, `dead_letter`, `orders_bannos`, `orders_flourlane`
-- RPC: `deduct_on_order_create(order_gid, payload)`
-- RPC: `enqueue_order_split(p_shop_domain, p_topic, p_hook_id, p_body)`
+**Shopify Configuration:**
+1. Create Shopify Flow to generate `ordak.kitchen_json` metafield on order creation
+2. Configure webhooks in each store:
+   - Bannos: `https://{project}.supabase.co/functions/v1/shopify-webhooks-bannos`
+   - Flourlane: `https://{project}.supabase.co/functions/v1/shopify-webhooks-flourlane`
 
-**Branch:** `feat/webhook-ingest-pipeline`  
-**PR:** #160  
-**Merged:** 2025-11-02  
-**Commits:** 7 commits squash-merged
-1. feat: implement order ingestion pipeline with kitchen-docket parity
-2. fix: update processed_webhooks status on duplicate orders
-3. fix: prevent race condition in order idempotency with ignore-duplicates
-4. fix: make enqueue_order_split best-effort to prevent inconsistent state
-5. fix: update status on missing GID + use authenticated domain for routing
-6. fix: log stock deduction failures to prevent silent data inconsistency
-7. fix: use actual webhook topic in stock deduction dead_letter logs
+**Branch:** `feat/webhook-metafield-refactor`  
+**PR:** #169  
+**Merged:** 2025-11-03  
+**Commits:** 4 commits squash-merged
+1. refactor: create separate webhooks for Bannos/Flourlane using metafields
+2. fix: eliminate race condition with atomic return=representation check
+3. docs: update all webhook documentation to match metafield implementation
+4. refactor: simplify webhook code - remove fallbacks and verbose comments
 
 ---
 

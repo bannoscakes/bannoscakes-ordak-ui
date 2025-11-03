@@ -34,19 +34,16 @@
 - ✅ No mock data required  
 
 ### Phase 5: Shopify Integration & Webhooks ✅ 100% COMPLETE (v0.9.6-beta)
-- ✅ Edge Function `shopify-webhooks` infrastructure deployed and responding
-- ✅ Full HMAC verification logic restored and production-ready
-- ✅ `processed_webhooks` + `dead_letter` tables with consistent statuses (`ok|rejected|error`)
+- ✅ Separate Edge Functions deployed: `shopify-webhooks-bannos` and `shopify-webhooks-flourlane`
+- ✅ Metafield-driven implementation using `ordak.kitchen_json` from Shopify Flow
 - ✅ RPC `enqueue_order_split` → `work_queue(topic,payload,status)`
 - ✅ Worker #1: `process_webhook_order_split` → emits `kitchen_task_create`
 - ✅ Worker #2: `process_kitchen_task_create` → creates `stage_events`
-- ✅ Complete order ingestion pipeline with kitchen-docket parity
-- ✅ Order-level idempotency (race-condition safe)
-- ✅ Stock deduction integration with full error logging
-- ✅ Security hardening (authenticated domain routing, exact matching)
-- ✅ Complete observability (audit trails, dead_letter logging)
+- ✅ Ultra-simplified order ingestion (no HMAC, no complex parsing)
+- ✅ Race-condition-proof idempotency (atomic `return=representation` check)
+- ✅ Stock deduction integration (`deduct_on_order_create` RPC)
 - ✅ Shopify webhooks connected for **Bannos** and **Flourlane**
-- ✅ Production smoke tested: rows flow through `processed_webhooks` → `work_queue` → `stage_events`
+- ✅ Production verified: orders flow to `orders_bannos/orders_flourlane` → `work_queue` → `stage_events`
 
 ### Phase 6: UI Integration ✅ 100% COMPLETE (v0.6.0-beta, v0.7.0-beta, v0.9.4-beta)
 - ✅ All UI connected to RPCs
@@ -81,18 +78,18 @@
   - Resolved 503 errors in `shopify-webhooks` Edge Function
   - Deployed minimal working version as temporary fix
   - Full logic successfully restored in Task 7b
-- ✅ **Task 7b:** Complete Webhook Order Ingestion Pipeline (v0.9.6-beta, PR #160) **COMPLETED 2025-11-02**
-  - Implemented full order ingestion pipeline with kitchen-docket parity
-  - Added order-level idempotency (race-condition safe)
-  - Integrated stock deduction with error logging
-  - Applied security hardening (authenticated domain routing)
-  - Implemented complete observability (audit trails, dead_letter)
-  - Fixed 8 critical bugs identified during development
+- ✅ **Task 7b:** Metafield-Driven Webhook Implementation (v0.9.6-beta, PR #169) **COMPLETED 2025-11-03**
+  - Implemented metafield-driven webhooks using Shopify Flow
+  - Separate functions for Bannos and Flourlane stores
+  - Ultra-simplified codebase (~50% less code)
+  - Eliminated race condition with atomic idempotency check
+  - No HMAC verification needed (Shopify Flow handles security)
+  - Stock deduction and order split integration
 - ✅ **Task 8:** Shopify Webhooks Connected (COMPLETED)
   - Webhook URLs registered in Shopify admin for both stores (Bannos + Flourlane)
-  - Supabase secrets configured
-  - Webhooks actively sending data to Edge Function
-  - End-to-end flow verified: webhooks → processed_webhooks → work_queue → stage_events
+  - Supabase secrets configured (only service role key needed)
+  - Webhooks actively sending data to Edge Functions
+  - End-to-end flow verified: webhooks → `orders_bannos/orders_flourlane` → `work_queue` → `stage_events`
 
 ### 🔜 PRIORITY 1: PRODUCTION READINESS (Must Complete Before Go-Live)
 
