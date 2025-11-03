@@ -74,7 +74,7 @@ export function normalizeShopifyOrder(order: any, authenticatedShopDomain: strin
 
   // Due date: attributes first, then tag fallback (DEL:YYYY-MM-DD or PICKUP:YYYY-MM-DD)
   const rawDue = getAttr("Local Delivery Date and Time");
-  let due_date = "";
+  let due_date: string | null = null;
   if (rawDue) {
     const m = toStr(rawDue).split(/between/i)[0].trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(m)) due_date = m;
