@@ -22,24 +22,19 @@ Choose table by shop domain:
 
 ---
 
-## Field Mapping (DB)
+## Field Mapping (from Metafield)
 
-| Target column | Source / Rule |
-|---|---|
-| `id` | `bannos-<order_number>` or `flourlane-<order_number>` (fallback: `<prefix>-<order.id>`) |
-| `shopify_order_id` | `order.id` |
-| `shopify_order_gid` | `order.admin_graphql_api_id` |
-| `shopify_order_number` | `order.order_number` |
-| `customer_name` | Use `order.shipping_address.name`; if blank, use `order.customer.name`. |
-| `product_title` | Title of the primary line item. |
-| `flavour` | Extract using the flavour rules below. |
-| `notes` | Concatenate `order.note` and the delivery instructions attribute (see below). Join parts with •. |
-| `currency` | `order.presentment_currency` if present; otherwise `order.currency`. |
-| `total_amount` | `order.current_total_price` if present; otherwise `order.total_price`. |
-| `order_json` | The full raw JSON payload stored as jsonb for auditing and reprocessing. |
-| `stage` | Initialise as 'Filling'. Subsequent stage updates are driven by barcode scans. |
-| `priority` | Derived from due_date: High if the due date is today or overdue; Medium if tomorrow; Low for later dates. |
-| Timestamps | All process timestamps are initialised to NULL. The Filling timestamp is set when the barcode is printed. |
+Orders are ingested from the `ordak.kitchen_json` metafield created by Shopify Flow. The metafield contains:
+
+- `order_number`: Order name (e.g., "#B24422")
+- `delivery_date`: Date string (parsed to YYYY-MM-DD format)
+- `is_pickup`: Boolean for pickup vs delivery
+- `customer_name`: Shipping or customer name
+- `order_notes`: Order note
+- `order_tags`: Comma-separated tags (cleaned to remove km, $, times)
+- `line_items[]`: Array with title, quantity, image_url, properties
+
+Flavour extraction reads from `order.line_items[].properties` for gelato cakes.
 
 ---
 
@@ -85,23 +80,21 @@ Any property whose name starts with _ or contains _origin, _raw, gwp or _LocalDe
 
 ---
 
-## Persist Logic (Edge Function)
+## Persist Logic (Separate Edge Functions)
 
-In the ingestion endpoint:
+Two independent Edge Functions handle webhook ingestion:
 
-Verify HMAC: compute the HMAC using SHOPIFY_WEBHOOK_SECRET and compare to X-Shopify-Hmac-Sha256. Reject with 401 if mismatched so Shopify will retry.
+- `shopify-webhooks-bannos` → inserts to `orders_bannos`
+- `shopify-webhooks-flourlane` → inserts to `orders_flourlane`
 
-Idempotency: check if a record with the same shopify_order_gid already exists. If so, return 200 without inserting a new row or deducting stock.
-
-Normalise: convert the raw payload into your internal schema using a pure function (see below). This function handles date/method extraction, flavour rules and attribute fallbacks.
-
-Insert: write the normalised row into the appropriate table (orders_bannos or orders_flourlane), and store the raw order_json. Initialise all timestamps to NULL and set stage = 'Filling'.
-
-Stock deduction: call deduct_on_order_create(order_gid, payload) to write a stock transaction for each cake line item and enqueue the new order in the work queue.
-
-Emit event: optionally, emit an order_ingested event to notify downstream systems or Slack.
-
-If any step fails, return 500 to let Shopify retry. All writes should be wrapped in a transaction.
+Each function:
+1. Reads `ordak.kitchen_json` metafield from webhook payload
+2. Parses delivery date to YYYY-MM-DD format
+3. Cleans order tags
+4. Extracts flavours from line item properties
+5. Inserts row with stage='Filling'
+6. Calls `deduct_on_order_create` RPC
+7. Calls `enqueue_order_split` RPC
 
 ## Post‑Ingest: Task Splitting
 
