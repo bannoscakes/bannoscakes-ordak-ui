@@ -1,25 +1,25 @@
 # Shopify Webhooks Configuration Checklist
 
-**Date:** 2025-11-02  
-**Status:** Pre-restoration verification  
-**Purpose:** Verify all settings are correct before restoring full webhook handler
+**Date:** 2025-11-03  
+**Status:** Metafield-driven implementation  
+**Purpose:** Verify all settings are correct for metafield-based webhook processing
+
+**Note:** HMAC verification has been removed. No secrets needed for webhook authentication.
 
 ---
 
 ## 1. Supabase Edge Functions - Environment Secrets
 
-**Location:** Supabase Dashboard → Edge Functions → shopify-webhooks → Settings
+**Location:** Supabase Dashboard → Edge Functions → Settings
 
-- [-] `SHOPIFY_APP_SECRET_BANNOS` is set (for Bannos store HMAC validation)
-- [-] `SHOPIFY_APP_SECRET_FLOURLANE` is set (for Flourlane store HMAC validation)
 - [ ] `SUPABASE_URL` is set to: `https://iwavciibrspfjezujydc.supabase.co`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` is set (for RPC calls)
 - [ ] `SUPABASE_ANON_KEY` is set
-- [ ] (Optional) `SHOPIFY_APP_SECRET` is set (legacy fallback)
 
 **Notes:**
 - Click "Reveal" to verify each secret is not empty
 - Secrets are masked by default
+- No webhook authentication secrets needed
 
 ---
 
@@ -27,16 +27,23 @@
 
 **Location:** Supabase Dashboard → Table Editor
 
-### Table: `processed_webhooks`
+### Table: `orders_bannos`
 - [ ] Table exists
-- [ ] Has column: `id` (text, part of PK)
-- [ ] Has column: `shop_domain` (text, part of PK)
-- [ ] Has column: `topic` (text)
-- [ ] Has column: `status` (text with CHECK: ok|rejected|error)
-- [ ] Has column: `received_at` (timestamptz)
-- [ ] Has column: `http_hmac` (text, nullable)
-- [ ] Has column: `note` (text, nullable)
-- [ ] Primary key is: `(id, shop_domain)`
+- [ ] Has column: `id` (text, PK)
+- [ ] Has column: `shopify_order_id` (bigint)
+- [ ] Has column: `shopify_order_gid` (text, unique)
+- [ ] Has column: `shopify_order_number` (bigint)
+- [ ] Has column: `customer_name` (text)
+- [ ] Has column: `product_title` (text)
+- [ ] Has column: `flavour` (text)
+- [ ] Has column: `notes` (text)
+- [ ] Has column: `due_date` (date)
+- [ ] Has column: `delivery_method` (text)
+- [ ] Has column: `stage` (text)
+- [ ] Has column: `order_json` (jsonb)
+
+### Table: `orders_flourlane`
+- [ ] Table exists (same structure as `orders_bannos`)
 
 ### Table: `work_queue`
 - [ ] Table exists
@@ -55,7 +62,8 @@
 - [ ] Has column: `reason` (text)
 
 **Check for existing data:**
-- [ ] Checked `processed_webhooks` - Found _____ rows
+- [ ] Checked `orders_bannos` - Found _____ rows
+- [ ] Checked `orders_flourlane` - Found _____ rows
 - [ ] Checked `work_queue` - Found _____ rows
 - [ ] Checked `dead_letter` - Found _____ rows
 
@@ -70,13 +78,12 @@ Run this query to verify:
 SELECT routine_name, routine_type, security_type
 FROM information_schema.routines 
 WHERE routine_schema = 'public' 
-AND routine_name = 'enqueue_order_split';
+AND routine_name IN ('deduct_on_order_create', 'enqueue_order_split');
 ```
 
+- [ ] Function `deduct_on_order_create` exists
 - [ ] Function `enqueue_order_split` exists
-- [ ] Function type is: `FUNCTION`
-- [ ] Security type is: `DEFINER` (SECURITY DEFINER)
-- [ ] Function has parameters: `p_shop_domain`, `p_topic`, `p_hook_id`, `p_body`
+- [ ] Both functions have security type: `DEFINER` (SECURITY DEFINER)
 
 ---
 
@@ -84,10 +91,16 @@ AND routine_name = 'enqueue_order_split';
 
 **Location:** Supabase Dashboard → Edge Functions
 
-- [ ] Function name: `shopify-webhooks` is listed
+### Function: `shopify-webhooks-bannos`
+- [ ] Function is listed
 - [ ] Status: Active/Deployed (green indicator)
-- [ ] Current version: 24 (or higher)
-- [ ] Last deployed: Within last 24 hours
+- [ ] Recent logs (last 1 hour) show 200 responses
+- [ ] No 503 boot errors in logs
+- [ ] No 500 internal errors in logs
+
+### Function: `shopify-webhooks-flourlane`
+- [ ] Function is listed
+- [ ] Status: Active/Deployed (green indicator)
 - [ ] Recent logs (last 1 hour) show 200 responses
 - [ ] No 503 boot errors in logs
 - [ ] No 500 internal errors in logs
@@ -98,28 +111,20 @@ AND routine_name = 'enqueue_order_split';
 
 **Location:** Bannos Shopify Admin → Settings → Notifications → Webhooks
 
-### Webhook 1: Order Creation
+### Webhook: Order Creation
 - [ ] Event: `orders/create` is configured
 - [ ] Format: JSON
-- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=bannos`
+- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos`
 - [ ] API Version: 2024-10 (or later)
 - [ ] Status: Active/Connected
 - [ ] Recent deliveries (last 10) show 200 responses
 - [ ] No failed deliveries in last hour
 
-### Webhook 2: Order Updated
-- [ ] Event: `orders/updated` is configured
-- [ ] Format: JSON
-- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=bannos`
-- [ ] API Version: 2024-10 (or later)
-- [ ] Status: Active/Connected
-- [ ] Recent deliveries (last 10) show 200 responses
-- [ ] No failed deliveries in last hour
-
-### Bannos App Credentials
-- [ ] App has "Orders" read permission
-- [ ] Webhooks are configured in this app (not manually)
-- [ ] API secret key is recorded (matches `SHOPIFY_APP_SECRET_BANNOS` in Supabase)
+### Bannos Store Requirements
+- [ ] Shopify Flow is configured to create `ordak.kitchen_json` metafield
+- [ ] Metafield namespace: `ordak`
+- [ ] Metafield key: `kitchen_json`
+- [ ] Flow runs on order creation
 
 ---
 
@@ -127,28 +132,20 @@ AND routine_name = 'enqueue_order_split';
 
 **Location:** Flourlane Shopify Admin → Settings → Notifications → Webhooks
 
-### Webhook 1: Order Creation
+### Webhook: Order Creation
 - [ ] Event: `orders/create` is configured
 - [ ] Format: JSON
-- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=flour`
+- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane`
 - [ ] API Version: 2024-10 (or later)
 - [ ] Status: Active/Connected
 - [ ] Recent deliveries (last 10) show 200 responses
 - [ ] No failed deliveries in last hour
 
-### Webhook 2: Order Updated
-- [ ] Event: `orders/updated` is configured
-- [ ] Format: JSON
-- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=flour`
-- [ ] API Version: 2024-10 (or later)
-- [ ] Status: Active/Connected
-- [ ] Recent deliveries (last 10) show 200 responses
-- [ ] No failed deliveries in last hour
-
-### Flourlane App Credentials
-- [ ] App has "Orders" read permission
-- [ ] Webhooks are configured in this app (not manually)
-- [ ] API secret key is recorded (matches `SHOPIFY_APP_SECRET_FLOURLANE` in Supabase)
+### Flourlane Store Requirements
+- [ ] Shopify Flow is configured to create `ordak.kitchen_json` metafield
+- [ ] Metafield namespace: `ordak`
+- [ ] Metafield key: `kitchen_json`
+- [ ] Flow runs on order creation
 
 ---
 
@@ -156,38 +153,18 @@ AND routine_name = 'enqueue_order_split';
 
 **Run these commands in terminal to verify endpoints:**
 
-### Test 1: GET Request (Health Check)
+### Test 1: Bannos GET Request (Health Check)
 ```bash
-curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=bannos
+curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos
 ```
 
 - [ ] Response status: 200 OK
 - [ ] Response body: `ok`
 - [ ] No errors in response
 
-### Test 2: POST Request (Basic)
+### Test 2: Flourlane GET Request (Health Check)
 ```bash
-curl -i -X POST https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=bannos \
-  -H "Content-Type: application/json" \
-  -d '{"test": true}'
-```
-
-- [ ] Response status: 200 OK
-- [ ] Response body: `ok`
-- [ ] No errors in response
-
-### Test 3: PUT Request (Non-Order Topic)
-```bash
-curl -i -X PUT https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=bannos
-```
-
-- [ ] Response status: 200 OK
-- [ ] Response body: `ok`
-- [ ] Note: Simplified handler accepts all methods for non-order topics
-
-### Test 4: Flourlane GET Request
-```bash
-curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?store=flour
+curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane
 ```
 
 - [ ] Response status: 200 OK
@@ -200,55 +177,51 @@ curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?s
 
 **Location:** Local repository
 
-### File: `supabase/functions/shopify-webhooks/deno.json`
+### File: `supabase/functions/shopify-webhooks-bannos/deno.json`
 - [ ] File exists
 - [ ] Contains import map: `"std/": "https://deno.land/std@0.224.0/"`
 
-### File: `supabase/config.toml`
+### File: `supabase/functions/shopify-webhooks-bannos/index.ts`
 - [ ] File exists
-- [ ] Contains function declaration for `shopify-webhooks`
-
-### File: `supabase/functions/shopify-webhooks/index.ts`
-- [ ] Current version: Minimal (36 lines)
 - [ ] File is valid TypeScript
 - [ ] No syntax errors
+- [ ] Reads `ordak.kitchen_json` metafield
+- [ ] Includes idempotency check
 
-### File: `supabase/functions/shopify-webhooks/index_full_backup.ts`
+### File: `supabase/functions/shopify-webhooks-flourlane/deno.json`
 - [ ] File exists
-- [ ] Contains full implementation (398-402 lines)
-- [ ] Has HMAC verification functions
-- [ ] Has idempotency logic
-- [ ] Has order splitting/enqueue logic
+- [ ] Contains import map: `"std/": "https://deno.land/std@0.224.0/"`
+
+### File: `supabase/functions/shopify-webhooks-flourlane/index.ts`
+- [ ] File exists
+- [ ] File is valid TypeScript
+- [ ] No syntax errors
+- [ ] Reads `ordak.kitchen_json` metafield
+- [ ] Includes idempotency check
+
+### File: `supabase/config.toml`
+- [ ] File exists
+- [ ] Contains `[functions.shopify-webhooks-bannos]` with `verify_jwt = false`
+- [ ] Contains `[functions.shopify-webhooks-flourlane]` with `verify_jwt = false`
 
 ---
 
-## 9. Cross-Reference Secret Keys
-
-**CRITICAL: Verify HMAC secrets match between Shopify and Supabase**
-
-### Bannos Store
-- [ ] Copied HMAC secret from Shopify Bannos app
-- [ ] Pasted into Supabase as `SHOPIFY_APP_SECRET_BANNOS`
-- [ ] Values match exactly (no extra spaces/newlines)
-- [ ] Secret is base64 encoded (if Shopify provides it that way)
-
-### Flourlane Store
-- [ ] Copied HMAC secret from Shopify Flourlane app
-- [ ] Pasted into Supabase as `SHOPIFY_APP_SECRET_FLOURLANE`
-- [ ] Values match exactly (no extra spaces/newlines)
-- [ ] Secret is base64 encoded (if Shopify provides it that way)
-
----
-
-## 10. Review Recent Webhook Activity
+## 9. Review Recent Webhook Activity
 
 **Check Supabase Edge Function Logs**
 
-**Location:** Supabase Dashboard → Edge Functions → shopify-webhooks → Logs (Last 1 hour)
+**Location:** Supabase Dashboard → Edge Functions → Logs (Last 1 hour)
 
+### Bannos Function
 - [ ] Total requests in last hour: _____
 - [ ] Successful (200): _____
-- [ ] Client errors (4xx): _____
+- [ ] Server errors (5xx): _____
+- [ ] No boot errors (503) visible
+- [ ] All POST requests from Shopify returned 200
+
+### Flourlane Function
+- [ ] Total requests in last hour: _____
+- [ ] Successful (200): _____
 - [ ] Server errors (5xx): _____
 - [ ] No boot errors (503) visible
 - [ ] All POST requests from Shopify returned 200
@@ -277,11 +250,11 @@ curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?s
 ### Ready to Proceed?
 - [ ] All critical items checked and verified
 - [ ] No configuration issues found
-- [ ] Secrets match between Shopify and Supabase
 - [ ] Database tables and RPC functions exist
-- [ ] Edge function is healthy (no boot errors)
+- [ ] Both Edge functions are healthy (no boot errors)
 - [ ] Manual tests all passed
-- [ ] Ready to restore full webhook handler
+- [ ] Shopify Flow creates metafield correctly
+- [ ] Ready for production use
 
 **Completed by:** _________________  
 **Date/Time:** _________________  
@@ -289,17 +262,16 @@ curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks?s
 
 ---
 
-## Next Steps (After Checklist Complete)
+## Next Steps
 
 Once all items are checked:
 
-1. **If all green:** Proceed with restoring full webhook handler from backup
+1. **If all green:** System is ready for production orders
 2. **If issues found:** Fix configuration issues first, then re-verify
-3. **Test plan:** Deploy full handler → monitor logs → test with real order
+3. **Test plan:** Create test order in Shopify → verify Flow creates metafield → verify webhook processes order → confirm database insert
 
 ---
 
-**File created:** 2025-11-02  
-**For task:** Task 7b - Restore Full Webhook Handler  
-**Reference:** PR #157, PR #158
-
+**File updated:** 2025-11-03  
+**Implementation:** Metafield-driven webhooks  
+**Reference:** `feat/webhook-metafield-refactor` branch
