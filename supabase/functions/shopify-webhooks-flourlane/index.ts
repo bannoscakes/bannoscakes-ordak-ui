@@ -15,18 +15,16 @@ serve(async (req) => {
     );
     
     if (!metafield?.value) {
-      console.error("Missing metafield ordak.kitchen_json");
-      return new Response("error: missing metafield", { status: 500 });
+      console.log("Metafield not ready yet, will retry");
+      return new Response("retry: metafield not created yet", { status: 500 });
     }
     
     const data = JSON.parse(metafield.value);
     
-    // Parse date
-    const due_date = data.delivery_date 
-      ? new Date(data.delivery_date).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+    // Parse date from metafield
+    const due_date = new Date(data.delivery_date).toISOString().split('T')[0];
     
-    // Map fields directly from metafield
+    // Extract data from metafield
     const delivery_method = data.is_pickup ? "pickup" : "delivery";
     const primaryItem = data.line_items?.[0] || {};
     
@@ -48,7 +46,7 @@ serve(async (req) => {
       delivery_method
     };
     
-    // Insert to orders_flourlane with return=representation to detect duplicates
+    // Insert with duplicate detection
     const insertRes = await fetch(
       `${Deno.env.get("SUPABASE_URL")}/rest/v1/orders_flourlane`,
       {
@@ -68,10 +66,10 @@ serve(async (req) => {
       return new Response("error", { status: 500 });
     }
     
-    // Check if row was actually inserted (empty response means duplicate was ignored)
+    // Check if row was actually inserted
     const insertedRows = await insertRes.json();
     if (!insertedRows || insertedRows.length === 0) {
-      console.log("Order already exists (duplicate ignored), skipping RPCs");
+      console.log("Order already exists, skipping RPCs");
       return new Response("ok", { status: 200 });
     }
     
