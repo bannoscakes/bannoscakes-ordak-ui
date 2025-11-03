@@ -10,7 +10,7 @@ export type QueueMinimalRow = {
   title: string;
   stage: Stage;
   priority: Priority;
-  due_date: string;
+  due_date: string | null;
   assignee_id: string | null;
   storage_location: string | null;
   store: Store;
