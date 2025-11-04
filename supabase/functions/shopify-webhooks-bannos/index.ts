@@ -35,8 +35,14 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+      return new Response('Configuration error', { status: 200, headers: corsHeaders })
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const body = await req.text()
@@ -48,19 +54,11 @@ serve(async (req) => {
       lineItems: shopifyOrder.line_items?.length || 0
     })
 
-    // ONLY BLOCKING: Tag validation
+    // ONLY BLOCKING: Tag validation (test orders have no tags)
     const orderTags = shopifyOrder.tags || ''
     if (!orderTags || orderTags.trim() === '') {
-      const hasDeliveryInfo = shopifyOrder.note_attributes?.some(attr => 
-        attr.name?.toLowerCase().includes('delivery')
-      )
-      const hasCustomer = shopifyOrder.customer?.first_name && shopifyOrder.customer?.last_name
-      const hasLineItems = shopifyOrder.line_items?.length > 0
-      
-      if (!hasDeliveryInfo && !hasCustomer && !hasLineItems) {
-        console.log(`Blocking order ${shopifyOrder.order_number} - test order`)
-        return new Response('Order blocked - test order', { status: 200, headers: corsHeaders })
-      }
+      console.log(`Blocking order ${shopifyOrder.order_number} - no tags (test order)`)
+      return new Response('Order blocked - test order', { status: 200, headers: corsHeaders })
     }
 
     // Categorize items
@@ -128,6 +126,8 @@ serve(async (req) => {
     } else {
       // Multiple cakes - split
       const suffixes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+      const totalAmount = Number(shopifyOrder.total_price || 0)
+      const amountPerCake = totalAmount / cakeItems.length
       
       for (let i = 0; i < cakeItems.length; i++) {
         const cakeItem = cakeItems[i]
@@ -153,7 +153,7 @@ serve(async (req) => {
           customer_email: shopifyOrder.customer?.email || shopifyOrder.email,
           order_notes: shopifyOrder.note || '',
           currency: shopifyOrder.currency || 'AUD',
-          total_amount: Number(shopifyOrder.total_price || 0),
+          total_amount: amountPerCake,
           accessories: isFirstOrder ? accessoriesForDB : [],
           due_date: null,
           created_at: new Date().toISOString()
