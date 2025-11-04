@@ -131,7 +131,7 @@ serve(async (req) => {
       
       for (let i = 0; i < cakeItems.length; i++) {
         const cakeItem = cakeItems[i]
-        const suffix = suffixes[i]
+        const suffix = suffixes[i] || (i + 1).toString() // Falls back to numbers for 11+
         const isFirstOrder = i === 0
         
         const order = {
