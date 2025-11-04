@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const SHOP_DOMAIN = "bannoscakes.myshopify.com"; // Update with actual domain
 
-const SHOPIFY_ACCESS_TOKEN = Deno.env.get("SHOPIFY_BANNOS_ACCESS_TOKEN");
+const SHOPIFY_ACCESS_TOKEN = Deno.env.get("SHOPIFY_ADMIN_TOKEN_BANNOS");
 
 serve(async (req) => {
   if (req.method === "GET") {
