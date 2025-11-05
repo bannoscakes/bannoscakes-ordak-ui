@@ -6,6 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * Determines whether a line item represents a cake product based on its title.
+ *
+ * @param item - The line item object; expected to have a `title` string.
+ * @returns `true` if the item's title indicates a cake and is not an accessory or cake decoration, `false` otherwise.
+ */
 function isCakeItem(item: any): boolean {
   const title = (item.title || '').toLowerCase()
   
@@ -22,6 +28,12 @@ function isCakeItem(item: any): boolean {
   return false
 }
 
+/**
+ * Determines whether a line item represents an accessory based on its title.
+ *
+ * @param item - The line-item object to inspect (expected to have a `title` property)
+ * @returns `true` if the item's title contains "candle", "balloon", or "topper" (case-insensitive), `false` otherwise.
+ */
 function isAccessoryItem(item: any): boolean {
   const title = (item.title || '').toLowerCase()
   return title.includes('candle') || 
@@ -191,4 +203,3 @@ serve(async (req) => {
     return new Response('OK', { status: 200, headers: corsHeaders })
   }
 })
-

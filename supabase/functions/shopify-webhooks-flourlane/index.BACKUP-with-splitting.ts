@@ -6,6 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+/**
+ * Determines whether a shopify line item should be classified as a cake.
+ *
+ * Considers an item a cake when its title contains "cake" and the item is not an accessory or a cake accessory (titles containing "topper" or "decoration").
+ *
+ * @param item - The shopify line-item object whose title is used for classification
+ * @returns `true` if the item is classified as a cake, `false` otherwise
+ */
 function isCakeItem(item: any): boolean {
   const title = (item.title || '').toLowerCase()
   
@@ -22,6 +30,12 @@ function isCakeItem(item: any): boolean {
   return false
 }
 
+/**
+ * Determines whether a line item represents an accessory by inspecting its title.
+ *
+ * @param item - The line item object; only the `title` property is considered (string expected).
+ * @returns `true` if the title contains "candle", "balloon", or "topper", `false` otherwise.
+ */
 function isAccessoryItem(item: any): boolean {
   const title = (item.title || '').toLowerCase()
   return title.includes('candle') || 
@@ -191,4 +205,3 @@ serve(async (req) => {
     return new Response('OK', { status: 200, headers: corsHeaders })
   }
 })
-
