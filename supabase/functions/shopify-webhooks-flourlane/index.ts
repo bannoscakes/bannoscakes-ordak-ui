@@ -43,6 +43,7 @@ serve(async (req) => {
       
       // Minimal fields for initial display
       customer_name: `${shopifyOrder.customer?.first_name || ''} ${shopifyOrder.customer?.last_name || ''}`.trim() || 'Customer',
+      customer_email: shopifyOrder.customer?.email || shopifyOrder.email,
       currency: shopifyOrder.currency || 'AUD',
       total_amount: Number(shopifyOrder.total_price || 0),
       
