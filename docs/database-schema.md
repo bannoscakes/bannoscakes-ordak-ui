@@ -73,9 +73,17 @@ These tables store production orders for Bannos and Flourlane respectively.
 - `currency` - Not needed in production workflow
 - `total_amount` - Not needed in production workflow
 
+**Migration Process:**
+
+1. Add new columns (`human_id`, `product_image`, `flavour_1`, `flavour_2`)
+2. Copy existing `flavour` data to `flavour_1` (preserves existing orders)
+3. Drop old columns (`flavour`, `currency`, `total_amount`)
+
 **Reason:** 
 
 Preparing schema for Stage 2 backend processor that will use Liquid templates to extract data from webhook payloads. Two-flavour field split ensures proper display for kitchen staff.
+
+**Note:** This migration documents changes already applied to production on 2025-11-05. It may fail in preview environments where base tables don't exist - this is expected.
 
 ---
 
