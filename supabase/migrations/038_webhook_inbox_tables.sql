@@ -6,14 +6,14 @@
 CREATE TABLE webhook_inbox_bannos (
   id text PRIMARY KEY,              -- bannos-18242 (prevents duplicates)
   payload jsonb NOT NULL,           -- EVERYTHING, nothing extracted
-  processed boolean DEFAULT false
+  processed boolean NOT NULL DEFAULT false
 );
 
 -- Flourlane inbox table
 CREATE TABLE webhook_inbox_flourlane (
   id text PRIMARY KEY,              -- flourlane-5001
   payload jsonb NOT NULL,           -- EVERYTHING, nothing extracted
-  processed boolean DEFAULT false
+  processed boolean NOT NULL DEFAULT false
 );
 
 -- Indexes for backend processing (only unprocessed orders)
