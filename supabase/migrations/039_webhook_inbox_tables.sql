@@ -1,4 +1,4 @@
--- 038_webhook_inbox_tables.sql
+-- 039_webhook_inbox_tables.sql
 -- Minimal tables for raw Shopify order storage
 -- NO EXTRACTION. PERIOD.
 
