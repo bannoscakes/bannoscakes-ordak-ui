@@ -24,10 +24,11 @@ serve(async (req) => {
     const shopifyOrder = JSON.parse(await req.text())
 
     // Just dump it - NO EXTRACTION
-    const { error } = await supabase.from('webhook_inbox_bannos').insert({
+    const { error } = await supabase.from('webhook_inbox_bannos').upsert({
       id: `bannos-${shopifyOrder.order_number}`,
-      payload: shopifyOrder
-    })
+      payload: shopifyOrder,
+      processed: false
+    }, { onConflict: 'id' })
 
     if (error) {
       console.error('Insert error:', error)
