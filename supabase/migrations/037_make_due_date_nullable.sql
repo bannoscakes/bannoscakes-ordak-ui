@@ -2,6 +2,13 @@
 -- Make due_date nullable to support raw order storage
 -- Orders will be processed later by backend using Liquid templates
 
+-- Create stage_type enum if it doesn't exist
+do $$ begin
+  create type stage_type as enum ('Filling','Covering','Decorating','Packing','Complete');
+exception
+  when duplicate_object then null;
+end $$;
+
 -- Create orders_bannos if it doesn't exist (based on schema-and-rls.md)
 create table if not exists public.orders_bannos (
   row_id                 uuid primary key default gen_random_uuid(),
@@ -16,7 +23,7 @@ create table if not exists public.orders_bannos (
   currency               char(3),
   total_amount           numeric(12,2),
   order_json             jsonb,
-  stage                  text not null default 'Filling',
+  stage                  stage_type not null default 'Filling',
   priority               smallint not null default 0,
   assignee_id            uuid,
   storage                text,
@@ -46,7 +53,7 @@ create table if not exists public.orders_flourlane (
   currency               char(3),
   total_amount           numeric(12,2),
   order_json             jsonb,
-  stage                  text not null default 'Filling',
+  stage                  stage_type not null default 'Filling',
   priority               smallint not null default 0,
   assignee_id            uuid,
   storage                text,
