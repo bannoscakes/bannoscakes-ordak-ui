@@ -25,7 +25,7 @@ serve(async (req) => {
 
     // Just dump it - NO EXTRACTION
     const { error } = await supabase.from('webhook_inbox_bannos').upsert({
-      id: `bannos-${shopifyOrder.order_number}`,
+      id: `bannos-${shopifyOrder.order_number || shopifyOrder.id}`,
       payload: shopifyOrder,
       processed: false
     }, { onConflict: 'id' })
