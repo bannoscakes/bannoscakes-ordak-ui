@@ -32,24 +32,21 @@ serve(async (req) => {
     })
 
     // Create single raw order record - no processing, no splitting, no blocking
+    // Store minimal fields + full order_json for backend processing with Liquid templates
     const order = {
       id: `flourlane-${shopifyOrder.order_number}`,
-      shopify_order_id: shopifyOrder.id.toString(),
+      shopify_order_id: shopifyOrder.id,
       shopify_order_number: shopifyOrder.order_number,
       shopify_order_gid: shopifyOrder.admin_graphql_api_id,
-      order_number: `F${shopifyOrder.order_number}`,
       order_json: shopifyOrder,
-      created_at: new Date().toISOString(),
       
       // Minimal fields for initial display
       customer_name: `${shopifyOrder.customer?.first_name || ''} ${shopifyOrder.customer?.last_name || ''}`.trim() || 'Customer',
       currency: shopifyOrder.currency || 'AUD',
       total_amount: Number(shopifyOrder.total_price || 0),
-      
-      // Status fields
       stage: 'Filling',
-      status: 'new-order',
-      store_source: 'flour_lane',
+      
+      // Note: due_date, product_title, flavour, etc. will be populated by backend processor
     }
 
     // Insert single order
@@ -64,7 +61,7 @@ serve(async (req) => {
       if (error) {
         console.error('Insert error:', error)
       } else {
-        console.log(`✅ Stored: ${order.order_number}`)
+        console.log(`✅ Stored: ${order.id}`)
       }
     } catch (err) {
       console.error('Storage failed:', err)
