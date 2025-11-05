@@ -24,10 +24,14 @@ serve(async (req) => {
     const shopifyOrder = JSON.parse(await req.text())
 
     // Just dump it - NO EXTRACTION
-    await supabase.from('webhook_inbox_flourlane').insert({
+    const { error } = await supabase.from('webhook_inbox_flourlane').insert({
       id: `flourlane-${shopifyOrder.order_number}`,
       payload: shopifyOrder
     })
+
+    if (error) {
+      console.error('Insert error:', error)
+    }
 
     return new Response('OK', { status: 200, headers: corsHeaders })
   } catch (err) {
