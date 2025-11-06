@@ -27,18 +27,18 @@ interface SidebarProps {
 
 const navigationItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
-  { icon: Cake, label: "Bannos Production", id: "bannos-production", badge: "8", isProduction: true },
-  { icon: TallCakeIcon, label: "Flourlane Production", id: "flourlane-production", badge: "4", isProduction: true },
-  { icon: Cake, label: "Bannos Monitor", id: "bannos-monitor", badge: "13", isMonitor: true },
-  { icon: TallCakeIcon, label: "Flourlane Monitor", id: "flourlane-monitor", badge: "12", isMonitor: true },
+  { icon: Cake, label: "Bannos Production", id: "bannos-production", isProduction: true },
+  { icon: TallCakeIcon, label: "Flourlane Production", id: "flourlane-production", isProduction: true },
+  { icon: Cake, label: "Bannos Monitor", id: "bannos-monitor", isMonitor: true },
+  { icon: TallCakeIcon, label: "Flourlane Monitor", id: "flourlane-monitor", isMonitor: true },
   { icon: Cake, label: "Bannos Analytics", id: "bannos-analytics", isAnalytics: true },
   { icon: TallCakeIcon, label: "Flourlane Analytics", id: "flourlane-analytics", isAnalytics: true },
   { icon: Users, label: "Staff Analytics", id: "staff-analytics", isAnalytics: true },
-  { icon: Users, label: "Staff", id: "staff", badge: "6", isStaff: true },
+  { icon: Users, label: "Staff", id: "staff", isStaff: true },
   { icon: Users, label: "Staff Workspace", id: "staff-workspace", isStaff: true },
   { icon: Users, label: "Supervisor Workspace", id: "supervisor-workspace", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
-  { icon: Package, label: "Inventory", id: "inventory", badge: "3" },
+  { icon: Package, label: "Inventory", id: "inventory" },
   { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true },
   { icon: AlertTriangle, label: "Error Test", id: "error-test", isSettings: true, devOnly: true },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
@@ -138,16 +138,7 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
                 disabled={!isClickable}
               >
                 <item.icon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge && (
-                      <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
+                {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
               </Button>
             </div>
           );
