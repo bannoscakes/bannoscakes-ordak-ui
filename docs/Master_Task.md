@@ -70,7 +70,7 @@
 
 ## 📋 WHAT'S LEFT TO DO
 
-### ✅ COMPLETED TASKS (v0.9.0 - v0.9.6)
+### ✅ COMPLETED TASKS (v0.9.0 - v0.9.7)
 - ✅ **Task 1:** Clean Mock Order Data (v0.9.0-beta, PR #117)
 - ✅ **Tasks 2-6:** Complete Inventory UI (All 5 tabs connected, v0.9.4-beta)
 - ✅ **Task 7:** Shopify Edge Functions (v0.9.2-beta)
@@ -90,8 +90,43 @@
   - Supabase secrets configured (only service role key needed)
   - Webhooks actively sending data to Edge Functions
   - End-to-end flow verified: webhooks → `orders_bannos/orders_flourlane` → `work_queue` → `stage_events`
+- ✅ **Task 8a:** Webhook Resilience & Raw Storage (v0.9.7-beta, PR #174-181) **COMPLETED 2025-11-05**
+  - Simplified webhooks to never-fail handlers (~35 lines each)
+  - Created `webhook_inbox_bannos` and `webhook_inbox_flourlane` tables for raw payload storage
+  - Webhooks now store raw Shopify JSON without processing
+  - Eliminated all schema-dependent blocking logic
+  - Prepared foundation for Stage 2 processor (Liquid templates + backend logic)
+  - Backed up original splitting logic to `.BACKUP-with-splitting.ts` files
+  - Documented business logic in `docs/webhook-splitting-logic-reference.md`
+  - All webhooks return 200 OK (never fail, never block orders)
 
 ### 🔜 PRIORITY 1: PRODUCTION READINESS (Must Complete Before Go-Live)
+
+#### Task 8b: Stage 2 Webhook Processor (Liquid Templates + Backend Logic) 🟡 DEFERRED
+**Status:** NOT STARTED (Deferred until after production launch)  
+**Priority:** MEDIUM (webhooks currently store raw data successfully)  
+**Effort:** ~3-5 days
+
+**What to Implement:**
+- Backend processor to consume `webhook_inbox_bannos` and `webhook_inbox_flourlane` tables
+- Liquid template integration for data extraction (Kitchen Docket, Packing Slip format)
+- Order splitting logic (restore from `.BACKUP-with-splitting.ts` files)
+- Categorization logic (cakes vs accessories, flavour extraction)
+- Processing from raw JSON → `orders_bannos/orders_flourlane` tables
+- Mark inbox records as `processed: true` after successful processing
+- Error handling and retry logic for failed processing
+
+**Current State:**
+- ✅ Webhooks successfully store raw Shopify payloads in inbox tables
+- ✅ All orders accepted (no blocking, no failures)
+- ✅ Original splitting logic preserved in backup files
+- ⏸️ Processing logic deferred to post-launch (manual order entry workflow sufficient for now)
+
+**Workflow:** Multiple PRs (one per component), merge to dev
+
+**Note:** This task is intentionally deferred. Current webhook implementation is stable and production-ready. Stage 2 processing can be implemented after launch when Liquid templates are ready.
+
+---
 
 #### Task 9: Mobile Testing & Responsiveness 🔴 CRITICAL
 **Status:** NOT STARTED  
