@@ -1,3 +1,85 @@
+## v0.9.7-beta — Webhook Resilience & Raw Storage Architecture (2025-11-05)
+
+### Added
+- **Raw Payload Storage Tables**: New inbox tables for webhook resilience
+  - `webhook_inbox_bannos` - Stores raw Shopify payloads from Bannos store
+  - `webhook_inbox_flourlane` - Stores raw Shopify payloads from Flourlane store
+  - Schema: `id text PRIMARY KEY`, `payload jsonb NOT NULL`, `processed boolean NOT NULL DEFAULT false`
+  - Indexes on unprocessed records for efficient Stage 2 processing
+- **Never-Fail Webhook Handlers**: Ultra-simplified Edge Functions (~35 lines each)
+  - Accept all orders without validation or blocking
+  - Store raw JSON payload immediately
+  - Always return 200 OK to Shopify
+  - No schema dependencies or processing logic
+- **Backup Files**: Preserved original webhook logic for future reference
+  - `supabase/functions/shopify-webhooks-bannos/index.BACKUP-with-splitting.ts`
+  - `supabase/functions/shopify-webhooks-flourlane/index.BACKUP-with-splitting.ts`
+- **Documentation**: Business logic reference for future Stage 2 implementation
+  - `docs/webhook-splitting-logic-reference.md` - Complete categorization and splitting rules
+
+### Changed
+- **Webhook Philosophy**: Shifted from "process on arrival" to "store first, process later"
+  - Stage 1 (Current): Webhooks dump raw data to inbox tables
+  - Stage 2 (Future): Backend processor extracts data using Liquid templates
+- **Error Handling**: Eliminated all failure modes
+  - No tag-based blocking
+  - No schema validation
+  - No metafield requirements
+  - No duplicate detection (upsert with `onConflict: 'id'`)
+- **ID Generation**: More resilient fallback logic
+  - Format: `bannos-${shopifyOrder.order_number || shopifyOrder.id}`
+  - Handles missing `order_number` gracefully
+
+### Removed
+- ❌ All order processing logic from webhooks
+- ❌ Tag-based test order blocking
+- ❌ Schema-dependent field extraction
+- ❌ Direct writes to `orders_bannos/orders_flourlane` tables
+- ❌ Metafield parsing and validation
+- ❌ Order splitting and categorization logic (preserved in backup files)
+
+### Fixed
+- **Schema Mismatch Errors**: Webhooks no longer fail due to missing database columns
+- **Blocking Logic Issues**: Removed all order rejection logic
+- **Duplicate Order Logging**: Changed from `insert` to `upsert` for cleaner logs
+- **Migration Conflicts**: Resolved `schema_migrations_pkey` duplicate key error
+
+### Technical Details
+- **Migration**: `039_webhook_inbox_tables.sql`
+  - Created minimal inbox tables
+  - Added partial indexes for unprocessed records
+  - Applied manually to production database
+- **Deployment**: Both Edge Functions deployed and active
+  - Bannos: `https://{project}.supabase.co/functions/v1/shopify-webhooks-bannos`
+  - Flourlane: `https://{project}.supabase.co/functions/v1/shopify-webhooks-flourlane`
+- **Data Flow**: Shopify → Edge Function → `webhook_inbox_*` → (Stage 2 processor - future)
+
+### Status
+- ✅ Webhooks accepting all orders successfully
+- ✅ Raw data stored in inbox tables
+- ✅ Zero failures, zero blocking
+- ✅ Original logic preserved for future use
+- ⏸️ Stage 2 processor (Liquid templates + backend logic) deferred to post-launch
+
+### Branch History
+- **PR #174**: Initial never-fail webhook implementation (reverted)
+- **PR #175**: Raw storage attempt (reverted)
+- **PR #176**: Full rollback to PR #174 state
+- **PR #177**: Schema fix attempt (reverted)
+- **PR #178**: Database restore to clean state
+- **PR #179**: Backup original splitting logic
+- **PR #180**: Create inbox tables migration
+- **PR #181**: Simplified webhook handlers (final implementation)
+
+### Next Steps
+- Task 8b: Implement Stage 2 processor (deferred to post-launch)
+  - Liquid template integration
+  - Order splitting and categorization
+  - Processing from inbox → orders tables
+  - Mark records as processed
+
+---
+
 ## v0.9.6-beta — Shopify Webhooks: Metafield-Driven Implementation (2025-11-03)
 
 ### Added
