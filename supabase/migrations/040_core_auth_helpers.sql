@@ -7,6 +7,34 @@
 -- In production, these tables already exist with full schema, so these statements are skipped.
 
 -- ============================================================================
+-- ENUM TYPES (Must be created before tables that use them)
+-- ============================================================================
+
+-- Stage enum for order workflow
+DO $$ BEGIN
+  CREATE TYPE stage_type AS ENUM (
+    'Filling',
+    'Covering',
+    'Decorating',
+    'Packing',
+    'Complete'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Priority enum for order urgency
+DO $$ BEGIN
+  CREATE TYPE priority_level AS ENUM (
+    'High',
+    'Medium',
+    'Low'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- ============================================================================
 -- TABLE STUBS (Minimal schemas for tables that exist in production)
 -- ============================================================================
 
