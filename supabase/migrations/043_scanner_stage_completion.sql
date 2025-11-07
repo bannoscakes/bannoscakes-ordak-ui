@@ -426,3 +426,165 @@ end
 $function$
 ;
 
+-- =====================================================
+-- VERSION 2 FUNCTIONS (with p_store parameter)
+-- These replace the Version 1 functions above
+-- =====================================================
+
+-- Version 2 of 2
+-- Function: handle_print_barcode
+CREATE OR REPLACE FUNCTION public.handle_print_barcode(p_order_id text, p_store text, p_barcode text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+  v_user_id uuid;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  
+  EXECUTE format('UPDATE public.%I SET barcode = $1, filling_start_ts = COALESCE(filling_start_ts, now()), updated_at = now() WHERE id = $2', v_table_name)
+  USING p_barcode, p_order_id;
+  
+  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by)
+  VALUES (p_order_id, p_store, 'Filling', 'barcode_printed', v_user_id);
+  
+  RETURN true;
+END;
+$function$
+;
+
+-- Version 2 of 2
+-- Function: start_packing
+CREATE OR REPLACE FUNCTION public.start_packing(p_order_id text, p_store text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+  v_user_id uuid;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  
+  EXECUTE format('UPDATE public.%I SET packing_start_ts = COALESCE(packing_start_ts, now()), updated_at = now() WHERE id = $1', v_table_name)
+  USING p_order_id;
+  
+  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by)
+  VALUES (p_order_id, p_store, 'Packing', 'started', v_user_id);
+  
+  RETURN true;
+END;
+$function$
+;
+
+-- Version 2 of 2
+-- Function: assign_staff_to_order
+CREATE OR REPLACE FUNCTION public.assign_staff_to_order(p_order_id text, p_store text, p_staff_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+  v_user_id uuid;
+  v_current_stage stage_type;
+  v_new_stage stage_type;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  
+  -- Get current stage
+  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage
+  USING p_order_id;
+  
+  IF v_current_stage IS NULL THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+  
+  -- Determine new stage based on current stage
+  v_new_stage := CASE
+    WHEN v_current_stage = 'Covering' THEN 'Covering'
+    WHEN v_current_stage = 'Decorating' THEN 'Decorating'
+    ELSE v_current_stage
+  END;
+  
+  EXECUTE format('UPDATE public.%I SET assignee_id = $1, stage = $2, updated_at = now() WHERE id = $3', v_table_name)
+  USING p_staff_id, v_new_stage, p_order_id;
+  
+  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by)
+  VALUES (p_order_id, p_store, v_new_stage::text, 'staff_assigned', v_user_id);
+  
+  RETURN true;
+END;
+$function$
+;
+
+-- Version 2 of 2
+-- Function: move_to_filling_with_assignment
+CREATE OR REPLACE FUNCTION public.move_to_filling_with_assignment(p_order_id text, p_store text, p_staff_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+  v_user_id uuid;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  
+  EXECUTE format('UPDATE public.%I SET assignee_id = $1, stage = ''Filling'', updated_at = now() WHERE id = $2', v_table_name)
+  USING p_staff_id, p_order_id;
+  
+  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by)
+  VALUES (p_order_id, p_store, 'Filling', 'assigned_to_filling', v_user_id);
+  
+  RETURN true;
+END;
+$function$
+;
+
+-- Version 2 of 2
+-- Function: qc_return_to_decorating
+CREATE OR REPLACE FUNCTION public.qc_return_to_decorating(p_order_id text, p_store text, p_reason text DEFAULT NULL::text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+  v_user_id uuid;
+  v_current_stage stage_type;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  
+  -- Get current stage
+  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage
+  USING p_order_id;
+  
+  IF v_current_stage IS NULL THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+  
+  IF v_current_stage != 'Packing' THEN
+    RAISE EXCEPTION 'Order must be in Packing stage to return to Decorating';
+  END IF;
+  
+  EXECUTE format('UPDATE public.%I SET stage = ''Decorating'', updated_at = now() WHERE id = $1', v_table_name)
+  USING p_order_id;
+  
+  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by, notes)
+  VALUES (p_order_id, p_store, 'Decorating', 'qc_return', v_user_id, p_reason);
+  
+  RETURN true;
+END;
+$function$
+;
+

@@ -259,3 +259,97 @@ begin
 end; $function$
 ;
 
+-- =====================================================
+-- VERSION 2 FUNCTIONS (with p_store parameter)
+-- These replace the Version 1 functions above
+-- =====================================================
+
+-- Version 2 of 2
+-- Function: get_order_for_scan
+-- This version searches across BOTH stores (bannos and flourlane)
+CREATE OR REPLACE FUNCTION public.get_order_for_scan(p_code text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+AS $function$
+DECLARE
+  s text := lower(trim(p_code));
+  v_store text;
+  v_num bigint;
+  v_id text;
+  v_row jsonb;
+BEGIN
+  -- Try UUID format (text-based ID like 'bannos-24481-A')
+  IF s ~ '^(bannos|flourlane)-\d+-[A-Z0-9]+$' THEN
+    -- Try bannos first
+    EXECUTE 'SELECT row_to_json(o.*)::jsonb FROM orders_bannos o WHERE id = $1 LIMIT 1'
+    INTO v_row
+    USING p_code;
+    IF v_row IS NOT NULL THEN RETURN v_row; END IF;
+    
+    -- Try flourlane
+    EXECUTE 'SELECT row_to_json(o.*)::jsonb FROM orders_flourlane o WHERE id = $1 LIMIT 1'
+    INTO v_row
+    USING p_code;
+    IF v_row IS NOT NULL THEN RETURN v_row; END IF;
+  END IF;
+  
+  -- Try barcode match in both stores
+  EXECUTE 'SELECT row_to_json(o.*)::jsonb FROM orders_bannos o WHERE barcode = $1 LIMIT 1'
+  INTO v_row
+  USING p_code;
+  IF v_row IS NOT NULL THEN RETURN v_row; END IF;
+  
+  EXECUTE 'SELECT row_to_json(o.*)::jsonb FROM orders_flourlane o WHERE barcode = $1 LIMIT 1'
+  INTO v_row
+  USING p_code;
+  IF v_row IS NOT NULL THEN RETURN v_row; END IF;
+  
+  -- Try shopify order number
+  IF s ~ '^\d+$' THEN
+    v_num := s::bigint;
+    
+    -- Try bannos
+    EXECUTE 'SELECT row_to_json(o.*)::jsonb FROM orders_bannos o WHERE shopify_order_number = $1 LIMIT 1'
+    INTO v_row
+    USING v_num;
+    IF v_row IS NOT NULL THEN RETURN v_row; END IF;
+    
+    -- Try flourlane
+    EXECUTE 'SELECT row_to_json(o.*)::jsonb FROM orders_flourlane o WHERE shopify_order_number = $1 LIMIT 1'
+    INTO v_row
+    USING v_num;
+    IF v_row IS NOT NULL THEN RETURN v_row; END IF;
+  END IF;
+  
+  RETURN NULL; -- No match found
+END;
+$function$
+;
+
+-- Version 2 of 2
+-- Function: admin_delete_order
+CREATE OR REPLACE FUNCTION public.admin_delete_order(p_order_id text, p_store text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  
+  -- Delete related records
+  DELETE FROM stage_events WHERE order_id = p_order_id AND store = p_store;
+  DELETE FROM work_queue WHERE order_id = p_order_id;
+  DELETE FROM order_photos WHERE order_id = p_order_id;
+  
+  -- Delete the order itself
+  EXECUTE format('DELETE FROM public.%I WHERE id = $1', v_table_name)
+  USING p_order_id;
+  
+  RETURN true;
+END;
+$function$
+;
+
