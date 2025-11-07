@@ -32,6 +32,16 @@ CREATE TABLE IF NOT EXISTS public.staff_shared (
   store TEXT DEFAULT 'both' CHECK (store IN ('bannos', 'flourlane', 'both'))
 );
 
+-- Ensure settings table exists (required for feature_rls_enabled and settings_get_bool)
+CREATE TABLE IF NOT EXISTS public.settings (
+  store TEXT NOT NULL,
+  key TEXT NOT NULL,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (store, key)
+);
+
 -- Function: _order_lock
 CREATE OR REPLACE FUNCTION public._order_lock(p_order_id uuid)
  RETURNS void

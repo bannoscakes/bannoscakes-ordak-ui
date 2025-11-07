@@ -189,11 +189,10 @@ BEGIN
   SELECT jsonb_agg(
     jsonb_build_object(
       'id', m.id,
-      'content', m.content,
+      'content', m.body,
       'sender_id', m.sender_id,
       'sender_name', s.full_name,
-      'created_at', m.created_at,
-      'read_by', m.read_by
+      'created_at', m.created_at
     ) ORDER BY m.created_at DESC
   )
   INTO v_messages
