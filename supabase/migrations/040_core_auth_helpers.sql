@@ -98,7 +98,7 @@ select
     select 1
     from staff_shared u
     where u.email = auth_email()
-      and (u.store_access @> array[s]::text[])
+      and (u.store = 'both' or u.store = s)
   );
 $function$
 ;
