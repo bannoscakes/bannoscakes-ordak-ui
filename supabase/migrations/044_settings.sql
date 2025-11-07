@@ -117,16 +117,29 @@ CREATE OR REPLACE FUNCTION public.get_printing_settings(p_store text)
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
+DECLARE
+  v_settings jsonb;
 BEGIN
-  -- Return default printing settings
-  RETURN jsonb_build_object(
+  -- Validate store
+  IF p_store NOT IN ('bannos', 'flourlane', 'global') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
+  -- Get printing settings from settings table
+  SELECT value INTO v_settings
+  FROM public.settings
+  WHERE store = p_store AND key = 'printing_settings'
+  LIMIT 1;
+
+  -- Return stored settings or default values
+  RETURN COALESCE(v_settings, jsonb_build_object(
     'printer_name', 'Default Printer',
     'paper_size', 'A4',
     'orientation', 'portrait',
     'auto_print', true,
     'print_barcodes', true,
     'print_labels', true
-  );
+  ));
 END;
 $function$
 ;
@@ -283,7 +296,7 @@ BEGIN
   END IF;
 
   -- Validate flavours array
-  IF p_flavours IS NULL OR array_length(p_flavours, 1) = 0 THEN
+    IF p_flavours IS NULL OR coalesce(array_length(p_flavours, 1), 0) = 0 THEN
     RAISE EXCEPTION 'Flavours array cannot be empty';
   END IF;
 
@@ -336,7 +349,22 @@ CREATE OR REPLACE FUNCTION public.set_printing_settings(p_store text, p_settings
  SECURITY DEFINER
 AS $function$
 BEGIN
-  -- For now, just return success
+  -- Validate store
+  IF p_store NOT IN ('bannos', 'flourlane', 'global') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
+  -- Validate settings object
+  IF p_settings IS NULL THEN
+    RAISE EXCEPTION 'Settings object cannot be null';
+  END IF;
+
+  -- Insert or update printing settings in settings table
+  INSERT INTO public.settings (store, key, value)
+  VALUES (p_store, 'printing_settings', p_settings)
+  ON CONFLICT (store, key) 
+  DO UPDATE SET value = p_settings;
+  
   RETURN true;
 END;
 $function$
@@ -385,7 +413,7 @@ BEGIN
   END IF;
 
   -- Validate locations array
-  IF p_locations IS NULL OR array_length(p_locations, 1) = 0 THEN
+  IF p_locations IS NULL OR coalesce(array_length(p_locations, 1), 0) = 0 THEN
     RAISE EXCEPTION 'Storage locations array cannot be empty';
   END IF;
 
