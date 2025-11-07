@@ -79,11 +79,12 @@ CREATE TABLE IF NOT EXISTS orders_flourlane (
 
 -- Function: _order_lock
 -- Purpose: Advisory lock for order operations
+-- Note: Uses hashtextextended for bigint output (PostgreSQL 11+)
 CREATE OR REPLACE FUNCTION public._order_lock(p_order_id uuid)
  RETURNS void
  LANGUAGE sql
 AS $function$
-  select pg_advisory_xact_lock(hashtext(p_order_id::text));
+  select pg_advisory_xact_lock(hashtextextended(p_order_id::text, 0));
 $function$
 ;
 

@@ -12,7 +12,7 @@ AS $function$
   from public.staff_shared s
   order by s.full_name;
 $function$
-
+;
 
 -- Function 2/5: get_staff_list
 CREATE OR REPLACE FUNCTION public.get_staff_list(p_role text DEFAULT NULL::text, p_is_active boolean DEFAULT true)
