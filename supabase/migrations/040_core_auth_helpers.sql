@@ -18,6 +18,20 @@
 --
 -- =====================================================
 
+-- Ensure staff_shared table exists (required for app_role and app_can_access_store)
+CREATE TABLE IF NOT EXISTS public.staff_shared (
+  user_id UUID PRIMARY KEY,
+  full_name TEXT,
+  role TEXT DEFAULT 'Staff' CHECK (role IN ('Admin', 'Supervisor', 'Staff')),
+  phone TEXT,
+  email TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  last_login TIMESTAMPTZ,
+  store TEXT DEFAULT 'both' CHECK (store IN ('bannos', 'flourlane', 'both'))
+);
+
 -- Function: _order_lock
 CREATE OR REPLACE FUNCTION public._order_lock(p_order_id uuid)
  RETURNS void
