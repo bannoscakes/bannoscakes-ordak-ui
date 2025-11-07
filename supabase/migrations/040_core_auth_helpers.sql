@@ -68,7 +68,7 @@ CREATE OR REPLACE FUNCTION public.app_role()
  LANGUAGE sql
  STABLE
 AS $function$
-select coalesce( (select role from users where email = auth_email() limit 1), 'Staff');
+select coalesce( (select role from staff_shared where email = auth_email() limit 1), 'Staff');
 $function$
 ;
 
@@ -82,7 +82,7 @@ select
   app_role() = 'Admin'
   or exists (
     select 1
-    from users u
+    from staff_shared u
     where u.email = auth_email()
       and (u.store_access @> array[s]::text[])
   );
