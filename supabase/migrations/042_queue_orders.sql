@@ -70,7 +70,12 @@ $function$
 ;
 */
 
--- Function 4/9: get_order_for_scan
+-- Function 4/9: get_order_for_scan (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- A Version 2 for the new system needs to be created if scanner functionality is required
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.get_order_for_scan(p_code text)
  RETURNS orders
  LANGUAGE plpgsql
@@ -124,6 +129,7 @@ begin
 end
 $function$
 ;
+*/
 
 -- Function 5/9: get_queue
 CREATE OR REPLACE FUNCTION public.get_queue(p_store text DEFAULT NULL::text, p_stage text DEFAULT NULL::text, p_assignee_id uuid DEFAULT NULL::uuid, p_search text DEFAULT NULL::text, p_priority text DEFAULT NULL::text, p_storage text DEFAULT NULL::text, p_offset integer DEFAULT 0, p_limit integer DEFAULT 50, p_sort_by text DEFAULT 'priority'::text, p_sort_order text DEFAULT 'DESC'::text)
