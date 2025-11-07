@@ -1,6 +1,97 @@
 -- Migration: Inventory and component management RPCs
 -- Generated: 2025-11-07T05:15:46.197Z
 -- Functions: 21
+--
+-- IMPORTANT: This migration creates minimal table stubs for tables that already exist in production.
+-- These CREATE TABLE IF NOT EXISTS statements ensure migrations work in Preview environments.
+-- In production, these tables already exist with full schema, so these statements are skipped.
+
+-- ============================================================================
+-- TABLE STUBS (Minimal schemas for tables that exist in production)
+-- ============================================================================
+
+-- Components table
+CREATE TABLE IF NOT EXISTS public.components (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku text UNIQUE NOT NULL,
+  name text NOT NULL,
+  current_stock numeric NOT NULL DEFAULT 0,
+  min_stock numeric NOT NULL DEFAULT 0,
+  unit text NOT NULL DEFAULT 'each',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Component transactions table
+CREATE TABLE IF NOT EXISTS public.component_txns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  component_id uuid NOT NULL,
+  qty_delta numeric NOT NULL,
+  reason text NOT NULL,
+  ref text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- BOMs (Bill of Materials) table
+CREATE TABLE IF NOT EXISTS public.boms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_title text NOT NULL,
+  store text NOT NULL,
+  description text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- BOM items table
+CREATE TABLE IF NOT EXISTS public.bom_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  bom_id uuid NOT NULL,
+  component_id uuid NOT NULL,
+  quantity_required numeric NOT NULL,
+  unit text NOT NULL DEFAULT 'each',
+  is_optional boolean NOT NULL DEFAULT false,
+  notes text,
+  UNIQUE (bom_id, component_id)
+);
+
+-- Product requirements table
+CREATE TABLE IF NOT EXISTS public.product_requirements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_title text NOT NULL,
+  store text NOT NULL,
+  component_id uuid NOT NULL,
+  quantity_required numeric NOT NULL,
+  unit text NOT NULL DEFAULT 'each',
+  is_optional boolean NOT NULL DEFAULT false,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Stock transactions table
+CREATE TABLE IF NOT EXISTS public.stock_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  component_id uuid NOT NULL,
+  qty_delta numeric NOT NULL,
+  reason text NOT NULL,
+  ref text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Accessory keywords table
+CREATE TABLE IF NOT EXISTS public.accessory_keywords (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  keyword text NOT NULL,
+  component_id uuid NOT NULL,
+  priority integer NOT NULL DEFAULT 0,
+  match_type text NOT NULL DEFAULT 'exact',
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- ============================================================================
+-- INVENTORY FUNCTIONS
+-- ============================================================================
 
 -- Function 1/21: add_bom_component
 CREATE OR REPLACE FUNCTION public.add_bom_component(p_bom_id uuid, p_component_id uuid, p_quantity_required numeric, p_unit text DEFAULT 'each'::text, p_is_optional boolean DEFAULT false, p_notes text DEFAULT NULL::text)
