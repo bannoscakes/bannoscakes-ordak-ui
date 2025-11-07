@@ -15,6 +15,11 @@
 -- ============================================================================
 
 -- Function 1/9: admin_delete_order (Version 1 - UUID-based)
+-- NOTE: This function references the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.admin_delete_order(p_order_id uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -30,6 +35,7 @@ begin
 end;
 $function$
 ;
+*/
 
 -- Function 2/9: assign_staff
 CREATE OR REPLACE FUNCTION public.assign_staff(p_order_id text, p_store text, p_staff_id uuid)
@@ -40,6 +46,11 @@ AS $function$
 DECLARE
   v_table_name text;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+  
   v_table_name := 'orders_' || p_store;
   
   EXECUTE format('UPDATE public.%I SET assignee_id = $1, updated_at = now() WHERE id = $2', v_table_name)
