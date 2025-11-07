@@ -18,6 +18,20 @@
 --
 -- =====================================================
 
+-- Create ENUM types (required by queue and order functions)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'stage_type') THEN
+    CREATE TYPE stage_type AS ENUM (
+      'Filling', 'Covering', 'Decorating', 'Packing', 'Ready', 'Completed'
+    );
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'priority_level') THEN
+    CREATE TYPE priority_level AS ENUM ('high', 'medium', 'low');
+  END IF;
+END $$;
+
 -- Ensure staff_shared table exists (required for app_role and app_can_access_store)
 CREATE TABLE IF NOT EXISTS public.staff_shared (
   user_id UUID PRIMARY KEY,
@@ -50,8 +64,20 @@ CREATE TABLE IF NOT EXISTS public.orders_bannos (
   id TEXT UNIQUE NOT NULL,
   shopify_order_id BIGINT,
   shopify_order_number INTEGER,
+  customer_name TEXT,
+  product_title TEXT,
+  flavour TEXT,
+  notes TEXT,
+  currency CHAR(3),
+  total_amount NUMERIC(12,2),
+  stage stage_type,
+  priority priority_level,
+  due_date DATE,
+  delivery_method TEXT,
+  size TEXT,
+  item_qty INTEGER,
+  storage TEXT,
   assignee_id UUID,
-  stage TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -61,8 +87,20 @@ CREATE TABLE IF NOT EXISTS public.orders_flourlane (
   id TEXT UNIQUE NOT NULL,
   shopify_order_id BIGINT,
   shopify_order_number INTEGER,
+  customer_name TEXT,
+  product_title TEXT,
+  flavour TEXT,
+  notes TEXT,
+  currency CHAR(3),
+  total_amount NUMERIC(12,2),
+  stage stage_type,
+  priority priority_level,
+  due_date DATE,
+  delivery_method TEXT,
+  size TEXT,
+  item_qty INTEGER,
+  storage TEXT,
   assignee_id UUID,
-  stage TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
