@@ -432,8 +432,9 @@ begin
   returning id into v_txn_id;
 
   return v_txn_id;
-end $function$
-
+end
+$function$
+;
 
 -- Function 15/21: remove_bom_component
 CREATE OR REPLACE FUNCTION public.remove_bom_component(p_bom_id uuid, p_component_id uuid)
