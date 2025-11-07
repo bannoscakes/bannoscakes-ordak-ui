@@ -47,7 +47,7 @@ BEGIN
   RETURN v_result;
 END;
 $function$
-
+;
 
 -- Function 2/13: get_flavours
 CREATE OR REPLACE FUNCTION public.get_flavours(p_store text)
@@ -81,7 +81,7 @@ BEGIN
   RETURN v_flavours;
 END;
 $function$
-
+;
 
 -- Function 3/13: get_monitor_density
 CREATE OR REPLACE FUNCTION public.get_monitor_density(p_store text)
@@ -109,7 +109,7 @@ BEGIN
   RETURN v_density;
 END;
 $function$
-
+;
 
 -- Function 4/13: get_printing_settings
 CREATE OR REPLACE FUNCTION public.get_printing_settings(p_store text)
@@ -129,7 +129,7 @@ BEGIN
   );
 END;
 $function$
-
+;
 
 -- Function 5/13: get_setting
 CREATE OR REPLACE FUNCTION public.get_setting(p_store text, p_key text)
@@ -154,7 +154,7 @@ BEGIN
   RETURN v_value;
 END;
 $function$
-
+;
 
 -- Function 6/13: get_settings
 CREATE OR REPLACE FUNCTION public.get_settings(p_store text)
@@ -179,7 +179,7 @@ BEGIN
   ORDER BY s.key;
 END;
 $function$
-
+;
 
 -- Function 7/13: get_storage_locations
 CREATE OR REPLACE FUNCTION public.get_storage_locations(p_store text)
@@ -213,7 +213,7 @@ BEGIN
   RETURN v_locations;
 END;
 $function$
-
+;
 
 -- Function 8/13: set_due_date_settings
 CREATE OR REPLACE FUNCTION public.set_due_date_settings(p_store text, p_settings jsonb)
@@ -266,7 +266,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 9/13: set_flavours
 CREATE OR REPLACE FUNCTION public.set_flavours(p_store text, p_flavours text[])
@@ -299,7 +299,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 10/13: set_monitor_density
 CREATE OR REPLACE FUNCTION public.set_monitor_density(p_store text, p_density text)
@@ -327,7 +327,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 11/13: set_printing_settings
 CREATE OR REPLACE FUNCTION public.set_printing_settings(p_store text, p_settings jsonb)
@@ -340,7 +340,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 12/13: set_setting
 CREATE OR REPLACE FUNCTION public.set_setting(p_store text, p_key text, p_value jsonb)
@@ -368,7 +368,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 13/13: set_storage_locations
 CREATE OR REPLACE FUNCTION public.set_storage_locations(p_store text, p_locations text[])
@@ -401,5 +401,5 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 

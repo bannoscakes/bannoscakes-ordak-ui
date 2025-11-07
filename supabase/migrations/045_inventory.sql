@@ -24,7 +24,7 @@ BEGIN
   RETURN v_item_id;
 END;
 $function$
-
+;
 
 -- Function 2/21: add_product_requirement
 CREATE OR REPLACE FUNCTION public.add_product_requirement(p_shopify_product_id text, p_shopify_variant_id text, p_product_title text, p_component_id uuid, p_quantity_per_unit numeric, p_is_optional boolean DEFAULT false, p_auto_deduct boolean DEFAULT true)
@@ -48,7 +48,7 @@ BEGIN
   RETURN v_req_id;
 END;
 $function$
-
+;
 
 -- Function 3/21: deduct_inventory_for_order
 CREATE OR REPLACE FUNCTION public.deduct_inventory_for_order(p_order_id text, p_product_title text, p_store text, p_quantity integer DEFAULT 1)
@@ -142,7 +142,7 @@ BEGIN
   );
 END;
 $function$
-
+;
 
 -- Function 4/21: delete_accessory_keyword
 CREATE OR REPLACE FUNCTION public.delete_accessory_keyword(p_id uuid)
@@ -155,7 +155,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 5/21: find_component_by_keyword
 CREATE OR REPLACE FUNCTION public.find_component_by_keyword(p_keyword text)
@@ -185,7 +185,7 @@ BEGIN
   LIMIT 1;
 END;
 $function$
-
+;
 
 -- Function 6/21: get_accessory_keywords
 CREATE OR REPLACE FUNCTION public.get_accessory_keywords(p_search text DEFAULT NULL::text, p_is_active boolean DEFAULT true)
@@ -214,7 +214,7 @@ BEGIN
   ORDER BY ak.priority DESC, ak.keyword;
 END;
 $function$
-
+;
 
 -- Function 7/21: get_bom_details
 CREATE OR REPLACE FUNCTION public.get_bom_details(p_bom_id uuid)
@@ -244,7 +244,7 @@ BEGIN
   ORDER BY bi.is_optional, c.name;
 END;
 $function$
-
+;
 
 -- Function 8/21: get_boms
 CREATE OR REPLACE FUNCTION public.get_boms(p_store text DEFAULT NULL::text, p_is_active boolean DEFAULT true, p_search text DEFAULT NULL::text)
@@ -273,7 +273,7 @@ BEGIN
   ORDER BY b.product_title;
 END;
 $function$
-
+;
 
 -- Function 9/21: get_components
 CREATE OR REPLACE FUNCTION public.get_components()
@@ -292,7 +292,7 @@ BEGIN
   ORDER BY c.name;
 END;
 $function$
-
+;
 
 -- Function 10/21: get_components
 CREATE OR REPLACE FUNCTION public.get_components(p_category text DEFAULT NULL::text, p_is_active boolean DEFAULT true, p_low_stock_only boolean DEFAULT false, p_search text DEFAULT NULL::text, p_limit integer DEFAULT 100)
@@ -317,7 +317,7 @@ BEGIN
   LIMIT p_limit;
 END;
 $function$
-
+;
 
 -- Function 11/21: get_low_stock_components
 CREATE OR REPLACE FUNCTION public.get_low_stock_components()
@@ -340,7 +340,7 @@ BEGIN
   ORDER BY (c.min_stock - c.current_stock) DESC;
 END;
 $function$
-
+;
 
 -- Function 12/21: get_product_requirements
 CREATE OR REPLACE FUNCTION public.get_product_requirements(p_shopify_product_id text DEFAULT NULL::text, p_search text DEFAULT NULL::text)
@@ -372,7 +372,7 @@ BEGIN
   ORDER BY pr.product_title, c.name;
 END;
 $function$
-
+;
 
 -- Function 13/21: get_stock_transactions
 CREATE OR REPLACE FUNCTION public.get_stock_transactions(p_component_id uuid DEFAULT NULL::uuid, p_order_id text DEFAULT NULL::text, p_transaction_type text DEFAULT NULL::text, p_limit integer DEFAULT 100)
@@ -406,7 +406,7 @@ BEGIN
   LIMIT p_limit;
 END;
 $function$
-
+;
 
 -- Function 14/21: record_component_txn
 CREATE OR REPLACE FUNCTION public.record_component_txn(p_component_id uuid, p_qty_delta numeric, p_reason text, p_ref text DEFAULT NULL::text)
@@ -448,7 +448,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 16/21: restock_order
 CREATE OR REPLACE FUNCTION public.restock_order(p_order_id text, p_store text)
@@ -504,7 +504,7 @@ BEGIN
   );
 END;
 $function$
-
+;
 
 -- Function 17/21: update_component_stock
 CREATE OR REPLACE FUNCTION public.update_component_stock(p_component_id uuid, p_delta numeric, p_reason text, p_order_id text DEFAULT NULL::text)
@@ -575,7 +575,7 @@ BEGIN
   );
 END;
 $function$
-
+;
 
 -- Function 18/21: upsert_accessory_keyword
 CREATE OR REPLACE FUNCTION public.upsert_accessory_keyword(p_keyword text, p_component_id uuid, p_id uuid DEFAULT NULL::uuid, p_priority integer DEFAULT 0, p_match_type text DEFAULT 'contains'::text, p_is_active boolean DEFAULT true)
@@ -607,7 +607,7 @@ BEGIN
   RETURN v_keyword_id;
 END;
 $function$
-
+;
 
 -- Function 19/21: upsert_bom
 CREATE OR REPLACE FUNCTION public.upsert_bom(p_product_title text, p_store text, p_bom_id uuid DEFAULT NULL::uuid, p_description text DEFAULT NULL::text, p_shopify_product_id text DEFAULT NULL::text)
@@ -638,7 +638,7 @@ BEGIN
   RETURN v_bom_id;
 END;
 $function$
-
+;
 
 -- Function 20/21: upsert_component
 CREATE OR REPLACE FUNCTION public.upsert_component(p_sku text, p_name text, p_id uuid DEFAULT NULL::uuid, p_description text DEFAULT NULL::text, p_category text DEFAULT NULL::text, p_unit text DEFAULT 'each'::text, p_current_stock numeric DEFAULT 0, p_min_stock numeric DEFAULT 0, p_max_stock numeric DEFAULT NULL::numeric, p_cost_per_unit numeric DEFAULT NULL::numeric, p_supplier text DEFAULT NULL::text, p_supplier_sku text DEFAULT NULL::text, p_is_active boolean DEFAULT true)
@@ -701,7 +701,7 @@ BEGIN
   RETURN v_component_id;
 END;
 $function$
-
+;
 
 -- Function 21/21: upsert_product_requirement
 CREATE OR REPLACE FUNCTION public.upsert_product_requirement(p_shopify_product_id text, p_shopify_variant_id text, p_product_title text, p_component_id uuid, p_quantity_per_unit numeric, p_id uuid DEFAULT NULL::uuid, p_is_optional boolean DEFAULT false, p_auto_deduct boolean DEFAULT true)
@@ -741,5 +741,5 @@ BEGIN
   RETURN v_req_id;
 END;
 $function$
-
+;
 

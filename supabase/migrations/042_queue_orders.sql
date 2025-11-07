@@ -47,7 +47,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 3/9: get_complete_minimal
 CREATE OR REPLACE FUNCTION public.get_complete_minimal(p_store text DEFAULT NULL::text, p_limit integer DEFAULT 50)
@@ -62,7 +62,7 @@ AS $function$
   order by packing_complete_ts desc nulls last
   limit p_limit;
 $function$
-
+;
 
 -- Function 4/9: get_order_for_scan
 CREATE OR REPLACE FUNCTION public.get_order_for_scan(p_code text)
@@ -117,7 +117,7 @@ begin
   return v_row; -- null if no match
 end
 $function$
-
+;
 
 -- Function 5/9: get_queue
 CREATE OR REPLACE FUNCTION public.get_queue(p_store text DEFAULT NULL::text, p_stage text DEFAULT NULL::text, p_assignee_id uuid DEFAULT NULL::uuid, p_search text DEFAULT NULL::text, p_priority text DEFAULT NULL::text, p_storage text DEFAULT NULL::text, p_offset integer DEFAULT 0, p_limit integer DEFAULT 50, p_sort_by text DEFAULT 'priority'::text, p_sort_order text DEFAULT 'DESC'::text)
@@ -215,7 +215,7 @@ BEGIN
   END IF;
 END;
 $function$
-
+;
 
 -- Function 6/9: get_queue_minimal
 CREATE OR REPLACE FUNCTION public.get_queue_minimal(p_store text DEFAULT NULL::text, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)
@@ -230,7 +230,7 @@ AS $function$
   order by due_date asc nulls last, created_at asc
   limit p_limit offset p_offset;
 $function$
-
+;
 
 -- Function 7/9: get_queue_stats
 CREATE OR REPLACE FUNCTION public.get_queue_stats(p_store text)
@@ -257,7 +257,7 @@ BEGIN
   ', v_table_name);
 END;
 $function$
-
+;
 
 -- Function 8/9: get_unassigned_counts
 CREATE OR REPLACE FUNCTION public.get_unassigned_counts(p_store text)
@@ -281,7 +281,7 @@ BEGIN
   ', v_table_name);
 END;
 $function$
-
+;
 
 -- Function 9/9: update_order_core
 CREATE OR REPLACE FUNCTION public.update_order_core(p_order_id text, p_store text, p_customer_name text DEFAULT NULL::text, p_product_title text DEFAULT NULL::text, p_flavour text DEFAULT NULL::text, p_notes text DEFAULT NULL::text, p_due_date date DEFAULT NULL::date, p_delivery_method text DEFAULT NULL::text, p_size text DEFAULT NULL::text, p_item_qty integer DEFAULT NULL::integer, p_storage text DEFAULT NULL::text)
@@ -410,5 +410,5 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 

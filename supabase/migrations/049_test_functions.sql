@@ -15,7 +15,7 @@ BEGIN
     auth.email() as user_email;
 END;
 $function$
-
+;
 
 -- Function 2/2: test_rpc_call
 CREATE OR REPLACE FUNCTION public.test_rpc_call()
@@ -27,5 +27,5 @@ BEGIN
   RETURN 'RPC function called successfully at ' || NOW()::text || ' by user ' || COALESCE(auth.uid()::text, 'NULL');
 END;
 $function$
-
+;
 

@@ -53,7 +53,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 2/13: complete_covering
 CREATE OR REPLACE FUNCTION public.complete_covering(p_order_id uuid)
@@ -91,7 +91,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 3/13: complete_covering
 CREATE OR REPLACE FUNCTION public.complete_covering(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -115,7 +115,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 4/13: complete_decorating
 CREATE OR REPLACE FUNCTION public.complete_decorating(p_order_id uuid)
@@ -153,7 +153,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 5/13: complete_decorating
 CREATE OR REPLACE FUNCTION public.complete_decorating(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -177,7 +177,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 6/13: complete_filling
 CREATE OR REPLACE FUNCTION public.complete_filling(p_order_id uuid)
@@ -215,7 +215,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 7/13: complete_filling
 CREATE OR REPLACE FUNCTION public.complete_filling(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -252,7 +252,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 8/13: complete_packing
 CREATE OR REPLACE FUNCTION public.complete_packing(p_order_id uuid)
@@ -288,7 +288,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 9/13: complete_packing
 CREATE OR REPLACE FUNCTION public.complete_packing(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -312,7 +312,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 10/13: handle_print_barcode
 CREATE OR REPLACE FUNCTION public.handle_print_barcode(p_order_id uuid, p_barcode text)
@@ -354,7 +354,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 11/13: move_to_filling_with_assignment
 CREATE OR REPLACE FUNCTION public.move_to_filling_with_assignment(p_order_id uuid, p_staff_id uuid)
@@ -392,7 +392,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 12/13: qc_return_to_decorating
 CREATE OR REPLACE FUNCTION public.qc_return_to_decorating(p_order_id uuid, p_reason text)
@@ -431,7 +431,7 @@ begin
   return v_row;
 end
 $function$
-
+;
 
 -- Function 13/13: start_packing
 CREATE OR REPLACE FUNCTION public.start_packing(p_order_id uuid)
@@ -457,5 +457,5 @@ begin
   return v_row;
 end
 $function$
-
+;
 

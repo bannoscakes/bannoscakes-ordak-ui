@@ -151,7 +151,7 @@ begin
   on conflict (shopify_order_gid) do nothing;
 end
 $function$
-
+;
 
 -- Function 2/5: ingest_order
 CREATE OR REPLACE FUNCTION public.ingest_order(p_shop_domain text, payload jsonb DEFAULT NULL::jsonb, normalized jsonb DEFAULT NULL::jsonb)
@@ -164,7 +164,7 @@ AS $function$
     null
   );
 $function$
-
+;
 
 -- Function 3/5: is_cake_item
 CREATE OR REPLACE FUNCTION public.is_cake_item(p_item jsonb)
@@ -175,7 +175,7 @@ AS $function$
   select coalesce( (p_item->>'product_type') ilike '%cake%'
                 or (p_item->>'title') ilike '%cake%', false )
 $function$
-
+;
 
 -- Function 4/5: process_kitchen_task_create
 CREATE OR REPLACE FUNCTION public.process_kitchen_task_create(p_limit integer DEFAULT 20, p_lock_secs integer DEFAULT 60)
@@ -260,7 +260,7 @@ begin
   return v_count;
 end;
 $function$
-
+;
 
 -- Function 5/5: process_webhook_order_split
 CREATE OR REPLACE FUNCTION public.process_webhook_order_split(p_limit integer DEFAULT 10, p_lock_secs integer DEFAULT 60)
@@ -387,5 +387,5 @@ begin
   return v_count;
 end;
 $function$
-
+;
 

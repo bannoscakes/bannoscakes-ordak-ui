@@ -17,7 +17,7 @@ begin
   return new;
 end
 $function$
-
+;
 
 -- Function 2/2: set_updated_at
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -29,5 +29,5 @@ BEGIN
   RETURN NEW;
 END;
 $function$
-
+;
 

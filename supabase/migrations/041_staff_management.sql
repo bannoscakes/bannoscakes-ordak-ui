@@ -38,7 +38,7 @@ BEGIN
   ORDER BY s.full_name;
 END;
 $function$
-
+;
 
 -- Function 3/5: get_staff_me
 CREATE OR REPLACE FUNCTION public.get_staff_me()
@@ -64,7 +64,7 @@ BEGIN
   WHERE s.user_id = auth.uid();
 END;
 $function$
-
+;
 
 -- Function 4/5: get_staff_member
 CREATE OR REPLACE FUNCTION public.get_staff_member(p_user_id uuid)
@@ -93,7 +93,7 @@ BEGIN
     AND s.is_active = true;
 END;
 $function$
-
+;
 
 -- Function 5/5: get_staff_stats
 CREATE OR REPLACE FUNCTION public.get_staff_stats()
@@ -113,5 +113,4 @@ AS $function$
   group by s.user_id
   order by assigned_orders desc nulls last;
 $function$
-
-
+;

@@ -13,7 +13,7 @@ AS $function$
   on conflict do nothing;
   select true;
 $function$
-
+;
 
 -- Function 2/15: add_participant
 CREATE OR REPLACE FUNCTION public.add_participant(p_conversation_id text, p_user_id text)
@@ -29,7 +29,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 3/15: create_conversation
 CREATE OR REPLACE FUNCTION public.create_conversation(p_participants uuid[], p_name text DEFAULT NULL::text, p_type text DEFAULT 'direct'::text)
@@ -81,7 +81,7 @@ begin
   return v_convo_id;
 end;
 $function$
-
+;
 
 -- Function 4/15: create_conversation_text
 CREATE OR REPLACE FUNCTION public.create_conversation_text(p_participants text[], p_name text DEFAULT NULL::text, p_type text DEFAULT 'direct'::text)
@@ -95,7 +95,7 @@ AS $function$
     p_type
   );
 $function$
-
+;
 
 -- Function 5/15: get_conversation_participants
 CREATE OR REPLACE FUNCTION public.get_conversation_participants(p_conversation_id uuid)
@@ -114,7 +114,7 @@ AS $function$
     and exists (select 1 from public.conversation_participants p
                 where p.conversation_id = p_conversation_id and p.user_id = auth.uid());
 $function$
-
+;
 
 -- Function 6/15: get_conversations
 CREATE OR REPLACE FUNCTION public.get_conversations(p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)
@@ -166,7 +166,7 @@ left join unread u on u.conversation_id = mc.id
 order by coalesce(lm.created_at, mc.created_at) desc
 limit p_limit offset p_offset;
 $function$
-
+;
 
 -- Function 7/15: get_messages
 CREATE OR REPLACE FUNCTION public.get_messages(p_conversation_id uuid, p_limit integer DEFAULT 50)
@@ -229,7 +229,7 @@ BEGIN
   );
 END;
 $function$
-
+;
 
 -- Function 8/15: get_messages_debug
 CREATE OR REPLACE FUNCTION public.get_messages_debug(p_conversation_id uuid)
@@ -263,7 +263,7 @@ BEGIN
     v_message_count;
 END;
 $function$
-
+;
 
 -- Function 9/15: get_messages_temp
 CREATE OR REPLACE FUNCTION public.get_messages_temp(p_conversation_id uuid, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)
@@ -282,7 +282,7 @@ AS $function$
   order by m.created_at asc
   limit p_limit offset p_offset
 $function$
-
+;
 
 -- Function 10/15: get_messages_temp_test
 CREATE OR REPLACE FUNCTION public.get_messages_temp_test(p_conversation_id uuid, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)
@@ -308,7 +308,7 @@ BEGIN
   OFFSET p_offset;
 END;
 $function$
-
+;
 
 -- Function 11/15: get_unread_count
 CREATE OR REPLACE FUNCTION public.get_unread_count()
@@ -334,7 +334,7 @@ left join public.message_reads r on r.conversation_id = mc.id and r.user_id = au
 where lm.last_msg_at is not null
   and (r.last_read_at is null or lm.last_msg_at > r.last_read_at);
 $function$
-
+;
 
 -- Function 12/15: mark_messages_read
 CREATE OR REPLACE FUNCTION public.mark_messages_read(p_conversation_id uuid)
@@ -353,7 +353,7 @@ begin
   return true;
 end;
 $function$
-
+;
 
 -- Function 13/15: remove_participant
 CREATE OR REPLACE FUNCTION public.remove_participant(p_conversation_id uuid, p_user_id uuid)
@@ -365,7 +365,7 @@ AS $function$
   where conversation_id = p_conversation_id and user_id = p_user_id;
   select true;
 $function$
-
+;
 
 -- Function 14/15: remove_participant
 CREATE OR REPLACE FUNCTION public.remove_participant(p_conversation_id text, p_user_id text)
@@ -381,7 +381,7 @@ BEGIN
   RETURN true;
 END;
 $function$
-
+;
 
 -- Function 15/15: send_message
 CREATE OR REPLACE FUNCTION public.send_message(p_conversation_id uuid, p_content text)
@@ -421,5 +421,5 @@ begin
   return v_id;
 end;
 $function$
-
+;
 
