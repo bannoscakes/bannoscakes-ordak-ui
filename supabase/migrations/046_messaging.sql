@@ -317,7 +317,7 @@ $function$
 
 -- Function 9/15: get_messages_temp
 CREATE OR REPLACE FUNCTION public.get_messages_temp(p_conversation_id uuid, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)
- RETURNS TABLE(id bigint, body text, sender_id uuid, sender_name text, created_at timestamp with time zone, is_own_message boolean)
+ RETURNS TABLE(id uuid, body text, sender_id uuid, sender_name text, created_at timestamp with time zone, is_own_message boolean)
  LANGUAGE sql
  STABLE SECURITY DEFINER
 AS $function$
