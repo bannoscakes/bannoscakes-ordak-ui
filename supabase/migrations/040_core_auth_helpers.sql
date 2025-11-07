@@ -2,13 +2,36 @@
 -- Generated: 2025-11-07T05:15:46.193Z
 -- Functions: 10
 -- 
--- IMPORTANT: This migration assumes the following tables already exist in production:
--- - staff_shared (for user/staff management)
--- - settings (for feature flags and configuration)
--- - orders_bannos, orders_flourlane (for order management)
---
--- These tables are NOT created here because they already exist in production.
--- This migration ONLY extracts the RPC functions from production into version control.
+-- IMPORTANT: This migration creates minimal table stubs for tables that already exist in production.
+-- These CREATE TABLE IF NOT EXISTS statements ensure migrations work in Preview environments.
+-- In production, these tables already exist with full schema, so these statements are skipped.
+
+-- ============================================================================
+-- TABLE STUBS (Minimal schemas for tables that exist in production)
+-- ============================================================================
+
+-- Staff/User management table
+CREATE TABLE IF NOT EXISTS staff_shared (
+  row_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid UNIQUE NOT NULL,
+  email text UNIQUE NOT NULL,
+  full_name text NOT NULL,
+  role text NOT NULL DEFAULT 'Staff',
+  store text NOT NULL DEFAULT 'bannos',
+  is_active boolean NOT NULL DEFAULT true,
+  phone text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Settings table
+CREATE TABLE IF NOT EXISTS settings (
+  store text NOT NULL,
+  key text NOT NULL,
+  value jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (store, key)
+);
 
 -- ============================================================================
 -- HELPER FUNCTIONS (No dependencies)
