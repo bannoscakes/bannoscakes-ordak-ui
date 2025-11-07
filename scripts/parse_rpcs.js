@@ -45,8 +45,8 @@ const categories = {
       'get_staff',
       'get_staff_list',
       'get_staff_me',
-      'get_staff_member',
-      'get_staff_stats'
+      'get_staff_member'
+      // Note: get_staff_stats moved to queue_orders due to orders table dependency
     ]
   },
   queue_orders: {
@@ -61,7 +61,8 @@ const categories = {
       'get_unassigned_counts',
       'admin_delete_order',
       'assign_staff',
-      'update_order_core'
+      'update_order_core',
+      'get_staff_stats'  // Moved from staff_management due to orders table dependency
     ]
   },
   stage_completion: {
