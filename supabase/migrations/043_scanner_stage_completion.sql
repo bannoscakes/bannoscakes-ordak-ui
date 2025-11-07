@@ -12,8 +12,18 @@
 -- ============================================================================
 -- VERSION 1: Old system (public.orders with UUID)
 -- ============================================================================
+-- NOTE: All Version 1 functions are commented out because they reference:
+--   1. Non-existent 'orders' table type (SQLSTATE 42704)
+--   2. Non-existent 'public.orders' table (UUID-based, old system)
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 functions below are the active implementations
 
 -- Function 1/13: assign_staff_to_order (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.assign_staff_to_order(p_order_id uuid, p_staff_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -54,8 +64,14 @@ begin
 end
 $function$
 ;
+*/
 
--- Function 2/13: complete_covering
+-- Function 2/13: complete_covering (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.complete_covering(p_order_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -92,6 +108,7 @@ begin
 end
 $function$
 ;
+*/
 
 -- Function 3/13: complete_covering
 CREATE OR REPLACE FUNCTION public.complete_covering(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -117,7 +134,12 @@ END;
 $function$
 ;
 
--- Function 4/13: complete_decorating
+-- Function 4/13: complete_decorating (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.complete_decorating(p_order_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -154,6 +176,7 @@ begin
 end
 $function$
 ;
+*/
 
 -- Function 5/13: complete_decorating
 CREATE OR REPLACE FUNCTION public.complete_decorating(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -179,7 +202,12 @@ END;
 $function$
 ;
 
--- Function 6/13: complete_filling
+-- Function 6/13: complete_filling (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.complete_filling(p_order_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -216,6 +244,7 @@ begin
 end
 $function$
 ;
+*/
 
 -- Function 7/13: complete_filling
 CREATE OR REPLACE FUNCTION public.complete_filling(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -254,7 +283,12 @@ END;
 $function$
 ;
 
--- Function 8/13: complete_packing
+-- Function 8/13: complete_packing (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.complete_packing(p_order_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -289,6 +323,7 @@ begin
 end
 $function$
 ;
+*/
 
 -- Function 9/13: complete_packing
 CREATE OR REPLACE FUNCTION public.complete_packing(p_order_id text, p_store text, p_notes text DEFAULT NULL::text)
@@ -314,7 +349,12 @@ END;
 $function$
 ;
 
--- Function 10/13: handle_print_barcode
+-- Function 10/13: handle_print_barcode (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.handle_print_barcode(p_order_id uuid, p_barcode text)
  RETURNS orders
  LANGUAGE plpgsql
@@ -355,8 +395,14 @@ begin
 end
 $function$
 ;
+*/
 
--- Function 11/13: move_to_filling_with_assignment
+-- Function 11/13: move_to_filling_with_assignment (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.move_to_filling_with_assignment(p_order_id uuid, p_staff_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -393,8 +439,14 @@ begin
 end
 $function$
 ;
+*/
 
--- Function 12/13: qc_return_to_decorating
+-- Function 12/13: qc_return_to_decorating (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.qc_return_to_decorating(p_order_id uuid, p_reason text)
  RETURNS orders
  LANGUAGE plpgsql
@@ -432,8 +484,14 @@ begin
 end
 $function$
 ;
+*/
 
--- Function 13/13: start_packing
+-- Function 13/13: start_packing (Version 1 - UUID-based)
+-- NOTE: This function depends on the old 'orders' table (UUID-based) which does not exist in production
+-- Production uses orders_bannos/orders_flourlane tables (text-based IDs)
+-- Version 2 exists and is the active implementation
+-- Uncomment this function only if the old 'orders' table exists in your environment
+/*
 CREATE OR REPLACE FUNCTION public.start_packing(p_order_id uuid)
  RETURNS orders
  LANGUAGE plpgsql
@@ -458,4 +516,5 @@ begin
 end
 $function$
 ;
+*/
 
