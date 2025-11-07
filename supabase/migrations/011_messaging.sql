@@ -175,7 +175,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.conversation_participants 
     WHERE conversation_id = p_conversation_id 
-    AND participant_id = v_user_id
+    AND user_id = v_user_id
   ) THEN
     RETURN jsonb_build_object(
       'success', false,
