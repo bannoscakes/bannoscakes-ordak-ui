@@ -1,6 +1,6 @@
 -- Migration: Core authentication and authorization helpers
 -- Generated: 2025-11-07T05:15:46.193Z
--- Functions: 10
+-- Functions: 11
 -- 
 -- IMPORTANT: This migration creates minimal table stubs for tables that already exist in production.
 -- These CREATE TABLE IF NOT EXISTS statements ensure migrations work in Preview environments.
@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Orders tables (store-specific)
 -- Note: These are minimal stubs. Production has full schema with all columns.
+-- IMPORTANT: Column types must match migration 037 to prevent schema drift.
 CREATE TABLE IF NOT EXISTS orders_bannos (
   id text PRIMARY KEY,
   shopify_order_id bigint,
@@ -74,8 +75,8 @@ CREATE TABLE IF NOT EXISTS orders_bannos (
   due_date date,
   delivery_method text,
   assignee_id uuid,
-  stage text,
-  priority text,
+  stage stage_type not null default 'Filling',
+  priority smallint not null default 0,
   storage text,
   item_qty integer DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -93,8 +94,8 @@ CREATE TABLE IF NOT EXISTS orders_flourlane (
   due_date date,
   delivery_method text,
   assignee_id uuid,
-  stage text,
-  priority text,
+  stage stage_type not null default 'Filling',
+  priority smallint not null default 0,
   storage text,
   item_qty integer DEFAULT 1,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -148,12 +149,13 @@ $function$
 
 -- Function: auth_email
 -- Purpose: Get current user's email from JWT
+-- Returns: email claim value, or NULL if not present (does not silently default to empty string)
 CREATE OR REPLACE FUNCTION public.auth_email()
  RETURNS text
  LANGUAGE sql
  STABLE
 AS $function$
-select coalesce( (current_setting('request.jwt.claims', true)::jsonb ->> 'email'), '' );
+select current_setting('request.jwt.claims', true)::jsonb ->> 'email';
 $function$
 ;
 
@@ -190,12 +192,40 @@ $function$
 -- Function: app_role
 -- Purpose: Get user's role from staff_shared table
 -- NOTE: Uses staff_shared (not users) as that's the active table in production
+-- Raises exception if email claim is missing from JWT
 CREATE OR REPLACE FUNCTION public.app_role()
  RETURNS text
+ LANGUAGE plpgsql
+ STABLE
+AS $function$
+declare
+  v_email text;
+  v_role text;
+begin
+  v_email := auth_email();
+  
+  if v_email is null then
+    raise exception 'Authentication error: missing email claim in JWT token';
+  end if;
+  
+  select role into v_role
+  from staff_shared
+  where email = v_email
+  limit 1;
+  
+  return coalesce(v_role, 'Staff');
+end;
+$function$
+;
+
+-- Function: check_user_role
+-- Purpose: Check if current user has a specific role
+CREATE OR REPLACE FUNCTION public.check_user_role(p_role text)
+ RETURNS boolean
  LANGUAGE sql
  STABLE
 AS $function$
-select coalesce( (select role from staff_shared where email = auth_email() limit 1), 'Staff');
+select app_role() = p_role;
 $function$
 ;
 

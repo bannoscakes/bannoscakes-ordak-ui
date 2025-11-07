@@ -118,16 +118,38 @@ CREATE OR REPLACE FUNCTION public.complete_covering(p_order_id text, p_store tex
 AS $function$
 DECLARE
   v_table_name text;
+  v_current_stage stage_type;
   v_user_id uuid;
+  v_rows_affected integer;
 BEGIN
   v_table_name := 'orders_' || p_store;
-  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
+  END IF;
+  
+  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage
+  USING p_order_id;
+  
+  IF v_current_stage IS NULL THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+  
+  IF v_current_stage != 'Covering' THEN
+    RAISE EXCEPTION 'Order must be in Covering stage to complete covering';
+  END IF;
   
   EXECUTE format('UPDATE public.%I SET stage = ''Decorating'', covering_complete_ts = now(), updated_at = now() WHERE id = $1', v_table_name)
   USING p_order_id;
   
-  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by, notes)
-  VALUES (p_order_id, p_store, 'Covering', 'completed', v_user_id, p_notes);
+  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+  IF v_rows_affected != 1 THEN
+    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
+  END IF;
+  
+  INSERT INTO public.audit_log (action, performed_by, source, meta)
+  VALUES ('complete_covering', v_user_id, 'rpc', jsonb_build_object('order_id', p_order_id, 'store', p_store, 'stage', 'Covering', 'notes', p_notes));
   
   RETURN true;
 END;
@@ -186,16 +208,38 @@ CREATE OR REPLACE FUNCTION public.complete_decorating(p_order_id text, p_store t
 AS $function$
 DECLARE
   v_table_name text;
+  v_current_stage stage_type;
   v_user_id uuid;
+  v_rows_affected integer;
 BEGIN
   v_table_name := 'orders_' || p_store;
-  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
+  END IF;
+  
+  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage
+  USING p_order_id;
+  
+  IF v_current_stage IS NULL THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+  
+  IF v_current_stage != 'Decorating' THEN
+    RAISE EXCEPTION 'Order must be in Decorating stage to complete decorating';
+  END IF;
   
   EXECUTE format('UPDATE public.%I SET stage = ''Packing'', decorating_complete_ts = now(), packing_start_ts = now(), updated_at = now() WHERE id = $1', v_table_name)
   USING p_order_id;
   
-  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by, notes)
-  VALUES (p_order_id, p_store, 'Decorating', 'completed', v_user_id, p_notes);
+  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+  IF v_rows_affected != 1 THEN
+    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
+  END IF;
+  
+  INSERT INTO public.audit_log (action, performed_by, source, meta)
+  VALUES ('complete_decorating', v_user_id, 'rpc', jsonb_build_object('order_id', p_order_id, 'store', p_store, 'stage', 'Decorating', 'notes', p_notes));
   
   RETURN true;
 END;
@@ -256,9 +300,13 @@ DECLARE
   v_table_name text;
   v_current_stage stage_type;
   v_user_id uuid;
+  v_rows_affected integer;
 BEGIN
   v_table_name := 'orders_' || p_store;
-  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
+  END IF;
   
   EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
   INTO v_current_stage
@@ -275,8 +323,13 @@ BEGIN
   EXECUTE format('UPDATE public.%I SET stage = ''Covering'', filling_complete_ts = now(), updated_at = now() WHERE id = $1', v_table_name)
   USING p_order_id;
   
-  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by, notes)
-  VALUES (p_order_id, p_store, 'Filling', 'completed', v_user_id, p_notes);
+  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+  IF v_rows_affected != 1 THEN
+    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
+  END IF;
+  
+  INSERT INTO public.audit_log (action, performed_by, source, meta)
+  VALUES ('complete_filling', v_user_id, 'rpc', jsonb_build_object('order_id', p_order_id, 'store', p_store, 'stage', 'Filling', 'notes', p_notes));
   
   RETURN true;
 END;
@@ -333,16 +386,38 @@ CREATE OR REPLACE FUNCTION public.complete_packing(p_order_id text, p_store text
 AS $function$
 DECLARE
   v_table_name text;
+  v_current_stage stage_type;
   v_user_id uuid;
+  v_rows_affected integer;
 BEGIN
   v_table_name := 'orders_' || p_store;
-  v_user_id := COALESCE(auth.uid(), '00000000-0000-0000-0000-000000000000'::uuid);
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
+  END IF;
+  
+  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage
+  USING p_order_id;
+  
+  IF v_current_stage IS NULL THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+  
+  IF v_current_stage != 'Packing' THEN
+    RAISE EXCEPTION 'Order must be in Packing stage to complete packing';
+  END IF;
   
   EXECUTE format('UPDATE public.%I SET stage = ''Complete'', packing_complete_ts = now(), updated_at = now() WHERE id = $1', v_table_name)
   USING p_order_id;
   
-  INSERT INTO public.stage_events (order_id, store, stage, event, performed_by, notes)
-  VALUES (p_order_id, p_store, 'Packing', 'completed', v_user_id, p_notes);
+  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+  IF v_rows_affected != 1 THEN
+    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
+  END IF;
+  
+  INSERT INTO public.audit_log (action, performed_by, source, meta)
+  VALUES ('complete_packing', v_user_id, 'rpc', jsonb_build_object('order_id', p_order_id, 'store', p_store, 'stage', 'Packing', 'notes', p_notes));
   
   RETURN true;
 END;
