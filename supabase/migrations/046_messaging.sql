@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id uuid NOT NULL,
   sender_id uuid NOT NULL,
+  sender_name text,
   body text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
