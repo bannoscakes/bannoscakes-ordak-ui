@@ -191,13 +191,13 @@ BEGIN
       'id', m.id,
       'content', m.body,
       'sender_id', m.sender_id,
-      'sender_name', s.full_name,
+      'sender_name', COALESCE(s.full_name, m.sender_name),
       'created_at', m.created_at
     ) ORDER BY m.created_at DESC
   )
   INTO v_messages
   FROM public.messages m
-  JOIN public.staff_shared s ON s.user_id = m.sender_id
+  LEFT JOIN public.staff_shared s ON s.user_id = m.sender_id
   WHERE m.conversation_id = p_conversation_id
   LIMIT p_limit;
   

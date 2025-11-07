@@ -42,6 +42,31 @@ CREATE TABLE IF NOT EXISTS public.settings (
   PRIMARY KEY (store, key)
 );
 
+-- Ensure orders tables exist (required for queue, scanner, and worker RPCs)
+-- Note: These tables exist in production with full schema.
+-- This is a minimal schema for CI/preview environments.
+CREATE TABLE IF NOT EXISTS public.orders_bannos (
+  row_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT UNIQUE NOT NULL,
+  shopify_order_id BIGINT,
+  shopify_order_number INTEGER,
+  assignee_id UUID,
+  stage TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.orders_flourlane (
+  row_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT UNIQUE NOT NULL,
+  shopify_order_id BIGINT,
+  shopify_order_number INTEGER,
+  assignee_id UUID,
+  stage TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Function: _order_lock
 CREATE OR REPLACE FUNCTION public._order_lock(p_order_id uuid)
  RETURNS void
