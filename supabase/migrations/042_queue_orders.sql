@@ -230,6 +230,10 @@ $function$
 ;
 
 -- Function 6/9: get_queue_minimal
+-- NOTE: This function depends on view vw_queue_minimal which must be created separately
+-- The view is part of the UI layer and was not extracted with RPCs
+-- Uncomment this function after creating the vw_queue_minimal view
+/*
 CREATE OR REPLACE FUNCTION public.get_queue_minimal(p_store text DEFAULT NULL::text, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)
  RETURNS SETOF vw_queue_minimal
  LANGUAGE sql
@@ -243,6 +247,7 @@ AS $function$
   limit p_limit offset p_offset;
 $function$
 ;
+*/
 
 -- Function 7/9: get_queue_stats
 CREATE OR REPLACE FUNCTION public.get_queue_stats(p_store text)
@@ -253,6 +258,11 @@ AS $function$
 DECLARE
   v_table_name text;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+  
   v_table_name := 'orders_' || p_store;
   
   RETURN QUERY EXECUTE format('
@@ -280,6 +290,11 @@ AS $function$
 DECLARE
   v_table_name text;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+  
   v_table_name := 'orders_' || p_store;
   
   RETURN QUERY EXECUTE format('
