@@ -1,6 +1,6 @@
 -- Migration: Queue and order retrieval RPCs
 -- Generated: 2025-11-07T05:15:46.196Z
--- Functions: 9
+-- Functions: 10 (includes get_staff_stats moved from 041)
 --
 -- IMPORTANT NOTES:
 -- 1. Some functions have TWO versions (e.g., admin_delete_order, get_order_for_scan):
@@ -412,3 +412,22 @@ END;
 $function$
 ;
 
+-- Function 10/10: get_staff_stats (moved from 041 due to orders table dependency)
+CREATE OR REPLACE FUNCTION public.get_staff_stats()
+ RETURNS TABLE(user_id uuid, assigned_orders bigint)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+AS $function$
+  with all_orders as (
+    select assignee_id from public.orders_bannos
+    union all
+    select assignee_id from public.orders_flourlane
+  )
+  select s.user_id,
+         count(a.assignee_id)::bigint as assigned_orders
+  from public.staff_shared s
+  left join all_orders a on a.assignee_id = s.user_id
+  group by s.user_id
+  order by assigned_orders desc nulls last;
+$function$
+;

@@ -1,6 +1,7 @@
 -- Migration: Staff and user management RPCs
 -- Generated: 2025-11-07T05:15:46.196Z
--- Functions: 5
+-- Functions: 4
+-- Note: get_staff_stats moved to 042_queue_orders.sql due to orders table dependency
 
 -- Function 1/5: get_staff
 CREATE OR REPLACE FUNCTION public.get_staff()
@@ -92,25 +93,5 @@ BEGIN
   WHERE s.user_id = p_user_id
     AND s.is_active = true;
 END;
-$function$
-;
-
--- Function 5/5: get_staff_stats
-CREATE OR REPLACE FUNCTION public.get_staff_stats()
- RETURNS TABLE(user_id uuid, assigned_orders bigint)
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-  with all_orders as (
-    select assignee_id from public.orders_bannos
-    union all
-    select assignee_id from public.orders_flourlane
-  )
-  select s.user_id,
-         count(a.assignee_id)::bigint as assigned_orders
-  from public.staff_shared s
-  left join all_orders a on a.assignee_id = s.user_id
-  group by s.user_id
-  order by assigned_orders desc nulls last;
 $function$
 ;
