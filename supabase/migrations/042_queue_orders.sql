@@ -51,6 +51,10 @@ $function$
 ;
 
 -- Function 3/9: get_complete_minimal
+-- NOTE: This function depends on view vw_complete_minimal which must be created separately
+-- The view is part of the UI layer and was not extracted with RPCs
+-- Uncomment this function after creating the vw_complete_minimal view
+/*
 CREATE OR REPLACE FUNCTION public.get_complete_minimal(p_store text DEFAULT NULL::text, p_limit integer DEFAULT 50)
  RETURNS SETOF vw_complete_minimal
  LANGUAGE sql
@@ -64,6 +68,7 @@ AS $function$
   limit p_limit;
 $function$
 ;
+*/
 
 -- Function 4/9: get_order_for_scan
 CREATE OR REPLACE FUNCTION public.get_order_for_scan(p_code text)
