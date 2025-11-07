@@ -1,6 +1,55 @@
 -- Migration: Messaging and conversation RPCs
 -- Generated: 2025-11-07T05:15:46.197Z
 -- Functions: 15
+--
+-- IMPORTANT: This migration creates minimal table stubs for tables that already exist in production.
+-- These CREATE TABLE IF NOT EXISTS statements ensure migrations work in Preview environments.
+-- In production, these tables already exist with full schema, so these statements are skipped.
+
+-- ============================================================================
+-- TABLE STUBS (Minimal schemas for tables that exist in production)
+-- ============================================================================
+
+-- Conversations table
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  type text NOT NULL DEFAULT 'direct',
+  name text,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Conversation participants table
+CREATE TABLE IF NOT EXISTS public.conversation_participants (
+  conversation_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role text DEFAULT 'member',
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (conversation_id, user_id)
+);
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS public.messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL,
+  sender_id uuid NOT NULL,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Message reads table
+CREATE TABLE IF NOT EXISTS public.message_reads (
+  conversation_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  last_read_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (conversation_id, user_id)
+);
+
+-- ============================================================================
+-- MESSAGING FUNCTIONS
+-- ============================================================================
 
 -- Function 1/15: add_participant
 CREATE OR REPLACE FUNCTION public.add_participant(p_conversation_id uuid, p_user_id uuid)
