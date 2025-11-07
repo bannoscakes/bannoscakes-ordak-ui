@@ -27,8 +27,9 @@ begin
   delete from audit_log     where order_id = p_order_id;
   delete from dead_letter   where payload->>'order_id' = p_order_id::text;
   delete from orders        where id = p_order_id;
-end; $function$
-
+end;
+$function$
+;
 
 -- Function 2/9: assign_staff
 CREATE OR REPLACE FUNCTION public.assign_staff(p_order_id text, p_store text, p_staff_id uuid)
