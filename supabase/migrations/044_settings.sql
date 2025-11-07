@@ -19,8 +19,8 @@ BEGIN
     RAISE EXCEPTION 'Invalid store: %', p_store;
   END IF;
 
-  -- Get default due date
-  SELECT value INTO v_default_due
+  -- Get default due date (extract raw string from JSONB)
+  SELECT value#>>'{}' INTO v_default_due
   FROM settings 
   WHERE store = p_store AND key = 'dueDates.defaultDue'
   LIMIT 1;
@@ -261,7 +261,7 @@ BEGIN
     (p_store, 'dueDates.allowedDays', v_allowed_days),
     (p_store, 'dueDates.blackoutDates', v_blackout_dates)
   ON CONFLICT (store, key) 
-  DO UPDATE SET value = EXCLUDED.value, created_at = now();
+  DO UPDATE SET value = EXCLUDED.value;
   
   RETURN true;
 END;
@@ -294,7 +294,7 @@ BEGIN
   INSERT INTO public.settings (store, key, value)
   VALUES (p_store, 'flavours', v_flavours_json)
   ON CONFLICT (store, key) 
-  DO UPDATE SET value = v_flavours_json, created_at = now();
+  DO UPDATE SET value = v_flavours_json;
   
   RETURN true;
 END;
@@ -322,7 +322,7 @@ BEGIN
   INSERT INTO public.settings (store, key, value)
   VALUES (p_store, 'monitor.density', to_jsonb(p_density))
   ON CONFLICT (store, key) 
-  DO UPDATE SET value = to_jsonb(p_density), created_at = now();
+  DO UPDATE SET value = to_jsonb(p_density);
   
   RETURN true;
 END;
@@ -363,7 +363,7 @@ BEGIN
   INSERT INTO public.settings (store, key, value)
   VALUES (p_store, p_key, p_value)
   ON CONFLICT (store, key) 
-  DO UPDATE SET value = p_value, created_at = now();
+  DO UPDATE SET value = p_value;
   
   RETURN true;
 END;
@@ -396,7 +396,7 @@ BEGIN
   INSERT INTO public.settings (store, key, value)
   VALUES (p_store, 'storage_locations', v_locations_json)
   ON CONFLICT (store, key) 
-  DO UPDATE SET value = v_locations_json, created_at = now();
+  DO UPDATE SET value = v_locations_json;
   
   RETURN true;
 END;
