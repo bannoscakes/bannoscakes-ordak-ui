@@ -16,9 +16,8 @@ CREATE TABLE IF NOT EXISTS webhook_inbox_flourlane (
   processed boolean NOT NULL DEFAULT false
 );
 
--- Indexes for backend processing (only unprocessed orders)
-CREATE INDEX IF NOT EXISTS idx_bannos_unprocessed ON webhook_inbox_bannos(processed) WHERE processed = false;
-CREATE INDEX IF NOT EXISTS idx_flourlane_unprocessed ON webhook_inbox_flourlane(processed) WHERE processed = false;
+-- NOTE: Partial indexes removed as they are not used by backend queries.
+-- Backend processes via work_queue table, not by querying webhook_inbox directly.
 
 -- Comments
 COMMENT ON TABLE webhook_inbox_bannos IS 'Raw Shopify orders for Bannos store. Backend processes these using Liquid templates.';

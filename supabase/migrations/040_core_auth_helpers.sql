@@ -33,6 +33,46 @@ CREATE TABLE IF NOT EXISTS settings (
   PRIMARY KEY (store, key)
 );
 
+-- Orders tables (store-specific)
+-- Note: These are minimal stubs. Production has full schema with all columns.
+CREATE TABLE IF NOT EXISTS orders_bannos (
+  id text PRIMARY KEY,
+  shopify_order_id bigint,
+  shopify_order_number integer,
+  customer_name text,
+  product_title text,
+  size text,
+  notes text,
+  due_date date,
+  delivery_method text,
+  assignee_id uuid,
+  stage text,
+  priority text,
+  storage text,
+  item_qty integer DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS orders_flourlane (
+  id text PRIMARY KEY,
+  shopify_order_id bigint,
+  shopify_order_number integer,
+  customer_name text,
+  product_title text,
+  size text,
+  notes text,
+  due_date date,
+  delivery_method text,
+  assignee_id uuid,
+  stage text,
+  priority text,
+  storage text,
+  item_qty integer DEFAULT 1,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- ============================================================================
 -- HELPER FUNCTIONS (No dependencies)
 -- ============================================================================
