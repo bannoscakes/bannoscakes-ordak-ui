@@ -52,7 +52,27 @@ end;
 $function$
 ;
 
--- Function: app_can_access_store
+-- Function: auth_email (MOVED UP - dependency for app_role and app_can_access_store)
+CREATE OR REPLACE FUNCTION public.auth_email()
+ RETURNS text
+ LANGUAGE sql
+ STABLE
+AS $function$
+select coalesce( (current_setting('request.jwt.claims', true)::jsonb ->> 'email'), '' );
+$function$
+;
+
+-- Function: app_role (MOVED UP - dependency for app_can_access_store)
+CREATE OR REPLACE FUNCTION public.app_role()
+ RETURNS text
+ LANGUAGE sql
+ STABLE
+AS $function$
+select coalesce( (select role from users where email = auth_email() limit 1), 'Staff');
+$function$
+;
+
+-- Function: app_can_access_store (depends on app_role and auth_email)
 CREATE OR REPLACE FUNCTION public.app_can_access_store(s text)
  RETURNS boolean
  LANGUAGE sql
@@ -69,33 +89,13 @@ select
 $function$
 ;
 
--- Function: app_is_service_role
+-- Function: app_is_service_role (dependency for rls_bypass)
 CREATE OR REPLACE FUNCTION public.app_is_service_role()
  RETURNS boolean
  LANGUAGE sql
  STABLE
 AS $function$
 select coalesce((current_setting('request.jwt.claims', true)::jsonb ->> 'role'), '') = 'service_role';
-$function$
-;
-
--- Function: app_role
-CREATE OR REPLACE FUNCTION public.app_role()
- RETURNS text
- LANGUAGE sql
- STABLE
-AS $function$
-select coalesce( (select role from users where email = auth_email() limit 1), 'Staff');
-$function$
-;
-
--- Function: auth_email
-CREATE OR REPLACE FUNCTION public.auth_email()
- RETURNS text
- LANGUAGE sql
- STABLE
-AS $function$
-select coalesce( (current_setting('request.jwt.claims', true)::jsonb ->> 'email'), '' );
 $function$
 ;
 
@@ -113,7 +113,7 @@ AS $function$
 $function$
 ;
 
--- Function: feature_rls_enabled
+-- Function: feature_rls_enabled (dependency for rls_bypass)
 CREATE OR REPLACE FUNCTION public.feature_rls_enabled()
  RETURNS boolean
  LANGUAGE sql
@@ -126,7 +126,7 @@ select coalesce(
 $function$
 ;
 
--- Function: rls_bypass
+-- Function: rls_bypass (depends on feature_rls_enabled and app_is_service_role)
 CREATE OR REPLACE FUNCTION public.rls_bypass()
  RETURNS boolean
  LANGUAGE sql
