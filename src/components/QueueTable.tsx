@@ -334,7 +334,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         {/* Production Stages */}
         <Tabs value={selectedStage} onValueChange={setSelectedStage} className="w-full">
           <div className="px-6 pt-4">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-6">
               {productionStages.map((stage) => (
                 <TabsTrigger key={stage.value} value={stage.value} className="relative">
                   {stage.label}
