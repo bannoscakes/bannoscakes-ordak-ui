@@ -22,7 +22,7 @@ export interface Order {
   created_at?: string;
   updated_at?: string;
   // New fields from Task 1
-  priority?: 'high' | 'medium' | 'low';
+  priority?: Priority;
   assignee_id?: string | null;
   storage?: string | null;
   status?: 'pending' | 'in_progress' | 'complete';
@@ -46,7 +46,7 @@ export interface QueueMinimalRow {
   created_at: string;
   updated_at: string;
   // New fields from Task 1
-  priority?: 'high' | 'medium' | 'low';
+  priority?: Priority;
   assignee_id?: string | null;
   storage?: string | null;
   status?: 'pending' | 'in_progress' | 'complete';
@@ -76,7 +76,7 @@ export interface CompleteMinimalRow {
   created_at: string;
   updated_at: string;
   // New fields from Task 1
-  priority?: 'high' | 'medium' | 'low';
+  priority?: Priority;
   assignee_id?: string | null;
   storage?: string | null;
   status?: 'pending' | 'in_progress' | 'complete';
