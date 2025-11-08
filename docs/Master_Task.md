@@ -303,6 +303,11 @@ Consider adding validation against configured storage locations in Settings. For
   
 Completed via migration `051_set_storage_rpc.sql`. Verified in UI and with direct RPC call.
 
+**Verification Notes:**
+- Called `select set_storage('bannos', '<order_id>', 'Kitchen Freezer');` → storage updated, `updated_at` changed.
+- Called with empty string `''` → normalized to NULL as expected.
+- Non-existent `order_id` raises exception via `ROW_COUNT` check after dynamic UPDATE.
+
 ---
 
 ### Task 5: Implement print_barcode RPC
