@@ -85,9 +85,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         filling: [],
         covering: [],
         decorating: [],
-        packaging: [],
-        quality: [],
-        ready: [],
+        packing: [],
+        complete: [],
       };
       
       orders.forEach((order: any) => {
@@ -112,9 +111,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         if (!order.assignee_id && stageKey === 'filling') {
           grouped.unassigned.push(item);
         } else if (stageKey === 'packing') {
-          grouped.packaging.push(item);
+          grouped.packing.push(item);
         } else if (stageKey === 'complete') {
-          grouped.ready.push(item);
+          grouped.complete.push(item);
         } else if (grouped[stageKey]) {
           grouped[stageKey].push(item);
         }
@@ -145,9 +144,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     { value: "filling", label: "Filling", count: 0 },
     { value: "covering", label: "Covering", count: 0 },
     { value: "decorating", label: "Decorating", count: 0 },
-    { value: "packaging", label: "Packaging", count: 0 },
-    { value: "quality", label: "Quality Check", count: 0 },
-    { value: "ready", label: "Ready", count: 0 }
+    { value: "packing", label: "Packing", count: 0 },
+    { value: "complete", label: "Complete", count: 0 }
   ];
 
   const currentItems = queueData[selectedStage] || [];
