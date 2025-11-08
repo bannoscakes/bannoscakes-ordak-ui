@@ -5,7 +5,7 @@ export type Priority = 'High' | 'Medium' | 'Low';
 
 // Core Order interface matching backend schema
 export interface Order {
-  id: string;
+  id: number;
   store: Store;
   human_id?: string;
   order_number?: string;
@@ -18,7 +18,7 @@ export interface Order {
   notes?: string | null;
   currency?: string | null;
   total_amount?: number | null;
-  stage?: string;
+  stage?: Stage;
   created_at?: string;
   updated_at?: string;
   // New fields from Task 1
@@ -42,7 +42,7 @@ export interface QueueMinimalRow {
   notes: string | null;
   currency: string | null;
   total_amount: number | null;
-  stage: string;
+  stage: Stage;
   created_at: string;
   updated_at: string;
   // New fields from Task 1
@@ -71,7 +71,7 @@ export interface CompleteMinimalRow {
   notes: string | null;
   currency: string | null;
   total_amount: number | null;
-  stage: string;
+  stage: Stage;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
