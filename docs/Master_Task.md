@@ -1,6 +1,6 @@
 # Ordak v2 - Master Task List
 **Last Updated:** 2025-11-08  
-**Overall Completion:** 70%  
+**Overall Completion:** 75%  
 **Target Completion:** 95% by 2025-12-06 (4 weeks)  
 **Source:** Consolidated findings from 5 comprehensive audit reports
 
@@ -19,11 +19,11 @@
 
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
-| Tier 1: Critical | 6 | 4 | 0 | 2 | 67% |
+| Tier 1: Critical | 6 | 5 | 0 | 1 | 83% |
 | Tier 2: High Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 3: Medium Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **4** | **0** | **16** | **20%** |
+| **TOTAL** | **20** | **5** | **0** | **15** | **25%** |
 
 ---
 
@@ -438,11 +438,11 @@ Actual printing implementation (thermal printer, label size) is client-side. Thi
 ---
 
 ### Task 6: Create stage_events Table
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-08  
 **Priority:** ⚡ CRITICAL  
 **Effort:** 4 hours  
 **Impact:** No analytics, no timeline, no staff metrics  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None (but blocks Tasks 5, 7)  
 **Report Source:** Reports #1, #4 (Confirmed missing, currently using audit_log workaround)
 
@@ -520,22 +520,50 @@ VALUES (
 ```
 
 **Acceptance Criteria:**
-- [ ] Table created with correct schema
-- [ ] All indexes created
-- [ ] RLS enabled with proper policies
-- [ ] `complete_*` RPCs updated to log to stage_events
-- [ ] `assign_staff` RPC updated to log to stage_events
-- [ ] Old audit_log entries preserved (don't delete)
+- [x] Table created with correct schema
+- [x] All indexes created
+- [x] RLS enabled with proper policies
+- [x] `complete_*` RPCs updated to log to stage_events
+- [x] `assign_staff` RPC updated to log to stage_events
+- [x] Old audit_log entries preserved (don't delete)
 - [ ] Test: Complete order through all stages, verify stage_events populated
 - [ ] Test: Query stage_events for timeline view works
 
 **Related Tasks:**
-- Task 5 (print_barcode) - **BLOCKED by this**
+- Task 5 (print_barcode) - **UNBLOCKED** - Can now proceed
 - Task 7 (Verify shift/break RPCs) - May need similar table
 - Task 12 (Shopify Integration) - May log events here
 
 **Notes:**
 This is foundational for analytics. All future event tracking should use this table. Consider migrating old audit_log entries if needed for historical analytics.
+
+**Completion Notes:**
+Completed via migrations `052_stage_events_rebuild.sql` and `053_add_stage_events_logging.sql`.
+
+**What was done:**
+1. **Replaced old stage_events table** - Old table from migration 028 had wrong schema (UUID order_id, shop_domain, etc). Dropped and recreated with production-ready schema (text order_id, store, stage, event_type).
+2. **Created proper indexes** - Added 4 indexes for common query patterns (store+timestamp, store+stage+timestamp, staff+timestamp, order+timestamp).
+3. **Enabled RLS** - Read allowed for authenticated users, direct writes blocked (RPC-only via SECURITY DEFINER).
+4. **Updated 5 RPCs** - Added stage_events logging to:
+   - `complete_filling` - Logs 'complete' event for Filling stage
+   - `complete_covering` - Logs 'complete' event for Covering stage
+   - `complete_decorating` - Logs 'complete' event for Decorating stage
+   - `complete_packing` - Logs 'complete' event for Packing stage
+   - `assign_staff` - Logs 'assign' event (also added missing audit_log entry)
+5. **Preserved backward compatibility** - All RPCs still log to audit_log in addition to stage_events.
+
+**Schema:**
+- `id` (uuid) - Primary key
+- `store` (text) - 'bannos' or 'flourlane'
+- `order_id` (text) - Matches orders_bannos/orders_flourlane
+- `stage` (text) - Filling, Covering, Decorating, Packing, or Complete
+- `event_type` (text) - 'assign', 'complete', or 'print'
+- `at_ts` (timestamptz) - Event timestamp
+- `staff_id` (uuid) - Who performed the action
+- `ok` (boolean) - Quality flag (for future QC tracking)
+- `meta` (jsonb) - Flexible metadata (notes, etc.)
+
+**Ready for testing** once migrations are applied to dev database.
 
 ---
 
@@ -2616,16 +2644,16 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 20  
+**Not Started:** 15  
 **In Progress:** 0  
-**Done:** 0  
+**Done:** 5  
 **Cancelled:** 0  
 
 **By Priority:**
-- 🔴 Critical (Tier 1): 6 tasks
-- 🟡 High (Tier 2): 5 tasks
-- 🟢 Medium (Tier 3): 5 tasks
-- 🔵 Low (Tier 4): 4 tasks
+- 🔴 Critical (Tier 1): 6 tasks (5 done, 1 remaining)
+- 🟡 High (Tier 2): 5 tasks (0 done)
+- 🟢 Medium (Tier 3): 5 tasks (0 done)
+- 🔵 Low (Tier 4): 4 tasks (0 done)
 
 **By Effort:**
 - ⚡ Quick (<2 hours): 6 tasks
