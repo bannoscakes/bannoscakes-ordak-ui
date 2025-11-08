@@ -20,6 +20,11 @@ export interface QueueMinimalRow {
   stage: string;
   created_at: string;
   updated_at: string;
+  // New fields from Task 1
+  priority?: 'high' | 'medium' | 'low';
+  assignee_id?: string | null;
+  storage?: string | null;
+  status?: 'pending' | 'in_progress' | 'complete';
 }
 
 export interface UnassignedCountRow {
@@ -45,4 +50,9 @@ export interface CompleteMinimalRow {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  // New fields from Task 1
+  priority?: 'high' | 'medium' | 'low';
+  assignee_id?: string | null;
+  storage?: string | null;
+  status?: 'pending' | 'in_progress' | 'complete';
 }
