@@ -19,11 +19,11 @@
 
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
-| Tier 1: Critical | 6 | 1 | 0 | 5 | 17% |
+| Tier 1: Critical | 6 | 3 | 0 | 3 | 50% |
 | Tier 2: High Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 3: Medium Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **1** | **0** | **19** | **5%** |
+| **TOTAL** | **20** | **3** | **0** | **17** | **15%** |
 
 ---
 
@@ -136,11 +136,11 @@ Completed via migration `050_add_flavour_column.sql`. Verified in DB using `info
 ---
 
 ### Task 3: Fix Stage Naming Drift in UI
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-08  
 **Priority:** ⚡ CRITICAL  
 **Effort:** 2 hours  
 **Impact:** Stage flow logic broken, causes bugs in queue grouping  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None  
 **Report Source:** Report #3 (Visual Code Audit - QueueTable.tsx screenshot)
 
@@ -185,19 +185,28 @@ type Stage = 'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete';
 4. Any components with stage comparisons
 
 **Acceptance Criteria:**
-- [ ] All references to "packaging" changed to "packing" (lowercase in code)
-- [ ] All "quality" stage references removed
-- [ ] All "ready" references changed to "complete"
-- [ ] Stage enum type matches: `'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete'`
-- [ ] Queue grouping works correctly
-- [ ] Stage progression (Packing → Complete) works
-- [ ] No TypeScript errors
-- [ ] Manual testing: Complete an order through all stages
+- [x] All references to "packaging" changed to "packing" (lowercase in code)
+- [x] All "quality" stage references removed
+- [x] All "ready" references changed to "complete"
+- [x] Stage enum type matches: `'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete'`
+- [x] Queue grouping works correctly
+- [x] Stage progression (Packing → Complete) works
+- [x] No TypeScript errors
+- [x] Manual testing: Complete an order through all stages
 
 **Related Tasks:** None
 
 **Notes:**
 This is a **critical bug** that affects order flow. Must fix before production use.
+
+**Completion Notes:**
+Fixed stage naming inconsistencies in `QueueTable.tsx`:
+- Changed `packaging` → `packing` in grouped object (line 88), mapping logic (line 114), and productionStages array (line 147)
+- Removed `quality` stage entirely (not in spec)
+- Changed `ready` → `complete` in grouped object (line 89), mapping logic (line 116), and productionStages array (line 148)
+- Updated `TabsList` grid layout from `grid-cols-7` to `grid-cols-6` to match 6 stages
+- All stage references now match backend enum: Filling, Covering, Decorating, Packing, Complete
+- Queue tabs now display correctly with proper alignment and spacing
 
 ---
 
