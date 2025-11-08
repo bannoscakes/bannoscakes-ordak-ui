@@ -1,7 +1,10 @@
 // Database types for the application
 export type Store = 'bannos' | 'flourlane';
 export type Stage = 'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete';
+// Priority type is for display purposes (capitalized labels)
 export type Priority = 'High' | 'Medium' | 'Low';
+// Note: Order interfaces use lowercase priority ('high'|'medium'|'low') to match backend schema
+// Components convert between formats as needed using .toLowerCase() or mapping
 
 export interface QueueMinimalRow {
   id: number;
