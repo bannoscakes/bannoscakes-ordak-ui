@@ -19,11 +19,11 @@
 
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
-| Tier 1: Critical | 6 | 3 | 0 | 3 | 50% |
+| Tier 1: Critical | 6 | 4 | 0 | 2 | 67% |
 | Tier 2: High Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 3: Medium Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **3** | **0** | **17** | **15%** |
+| **TOTAL** | **20** | **4** | **0** | **16** | **20%** |
 
 ---
 
@@ -211,11 +211,11 @@ Fixed stage naming inconsistencies in `QueueTable.tsx`:
 ---
 
 ### Task 4: Implement set_storage RPC
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-08  
 **Priority:** ⚡ CRITICAL  
 **Effort:** 1 hour  
 **Impact:** Storage feature completely non-functional  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None  
 **Report Source:** Report #4, Section 2 (RPC Coverage - Queue Management)
 
@@ -226,7 +226,7 @@ Storage chip displays on cards and storage locations are configured in Settings,
 Create `set_storage` RPC:
 
 ```sql
--- File: supabase/migrations/047_set_storage_rpc.sql
+-- File: supabase/migrations/051_set_storage_rpc.sql
 CREATE OR REPLACE FUNCTION set_storage(
   p_store text,
   p_order_id text,
@@ -286,20 +286,22 @@ COMMENT ON FUNCTION set_storage IS 'Set storage location for an order (bulk or s
 ```
 
 **Acceptance Criteria:**
-- [ ] RPC created and deployed
-- [ ] Function validates store parameter
-- [ ] Function updates storage field correctly
-- [ ] Audit log entry created
-- [ ] Error handling for non-existent orders
-- [ ] UI "Set Storage" action works (StickyAssignBar or Order Drawer)
-- [ ] Storage chip updates immediately after setting
-- [ ] Manual test: Set storage on multiple orders
+- [x] RPC created and deployed
+- [x] Function validates store parameter
+- [x] Function updates storage field correctly
+- [x] Audit log entry created
+- [x] Error handling for non-existent orders
+- [x] UI "Set Storage" action works (StickyAssignBar or Order Drawer)
+- [x] Storage chip updates immediately after setting
+- [x] Manual test: Set storage on multiple orders
 
 **Related Tasks:**
 - Task 11 (Add Storage filter to queues)
 
 **Notes:**
 Consider adding validation against configured storage locations in Settings. For now, accept any text value.
+  
+Completed via migration `051_set_storage_rpc.sql`. Verified in UI and with direct RPC call.
 
 ---
 
