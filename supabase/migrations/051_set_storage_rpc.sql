@@ -12,6 +12,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_table_name text;
+  v_rows_updated integer := 0;
 BEGIN
   -- Validate store
   IF p_store NOT IN ('bannos', 'flourlane') THEN
@@ -32,8 +33,9 @@ BEGIN
     v_table_name
   ) USING p_storage, p_order_id;
 
-  -- Ensure order exists
-  IF NOT FOUND THEN
+  -- Ensure order exists (FOUND is not set by EXECUTE; use ROW_COUNT)
+  GET DIAGNOSTICS v_rows_updated = ROW_COUNT;
+  IF v_rows_updated = 0 THEN
     RAISE EXCEPTION 'Order not found: %', p_order_id;
   END IF;
 
