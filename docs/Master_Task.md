@@ -34,11 +34,11 @@
 ---
 
 ### Task 1: Update Order TypeScript Interface
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-08  
 **Priority:** ⚡ CRITICAL  
 **Effort:** 30 minutes  
 **Impact:** UI cannot display priority, assignee, storage, status  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None  
 **Report Source:** Report #5, Section 5 (Data Models & Types)
 
@@ -64,17 +64,26 @@ export interface Order {
 ```
 
 **Acceptance Criteria:**
-- [ ] Type updated in `src/types/db.ts`
-- [ ] No TypeScript compilation errors
-- [ ] Priority badges display correctly in queue cards
-- [ ] Assignee names show on assigned orders
-- [ ] Storage chips appear when storage is set
-- [ ] Status indicators work in all views
+- [x] Type updated in `src/types/db.ts`
+- [x] No TypeScript compilation errors
+- [x] Priority badges display correctly in queue cards
+- [x] Assignee names show on assigned orders
+- [x] Storage chips appear when storage is set
+- [x] Status indicators work in all views
 
 **Related Tasks:** None
 
 **Notes:**
 Backend schema already has these fields (`orders_bannos` and `orders_flourlane` tables). This is purely a frontend type mismatch.
+
+**Completion Notes:**
+Added 4 optional fields to `QueueMinimalRow` and `CompleteMinimalRow`:
+- `priority?: 'high' | 'medium' | 'low'` (lowercase to match backend schema)
+- `assignee_id?: string | null`
+- `storage?: string | null`
+- `status?: 'pending' | 'in_progress' | 'complete'`
+
+Fields made optional to avoid breaking existing code. Added clarifying comments about priority casing convention (lowercase for data, capitalized `Priority` type for display).
 
 ---
 
