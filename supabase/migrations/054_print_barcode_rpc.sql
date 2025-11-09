@@ -46,7 +46,10 @@ BEGIN
   -- Note: filling_start_ts will be added in Task 8
   -- For now, we just detect if it's Filling stage
   IF v_order.stage = 'Filling' THEN
-    v_is_first_filling_print := true;
+    -- TODO: When Task 8 filling_start_ts column is added, change this to:
+    -- v_is_first_filling_print := (v_order.filling_start_ts IS NULL);
+    -- For now, always false until Task 8 provides the timestamp column
+    v_is_first_filling_print := false;
     
     -- TODO: When Task 8 is complete, add:
     -- IF v_order.filling_start_ts IS NULL THEN
