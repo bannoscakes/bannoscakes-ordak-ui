@@ -440,42 +440,25 @@ Completed via migration `054_print_barcode_rpc.sql`.
 
 **What was done:**
 1. **Created print_barcode RPC** - Takes `p_store` and `p_order_id`, returns JSON payload for thermal printer
-2. **Logs to stage_events** - Every print creates a 'print' event with metadata
-3. **Generates barcode content** - Format: `{store}-{order_id}` (e.g., `bannos-abc123`)
+2. **Logs to stage_events** - Every print creates a 'print' event
+3. **Generates barcode content** - Format: `{store}-{order_id}`
 4. **Returns complete payload** - Includes order_number, product_title, size, due_date, customer_name, stage, priority, barcode_content, printed_at, printed_by
 5. **Validates inputs** - Checks store validity, order existence, authentication
-6. **Detects Filling stage prints** - Sets metadata flag for first Filling print (timer logic will be added in Task 8)
+6. **Prepares for Task 8** - Sets `first_filling_print` flag to false until filling_start_ts column exists
 
-**Payload Structure:**
-```json
-{
-  "order_number": 1234,
-  "order_id": "abc-123",
-  "product_title": "Chocolate Cake",
-  "size": "6 inch",
-  "due_date": "2025-11-10",
-  "customer_name": "John Doe",
-  "stage": "Filling",
-  "priority": "HIGH",
-  "barcode_content": "bannos-abc-123",
-  "printed_at": "2025-11-09T10:30:00Z",
-  "printed_by": "uuid-of-staff"
-}
-```
-
-**Task 8 Integration:**
-When Task 8 (completion timestamp columns) is implemented, this RPC will automatically set `filling_start_ts` on first Filling print. The TODO comment is in the migration file.
+**Bug Fix Applied:**
+Initially set `first_filling_print := true` for all Filling prints. Corrected to `false` until Task 8 provides `filling_start_ts` column for proper first-print detection.
 
 **Ready for testing** once migration is applied to dev database.
 
 ---
 
 ### Task 6: Create stage_events Table
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-08  
 **Priority:** ⚡ CRITICAL  
 **Effort:** 4 hours  
 **Impact:** No analytics, no timeline, no staff metrics  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None (but blocks Tasks 5, 7)  
 **Report Source:** Reports #1, #4 (Confirmed missing, currently using audit_log workaround)
 
@@ -553,22 +536,50 @@ VALUES (
 ```
 
 **Acceptance Criteria:**
-- [ ] Table created with correct schema
-- [ ] All indexes created
-- [ ] RLS enabled with proper policies
-- [ ] `complete_*` RPCs updated to log to stage_events
-- [ ] `assign_staff` RPC updated to log to stage_events
-- [ ] Old audit_log entries preserved (don't delete)
+- [x] Table created with correct schema
+- [x] All indexes created
+- [x] RLS enabled with proper policies
+- [x] `complete_*` RPCs updated to log to stage_events
+- [x] `assign_staff` RPC updated to log to stage_events
+- [x] Old audit_log entries preserved (don't delete)
 - [ ] Test: Complete order through all stages, verify stage_events populated
 - [ ] Test: Query stage_events for timeline view works
 
 **Related Tasks:**
-- Task 5 (print_barcode) - **BLOCKED by this**
+- Task 5 (print_barcode) - **UNBLOCKED** - Can now proceed
 - Task 7 (Verify shift/break RPCs) - May need similar table
 - Task 12 (Shopify Integration) - May log events here
 
 **Notes:**
 This is foundational for analytics. All future event tracking should use this table. Consider migrating old audit_log entries if needed for historical analytics.
+
+**Completion Notes:**
+Completed via migrations `052_stage_events_rebuild.sql` and `053_add_stage_events_logging.sql`.
+
+**What was done:**
+1. **Replaced old stage_events table** - Old table from migration 028 had wrong schema (UUID order_id, shop_domain, etc). Dropped and recreated with production-ready schema (text order_id, store, stage, event_type).
+2. **Created proper indexes** - Added 4 indexes for common query patterns (store+timestamp, store+stage+timestamp, staff+timestamp, order+timestamp).
+3. **Enabled RLS** - Read allowed for authenticated users, direct writes blocked (RPC-only via SECURITY DEFINER).
+4. **Updated 5 RPCs** - Added stage_events logging to:
+   - `complete_filling` - Logs 'complete' event for Filling stage
+   - `complete_covering` - Logs 'complete' event for Covering stage
+   - `complete_decorating` - Logs 'complete' event for Decorating stage
+   - `complete_packing` - Logs 'complete' event for Packing stage
+   - `assign_staff` - Logs 'assign' event (also added missing audit_log entry)
+5. **Preserved backward compatibility** - All RPCs still log to audit_log in addition to stage_events.
+
+**Schema:**
+- `id` (uuid) - Primary key
+- `store` (text) - 'bannos' or 'flourlane'
+- `order_id` (text) - Matches orders_bannos/orders_flourlane
+- `stage` (text) - Filling, Covering, Decorating, Packing, or Complete
+- `event_type` (text) - 'assign', 'complete', or 'print'
+- `at_ts` (timestamptz) - Event timestamp
+- `staff_id` (uuid) - Who performed the action
+- `ok` (boolean) - Quality flag (for future QC tracking)
+- `meta` (jsonb) - Flexible metadata (notes, etc.)
+
+**Ready for testing** once migrations are applied to dev database.
 
 ---
 
