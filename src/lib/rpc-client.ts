@@ -1048,6 +1048,19 @@ export async function getComplete(params: {
 }
 
 // =============================================
+// UNIVERSAL ORDER SEARCH (ALL STAGES)
+// =============================================
+
+export async function findOrder(search: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('find_order', {
+    p_search: search,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+// =============================================
 // BULK OPERATIONS
 // =============================================
 
