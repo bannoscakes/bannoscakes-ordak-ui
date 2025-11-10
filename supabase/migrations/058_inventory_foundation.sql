@@ -195,8 +195,8 @@ ON CONFLICT (store, key) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.deduct_inventory_for_order(
   p_order_id text,
-  p_product_title text DEFAULT NULL,
   p_store text,
+  p_product_title text DEFAULT NULL,
   p_quantity integer DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql
