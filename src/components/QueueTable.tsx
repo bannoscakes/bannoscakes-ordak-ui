@@ -67,7 +67,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   // Fetch real queue data from Supabase
   useEffect(() => {
     fetchQueueData();
-  }, [store]);
+  }, [store, storageFilter]);
 
   // Fetch storage locations for the current store
   useEffect(() => {
