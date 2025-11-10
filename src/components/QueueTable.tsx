@@ -21,7 +21,6 @@ import { ErrorDisplay } from "./ErrorDisplay";
 // import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
 import { getQueue, getStorageLocations } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
-import type { Stage } from "../types/db";
 
 interface QueueItem {
   id: string;
