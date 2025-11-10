@@ -95,15 +95,20 @@ The client code existed but backend was missing - classic case of incomplete imp
 
 ### RPC Functions Implemented
 
-#### 1. `start_shift(p_staff_id uuid DEFAULT NULL)`
+#### 1. `start_shift(p_store text, p_staff_id uuid DEFAULT NULL)`
 
-**Purpose:** Start a new shift for a staff member  
+**Purpose:** Start a new shift for a staff member at a specific store  
 **Returns:** `uuid` (shift_id)
 
+**Parameters:**
+- `p_store` (required) - Which store the shift is for: `'bannos'` or `'flourlane'`
+- `p_staff_id` (optional) - Staff member UUID, defaults to `auth.uid()`
+
 **Validations:**
+- Store parameter is `'bannos'` or `'flourlane'`
 - Staff member exists and is active
+- Staff is assigned to the specified store (or 'both')
 - No active shift already exists
-- Gets staff member's store from `staff_shared` table
 
 **Actions:**
 - Creates shift record with current timestamp
@@ -111,8 +116,11 @@ The client code existed but backend was missing - classic case of incomplete imp
 
 **Example:**
 ```sql
-SELECT start_shift();  -- Uses auth.uid()
+SELECT start_shift('bannos');  -- Start shift at Bannos store
 -- Returns: 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+
+SELECT start_shift('flourlane', 'staff-uuid');  -- Admin starts shift for staff at Flourlane
+-- Returns: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 ```
 
 ---
@@ -232,13 +240,24 @@ Once migration is applied to dev database:
 
 - [ ] **Test start_shift:**
   ```sql
-  SELECT start_shift();
-  -- Verify shift created in shifts table
+  SELECT start_shift('bannos');
+  -- Verify shift created in shifts table with store='bannos'
   ```
 
 - [ ] **Test duplicate shift prevention:**
   ```sql
-  SELECT start_shift();  -- Should fail with error
+  SELECT start_shift('flourlane');  -- Should fail with error (already has active shift)
+  ```
+
+- [ ] **Test staff assignment validation:**
+  ```sql
+  -- For staff assigned to 'bannos' only:
+  SELECT start_shift('flourlane');  -- Should fail: not assigned to flourlane
+  
+  -- For staff assigned to 'both':
+  SELECT start_shift('bannos');  -- Should succeed
+  SELECT end_shift();
+  SELECT start_shift('flourlane');  -- Should also succeed
   ```
 
 - [ ] **Test start_break:**
@@ -350,6 +369,12 @@ Migration structure follows the same pattern as:
 - `052_stage_events_rebuild.sql` (table creation)
 
 ### Design Decisions
+
+**Why required `p_store` parameter for `start_shift`?**
+- `staff_shared.store` can be `'both'`, but `shifts.store` must be specific (`'bannos'` or `'flourlane'`)
+- Forces caller to explicitly specify which store the shift is for
+- Prevents constraint violation when staff member is assigned to both stores
+- Allows proper time tracking per store for multi-store staff
 
 **Why nullable `p_staff_id` parameter?**
 - Allows both self-service (staff managing own shifts) and admin management

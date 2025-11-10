@@ -126,6 +126,7 @@ COMMENT ON COLUMN public.breaks.end_ts IS 'When break ended (NULL = currently on
 -- Function 1/5: start_shift
 -- Starts a new shift for the authenticated staff member
 CREATE OR REPLACE FUNCTION public.start_shift(
+  p_store text,
   p_staff_id uuid DEFAULT NULL
 )
 RETURNS uuid
@@ -136,8 +137,13 @@ AS $$
 DECLARE
   v_staff_id uuid;
   v_shift_id uuid;
-  v_store text;
+  v_staff_store text;
 BEGIN
+  -- Validate store parameter
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %. Must be bannos or flourlane', p_store;
+  END IF;
+  
   -- Use provided staff_id or fallback to authenticated user
   v_staff_id := COALESCE(p_staff_id, auth.uid());
   
@@ -145,13 +151,18 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
   
-  -- Get staff member's store
-  SELECT store INTO v_store
+  -- Get staff member's store assignment
+  SELECT store INTO v_staff_store
   FROM public.staff_shared
   WHERE user_id = v_staff_id AND is_active = true;
   
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Staff member not found or inactive';
+  END IF;
+  
+  -- Validate staff is assigned to this store
+  IF v_staff_store NOT IN (p_store, 'both') THEN
+    RAISE EXCEPTION 'Staff member is not assigned to % store', p_store;
   END IF;
   
   -- Check for active shift
@@ -164,7 +175,7 @@ BEGIN
   
   -- Create new shift
   INSERT INTO public.shifts (staff_id, store, start_ts)
-  VALUES (v_staff_id, v_store, now())
+  VALUES (v_staff_id, p_store, now())
   RETURNING id INTO v_shift_id;
   
   -- Log to audit_log
@@ -408,7 +419,7 @@ $$;
 -- GRANT EXECUTE PERMISSIONS
 -- =============================================================================
 
-GRANT EXECUTE ON FUNCTION public.start_shift(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.start_shift(text, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.end_shift(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.start_break(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.end_break(uuid) TO authenticated;
