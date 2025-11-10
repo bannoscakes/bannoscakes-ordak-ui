@@ -19,7 +19,7 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 // import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getUnassignedCounts, getStorageLocations } from "../lib/rpc-client";
+import { getQueue, getStorageLocations } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
 import type { Stage } from "../types/db";
 
