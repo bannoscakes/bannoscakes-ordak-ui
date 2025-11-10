@@ -509,7 +509,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           setIsEditingOrder(false);
           setSelectedOrder(null);
         }}
-        onSaved={(updatedOrder) => {
+        onSaved={(_updatedOrder) => {
           // TODO: Implement order update functionality
           setIsEditingOrder(false);
           setSelectedOrder(null);
