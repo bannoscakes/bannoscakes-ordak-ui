@@ -20,10 +20,10 @@
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
 | Tier 1: Critical | 6 | 6 | 0 | 0 | 100% |
-| Tier 2: High Priority | 5 | 2 | 0 | 3 | 40% |
+| Tier 2: High Priority | 5 | 3 | 0 | 2 | 60% |
 | Tier 3: Medium Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **8** | **0** | **12** | **40%** |
+| **TOTAL** | **20** | **9** | **0** | **11** | **45%** |
 
 ---
 
@@ -1264,11 +1264,11 @@ This is the **most complex task** in the list. Break into smaller PRs if needed:
 ---
 
 ### Task 10: Add Missing Staff Columns
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-10  
 **Priority:** 🟡 HIGH  
-**Effort:** 2 hours  
+**Effort:** 30 minutes (database only - UI updates separate)  
 **Impact:** Staff approval workflow and payroll incomplete  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None  
 **Report Source:** Report #4, Section 1 (Staff Table)
 
@@ -1328,6 +1328,37 @@ COMMENT ON COLUMN staff_shared.hourly_rate IS 'Hourly wage for payroll calculati
 
 **Notes:**
 Consider adding approval notification (email/slack) when staff approved. Also consider approval audit trail (who approved, when).
+
+**Completion Notes:**
+Created migration `057_add_staff_approval_columns.sql` with:
+
+1. **Columns Added to staff_shared:**
+   - `approved` (boolean NOT NULL DEFAULT false) - Staff approval status
+   - `hourly_rate` (numeric(10,2) NULL) - Hourly wage for payroll
+
+2. **Design Decisions:**
+   - `approved` defaults to `false` for new staff (requires explicit approval)
+   - `hourly_rate` is nullable (not all staff may have hourly wages set)
+   - Precision (10,2) allows rates up to $99,999,999.99/hour (more than sufficient)
+
+3. **Migration includes optional auto-approve:**
+   - Commented-out SQL to auto-approve existing active staff
+   - Makes sense for migration (existing staff already working)
+   - Can be uncommented if desired
+
+4. **Scope:**
+   - **This PR:** Database schema only
+   - **Future PR:** UI updates for Staff Page, approval toggles, hourly rate inputs
+   - Following "one small task = one PR" workflow
+
+5. **Impact:**
+   - Enables Task 13 (Time & Payroll RPCs) - can now calculate pay using hourly_rate
+   - Foundation for staff approval workflow
+   - Admin can set hourly rates for payroll
+
+**Migration is idempotent** - Uses `IF NOT EXISTS` so safe to run multiple times.
+
+**Ready for testing** once migration is applied to dev database.
 
 ---
 
@@ -2734,14 +2765,14 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 12  
+**Not Started:** 11  
 **In Progress:** 0  
-**Done:** 8  
+**Done:** 9  
 **Cancelled:** 0  
 
 **By Priority:**
 - 🔴 Critical (Tier 1): 6 tasks (6 done - **100% COMPLETE** ✅)
-- 🟡 High (Tier 2): 5 tasks (2 done - **40% COMPLETE**)
+- 🟡 High (Tier 2): 5 tasks (3 done - **60% COMPLETE**)
 - 🟢 Medium (Tier 3): 5 tasks (0 done)
 - 🔵 Low (Tier 4): 4 tasks (0 done)
 
