@@ -528,6 +528,9 @@ BEGIN
     RETURN jsonb_build_object('status', 'skipped', 'reason', 'feature_flag_disabled');
   END IF;
 
+  v_tx_hash := hashtext(p_store || ':' || p_order_id || ':restock');
+  PERFORM pg_advisory_xact_lock(v_tx_hash);
+
   SELECT COUNT(*)
   INTO v_existing
   FROM public.inventory_transactions t
@@ -536,11 +539,19 @@ BEGIN
     AND t.direction = 'restock';
 
   IF v_existing > 0 THEN
+    INSERT INTO public.audit_log (action, performed_by, source, meta)
+    VALUES (
+      'inventory_restock_skipped',
+      auth.uid(),
+      'restock_order',
+      jsonb_build_object(
+        'store', p_store,
+        'order_id', p_order_id,
+        'reason', 'already_restocked'
+      )
+    );
     RETURN jsonb_build_object('status', 'skipped', 'reason', 'already_restocked');
   END IF;
-
-  v_tx_hash := hashtext(p_store || ':' || p_order_id || ':restock');
-  PERFORM pg_advisory_xact_lock(v_tx_hash);
 
   FOR v_deduction IN
     SELECT 
