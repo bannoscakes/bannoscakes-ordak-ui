@@ -193,7 +193,12 @@ ON CONFLICT (store, key) DO NOTHING;
 -- RPCS
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION public.deduct_inventory_for_order(
+-- Drop existing function to allow parameter name changes
+DROP FUNCTION IF EXISTS public.deduct_inventory_for_order(text, text, text, integer);
+DROP FUNCTION IF EXISTS public.deduct_inventory_for_order(text, text, integer, text);
+DROP FUNCTION IF EXISTS public.deduct_inventory_for_order(text, text);
+
+CREATE FUNCTION public.deduct_inventory_for_order(
   p_order_id text,
   p_store text,
   p_product_title text DEFAULT NULL,
@@ -491,7 +496,10 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.restock_order(
+-- Drop existing function to allow parameter name changes
+DROP FUNCTION IF EXISTS public.restock_order(text, text);
+
+CREATE FUNCTION public.restock_order(
   p_order_id text,
   p_store text
 ) RETURNS jsonb
