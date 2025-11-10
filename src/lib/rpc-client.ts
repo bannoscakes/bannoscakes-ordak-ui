@@ -504,9 +504,10 @@ export async function getStaffMe() {
   return data?.[0] || null;
 }
 
-export async function startShift(staffId?: string) {
+export async function startShift(store: 'bannos' | 'flourlane', staffId?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('start_shift', {
+    p_store: store,
     p_staff_id: staffId || null,
   });
   if (error) throw error;
