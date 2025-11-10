@@ -74,12 +74,11 @@ export function Header({ onSignOut }: HeaderProps) {
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && searchValue.trim()) {
                   setSearchOpen(true);
                   handleSearch();
                 }
               }}
-              onFocus={() => setSearchOpen(true)}
             />
           </div>
           
