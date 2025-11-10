@@ -1061,6 +1061,48 @@ export async function findOrder(search: string) {
 }
 
 // =============================================
+// TIME & PAYROLL
+// =============================================
+
+export async function getStaffTimes(from: string, to: string, staffId?: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_times', {
+    p_from: from,
+    p_to: to,
+    p_staff_id: staffId || null,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getStaffTimesDetail(staffId: string, from: string, to: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_times_detail', {
+    p_staff_id: staffId,
+    p_from: from,
+    p_to: to,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function adjustStaffTime(
+  shiftId: string,
+  newStart?: string,
+  newEnd?: string,
+  note?: string
+) {
+  const supabase = getSupabase();
+  const { error } = await supabase.rpc('adjust_staff_time', {
+    p_shift_id: shiftId,
+    p_new_start: newStart || null,
+    p_new_end: newEnd || null,
+    p_note: note || null,
+  });
+  if (error) throw error;
+}
+
+// =============================================
 // BULK OPERATIONS
 // =============================================
 

@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { getStaffList, type StaffMember as RpcStaffMember } from "../lib/rpc-client";
+import { getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
 import { 
   Calendar,
   Search, 
@@ -62,38 +62,70 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
 
-  // Fetch real staff data
+  // Helper: Get date range from filter
+  function getDateRange() {
+    const today = new Date();
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(thisWeekStart.getDate() - 1);
+    
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+    switch (dateRange) {
+      case 'this-week':
+        return { from: thisWeekStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+      case 'last-week':
+        return { from: lastWeekStart.toISOString().split('T')[0], to: lastWeekEnd.toISOString().split('T')[0] };
+      case 'this-month':
+        return { from: thisMonthStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+      case 'last-month':
+        return { from: lastMonthStart.toISOString().split('T')[0], to: lastMonthEnd.toISOString().split('T')[0] };
+      default:
+        return { from: thisWeekStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+    }
+  }
+
+  // Fetch real staff time data
   useEffect(() => {
     async function fetchStaffData() {
       try {
         setLoading(true);
-        const staffList = await getStaffList();
+        const { from, to } = getDateRange();
         
-        // Convert real staff to time records (with mock time data for now)
-        const staffTimeRecords: StaffTimeRecord[] = staffList.map((staff) => ({
-          id: staff.user_id,
-          name: staff.full_name || 'Unknown Staff',
-          avatar: (staff.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase(),
-          daysWorked: 0, // TODO: Get real time tracking data
-          totalShiftHours: 0,
-          totalBreakMinutes: 0,
-          totalNetHours: 0,
-          hourlyRate: 20.00, // TODO: Get from staff_shared if we add this column
-          totalPay: 0,
-          timeEntries: [] // TODO: Get real time entries
+        // Fetch real time tracking data from RPC
+        const staffTimes = await getStaffTimes(from, to);
+        
+        // Convert to UI format
+        const staffTimeRecords: StaffTimeRecord[] = staffTimes.map((staff: any) => ({
+          id: staff.staff_id,
+          name: staff.staff_name || 'Unknown Staff',
+          avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          daysWorked: staff.days_worked || 0,
+          totalShiftHours: parseFloat(staff.total_shift_hours) || 0,
+          totalBreakMinutes: parseFloat(staff.total_break_minutes) || 0,
+          totalNetHours: parseFloat(staff.net_hours) || 0,
+          hourlyRate: parseFloat(staff.hourly_rate) || 0,
+          totalPay: parseFloat(staff.total_pay) || 0,
+          timeEntries: [] // Loaded separately when "View Details" clicked
         }));
         
         setTimeData(staffTimeRecords);
       } catch (error) {
         console.error('Error fetching staff data:', error);
-        toast.error('Failed to load staff data');
+        toast.error('Failed to load staff time data');
       } finally {
         setLoading(false);
       }
     }
     
     fetchStaffData();
-  }, []);
+  }, [dateRange]);
 
   // Filter by initial staff if provided
   useEffect(() => {
@@ -118,9 +150,36 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     toast.success("Pay period approved and locked");
   };
 
-  const handleViewDetails = (staff: StaffTimeRecord) => {
-    setSelectedStaff(staff);
-    setIsDetailsModalOpen(true);
+  const handleViewDetails = async (staff: StaffTimeRecord) => {
+    try {
+      const { from, to } = getDateRange();
+      
+      // Fetch daily breakdown for this staff member
+      const detailData = await getStaffTimesDetail(staff.id, from, to);
+      
+      // Convert to UI format
+      const timeEntries: TimeEntry[] = detailData.map((day: any) => {
+        // Extract time from ISO timestamp
+        const startTime = day.shift_start ? new Date(day.shift_start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        
+        return {
+          date: day.shift_date,
+          shiftStart: startTime,
+          shiftEnd: endTime,
+          breakMinutes: parseFloat(day.break_minutes) || 0,
+          netHours: parseFloat(day.net_hours) || 0,
+          adjustmentNote: day.notes || undefined
+        };
+      });
+      
+      // Update selected staff with time entries
+      setSelectedStaff({ ...staff, timeEntries });
+      setIsDetailsModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching time details:', error);
+      toast.error('Failed to load time details');
+    }
   };
 
   const handleEditEntry = (entry: TimeEntry) => {
@@ -358,7 +417,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedStaff.timeEntries.map((entry, index) => (
+                  {selectedStaff.timeEntries.map((entry) => (
                     <TableRow key={entry.date}>
                       <TableCell>{formatDate(entry.date)}</TableCell>
                       <TableCell>{formatTime(entry.shiftStart)}</TableCell>
