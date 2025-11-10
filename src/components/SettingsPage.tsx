@@ -85,6 +85,21 @@ const getDefaultSettings = (store: "bannos" | "flourlane"): StoreSettings => ({
 
 const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+const ensureArray = <T,>(value: unknown, fallback: T[]): T[] => {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? (parsed as T[]) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+};
+
 export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   const [settings, setSettings] = useState<StoreSettings>(getDefaultSettings(store));
@@ -157,8 +172,8 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
             dueDates: {
               ...prev.dueDates,
               defaultDue: dueDateDefault || prev.dueDates.defaultDue,
-              allowedDays: dueDateDays ? JSON.parse(dueDateDays) : prev.dueDates.allowedDays,
-              blackoutDates: dueDateBlackouts ? JSON.parse(dueDateBlackouts) : prev.dueDates.blackoutDates
+              allowedDays: ensureArray(dueDateDays, prev.dueDates.allowedDays),
+              blackoutDates: ensureArray(dueDateBlackouts, prev.dueDates.blackoutDates)
             },
             monitor: {
               ...prev.monitor,
