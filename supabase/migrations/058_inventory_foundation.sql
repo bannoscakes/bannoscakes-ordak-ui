@@ -124,7 +124,8 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'inventory_items_select_policy'
+    WHERE policyname = 'inventory_items_select_policy'
+      AND schemaname = 'public'
       AND tablename = 'inventory_items'
   ) THEN
     CREATE POLICY inventory_items_select_policy
@@ -136,7 +137,8 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'inventory_items_block_writes'
+    WHERE policyname = 'inventory_items_block_writes'
+      AND schemaname = 'public'
       AND tablename = 'inventory_items'
   ) THEN
     CREATE POLICY inventory_items_block_writes
@@ -149,7 +151,8 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'inventory_transactions_select_policy'
+    WHERE policyname = 'inventory_transactions_select_policy'
+      AND schemaname = 'public'
       AND tablename = 'inventory_transactions'
   ) THEN
     CREATE POLICY inventory_transactions_select_policy
@@ -161,7 +164,8 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE polname = 'inventory_transactions_block_writes'
+    WHERE policyname = 'inventory_transactions_block_writes'
+      AND schemaname = 'public'
       AND tablename = 'inventory_transactions'
   ) THEN
     CREATE POLICY inventory_transactions_block_writes
