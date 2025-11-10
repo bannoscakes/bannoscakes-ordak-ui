@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
+import { adjustStaffTime, getStaffTimes, getStaffTimesDetail, adjustStaffTime } from "../lib/rpc-client";
 import { 
   Calendar,
   Search, 
@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 
 interface TimeEntry {
+  shiftId: string;
   date: string;
   shiftStart: string;
   shiftEnd: string;
@@ -164,6 +165,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
         const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
         
         return {
+          shiftId: day.shift_id,
           date: day.shift_date,
           shiftStart: startTime,
           shiftEnd: endTime,
@@ -186,38 +188,51 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     setEditingEntry({ ...entry });
   };
 
-  const handleSaveEntry = () => {
-    if (selectedStaff && editingEntry) {
+  const handleSaveEntry = async () => {
+    if (!selectedStaff || !editingEntry) return;
+    
+    try {
+      // Convert time strings back to ISO timestamps for the database
+      const dateStr = editingEntry.date;
+      const newStart = editingEntry.shiftStart ? `${dateStr}T${editingEntry.shiftStart}:00` : undefined;
+      const newEnd = editingEntry.shiftEnd ? `${dateStr}T${editingEntry.shiftEnd}:00` : undefined;
+      // Call RPC to persist changes
+      await adjustStaffTime(
+        editingEntry.shiftId,
+        newStart,
+        newEnd,
+        editingEntry.adjustmentNote
+      );
+      
+      // Update local state
       const updatedEntries = selectedStaff.timeEntries.map(entry =>
         entry.date === editingEntry.date ? editingEntry : entry
       );
       
-      const updatedStaff = { ...selectedStaff, timeEntries: updatedEntries };
+      setSelectedStaff({ ...selectedStaff, timeEntries: updatedEntries });
       
-      // Recalculate totals
-      const totalShiftHours = updatedEntries.reduce((sum, entry) => {
-        const start = new Date(`2024-01-01 ${entry.shiftStart}`);
-        const end = new Date(`2024-01-01 ${entry.shiftEnd}`);
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        return sum + hours;
-      }, 0);
-      
-      const totalBreakMinutes = updatedEntries.reduce((sum, entry) => sum + entry.breakMinutes, 0);
-      const totalNetHours = updatedEntries.reduce((sum, entry) => sum + entry.netHours, 0);
-      const totalPay = totalNetHours * updatedStaff.hourlyRate;
-
-      updatedStaff.totalShiftHours = totalShiftHours;
-      updatedStaff.totalBreakMinutes = totalBreakMinutes;
-      updatedStaff.totalNetHours = totalNetHours;
-      updatedStaff.totalPay = totalPay;
-
-      setSelectedStaff(updatedStaff);
-      setTimeData(prev => prev.map(record => 
-        record.id === updatedStaff.id ? updatedStaff : record
-      ));
+      // Refresh main data to get updated totals
+      const { from, to } = getDateRange();
+      const staffTimes = await getStaffTimes(from, to);
+      const updatedData = staffTimes.map((staff: any) => ({
+        id: staff.staff_id,
+        name: staff.staff_name || 'Unknown Staff',
+        avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        daysWorked: staff.days_worked || 0,
+        totalShiftHours: parseFloat(staff.total_shift_hours) || 0,
+        totalBreakMinutes: parseFloat(staff.total_break_minutes) || 0,
+        totalNetHours: parseFloat(staff.net_hours) || 0,
+        hourlyRate: parseFloat(staff.hourly_rate) || 0,
+        totalPay: parseFloat(staff.total_pay) || 0,
+        timeEntries: []
+      }));
+      setTimeData(updatedData);
       
       setEditingEntry(null);
       toast.success("Time entry updated successfully");
+    } catch (error) {
+      console.error('Error saving time entry:', error);
+      toast.error('Failed to save time entry');
     }
   };
 
