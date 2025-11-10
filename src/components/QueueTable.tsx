@@ -12,16 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Clock, Users, Search, X } from "lucide-react";
+import { Clock, Search, X } from "lucide-react";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 // import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getUnassignedCounts } from "../lib/rpc-client";
+import { getQueue, getStorageLocations } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
-import type { Stage } from "../types/db";
 
 interface QueueItem {
   id: string;
@@ -59,13 +58,36 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [storageFilter, setStorageFilter] = useState<string | null>(null);
+  const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [error, setError] = useState<unknown>(null);
 
-  const { showError, showErrorWithRetry } = useErrorNotifications();
+  const { showErrorWithRetry } = useErrorNotifications();
 
   // Fetch real queue data from Supabase
   useEffect(() => {
     fetchQueueData();
+  }, [store, storageFilter]);
+
+  // Fetch storage locations for the current store
+  useEffect(() => {
+    async function fetchStorageLocations() {
+      try {
+        const locations = await getStorageLocations(store);
+        setStorageLocations(locations);
+      } catch (error) {
+        console.error('Failed to fetch storage locations:', error);
+        // Fallback to default locations if fetch fails
+        setStorageLocations([
+          "Store Fridge",
+          "Store Freezer", 
+          "Kitchen Coolroom",
+          "Kitchen Freezer",
+          "Basement Coolroom"
+        ]);
+      }
+    }
+    fetchStorageLocations();
   }, [store]);
 
   const fetchQueueData = async () => {
@@ -76,6 +98,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       // Fetch queue data using the new RPC
       const orders = await getQueue({
         store,
+        storage: storageFilter,
         limit: 200,
       });
       
@@ -159,10 +182,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       
       const matchesPriority = !priorityFilter || item.priority === priorityFilter;
       const matchesStatus = !statusFilter || item.status === statusFilter;
+      const matchesStorage = !storageFilter || item.storage === storageFilter;
       
-      return matchesSearch && matchesPriority && matchesStatus;
+      return matchesSearch && matchesPriority && matchesStatus && matchesStorage;
     });
-  }, [currentItems, searchQuery, priorityFilter, statusFilter]);
+  }, [currentItems, searchQuery, priorityFilter, statusFilter, storageFilter]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -292,13 +316,26 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               </SelectContent>
             </Select>
 
-            {(priorityFilter || statusFilter || searchQuery) && (
+            <Select value={storageFilter || "all"} onValueChange={(value) => setStorageFilter(value === "all" ? null : value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Storage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {storageLocations.map(location => (
+                  <SelectItem key={location} value={location}>{location}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {(priorityFilter || statusFilter || storageFilter || searchQuery) && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setPriorityFilter(null);
                   setStatusFilter(null);
+                  setStorageFilter(null);
                   setSearchQuery("");
                 }}
                 className="h-10"
@@ -472,7 +509,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           setIsEditingOrder(false);
           setSelectedOrder(null);
         }}
-        onSaved={(updatedOrder) => {
+        onSaved={(_updatedOrder) => {
           // TODO: Implement order update functionality
           setIsEditingOrder(false);
           setSelectedOrder(null);
