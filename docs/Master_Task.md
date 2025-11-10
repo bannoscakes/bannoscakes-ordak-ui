@@ -1,5 +1,5 @@
 # Ordak v2 - Master Task List
-**Last Updated:** 2025-11-09  
+**Last Updated:** 2025-11-10  
 **Overall Completion:** 80%  
 **Target Completion:** 95% by 2025-12-06 (4 weeks)  
 **Source:** Consolidated findings from 5 comprehensive audit reports
@@ -20,10 +20,10 @@
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
 | Tier 1: Critical | 6 | 6 | 0 | 0 | 100% |
-| Tier 2: High Priority | 5 | 0 | 0 | 5 | 0% |
+| Tier 2: High Priority | 5 | 1 | 0 | 4 | 20% |
 | Tier 3: Medium Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **6** | **0** | **14** | **30%** |
+| **TOTAL** | **20** | **7** | **0** | **13** | **35%** |
 
 ---
 
@@ -590,11 +590,11 @@ Completed via migrations `052_stage_events_rebuild.sql` and `053_add_stage_event
 ---
 
 ### Task 7: Verify Shift/Break RPCs Exist (Contradiction Resolution)
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-10  
 **Priority:** 🔴 HIGH (Contradiction between reports)  
-**Effort:** 1 hour investigation + potential implementation  
+**Effort:** 1 hour investigation + 2 hours implementation  
 **Impact:** Determines if Staff Workspace is functional  
-**Owner:** TBD  
+**Owner:** Completed  
 **Dependencies:** None  
 **Report Source:** Report #4 vs Report #5 (Conflicting information)
 
@@ -842,6 +842,49 @@ GRANT EXECUTE ON FUNCTION end_break() TO authenticated;
 
 **Notes:**
 **PRIORITY:** Resolve this contradiction FIRST before implementing anything. Document findings in this task's notes section.
+
+**Completion Notes:**
+**Investigation Results:**
+- **Report #4 was CORRECT** ✅ - shifts/breaks tables were missing, RPCs not implemented
+- **Report #5 was WRONG** ❌ - RPCs were NOT fully implemented
+
+**Evidence Found:**
+1. ❌ No `CREATE TABLE shifts` in any migration
+2. ❌ No `CREATE TABLE breaks` in any migration  
+3. ❌ No RPC function definitions (start_shift, end_shift, start_break, end_break) in migrations
+4. ⚠️ **Critical Issue:** RPC client (`src/lib/rpc-client.ts` lines 507-549) HAD client-side functions calling these non-existent RPCs - Staff Workspace shift controls were broken!
+
+**Implementation Completed:**
+Created migration `055_shifts_breaks_system.sql` with:
+1. **Tables Created:**
+   - `shifts` table (id, staff_id, store, start_ts, end_ts, created_at, updated_at)
+   - `breaks` table (id, shift_id, start_ts, end_ts, created_at, updated_at)
+
+2. **Indexes Created:**
+   - `idx_shifts_staff_id_start` - Query shifts by staff and date
+   - `idx_shifts_active` - Find active shifts (WHERE end_ts IS NULL)
+   - `idx_breaks_shift_id` - Query breaks by shift
+   - `idx_breaks_active` - Find active breaks
+
+3. **RLS Policies:**
+   - Staff can read their own shifts/breaks
+   - Admin can read all shifts/breaks
+   - Direct writes blocked (RPC-only via SECURITY DEFINER)
+
+4. **RPCs Implemented (5 functions):**
+   - `start_shift(p_staff_id)` - Start new shift, validates no active shift
+   - `end_shift(p_staff_id)` - End active shift and any active breaks
+   - `start_break(p_staff_id)` - Start break during shift
+   - `end_break(p_staff_id)` - End active break
+   - `get_current_shift(p_staff_id)` - Get active shift with break status
+
+5. **Features:**
+   - Auto-closes breaks when shift ends
+   - Validates no duplicate active shifts/breaks
+   - Audit logging for all actions
+   - Staff_id parameter defaults to auth.uid() for convenience
+
+**Ready for testing** once migration is applied to dev database.
 
 ---
 
@@ -2660,14 +2703,14 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 14  
+**Not Started:** 13  
 **In Progress:** 0  
-**Done:** 6  
+**Done:** 7  
 **Cancelled:** 0  
 
 **By Priority:**
 - 🔴 Critical (Tier 1): 6 tasks (6 done - **100% COMPLETE** ✅)
-- 🟡 High (Tier 2): 5 tasks (0 done)
+- 🟡 High (Tier 2): 5 tasks (1 done - **20% COMPLETE**)
 - 🟢 Medium (Tier 3): 5 tasks (0 done)
 - 🔵 Low (Tier 4): 4 tasks (0 done)
 
@@ -2726,6 +2769,6 @@ If priorities change during development, update task priority and move to approp
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2025-11-08  
-**Next Review:** After completing Tier 1
+**Document Version:** 1.1  
+**Last Updated:** 2025-11-10  
+**Next Review:** After completing Tier 2
