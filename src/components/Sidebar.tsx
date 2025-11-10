@@ -1,8 +1,5 @@
 import { 
   LayoutDashboard, 
-  Factory, 
-  Monitor, 
-  BarChart3, 
   Users, 
   Package,
   Settings,
@@ -11,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Cake,
-  Wheat,
   AlertTriangle
 } from "lucide-react";
 import { Button } from "./ui/button";
