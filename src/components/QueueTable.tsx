@@ -62,7 +62,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [error, setError] = useState<unknown>(null);
 
-  const { showError, showErrorWithRetry } = useErrorNotifications();
+  const { showErrorWithRetry } = useErrorNotifications();
 
   // Fetch real queue data from Supabase
   useEffect(() => {
