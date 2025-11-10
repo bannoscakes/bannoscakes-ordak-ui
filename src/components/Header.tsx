@@ -7,11 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { findOrder } from "../lib/rpc-client";
 
 interface HeaderProps {
-  onRefresh?: () => Promise<void>;
   onSignOut?: () => void;
 }
 
-export function Header({ onRefresh, onSignOut }: HeaderProps) {
+export function Header({ onSignOut }: HeaderProps) {
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
