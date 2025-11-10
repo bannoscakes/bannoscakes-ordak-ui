@@ -1487,10 +1487,13 @@ Completed via updates to `src/components/QueueTable.tsx`.
 - **No new dependencies**: Uses existing `getStorageLocations` RPC and UI components
 - **Works across all stages**: Filtering applies to Unassigned, Filling, Covering, Decorating, Packing, Complete
 
-**Files Modified:**
-- `src/components/QueueTable.tsx` (+42 lines, -4 lines)
+**Critical Bug Fix Applied:**
+⚠️ **Initial implementation had broken server-side filtering** - The useEffect that calls `fetchQueueData()` was missing `storageFilter` in its dependency array (line 70). This caused the server to always fetch all 200 orders regardless of storage selection - only client-side filtering worked. Fixed by adding `storageFilter` to the deps array: `}, [store, storageFilter]);`. Now server-side filtering triggers correctly when storage dropdown changes.
 
-**Ready for testing** - Storage filter dropdown now available in Production queue views for both Bannos and Flourlane stores.
+**Files Modified:**
+- `src/components/QueueTable.tsx` (+43 lines, -4 lines, 1 critical bug fix)
+
+**Ready for testing** - Storage filter dropdown now available in Production queue views for both Bannos and Flourlane stores. Server-side filtering confirmed working after bug fix.
 
 ---
 
