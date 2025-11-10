@@ -169,7 +169,16 @@ BEGIN
            o.product_title ILIKE '%' || p_search || '%' OR
            o.customer_name ILIKE '%' || p_search || '%')
   ) combined
-  ORDER BY packing_complete_ts DESC
+  ORDER BY 
+    CASE WHEN p_sort_by = 'completed_at' AND p_sort_order = 'DESC' THEN packing_complete_ts END DESC,
+    CASE WHEN p_sort_by = 'completed_at' AND p_sort_order = 'ASC' THEN packing_complete_ts END ASC,
+    CASE WHEN p_sort_by = 'due_date' AND p_sort_order = 'DESC' THEN due_date END DESC,
+    CASE WHEN p_sort_by = 'due_date' AND p_sort_order = 'ASC' THEN due_date END ASC,
+    CASE WHEN p_sort_by = 'customer_name' AND p_sort_order = 'DESC' THEN customer_name END DESC,
+    CASE WHEN p_sort_by = 'customer_name' AND p_sort_order = 'ASC' THEN customer_name END ASC,
+    CASE WHEN p_sort_by = 'product_title' AND p_sort_order = 'DESC' THEN product_title END DESC,
+    CASE WHEN p_sort_by = 'product_title' AND p_sort_order = 'ASC' THEN product_title END ASC,
+    packing_complete_ts DESC  -- fallback default
   OFFSET p_offset
   LIMIT p_limit;
 END;
