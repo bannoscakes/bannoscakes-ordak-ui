@@ -7,7 +7,6 @@ import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { toast } from "sonner";
@@ -33,6 +32,7 @@ interface StoreSettings {
   shopifyToken: string;
   lastConnected?: string;
   lastSync?: string;
+  inventoryTrackingEnabled: boolean;
   printing: {
     ticketSize: string;
     copies: number;
@@ -56,6 +56,7 @@ const getDefaultSettings = (store: "bannos" | "flourlane"): StoreSettings => ({
   shopifyToken: "",
   lastConnected: "2024-12-19 14:30:00",
   lastSync: "2024-12-19 15:45:00",
+  inventoryTrackingEnabled: false,
   printing: {
     ticketSize: "80mm",
     copies: 1,
@@ -118,6 +119,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         const dueDateBlackouts = allSettings?.find((s: any) => s.key === 'dueDates.blackoutDates')?.value;
         const autoRefresh = allSettings?.find((s: any) => s.key === 'monitor.autoRefresh')?.value;
         const shopifyToken = allSettings?.find((s: any) => s.key === 'shopifyToken')?.value;
+        const inventoryTracking = allSettings?.find((s: any) => s.key === 'inventory_tracking_enabled')?.value;
 
         console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
         console.log('Storage locations details:', { 
@@ -134,11 +136,20 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
         // Update settings with real data
         setSettings(prev => {
+          const parsedInventoryTracking = (() => {
+            if (typeof inventoryTracking === 'boolean') return inventoryTracking;
+            if (typeof inventoryTracking === 'string') {
+              return inventoryTracking.toLowerCase() === 'true';
+            }
+            return prev.inventoryTrackingEnabled;
+          })();
+
           const newSettings = {
             ...prev,
             shopifyToken: shopifyToken || prev.shopifyToken,
             flavours: Array.isArray(flavours) ? flavours : prev.flavours,
             storage: Array.isArray(storage) ? storage : prev.storage,
+            inventoryTrackingEnabled: parsedInventoryTracking,
             printing: {
               ...prev.printing,
               ...(typeof printing === 'object' && printing ? printing : {})
@@ -185,6 +196,10 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       return newSettings;
     });
     setHasUnsavedChanges(true);
+  };
+
+  const handleInventoryToggle = (enabled: boolean) => {
+    handleSettingsChange('inventoryTrackingEnabled', enabled);
   };
 
   const handleTestConnection = async () => {
@@ -291,6 +306,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         setStorageLocations(store, settings.storage),
         setPrintingSettings(store, settings.printing),
         setMonitorDensity(store, settings.monitor.density),
+        setSetting(store, 'inventory_tracking_enabled', settings.inventoryTrackingEnabled),
         // Save due date settings
         setSetting(store, 'dueDates.defaultDue', settings.dueDates.defaultDue),
         setSetting(store, 'dueDates.allowedDays', JSON.stringify(settings.dueDates.allowedDays)),
@@ -344,6 +360,33 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
           </div>
         )}
         
+        {/* Inventory Tracking */}
+        <Card className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-2">
+              <h3 className="font-medium text-foreground">Inventory Tracking</h3>
+              <p className="text-sm text-muted-foreground">
+                Requires BOM data and inventory quantities before enabling. Feature flag controls `deduct_inventory_for_order` and `restock_order`.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                When disabled, all inventory RPCs safely no-op and log a skip event.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={settings.inventoryTrackingEnabled ? "default" : "outline"}>
+                {settings.inventoryTrackingEnabled ? "Active" : "Inactive"}
+              </Badge>
+              <Switch
+                checked={settings.inventoryTrackingEnabled}
+                onCheckedChange={handleInventoryToggle}
+              />
+            </div>
+          </div>
+          <div className="mt-4 rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700">
+            Warning: Enable only after BOMs and inventory counts are loaded. The system is dormant by default.
+          </div>
+        </Card>
+
         {/* Shopify Integration Section */}
         <div className="space-y-4">
           <h2 className="text-lg font-medium text-foreground">Shopify Integration</h2>
