@@ -278,6 +278,9 @@ BEGIN
     RETURN jsonb_build_object('status', 'skipped', 'reason', 'bom_not_found');
   END IF;
 
+  v_tx_hash := hashtext(p_store || ':' || p_order_id || ':deduct');
+  PERFORM pg_advisory_xact_lock(v_tx_hash);
+
   SELECT COUNT(*)
   INTO v_existing
   FROM public.inventory_transactions t
@@ -286,11 +289,19 @@ BEGIN
     AND t.direction = 'deduct';
 
   IF v_existing > 0 THEN
+    INSERT INTO public.audit_log (action, performed_by, source, meta)
+    VALUES (
+      'inventory_deduction_skipped',
+      auth.uid(),
+      'deduct_inventory_for_order',
+      jsonb_build_object(
+        'store', p_store,
+        'order_id', p_order_id,
+        'reason', 'already_deducted'
+      )
+    );
     RETURN jsonb_build_object('status', 'skipped', 'reason', 'already_deducted');
   END IF;
-
-  v_tx_hash := hashtext(p_store || ':' || p_order_id || ':deduct');
-  PERFORM pg_advisory_xact_lock(v_tx_hash);
 
   FOR v_item IN
     SELECT 
