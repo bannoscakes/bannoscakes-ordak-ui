@@ -20,10 +20,10 @@
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
 | Tier 1: Critical | 6 | 6 | 0 | 0 | 100% |
-| Tier 2: High Priority | 5 | 3 | 0 | 2 | 60% |
+| Tier 2: High Priority | 5 | 4 | 0 | 1 | 80% |
 | Tier 3: Medium Priority | 5 | 0 | 0 | 5 | 0% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **9** | **0** | **11** | **45%** |
+| **TOTAL** | **20** | **10** | **0** | **10** | **50%** |
 
 ---
 
@@ -1363,12 +1363,12 @@ Created migration `057_add_staff_approval_columns.sql` with:
 ---
 
 ### Task 11: Add Storage Filter to Queue Tables
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-10  
 **Priority:** 🟡 HIGH  
-**Effort:** 4 hours  
+**Effort:** 4 hours (completed in ~1 hour)  
 **Impact:** Cannot filter orders by storage location  
-**Owner:** TBD  
-**Dependencies:** Task 4 (set_storage RPC)  
+**Owner:** Completed  
+**Dependencies:** Task 4 (set_storage RPC) - ✅ COMPLETE  
 **Report Source:** Reports #3, #5 (UI Gaps)
 
 **Problem:**
@@ -1453,21 +1453,44 @@ In Production pages (BannosProductionPage, FlourlaneProductionPage):
 3. Include in get_queue RPC call
 
 **Acceptance Criteria:**
-- [ ] Storage dropdown added to FilterBar
-- [ ] Dropdown populated with configured storage locations
-- [ ] "All Locations" option shown by default
-- [ ] Selecting storage filters queue to show only those orders
-- [ ] Filter works across all stages (Filling, Covering, Decorating, Packing)
-- [ ] Complete view also has storage filter
-- [ ] URL param persists filter on refresh (optional)
-- [ ] Manual test: Set storage on orders → Filter by location
+- [x] Storage dropdown added to FilterBar
+- [x] Dropdown populated with configured storage locations
+- [x] "All Locations" option shown by default
+- [x] Selecting storage filters queue to show only those orders
+- [x] Filter works across all stages (Filling, Covering, Decorating, Packing)
+- [x] Complete view also has storage filter
+- [ ] URL param persists filter on refresh (optional - not implemented)
+- [ ] Manual test: Set storage on orders → Filter by location (ready for testing)
 
 **Related Tasks:**
-- Task 4 (set_storage RPC) - Required
+- Task 4 (set_storage RPC) - ✅ REQUIRED - COMPLETE
 - Task 2 (Add flavour column) - Similar pattern
 
 **Notes:**
 Consider adding "Unassigned Storage" option to show orders without storage set.
+
+**Completion Notes:**
+Completed via updates to `src/components/QueueTable.tsx`.
+
+**What was done:**
+1. **Added storage filter state** - `storageFilter` and `storageLocations` state variables
+2. **Fetched storage locations** - Added useEffect to call `getStorageLocations(store)` RPC
+3. **Server-side filtering** - Updated `fetchQueueData` to pass `storage: storageFilter` to `getQueue` RPC
+4. **Client-side filtering** - Updated `filteredItems` useMemo to filter by `matchesStorage`
+5. **Added Storage dropdown** - New Select component in filter bar with "All Locations" + configured locations
+6. **Updated Clear Filters** - Now also resets `storageFilter` to null
+7. **Fallback handling** - If storage locations fetch fails, falls back to default 5 locations
+
+**Implementation Details:**
+- **Dual filtering approach**: Both server-side (RPC parameter) and client-side (filteredItems) for optimal UX
+- **Reused existing patterns**: Same structure as Priority and Status filters
+- **No new dependencies**: Uses existing `getStorageLocations` RPC and UI components
+- **Works across all stages**: Filtering applies to Unassigned, Filling, Covering, Decorating, Packing, Complete
+
+**Files Modified:**
+- `src/components/QueueTable.tsx` (+42 lines, -4 lines)
+
+**Ready for testing** - Storage filter dropdown now available in Production queue views for both Bannos and Flourlane stores.
 
 ---
 
@@ -2765,14 +2788,14 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 11  
+**Not Started:** 10  
 **In Progress:** 0  
-**Done:** 9  
+**Done:** 10  
 **Cancelled:** 0  
 
 **By Priority:**
 - 🔴 Critical (Tier 1): 6 tasks (6 done - **100% COMPLETE** ✅)
-- 🟡 High (Tier 2): 5 tasks (3 done - **60% COMPLETE**)
+- 🟡 High (Tier 2): 5 tasks (4 done - **80% COMPLETE**)
 - 🟢 Medium (Tier 3): 5 tasks (0 done)
 - 🔵 Low (Tier 4): 4 tasks (0 done)
 
