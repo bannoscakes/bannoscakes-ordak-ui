@@ -215,6 +215,7 @@ DECLARE
   v_after numeric;
   v_update record;
   v_tx_hash bigint;
+  v_rows integer;
 BEGIN
   IF p_store NOT IN ('bannos','flourlane') THEN
     RAISE EXCEPTION 'Invalid store: %', p_store;
@@ -246,7 +247,9 @@ BEGIN
     USING p_order_id
     INTO v_order;
 
-  IF NOT FOUND THEN
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+
+  IF COALESCE(v_rows, 0) = 0 THEN
     RAISE EXCEPTION 'Order % not found for store %', p_order_id, p_store;
   END IF;
 

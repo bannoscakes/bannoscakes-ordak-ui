@@ -48,6 +48,7 @@ serve(async (req) => {
 
     const processed: Array<Record<string, unknown>> = [];
     const skipped: Array<Record<string, unknown>> = [];
+    const failures: Array<Record<string, unknown>> = [];
     const nowIso = new Date().toISOString();
 
     for (const row of auditRows ?? []) {
@@ -94,6 +95,14 @@ serve(async (req) => {
 
         if (updateError) {
           console.error("[flip-shopify-oos] Failed to mark audit row processed", updateError);
+          failures.push({
+            id: row.id,
+            store,
+            variant_id: variantId,
+            reason: "update_failed",
+            error: updateError?.message ?? updateError,
+          });
+          continue;
         }
 
         const { error: insertError } = await supabase
@@ -112,6 +121,14 @@ serve(async (req) => {
 
         if (insertError) {
           console.error("[flip-shopify-oos] Failed to log dispatch audit row", insertError);
+          failures.push({
+            id: row.id,
+            store,
+            variant_id: variantId,
+            reason: "audit_insert_failed",
+            error: insertError?.message ?? insertError,
+          });
+          continue;
         }
       }
 
@@ -127,8 +144,10 @@ serve(async (req) => {
       JSON.stringify({
         processedCount: processed.length,
         skippedCount: skipped.length,
+        failedCount: failures.length,
         processed,
         skipped,
+        failures,
         dryRun,
       }),
       {
