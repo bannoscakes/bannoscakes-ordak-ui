@@ -165,6 +165,14 @@ BEGIN
     RAISE EXCEPTION 'Staff member is not assigned to % store', p_store;
   END IF;
   
+  -- Permission check: only allow self-service or Admin
+  IF v_staff_id != auth.uid() AND NOT EXISTS (
+    SELECT 1 FROM public.staff_shared 
+    WHERE user_id = auth.uid() AND role = 'Admin'
+  ) THEN
+    RAISE EXCEPTION 'Permission denied: cannot manage other staff''s shifts';
+  END IF;
+  
   -- Check for active shift
   IF EXISTS (
     SELECT 1 FROM public.shifts 
@@ -187,7 +195,7 @@ BEGIN
     jsonb_build_object(
       'shift_id', v_shift_id,
       'staff_id', v_staff_id,
-      'store', v_store
+      'store', p_store
     )
   );
   
@@ -214,6 +222,14 @@ BEGIN
   
   IF v_staff_id IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  
+  -- Permission check: only allow self-service or Admin
+  IF v_staff_id != auth.uid() AND NOT EXISTS (
+    SELECT 1 FROM public.staff_shared 
+    WHERE user_id = auth.uid() AND role = 'Admin'
+  ) THEN
+    RAISE EXCEPTION 'Permission denied: cannot manage other staff''s shifts';
   END IF;
   
   -- Get active shift
@@ -269,6 +285,14 @@ BEGIN
   
   IF v_staff_id IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  
+  -- Permission check: only allow self-service or Admin
+  IF v_staff_id != auth.uid() AND NOT EXISTS (
+    SELECT 1 FROM public.staff_shared 
+    WHERE user_id = auth.uid() AND role = 'Admin'
+  ) THEN
+    RAISE EXCEPTION 'Permission denied: cannot manage other staff''s shifts';
   END IF;
   
   -- Get active shift
@@ -330,6 +354,14 @@ BEGIN
   
   IF v_staff_id IS NULL THEN
     RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  
+  -- Permission check: only allow self-service or Admin
+  IF v_staff_id != auth.uid() AND NOT EXISTS (
+    SELECT 1 FROM public.staff_shared 
+    WHERE user_id = auth.uid() AND role = 'Admin'
+  ) THEN
+    RAISE EXCEPTION 'Permission denied: cannot manage other staff''s shifts';
   END IF;
   
   -- Get active shift
