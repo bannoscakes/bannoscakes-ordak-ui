@@ -506,6 +506,7 @@ DECLARE
   v_restocks jsonb := '[]'::jsonb;
   v_after numeric;
   v_tx_hash bigint;
+  v_rows integer;
 BEGIN
   IF p_store NOT IN ('bannos','flourlane') THEN
     RAISE EXCEPTION 'Invalid store: %', p_store;
@@ -608,12 +609,16 @@ BEGIN
     )
     ON CONFLICT (store, order_id, inventory_item_id, direction) DO NOTHING;
 
-    v_restocks := v_restocks || jsonb_build_array(jsonb_build_object(
-      'inventory_item_id', v_deduction.inventory_item_id::text,
-      'quantity', v_deduction.quantity,
-      'quantity_after', v_after,
-      'source_transaction_id', v_deduction.id::text
-    ));
+    GET DIAGNOSTICS v_rows = ROW_COUNT;
+
+    IF COALESCE(v_rows, 0) > 0 THEN
+      v_restocks := v_restocks || jsonb_build_array(jsonb_build_object(
+        'inventory_item_id', v_deduction.inventory_item_id::text,
+        'quantity', v_deduction.quantity,
+        'quantity_after', v_after,
+        'source_transaction_id', v_deduction.id::text
+      ));
+    END IF;
   END LOOP;
 
   IF jsonb_array_length(v_restocks) = 0 THEN
