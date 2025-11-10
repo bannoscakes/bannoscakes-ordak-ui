@@ -27,6 +27,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $function$
 BEGIN
+  -- Validate date range
+  IF p_from > p_to THEN
+    RAISE EXCEPTION 'Invalid date range: p_from (%) must be <= p_to (%)', p_from, p_to;
+  END IF;
+  
   RETURN QUERY
   SELECT 
     s.user_id as staff_id,
@@ -94,6 +99,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $function$
 BEGIN
+  -- Validate date range
+  IF p_from > p_to THEN
+    RAISE EXCEPTION 'Invalid date range: p_from (%) must be <= p_to (%)', p_from, p_to;
+  END IF;
+  
   RETURN QUERY
   SELECT 
     DATE(sh.start_ts) as shift_date,
