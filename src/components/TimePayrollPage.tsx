@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { adjustStaffTime, getStaffTimes, getStaffTimesDetail, adjustStaffTime } from "../lib/rpc-client";
+import { adjustStaffTime, getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
 import { 
   Calendar,
   Search, 
@@ -204,14 +204,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
         editingEntry.adjustmentNote
       );
       
-      // Update local state
-      const updatedEntries = selectedStaff.timeEntries.map(entry =>
-        entry.date === editingEntry.date ? editingEntry : entry
-      );
-      
-      setSelectedStaff({ ...selectedStaff, timeEntries: updatedEntries });
-      
-      // Refresh main data to get updated totals
+      // Refresh data from database to get updated totals
       const { from, to } = getDateRange();
       const staffTimes = await getStaffTimes(from, to);
       const updatedData = staffTimes.map((staff: any) => ({
@@ -227,6 +220,28 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
         timeEntries: []
       }));
       setTimeData(updatedData);
+      
+      // Also refresh the details for the currently selected staff
+      const detailData = await getStaffTimesDetail(selectedStaff.id, from, to);
+      const timeEntries: TimeEntry[] = detailData.map((day: any) => {
+        const startTime = day.shift_start ? new Date(day.shift_start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        return {
+          shiftId: day.shift_id,
+          date: day.shift_date,
+          shiftStart: startTime,
+          shiftEnd: endTime,
+          breakMinutes: parseFloat(day.break_minutes) || 0,
+          netHours: parseFloat(day.net_hours) || 0,
+          adjustmentNote: day.notes || undefined
+        };
+      });
+      
+      // Update selectedStaff with fresh data including updated totals
+      const freshStaffData = updatedData.find(s => s.id === selectedStaff.id);
+      if (freshStaffData) {
+        setSelectedStaff({ ...freshStaffData, timeEntries });
+      }
       
       setEditingEntry(null);
       toast.success("Time entry updated successfully");
@@ -433,7 +448,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                 </TableHeader>
                 <TableBody>
                   {selectedStaff.timeEntries.map((entry) => (
-                    <TableRow key={entry.date}>
+                    <TableRow key={entry.shiftId}>
                       <TableCell>{formatDate(entry.date)}</TableCell>
                       <TableCell>{formatTime(entry.shiftStart)}</TableCell>
                       <TableCell>{formatTime(entry.shiftEnd)}</TableCell>
