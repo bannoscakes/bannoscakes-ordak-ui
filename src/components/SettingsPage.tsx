@@ -21,8 +21,7 @@ import {
   setPrintingSettings, 
   getMonitorDensity, 
   setMonitorDensity,
-  testStorefrontToken,
-  connectCatalog,
+  testAdminToken,
   syncShopifyOrders
 } from "../lib/rpc-client";
 
@@ -222,7 +221,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
   const handleTestConnection = async () => {
     if (!settings.shopifyToken.trim()) {
-      toast.error("Please enter a Storefront Access Token");
+      toast.error("Please enter a Shopify Admin API token");
       return;
     }
 
@@ -230,48 +229,20 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setConnectionStatus('idle');
     
     try {
-      const result = await testStorefrontToken(store, settings.shopifyToken);
+      const result = await testAdminToken(store, settings.shopifyToken);
       
       if (result.valid) {
         setConnectionStatus('success');
-        toast.success(result.stub ? "Token saved (validation pending Edge Function)" : "Connected successfully");
+        toast.success("Admin API token validated successfully");
         setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
       } else {
         setConnectionStatus('error');
-        toast.error(result.error || "Connection failed");
+        toast.error(result.error || "Token validation failed");
       }
     } catch (error) {
-      console.error('Connection test error:', error);
+      console.error('Token validation error:', error);
       setConnectionStatus('error');
-      toast.error("Connection failed. Check token and permissions.");
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const handleConnectAndSync = async () => {
-    if (!settings.shopifyToken.trim()) {
-      toast.error("Please enter a Storefront Access Token");
-      return;
-    }
-
-    setIsConnecting(true);
-    
-    try {
-      const result = await connectCatalog(store, settings.shopifyToken);
-      
-      if (result.success) {
-        toast.success(result.stub ? "Catalog sync queued (Edge Function pending)" : "Catalog sync started");
-        setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
-        setConnectionStatus('success');
-      } else {
-        toast.error("Catalog sync failed");
-        setConnectionStatus('error');
-      }
-    } catch (error) {
-      console.error('Catalog sync error:', error);
-      toast.error("Catalog sync failed");
-      setConnectionStatus('error');
+      toast.error("Token validation failed. Check token and permissions.");
     } finally {
       setIsConnecting(false);
     }
@@ -451,25 +422,25 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         <div className="space-y-4">
           <h2 className="text-lg font-medium text-foreground">Shopify Integration</h2>
           
-          {/* Storefront Access Token */}
+          {/* Admin API Token */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-medium text-foreground">Storefront Access Token</h3>
+                <h3 className="font-medium text-foreground">Admin API Token</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Used to fetch product info/images. From: Shopify Admin → Apps → Private apps → Storefront API.
+                  Used to sync orders from Shopify. Same token as used by webhooks. From: Shopify Admin → Apps → Private app → Admin API.
                 </p>
               </div>
               {settings.lastConnected && (
                 <div className="text-xs text-muted-foreground">
-                  Last connected: {settings.lastConnected}
+                  Last validated: {settings.lastConnected}
                 </div>
               )}
             </div>
 
             {connectionStatus === 'success' && (
               <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">Connected. Catalog sync started.</p>
+                <p className="text-sm text-green-700">Admin API token validated successfully.</p>
               </div>
             )}
 
@@ -477,7 +448,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm text-red-700">Connection failed. Check token and permissions.</p>
+                  <p className="text-sm text-red-700">Token validation failed. Check token and permissions.</p>
                 </div>
               </div>
             )}
@@ -486,7 +457,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
               <div className="relative">
                 <Input
                   type={showToken ? "text" : "password"}
-                  placeholder="Enter your Storefront Access Token"
+                  placeholder="Enter your Shopify Admin API token"
                   value={settings.shopifyToken}
                   onChange={(e) => handleSettingsChange('shopifyToken', e.target.value)}
                   disabled={isConnecting}
@@ -501,19 +472,12 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
                 </Button>
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end">
                 <Button
-                  variant="outline"
                   onClick={handleTestConnection}
                   disabled={isConnecting || !settings.shopifyToken.trim()}
                 >
-                  {isConnecting ? "Testing..." : "Test Connection"}
-                </Button>
-                <Button
-                  onClick={handleConnectAndSync}
-                  disabled={isConnecting || !settings.shopifyToken.trim()}
-                >
-                  Connect & Sync Complete Catalog
+                  {isConnecting ? "Testing..." : "Test Admin API Token"}
                 </Button>
               </div>
             </div>

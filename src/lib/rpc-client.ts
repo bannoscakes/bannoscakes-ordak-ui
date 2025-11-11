@@ -1064,19 +1064,9 @@ export async function findOrder(search: string) {
 // SHOPIFY INTEGRATION
 // =============================================
 
-export async function testStorefrontToken(store: Store, token: string) {
+export async function testAdminToken(store: Store, token: string) {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('test_storefront_token', {
-    p_store: store,
-    p_token: token,
-  });
-  if (error) throw error;
-  return data;
-}
-
-export async function connectCatalog(store: Store, token: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('connect_catalog', {
+  const { data, error } = await supabase.rpc('test_admin_token', {
     p_store: store,
     p_token: token,
   });
