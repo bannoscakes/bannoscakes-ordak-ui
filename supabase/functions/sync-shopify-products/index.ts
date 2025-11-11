@@ -33,7 +33,7 @@ serve(async (req) => {
     // TODO: Implement actual Shopify GraphQL product fetch
     // For now, update run status with stub message
     
-    await supabase
+    const { error: updateError } = await supabase
       .from('shopify_sync_runs')
       .update({
         status: 'success',
@@ -43,6 +43,11 @@ serve(async (req) => {
         error_message: 'Stub: Product sync not yet implemented. Requires Shopify Admin API credentials.'
       })
       .eq('id', run_id);
+    
+    if (updateError) {
+      console.error('Failed to update sync run:', updateError);
+      // Continue anyway - return success even if logging fails
+    }
 
     return new Response(
       JSON.stringify({

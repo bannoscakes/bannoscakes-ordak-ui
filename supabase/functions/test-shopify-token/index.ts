@@ -38,7 +38,7 @@ serve(async (req) => {
     //   headers: { 'X-Shopify-Storefront-Access-Token': token }
     // });
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('shopify_sync_runs')
       .update({
         status: 'success',
@@ -46,6 +46,11 @@ serve(async (req) => {
         error_message: 'Stub: Token validation not yet implemented. Requires Shopify Storefront API call.'
       })
       .eq('id', run_id);
+    
+    if (updateError) {
+      console.error('Failed to update sync run:', updateError);
+      // Continue anyway - return success even if logging fails
+    }
 
     return new Response(
       JSON.stringify({

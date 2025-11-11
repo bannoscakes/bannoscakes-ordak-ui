@@ -31,7 +31,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Show limitation message - webhooks are the proper way
-    await supabase
+    const { error: updateError } = await supabase
       .from('shopify_sync_runs')
       .update({
         status: 'success',
@@ -41,6 +41,11 @@ serve(async (req) => {
         error_message: 'Manual order sync not recommended - use Shopify webhooks instead. Webhooks are already configured and working.'
       })
       .eq('id', run_id);
+    
+    if (updateError) {
+      console.error('Failed to update sync run:', updateError);
+      // Continue anyway - return success even if logging fails
+    }
 
     return new Response(
       JSON.stringify({
