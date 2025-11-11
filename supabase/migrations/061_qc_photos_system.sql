@@ -11,7 +11,7 @@ BEGIN;
 DO $$
 BEGIN
   -- If table doesn't exist, create it
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'order_photos') THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_photos') THEN
     CREATE TABLE public.order_photos (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       order_id text NOT NULL,
@@ -37,46 +37,46 @@ BEGIN
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'order_photos' AND column_name = 'order_id' AND data_type = 'uuid'
+        WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'order_id' AND data_type = 'uuid'
       ) THEN
         ALTER TABLE public.order_photos ALTER COLUMN order_id TYPE text USING order_id::text;
       END IF;
     END $inner$;
     
     -- Add stage column if missing (don't drop if exists - preserve data)
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'stage') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'stage') THEN
       ALTER TABLE public.order_photos ADD COLUMN stage text NOT NULL DEFAULT 'Packing' CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete'));
     END IF;
     
     -- Add store column if missing
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'store') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'store') THEN
       ALTER TABLE public.order_photos ADD COLUMN store text NOT NULL DEFAULT 'bannos' CHECK (store IN ('bannos','flourlane'));
     END IF;
     
     -- Add QC columns if missing
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'qc_status') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'qc_status') THEN
       ALTER TABLE public.order_photos ADD COLUMN qc_status text NOT NULL DEFAULT 'ok' CHECK (qc_status IN ('ok','needs_review','rejected'));
     END IF;
     
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'qc_issue') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'qc_issue') THEN
       ALTER TABLE public.order_photos ADD COLUMN qc_issue text;
     END IF;
     
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'qc_comments') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'qc_comments') THEN
       ALTER TABLE public.order_photos ADD COLUMN qc_comments text;
     END IF;
     
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'updated_at') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'updated_at') THEN
       ALTER TABLE public.order_photos ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
     END IF;
     
     -- Add uploaded_by column if missing (needed for FK)
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'uploaded_by') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'uploaded_by') THEN
       ALTER TABLE public.order_photos ADD COLUMN uploaded_by uuid;
     END IF;
     
     -- Add FK to staff_shared
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'order_photos_uploaded_by_fkey_staff') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.order_photos'::regclass AND conname = 'order_photos_uploaded_by_fkey_staff') THEN
       ALTER TABLE public.order_photos
         ADD CONSTRAINT order_photos_uploaded_by_fkey_staff
         FOREIGN KEY (uploaded_by)
