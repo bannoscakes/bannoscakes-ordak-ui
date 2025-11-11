@@ -1,6 +1,6 @@
 # Ordak v2 - Master Task List
 **Last Updated:** 2025-11-11  
-**Overall Completion:** 80%  
+**Overall Completion:** 75%  
 **Target Completion:** 95% by 2025-12-06 (4 weeks)  
 **Source:** Consolidated findings from 5 comprehensive audit reports
 
@@ -19,11 +19,11 @@
 
 | Tier | Total | Done | In Progress | Not Started | Completion |
 |------|-------|------|-------------|-------------|------------|
-| Tier 1: Critical | 6 | 6 | 0 | 0 | 100% |
-| Tier 2: High Priority | 5 | 5 | 0 | 0 | 100% |
-| Tier 3: Medium Priority | 5 | 5 | 0 | 0 | 100% ✅ |
+| Tier 1: Critical | 6 | 6 | 0 | 0 | 100% ✅ |
+| Tier 2: High Priority | 5 | 5 | 0 | 0 | 100% ✅ |
+| Tier 3: Medium Priority | 5 | 4 | 0 | 1 | 80% |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **16** | **0** | **4** | **80%** |
+| **TOTAL** | **20** | **15** | **0** | **5** | **75%** |
 
 ---
 
@@ -2936,15 +2936,15 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 4  
+**Not Started:** 5  
 **In Progress:** 0  
-**Done:** 16  
+**Done:** 15  
 **Cancelled:** 0  
 
 **By Priority:**
 - 🔴 Critical (Tier 1): 6 tasks (6 done - **100% COMPLETE** ✅)
 - 🟡 High (Tier 2): 5 tasks (5 done - **100% COMPLETE** ✅)
-- 🟢 Medium (Tier 3): 5 tasks (5 done - **100% COMPLETE** ✅)
+- 🟢 Medium (Tier 3): 5 tasks (4 done - **80% COMPLETE**)
 - 🔵 Low (Tier 4): 4 tasks (0 done - **0% COMPLETE**)
 
 **By Effort:**
