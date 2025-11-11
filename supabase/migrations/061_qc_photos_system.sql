@@ -230,7 +230,8 @@ BEGIN
     p.created_at as uploaded_at
   FROM public.order_photos p
   INNER JOIN orders_bannos o ON o.id = p.order_id
-  WHERE (p_store IS NULL OR p.store = 'bannos')
+  WHERE (p_store IS NULL OR p_store = 'bannos')
+    AND p.store = 'bannos'
     AND (p_qc_status IS NULL OR p.qc_status = p_qc_status)
     AND DATE(p.created_at) = CURRENT_DATE
   
@@ -251,7 +252,8 @@ BEGIN
     p.created_at as uploaded_at
   FROM public.order_photos p
   INNER JOIN orders_flourlane o ON o.id = p.order_id
-  WHERE (p_store IS NULL OR p.store = 'flourlane')
+  WHERE (p_store IS NULL OR p_store = 'flourlane')
+    AND p.store = 'flourlane'
     AND (p_qc_status IS NULL OR p.qc_status = p_qc_status)
     AND DATE(p.created_at) = CURRENT_DATE
   
