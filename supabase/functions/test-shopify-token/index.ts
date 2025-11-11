@@ -19,15 +19,33 @@ serve(async (req) => {
   }
 
   try {
-    const { store, token } = await req.json();
+    const { store, token, run_id } = await req.json();
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase credentials');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // TODO: Implement actual Shopify Storefront API test
-    // For now, return stub response
+    // For now, update run status with stub message
     
     // Example implementation would be:
     // const shopifyResponse = await fetch(`https://${store}.myshopify.com/api/...`, {
     //   headers: { 'X-Shopify-Storefront-Access-Token': token }
     // });
+
+    await supabase
+      .from('shopify_sync_runs')
+      .update({
+        status: 'success',
+        completed_at: new Date().toISOString(),
+        error_message: 'Stub: Token validation not yet implemented. Requires Shopify Storefront API call.'
+      })
+      .eq('id', run_id);
 
     return new Response(
       JSON.stringify({
@@ -35,6 +53,7 @@ serve(async (req) => {
         message: "Token test not yet implemented - returning stub",
         stub: true,
         store,
+        run_id,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
