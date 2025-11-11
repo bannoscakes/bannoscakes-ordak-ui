@@ -1061,6 +1061,53 @@ export async function findOrder(search: string) {
 }
 
 // =============================================
+// QC PHOTOS
+// =============================================
+
+export async function uploadOrderPhoto(
+  orderId: string,
+  store: Store,
+  url: string,
+  stage: string = 'Packing',
+  qcStatus: string = 'ok',
+  qcIssue?: string,
+  qcComments?: string
+) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('upload_order_photo', {
+    p_order_id: orderId,
+    p_store: store,
+    p_url: url,
+    p_stage: stage,
+    p_qc_status: qcStatus,
+    p_qc_issue: qcIssue || null,
+    p_qc_comments: qcComments || null,
+  });
+  if (error) throw error;
+  return data; // Returns photo UUID
+}
+
+export async function getOrderPhotos(orderId: string, store: Store) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_order_photos', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getQCReviewQueue(store?: Store, qcStatus?: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_qc_review_queue', {
+    p_store: store || null,
+    p_qc_status: qcStatus || null,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+// =============================================
 // TIME & PAYROLL
 // =============================================
 
