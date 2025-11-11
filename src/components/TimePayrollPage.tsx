@@ -63,6 +63,14 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
 
+  // Helper: Format date to YYYY-MM-DD without timezone conversion
+  function formatDateForDB(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   // Helper: Get date range from filter
   function getDateRange() {
     const today = new Date();
@@ -80,15 +88,15 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
 
     switch (dateRange) {
       case 'this-week':
-        return { from: thisWeekStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+        return { from: formatDateForDB(thisWeekStart), to: formatDateForDB(today) };
       case 'last-week':
-        return { from: lastWeekStart.toISOString().split('T')[0], to: lastWeekEnd.toISOString().split('T')[0] };
+        return { from: formatDateForDB(lastWeekStart), to: formatDateForDB(lastWeekEnd) };
       case 'this-month':
-        return { from: thisMonthStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+        return { from: formatDateForDB(thisMonthStart), to: formatDateForDB(today) };
       case 'last-month':
-        return { from: lastMonthStart.toISOString().split('T')[0], to: lastMonthEnd.toISOString().split('T')[0] };
+        return { from: formatDateForDB(lastMonthStart), to: formatDateForDB(lastMonthEnd) };
       default:
-        return { from: thisWeekStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+        return { from: formatDateForDB(thisWeekStart), to: formatDateForDB(today) };
     }
   }
 
