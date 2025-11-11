@@ -532,22 +532,26 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
               </div>
 
               <div>
-                <Label>Break Minutes</Label>
+                <Label>Break Minutes (calculated)</Label>
                 <Input
                   type="number"
                   value={editingEntry.breakMinutes}
-                  onChange={(e) => setEditingEntry({...editingEntry, breakMinutes: parseInt(e.target.value) || 0})}
+                  disabled
+                  className="bg-gray-100"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Auto-calculated from break records</p>
               </div>
 
               <div>
-                <Label>Net Hours</Label>
+                <Label>Net Hours (calculated)</Label>
                 <Input
                   type="number"
                   step="0.25"
                   value={editingEntry.netHours}
-                  onChange={(e) => setEditingEntry({...editingEntry, netHours: parseFloat(e.target.value) || 0})}
+                  disabled
+                  className="bg-gray-100"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Auto-calculated from shift and breaks</p>
               </div>
 
               <div className="col-span-2">
