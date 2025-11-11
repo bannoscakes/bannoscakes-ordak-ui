@@ -60,6 +60,11 @@ BEGIN
     );
   END IF;
   
+  -- Save token to settings (so "Token saved" message is accurate)
+  INSERT INTO settings (store, key, value)
+  VALUES (p_store, 'shopifyToken', to_jsonb(p_token))
+  ON CONFLICT (store, key) DO UPDATE SET value = EXCLUDED.value;
+  
   -- Create sync run record
   INSERT INTO shopify_sync_runs (store, sync_type, status)
   VALUES (p_store, 'test_token', 'running')
