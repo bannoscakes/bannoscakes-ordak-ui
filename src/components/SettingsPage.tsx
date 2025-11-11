@@ -20,7 +20,10 @@ import {
   getPrintingSettings, 
   setPrintingSettings, 
   getMonitorDensity, 
-  setMonitorDensity 
+  setMonitorDensity,
+  testStorefrontToken,
+  connectCatalog,
+  syncShopifyOrders
 } from "../lib/rpc-client";
 
 interface SettingsPageProps {
@@ -226,25 +229,51 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setIsConnecting(true);
     setConnectionStatus('idle');
     
-    // Simulate API call
-    setTimeout(() => {
-      const success = settings.shopifyToken.length > 10; // Mock validation
-      setConnectionStatus(success ? 'success' : 'error');
-      setIsConnecting(false);
+    try {
+      const result = await testStorefrontToken(store, settings.shopifyToken);
       
-      if (success) {
-        toast.success("Connected successfully");
+      if (result.valid) {
+        setConnectionStatus('success');
+        toast.success(result.stub ? "Token saved (validation pending Edge Function)" : "Connected successfully");
         setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
       } else {
-        toast.error("Connection failed. Check token and permissions.");
+        setConnectionStatus('error');
+        toast.error(result.error || "Connection failed");
       }
-    }, 2000);
+    } catch (error) {
+      console.error('Connection test error:', error);
+      setConnectionStatus('error');
+      toast.error("Connection failed. Check token and permissions.");
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleConnectAndSync = async () => {
-    await handleTestConnection();
-    if (connectionStatus === 'success') {
-      handleSyncOrders();
+    if (!settings.shopifyToken.trim()) {
+      toast.error("Please enter a Storefront Access Token");
+      return;
+    }
+
+    setIsConnecting(true);
+    
+    try {
+      const result = await connectCatalog(store, settings.shopifyToken);
+      
+      if (result.success) {
+        toast.success(result.stub ? "Catalog sync queued (Edge Function pending)" : "Catalog sync started");
+        setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
+        setConnectionStatus('success');
+      } else {
+        toast.error("Catalog sync failed");
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      console.error('Catalog sync error:', error);
+      toast.error("Catalog sync failed");
+      setConnectionStatus('error');
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -253,22 +282,38 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setSyncStatus('idle');
     setSyncProgress({ imported: 0, skipped: 0, errors: 0 });
     
-    // Simulate sync progress
-    const interval = setInterval(() => {
-      setSyncProgress(prev => ({
-        imported: Math.min(prev.imported + Math.floor(Math.random() * 3) + 1, 45),
-        skipped: Math.min(prev.skipped + Math.floor(Math.random() * 2), 8),
-        errors: Math.min(prev.errors + (Math.random() < 0.1 ? 1 : 0), 2)
-      }));
-    }, 200);
-
-    setTimeout(() => {
-      clearInterval(interval);
+    try {
+      const result = await syncShopifyOrders(store);
+      
+      if (result.success) {
+        setSyncStatus('success');
+        setSettings(prev => ({ ...prev, lastSync: new Date().toLocaleString() }));
+        
+        if (result.recommendation) {
+          toast.success(result.recommendation, { duration: 5000 });
+        } else {
+          toast.success(result.stub ? "Sync queued (Edge Function pending)" : "Sync completed");
+        }
+        
+        // Set progress from result if available
+        if (result.imported !== undefined) {
+          setSyncProgress({
+            imported: result.imported || 0,
+            skipped: result.skipped || 0,
+            errors: result.errors || 0
+          });
+        }
+      } else {
+        setSyncStatus('error');
+        toast.error("Sync failed");
+      }
+    } catch (error) {
+      console.error('Sync orders error:', error);
+      setSyncStatus('error');
+      toast.error("Sync failed");
+    } finally {
       setIsSyncing(false);
-      setSyncStatus('success');
-      setSettings(prev => ({ ...prev, lastSync: new Date().toLocaleString() }));
-      toast.success("Sync completed successfully");
-    }, 3000);
+    }
   };
 
   const handleTestPrint = () => {

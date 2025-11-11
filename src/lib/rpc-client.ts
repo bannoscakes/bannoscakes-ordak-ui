@@ -1061,6 +1061,49 @@ export async function findOrder(search: string) {
 }
 
 // =============================================
+// SHOPIFY INTEGRATION
+// =============================================
+
+export async function testStorefrontToken(store: Store, token: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('test_storefront_token', {
+    p_store: store,
+    p_token: token,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function connectCatalog(store: Store, token: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('connect_catalog', {
+    p_store: store,
+    p_token: token,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function syncShopifyOrders(store: Store) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('sync_shopify_orders', {
+    p_store: store,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getSyncLog(store?: Store, limit?: number) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_sync_log', {
+    p_store: store || null,
+    p_limit: limit || 50,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+// =============================================
 // QC PHOTOS
 // =============================================
 
