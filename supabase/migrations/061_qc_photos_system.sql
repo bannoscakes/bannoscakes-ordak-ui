@@ -93,6 +93,11 @@ AS $function$
 DECLARE
   v_photo_id uuid;
 BEGIN
+  -- Validate authentication
+  IF p_order_id IS NULL OR auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  
   -- Validate inputs
   IF p_store NOT IN ('bannos', 'flourlane') THEN
     RAISE EXCEPTION 'Invalid store: %', p_store;
@@ -198,7 +203,7 @@ CREATE OR REPLACE FUNCTION public.get_qc_review_queue(
 ) RETURNS TABLE(
   photo_id uuid,
   order_id text,
-  order_number integer,
+  order_number bigint,
   store text,
   customer_name text,
   product_title text,
@@ -219,7 +224,7 @@ BEGIN
   SELECT 
     p.id as photo_id,
     p.order_id,
-    o.shopify_order_number::integer as order_number,
+    o.shopify_order_number::bigint as order_number,
     p.store,
     o.customer_name,
     o.product_title,
@@ -241,7 +246,7 @@ BEGIN
   SELECT 
     p.id as photo_id,
     p.order_id,
-    o.shopify_order_number::integer as order_number,
+    o.shopify_order_number::bigint as order_number,
     p.store,
     o.customer_name,
     o.product_title,
