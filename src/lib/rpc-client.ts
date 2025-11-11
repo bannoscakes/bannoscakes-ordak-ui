@@ -1064,33 +1064,60 @@ export async function findOrder(search: string) {
 // SHOPIFY INTEGRATION
 // =============================================
 
-export async function testStorefrontToken(store: Store, token: string) {
+export async function testAdminToken(store: Store, token: string) {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('test_storefront_token', {
+  
+  // Step 1: Call RPC to create sync run and save token
+  const { data: rpcData, error: rpcError } = await supabase.rpc('test_admin_token', {
     p_store: store,
     p_token: token,
   });
-  if (error) throw error;
-  return data;
-}
-
-export async function connectCatalog(store: Store, token: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('connect_catalog', {
-    p_store: store,
-    p_token: token,
+  if (rpcError) throw rpcError;
+  
+  // Step 2: Invoke Edge Function to actually test the token
+  const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('test-shopify-token', {
+    body: {
+      store,
+      token,
+      run_id: rpcData.run_id
+    }
   });
-  if (error) throw error;
-  return data;
+  
+  if (edgeFunctionError) throw edgeFunctionError;
+  return edgeFunctionData;
 }
 
 export async function syncShopifyOrders(store: Store) {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('sync_shopify_orders', {
+  
+  // Step 1: Call RPC to create sync run and get token
+  const { data: rpcData, error: rpcError } = await supabase.rpc('sync_shopify_orders', {
     p_store: store,
   });
-  if (error) throw error;
-  return data;
+  if (rpcError) throw rpcError;
+  
+  // Step 2: Get the token from settings (RPC already validated it exists)
+  const { data: settingsData, error: settingsError } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('store', store)
+    .eq('key', 'shopifyToken')
+    .single();
+  
+  if (settingsError) throw settingsError;
+  const token = settingsData?.value;
+  
+  // Step 3: Invoke Edge Function to actually sync orders
+  const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('sync-shopify-orders', {
+    body: {
+      store,
+      token,
+      run_id: rpcData.run_id
+    }
+  });
+  
+  if (edgeFunctionError) throw edgeFunctionError;
+  return edgeFunctionData;
 }
 
 export async function getSyncLog(store?: Store, limit?: number) {
