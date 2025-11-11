@@ -163,7 +163,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
           const newSettings = {
             ...prev,
-            shopifyToken: shopifyToken || prev.shopifyToken,
+            shopifyToken: shopifyToken || '',  // Don't fallback to prev - causes cross-store contamination
             flavours: Array.isArray(flavours) ? flavours : prev.flavours,
             storage: Array.isArray(storage) ? storage : prev.storage,
             inventoryTrackingEnabled: parsedInventoryTracking,
