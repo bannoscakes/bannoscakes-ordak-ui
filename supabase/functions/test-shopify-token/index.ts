@@ -46,6 +46,9 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get Shopify API version from env, fallback to current supported version
+    const apiVersion = Deno.env.get('SHOPIFY_API_VERSION') || '2025-01';
+
     // Test Admin API with a simple shop query
     const query = `
       query {
@@ -59,7 +62,7 @@ serve(async (req) => {
     `;
 
     const response = await fetch(
-      `https://${shopUrl}/admin/api/2024-10/graphql.json`,
+      `https://${shopUrl}/admin/api/${apiVersion}/graphql.json`,
       {
         method: 'POST',
         headers: {
