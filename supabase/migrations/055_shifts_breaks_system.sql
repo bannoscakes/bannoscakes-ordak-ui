@@ -58,46 +58,62 @@ CREATE INDEX IF NOT EXISTS idx_breaks_active
 ALTER TABLE public.shifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.breaks ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Staff can read their own shifts, Admin can read all
-CREATE POLICY shifts_select_policy ON public.shifts
-  FOR SELECT TO authenticated
-  USING (
-    staff_id = auth.uid() 
-    OR EXISTS (
-      SELECT 1 FROM public.staff_shared 
-      WHERE user_id = auth.uid() AND role = 'Admin'
-    )
-  );
+-- RLS Policies (idempotent)
+DO $$
+BEGIN
+  -- Staff can read their own shifts, Admin can read all
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND policyname = 'shifts_select_policy' AND tablename = 'shifts') THEN
+    CREATE POLICY shifts_select_policy ON public.shifts
+      FOR SELECT TO authenticated
+      USING (
+        staff_id = auth.uid() 
+        OR EXISTS (
+          SELECT 1 FROM public.staff_shared 
+          WHERE user_id = auth.uid() AND role = 'Admin'
+        )
+      );
+  END IF;
 
--- RLS Policy: Staff can read their own breaks, Admin can read all
-CREATE POLICY breaks_select_policy ON public.breaks
-  FOR SELECT TO authenticated
-  USING (
-    shift_id IN (
-      SELECT id FROM public.shifts WHERE staff_id = auth.uid()
-    )
-    OR EXISTS (
-      SELECT 1 FROM public.staff_shared 
-      WHERE user_id = auth.uid() AND role = 'Admin'
-    )
-  );
+  -- Staff can read their own breaks, Admin can read all
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND policyname = 'breaks_select_policy' AND tablename = 'breaks') THEN
+    CREATE POLICY breaks_select_policy ON public.breaks
+      FOR SELECT TO authenticated
+      USING (
+        shift_id IN (
+          SELECT id FROM public.shifts WHERE staff_id = auth.uid()
+        )
+        OR EXISTS (
+          SELECT 1 FROM public.staff_shared 
+          WHERE user_id = auth.uid() AND role = 'Admin'
+        )
+      );
+  END IF;
 
--- RLS Policy: No direct writes (RPC-only via SECURITY DEFINER)
-CREATE POLICY shifts_insert_policy ON public.shifts
-  FOR INSERT TO authenticated
-  WITH CHECK (false);
+  -- No direct writes (RPC-only via SECURITY DEFINER)
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND policyname = 'shifts_insert_policy' AND tablename = 'shifts') THEN
+    CREATE POLICY shifts_insert_policy ON public.shifts
+      FOR INSERT TO authenticated
+      WITH CHECK (false);
+  END IF;
 
-CREATE POLICY shifts_update_policy ON public.shifts
-  FOR UPDATE TO authenticated
-  USING (false);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND policyname = 'shifts_update_policy' AND tablename = 'shifts') THEN
+    CREATE POLICY shifts_update_policy ON public.shifts
+      FOR UPDATE TO authenticated
+      USING (false);
+  END IF;
 
-CREATE POLICY breaks_insert_policy ON public.breaks
-  FOR INSERT TO authenticated
-  WITH CHECK (false);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND policyname = 'breaks_insert_policy' AND tablename = 'breaks') THEN
+    CREATE POLICY breaks_insert_policy ON public.breaks
+      FOR INSERT TO authenticated
+      WITH CHECK (false);
+  END IF;
 
-CREATE POLICY breaks_update_policy ON public.breaks
-  FOR UPDATE TO authenticated
-  USING (false);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND policyname = 'breaks_update_policy' AND tablename = 'breaks') THEN
+    CREATE POLICY breaks_update_policy ON public.breaks
+      FOR UPDATE TO authenticated
+      USING (false);
+  END IF;
+END $$;
 
 -- Grant read access
 GRANT SELECT ON public.shifts TO authenticated;
