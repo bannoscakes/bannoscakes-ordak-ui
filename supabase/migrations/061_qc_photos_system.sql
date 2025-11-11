@@ -43,11 +43,10 @@ BEGIN
       END IF;
     END $inner$;
     
-    -- Handle stage column
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'stage') THEN
-      ALTER TABLE public.order_photos DROP COLUMN stage;
+    -- Add stage column if missing (don't drop if exists - preserve data)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'stage') THEN
+      ALTER TABLE public.order_photos ADD COLUMN stage text NOT NULL DEFAULT 'Packing' CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete'));
     END IF;
-    ALTER TABLE public.order_photos ADD COLUMN stage text NOT NULL DEFAULT 'Packing' CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete'));
     
     -- Add store column if missing
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'store') THEN
@@ -69,6 +68,11 @@ BEGIN
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'updated_at') THEN
       ALTER TABLE public.order_photos ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+    END IF;
+    
+    -- Add uploaded_by column if missing (needed for FK)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'order_photos' AND column_name = 'uploaded_by') THEN
+      ALTER TABLE public.order_photos ADD COLUMN uploaded_by uuid;
     END IF;
     
     -- Add FK to staff_shared
