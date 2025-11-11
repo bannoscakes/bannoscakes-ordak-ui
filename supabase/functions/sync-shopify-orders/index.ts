@@ -45,8 +45,10 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let runId: string | undefined;
   try {
     const { store, token, run_id } = await req.json();
+    runId = run_id;
 
     if (!store || !token || !run_id) {
       throw new Error('Missing required fields: store, token, run_id');
@@ -242,11 +244,12 @@ serve(async (req) => {
     };
 
     console.log('Sync complete:', summary);
+    const hasErrors = errorCount > 0;
 
     const { error: updateError } = await supabase
       .from('shopify_sync_runs')
       .update({
-        status: errorCount > 0 ? 'error' : 'success',
+        status: hasErrors ? 'error' : 'success',
         completed_at: new Date().toISOString(),
         orders_imported: importedCount,
         orders_skipped: skippedNoDueDateCount + skippedPastDueCount + skippedExistsCount,
@@ -261,11 +264,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: !hasErrors,
         imported: importedCount,
         skipped: skippedNoDueDateCount + skippedPastDueCount + skippedExistsCount,
         errors: errorCount,
-        message: `Sync complete: ${importedCount} imported, ${skippedNoDueDateCount + skippedPastDueCount + skippedExistsCount} skipped`,
+        message: hasErrors
+          ? `Sync completed with ${errorCount} errors`
+          : `Sync complete: ${importedCount} imported, ${skippedNoDueDateCount + skippedPastDueCount + skippedExistsCount} skipped`,
         details: summary
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -274,15 +279,14 @@ serve(async (req) => {
     console.error('Sync error:', error);
     
     // Try to update sync run to error
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      
-      if (supabaseUrl && supabaseServiceKey) {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const body = await req.clone().json();
+    if (runId) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
         
-        if (body.run_id) {
+        if (supabaseUrl && supabaseServiceKey) {
+          const supabase = createClient(supabaseUrl, supabaseServiceKey);
+          
           await supabase
             .from('shopify_sync_runs')
             .update({
@@ -290,11 +294,11 @@ serve(async (req) => {
               completed_at: new Date().toISOString(),
               error_message: error instanceof Error ? error.message : 'Unknown error'
             })
-            .eq('id', body.run_id);
+            .eq('id', runId);
         }
+      } catch (updateError) {
+        console.error('Failed to update sync run:', updateError);
       }
-    } catch (updateError) {
-      console.error('Failed to update sync run:', updateError);
     }
 
     return new Response(
