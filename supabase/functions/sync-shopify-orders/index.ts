@@ -197,7 +197,8 @@ serve(async (req) => {
         }
         
         // Check if order already exists
-        const orderNumber = order.name.replace('#', '').replace('B', '');
+        // Use regex to only remove leading #B prefix (e.g., #B1234 → 1234, #1B23 → 1B23)
+        const orderNumber = order.name.replace(/^#?B?/, '');
         const { data: existing } = await supabase
           .from(`orders_${store}`)
           .select('id')
