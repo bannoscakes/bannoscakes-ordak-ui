@@ -43,6 +43,15 @@ BEGIN
       END IF;
     END $inner$;
     
+    -- Add essential columns if missing
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'url') THEN
+      ALTER TABLE public.order_photos ADD COLUMN url text NOT NULL DEFAULT '';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'created_at') THEN
+      ALTER TABLE public.order_photos ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+    END IF;
+    
     -- Add stage column if missing (don't drop if exists - preserve data)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'order_photos' AND column_name = 'stage') THEN
       ALTER TABLE public.order_photos ADD COLUMN stage text NOT NULL DEFAULT 'Packing' CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete'));
