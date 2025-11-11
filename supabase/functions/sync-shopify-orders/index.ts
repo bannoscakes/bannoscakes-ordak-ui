@@ -168,8 +168,9 @@ serve(async (req) => {
     console.log(`Total unfulfilled orders fetched: ${allOrders.length}`);
 
     // Filter and import orders
+    // Use UTC midnight to match parseDueDateFromTags which returns UTC dates
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     let importedCount = 0;
     let skippedNoDueDateCount = 0;
