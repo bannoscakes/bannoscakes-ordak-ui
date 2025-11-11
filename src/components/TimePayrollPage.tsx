@@ -192,10 +192,21 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     if (!selectedStaff || !editingEntry) return;
     
     try {
-      // Convert time strings back to ISO timestamps for the database
+      // Convert time strings back to ISO timestamps with proper timezone handling
       const dateStr = editingEntry.date;
-      const newStart = editingEntry.shiftStart ? `${dateStr}T${editingEntry.shiftStart}:00` : undefined;
-      const newEnd = editingEntry.shiftEnd ? `${dateStr}T${editingEntry.shiftEnd}:00` : undefined;
+      let newStart: string | undefined;
+      let newEnd: string | undefined;
+      
+      if (editingEntry.shiftStart) {
+        const startDate = new Date(`${dateStr}T${editingEntry.shiftStart}:00`);
+        newStart = startDate.toISOString();
+      }
+      
+      if (editingEntry.shiftEnd) {
+        const endDate = new Date(`${dateStr}T${editingEntry.shiftEnd}:00`);
+        newEnd = endDate.toISOString();
+      }
+      
       // Call RPC to persist changes
       await adjustStaffTime(
         editingEntry.shiftId,
