@@ -152,35 +152,38 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         });
 
         // Update settings with real data
+        // Use store-specific defaults to prevent cross-store contamination
+        const storeDefaults = getDefaultSettings(store);
+        
         setSettings(prev => {
           const parsedInventoryTracking = (() => {
             if (typeof inventoryTracking === 'boolean') return inventoryTracking;
             if (typeof inventoryTracking === 'string') {
               return inventoryTracking.toLowerCase() === 'true';
             }
-            return prev.inventoryTrackingEnabled;
+            return storeDefaults.inventoryTrackingEnabled;
           })();
 
           const newSettings = {
             ...prev,
-            shopifyToken: shopifyToken || prev.shopifyToken,
-            flavours: Array.isArray(flavours) ? flavours : prev.flavours,
-            storage: Array.isArray(storage) ? storage : prev.storage,
+            shopifyToken: shopifyToken || '',  // Don't fallback to prev - causes cross-store contamination
+            flavours: Array.isArray(flavours) ? flavours : storeDefaults.flavours,
+            storage: Array.isArray(storage) ? storage : storeDefaults.storage,
             inventoryTrackingEnabled: parsedInventoryTracking,
             printing: {
-              ...prev.printing,
+              ...storeDefaults.printing,
               ...(typeof printing === 'object' && printing ? printing : {})
             },
             dueDates: {
-              ...prev.dueDates,
-              defaultDue: dueDateDefault || prev.dueDates.defaultDue,
-              allowedDays: ensureArray(dueDateDays, prev.dueDates.allowedDays),
-              blackoutDates: ensureArray(dueDateBlackouts, prev.dueDates.blackoutDates)
+              ...storeDefaults.dueDates,
+              defaultDue: dueDateDefault || storeDefaults.dueDates.defaultDue,
+              allowedDays: ensureArray(dueDateDays, storeDefaults.dueDates.allowedDays),
+              blackoutDates: ensureArray(dueDateBlackouts, storeDefaults.dueDates.blackoutDates)
             },
             monitor: {
-              ...prev.monitor,
-              density: typeof monitor === 'string' ? monitor : prev.monitor.density,
-              autoRefresh: autoRefresh ? parseInt(autoRefresh) : prev.monitor.autoRefresh
+              ...storeDefaults.monitor,
+              density: typeof monitor === 'string' ? monitor : storeDefaults.monitor.density,
+              autoRefresh: autoRefresh ? parseInt(autoRefresh) : storeDefaults.monitor.autoRefresh
             }
           };
           
