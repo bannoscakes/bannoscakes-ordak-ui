@@ -1,5 +1,5 @@
 # Ordak v2 - Master Task List
-**Last Updated:** 2025-11-10  
+**Last Updated:** 2025-11-11  
 **Overall Completion:** 80%  
 **Target Completion:** 95% by 2025-12-06 (4 weeks)  
 **Source:** Consolidated findings from 5 comprehensive audit reports
@@ -21,9 +21,9 @@
 |------|-------|------|-------------|-------------|------------|
 | Tier 1: Critical | 6 | 6 | 0 | 0 | 100% |
 | Tier 2: High Priority | 5 | 5 | 0 | 0 | 100% |
-| Tier 3: Medium Priority | 5 | 4 | 0 | 1 | 80% |
+| Tier 3: Medium Priority | 5 | 5 | 0 | 0 | 100% ✅ |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **15** | **0** | **5** | **75%** |
+| **TOTAL** | **20** | **16** | **0** | **4** | **80%** |
 
 ---
 
@@ -1675,14 +1675,20 @@ These Edge Functions do the actual Shopify API work:
 3. `supabase/functions/sync-shopify-orders/index.ts`
 
 **Acceptance Criteria:**
-- [x] All 4 RPCs created (test_storefront_token, connect_catalog, sync_shopify_orders, get_sync_log)
-- [x] Settings page "Test Connection" button works
-- [x] Settings page "Connect & Sync Catalog" button works
+- [x] Admin API RPCs created (test_admin_token, sync_shopify_orders, get_sync_log)
+- [x] Catalog sync removed (not needed - BOMs handle inventory)
+- [x] Settings page "Test Admin API Token" button works
 - [x] Settings page "Sync Orders" button works
-- [x] Progress indicators show during sync
-- [x] Last connected timestamp updates
-- [ ] Sync log viewable (UI modal not implemented - RPC ready)
-- [x] Edge Functions deployed (stubs - ready for Shopify API)
+- [x] Edge Functions complete (not stubs - full Admin API implementation)
+- [x] Token validation tests real Shopify API
+- [x] Order sync fetches unfulfilled orders with pagination
+- [x] Due date filtering works (timezone-safe UTC comparison)
+- [x] Duplicate detection prevents re-importing orders
+- [x] Error tracking works (sync runs update to success/error status)
+- [x] Store URLs correct (bannos.myshopify.com, flour-lane.myshopify.com)
+- [x] Order numbers preserved correctly (no corruption from sanitization)
+- [x] API version configurable via environment variable
+- [ ] Sync log UI modal (RPC ready, UI deferred to future PR)
 
 **Related Tasks:**
 - Task 9 (Inventory deduction) - Product sync needed for variant IDs
@@ -1695,40 +1701,56 @@ This is a large task. Consider breaking into:
 4. PR4: Edge Function for order sync
 
 **Completion Notes (2025-11-11):**
-Created migration `062_shopify_integration.sql`, 3 Edge Functions, and wired SettingsPage.
+**FIXED in PR #217** - Complete Admin API implementation with 7 critical bug fixes.
 
 **What was done:**
-1. **Created shopify_sync_runs table** - Tracks all sync operations
-2. **Created 4 RPCs:**
-   - `test_storefront_token(store, token)` - Validates and saves token
-   - `connect_catalog(store, token)` - Saves token, triggers product sync
-   - `sync_shopify_orders(store)` - Triggers order sync
-   - `get_sync_log(store, limit)` - Query sync history
+1. **Migration 063_fix_shopify_integration.sql:**
+   - ❌ Removed `connect_catalog()` RPC - Not needed (BOMs handle inventory)
+   - ❌ Removed `test_storefront_token()` RPC - Wrong API
+   - ✅ Created `test_admin_token(store, token)` - Admin API validation
+   - ✅ Fixed `sync_shopify_orders(store)` - Uses correct token key `'shopifyToken'`
+   - ✅ Kept `get_sync_log(store, limit)` - Query sync history
 
-3. **Created 3 Edge Functions (deployed):**
-   - `test-shopify-token` - Stub validator (ready for Shopify API)
-   - `sync-shopify-products` - Stub product fetcher (ready for Shopify Admin API)
-   - `sync-shopify-orders` - Shows webhook recommendation
+2. **Edge Functions (COMPLETE - not stubs):**
+   - `test-shopify-token/index.ts` - Full Admin API validation with shop query
+   - `sync-shopify-orders/index.ts` - Complete order sync with pagination and filtering
 
-4. **Wired SettingsPage** - All buttons call real RPCs instead of mocks
+3. **Frontend Updates:**
+   - RPC client: `testAdminToken()` replaces `testStorefrontToken()`
+   - Removed `connectCatalog()` function
+   - Edge Functions properly invoked after RPC calls
+   - SettingsPage: Removed catalog sync button, updated labels to Admin API
+
+**Critical Bug Fixes (7 total):**
+1. **Timezone Drift** - Use UTC midnight for date comparison (setUTCHours)
+2. **Order Sync Silent Failure** - Frontend now invokes Edge Function
+3. **Token Test Incomplete** - Frontend now invokes Edge Function
+4. **Body Consumption (test-shopify-token)** - Parse run_id outside try block
+5. **Body Consumption (sync-shopify-orders)** - Parse run_id outside try block
+6. **Order Number Corruption** - Use regex `/^#?B?/` instead of chained replace
+7. **Outdated API Version** - Configurable via env var, defaults to 2025-01
 
 **Architecture:**
-- Button → RPC (creates run record, saves state) → Edge Function (updates run status)
-- Tokens stored in `settings` table
+- Button → RPC (creates run record, saves token) → Frontend invokes Edge Function → Edge Function updates run status
+- Tokens stored in `settings` table with key `'shopifyToken'` (matches webhooks)
 - Sync history tracked in `shopify_sync_runs`
+- Store URLs: bannos.myshopify.com, flour-lane.myshopify.com
 
 **What works:**
-- ✅ Test Connection saves token and creates run record
-- ✅ Connect & Sync Catalog saves token and queues sync
-- ✅ Sync Orders shows webhook recommendation
-- ✅ All operations logged with audit trail
+- ✅ Test Admin API Token validates with real Shopify API
+- ✅ Sync Orders fetches unfulfilled orders with pagination
+- ✅ Filters by due date tags (format: "Fri 14 Nov 2025")
+- ✅ Skips past-due and duplicate orders
+- ✅ Inserts to webhook_inbox for existing webhook worker
+- ✅ All operations logged with complete audit trail
+- ✅ Error tracking works (sync runs update to success/error)
 
-**Stubs (for later):**
-- 🔜 Real Shopify Storefront API validation
-- 🔜 Real product catalog fetch
-- 🔜 Sync log UI modal
+**Deployment:**
+1. Migration already in dev: `063_fix_shopify_integration.sql`
+2. Edge Functions ready for deployment: `supabase functions deploy test-shopify-token sync-shopify-orders`
+3. Optional: Set `SHOPIFY_API_VERSION` env var for custom API version
 
-**Edge Functions ready for Shopify API implementation when credentials available.**
+**Reference:** TASK_12_FIX_COMPLETE.md, PR #217, CHANGELOG.md v0.9.9-beta
 
 ---
 
@@ -2914,16 +2936,16 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 10  
+**Not Started:** 4  
 **In Progress:** 0  
-**Done:** 10  
+**Done:** 16  
 **Cancelled:** 0  
 
 **By Priority:**
 - 🔴 Critical (Tier 1): 6 tasks (6 done - **100% COMPLETE** ✅)
-- 🟡 High (Tier 2): 5 tasks (4 done - **80% COMPLETE**)
-- 🟢 Medium (Tier 3): 5 tasks (0 done)
-- 🔵 Low (Tier 4): 4 tasks (0 done)
+- 🟡 High (Tier 2): 5 tasks (5 done - **100% COMPLETE** ✅)
+- 🟢 Medium (Tier 3): 5 tasks (5 done - **100% COMPLETE** ✅)
+- 🔵 Low (Tier 4): 4 tasks (0 done - **0% COMPLETE**)
 
 **By Effort:**
 - ⚡ Quick (<2 hours): 6 tasks
