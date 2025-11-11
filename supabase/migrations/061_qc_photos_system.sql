@@ -4,57 +4,22 @@
 BEGIN;
 
 -- ============================================================================
--- FIX order_photos TABLE
+-- CREATE order_photos TABLE
 -- ============================================================================
 
--- Drop old foreign key constraints (references non-existent 'orders' table)
-ALTER TABLE public.order_photos DROP CONSTRAINT IF EXISTS order_photos_order_id_fkey;
-ALTER TABLE public.order_photos DROP CONSTRAINT IF EXISTS order_photos_uploaded_by_fkey;
-
--- Change order_id from UUID to TEXT (current system uses text IDs)
-ALTER TABLE public.order_photos ALTER COLUMN order_id TYPE text;
-
--- Drop old stage enum column and add simple text
-ALTER TABLE public.order_photos DROP COLUMN IF EXISTS stage;
-ALTER TABLE public.order_photos 
-  ADD COLUMN stage text NOT NULL DEFAULT 'Packing'
-  CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete'));
-
--- Add store column (required to identify bannos vs flourlane)
-ALTER TABLE public.order_photos 
-  ADD COLUMN IF NOT EXISTS store text NOT NULL DEFAULT 'bannos'
-  CHECK (store IN ('bannos','flourlane'));
-
--- Add QC-specific columns
-ALTER TABLE public.order_photos 
-  ADD COLUMN IF NOT EXISTS qc_status text NOT NULL DEFAULT 'ok'
-  CHECK (qc_status IN ('ok','needs_review','rejected'));
-
-ALTER TABLE public.order_photos 
-  ADD COLUMN IF NOT EXISTS qc_issue text;
-
-ALTER TABLE public.order_photos 
-  ADD COLUMN IF NOT EXISTS qc_comments text;
-
--- Add updated_at for tracking changes
-ALTER TABLE public.order_photos 
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
--- Update uploaded_by to reference staff_shared instead of users
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint 
-    WHERE conname = 'order_photos_uploaded_by_fkey_staff'
-  ) THEN
-    ALTER TABLE public.order_photos
-      ADD CONSTRAINT order_photos_uploaded_by_fkey_staff
-      FOREIGN KEY (uploaded_by)
-      REFERENCES staff_shared(user_id)
-      ON DELETE SET NULL;
-  END IF;
-END;
-$$;
+CREATE TABLE IF NOT EXISTS public.order_photos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id text NOT NULL,
+  store text NOT NULL CHECK (store IN ('bannos','flourlane')),
+  stage text NOT NULL DEFAULT 'Packing' CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete')),
+  url text NOT NULL,
+  qc_status text NOT NULL DEFAULT 'ok' CHECK (qc_status IN ('ok','needs_review','rejected')),
+  qc_issue text,
+  qc_comments text,
+  uploaded_by uuid REFERENCES staff_shared(user_id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_order_photos_order_store 
