@@ -110,10 +110,16 @@ export function FlourlaneMonitorPage() {
     try {
       setLoading(true);
       
-      // Fetch all orders for the store
+      // Calculate week's date range for reference
+      const weekStart = currentWeekStart;
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      // Fetch orders with high limit to ensure we get orders across multiple weeks
+      // This handles cases where there are many orders or when navigating to future weeks
       const orders = await getQueue({
         store: 'flourlane',
-        limit: 500,
+        limit: 5000, // Increased limit to cover more orders across time
         sort_by: 'due_date',
         sort_order: 'ASC'
       });
@@ -121,20 +127,27 @@ export function FlourlaneMonitorPage() {
       // Initialize week structure
       const days = getWeekDates(currentWeekStart);
       
-      // Group orders by due date
+      // Group orders by due date - only include orders within the displayed week
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+      const weekEndStr = weekEnd.toISOString().split('T')[0];
+      
       orders.forEach((order: any) => {
         if (!order.due_date) return;
         
         const orderDate = order.due_date.split('T')[0]; // Get YYYY-MM-DD
-        const dayIndex = days.findIndex(d => d.dateStr === orderDate);
         
-        if (dayIndex !== -1) {
-          days[dayIndex].orders.push({
-            id: order.id,
-            humanId: order.human_id || `#F${order.id}`,
-            stage: order.stage || 'Filling',
-            dueDate: order.due_date
-          });
+        // Only process orders within the current week's date range
+        if (orderDate >= weekStartStr && orderDate <= weekEndStr) {
+          const dayIndex = days.findIndex(d => d.dateStr === orderDate);
+          
+          if (dayIndex !== -1) {
+            days[dayIndex].orders.push({
+              id: order.id,
+              humanId: order.human_id || `#F${order.id}`,
+              stage: order.stage || 'Filling',
+              dueDate: order.due_date
+            });
+          }
         }
       });
 
