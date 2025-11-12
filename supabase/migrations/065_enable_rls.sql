@@ -426,6 +426,96 @@ BEGIN
   END IF;
 END $$;
 
+-- conversation_participants (CRITICAL - prevents participant enumeration)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'conversation_participants') THEN
+    ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
+    
+    -- Users can only see participants in conversations they're part of
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'conversation_participants' 
+      AND policyname = 'conversation_participants_select_own'
+    ) THEN
+      CREATE POLICY "conversation_participants_select_own" ON conversation_participants
+        FOR SELECT TO authenticated
+        USING (
+          user_id = auth.uid()  -- Can see their own participation
+          OR EXISTS (
+            SELECT 1 FROM conversation_participants cp2
+            WHERE cp2.conversation_id = conversation_participants.conversation_id 
+            AND cp2.user_id = auth.uid()
+          )
+          OR EXISTS (
+            SELECT 1 FROM staff_shared 
+            WHERE user_id = auth.uid() 
+            AND role = 'Admin'
+          )
+        );
+    END IF;
+    
+    -- Block direct writes (managed by RPCs)
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'conversation_participants' 
+      AND policyname = 'conversation_participants_no_direct_writes'
+    ) THEN
+      CREATE POLICY "conversation_participants_no_direct_writes" ON conversation_participants
+        FOR ALL TO authenticated
+        USING (false)
+        WITH CHECK (false);
+    END IF;
+  END IF;
+END $$;
+
+-- message_reads (CRITICAL - prevents read status enumeration)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'message_reads') THEN
+    ALTER TABLE message_reads ENABLE ROW LEVEL SECURITY;
+    
+    -- Users can only see read status for conversations they're part of
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'message_reads' 
+      AND policyname = 'message_reads_select_participants'
+    ) THEN
+      CREATE POLICY "message_reads_select_participants" ON message_reads
+        FOR SELECT TO authenticated
+        USING (
+          user_id = auth.uid()  -- Can see their own read status
+          OR EXISTS (
+            SELECT 1 FROM conversation_participants 
+            WHERE conversation_id = message_reads.conversation_id 
+            AND user_id = auth.uid()
+          )
+          OR EXISTS (
+            SELECT 1 FROM staff_shared 
+            WHERE user_id = auth.uid() 
+            AND role = 'Admin'
+          )
+        );
+    END IF;
+    
+    -- Block direct writes (managed by RPCs)
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'message_reads' 
+      AND policyname = 'message_reads_no_direct_writes'
+    ) THEN
+      CREATE POLICY "message_reads_no_direct_writes" ON message_reads
+        FOR ALL TO authenticated
+        USING (false)
+        WITH CHECK (false);
+    END IF;
+  END IF;
+END $$;
+
 -- ============================================================================
 -- COMPONENTS TABLE (if exists - old name for inventory_items)
 -- ============================================================================
