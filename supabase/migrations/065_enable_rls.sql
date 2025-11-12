@@ -253,11 +253,7 @@ BEGIN
       FOR SELECT TO authenticated
       USING (
         user_id = auth.uid()  -- Users can see their own record
-        OR EXISTS (
-          SELECT 1 FROM staff_shared 
-          WHERE user_id = auth.uid() 
-          AND role = 'Admin'
-        )
+        OR current_user_role() = 'Admin'  -- Uses SECURITY DEFINER helper to avoid recursion
       );
   END IF;
 
@@ -270,18 +266,10 @@ BEGIN
     CREATE POLICY "staff_write_admin_only" ON staff_shared
       FOR ALL TO authenticated
       USING (
-        EXISTS (
-          SELECT 1 FROM staff_shared 
-          WHERE user_id = auth.uid() 
-          AND role = 'Admin'
-        )
+        current_user_role() = 'Admin'  -- Uses SECURITY DEFINER helper to avoid recursion
       )
       WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM staff_shared 
-          WHERE user_id = auth.uid() 
-          AND role = 'Admin'
-        )
+        current_user_role() = 'Admin'  -- Uses SECURITY DEFINER helper to avoid recursion
       );
   END IF;
 END $$;
