@@ -1097,6 +1097,7 @@ export async function syncShopifyOrders(store: Store) {
   if (rpcError) throw rpcError;
   
   // Step 2: Get the token from settings (RPC already validated it exists)
+  // Use ->> operator to extract text from JSONB
   const { data: settingsData, error: settingsError } = await supabase
     .from('settings')
     .select('value')
@@ -1105,7 +1106,10 @@ export async function syncShopifyOrders(store: Store) {
     .single();
   
   if (settingsError) throw settingsError;
-  const token = settingsData?.value;
+  // Token is stored as JSONB via to_jsonb(p_token), extract as string
+  const token = typeof settingsData?.value === 'string' 
+    ? settingsData.value 
+    : String(settingsData?.value || '');
   
   // Step 3: Invoke Edge Function to actually sync orders
   const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('sync-shopify-orders', {
