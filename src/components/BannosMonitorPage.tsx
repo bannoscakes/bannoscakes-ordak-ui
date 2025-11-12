@@ -114,12 +114,17 @@ export function BannosMonitorPage() {
         sort_order: 'ASC'
       });
 
+      console.log(`Bannos: Fetched ${orders.length} orders from getQueue`);
+
       // Initialize week structure
       const days = getWeekDates(currentWeekStart);
       
       // Group orders by due date
       orders.forEach((order: any) => {
-        if (!order.due_date) return;
+        if (!order.due_date) {
+          console.log('Order without due_date:', order.id, order.human_id);
+          return;
+        }
         
         const orderDate = order.due_date.split('T')[0]; // Get YYYY-MM-DD
         const dayIndex = days.findIndex(d => d.dateStr === orderDate);
@@ -131,9 +136,12 @@ export function BannosMonitorPage() {
             stage: order.stage || 'Filling',
             dueDate: order.due_date
           });
+        } else {
+          console.log(`Order ${order.human_id} due ${orderDate} not in current week`);
         }
       });
 
+      console.log('Week days with orders:', days.map(d => ({ day: d.dayName, count: d.orders.length })));
       setWeekDays(days);
     } catch (error) {
       console.error('Failed to fetch weekly orders:', error);
