@@ -1,5 +1,5 @@
 // components/messaging/MessagesPage.tsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { v4 as uuid } from "uuid";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
