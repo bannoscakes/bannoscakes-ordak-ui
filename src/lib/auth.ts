@@ -238,14 +238,13 @@ class AuthService {
       
       console.log('=== SIGNOUT DEBUG END ===');
       
-      // Reload page to ensure clean state
-      console.log('Reloading page in 500ms...');
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Update state - React will handle re-rendering
+      this.updateAuthState({ user: null, session: null, loading: false });
+      console.log('✅ Sign out complete - state cleared');
       
     } catch (error) {
       console.error('Sign out error:', error);
+      this.updateAuthState({ user: null, session: null, loading: false });
     }
   }
 
