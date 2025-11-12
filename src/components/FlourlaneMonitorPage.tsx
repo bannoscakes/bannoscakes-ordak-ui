@@ -162,7 +162,13 @@ export function FlourlaneMonitorPage() {
 
       setWeekDays(days);
     } catch (error) {
-      console.error('Failed to fetch weekly orders:', error);
+      console.error('RPC call failed:', {
+        rpc: 'get_queue',
+        store: 'flourlane',
+        weekStart: formatDateLocal(currentWeekStart),
+        weekEnd: formatDateLocal(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000)),
+        error: error instanceof Error ? error.message : String(error)
+      });
       setWeekDays(getWeekDates(currentWeekStart));
     } finally {
       setLoading(false);
@@ -184,7 +190,11 @@ export function FlourlaneMonitorPage() {
       return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
     };
     
-    return `${formatDate(start)} - ${formatDate(end)}, ${start.getFullYear()}`;
+    // Show both years when week spans New Year's (e.g., "Dec 29, 2025 - Jan 04, 2026")
+    if (start.getFullYear() === end.getFullYear()) {
+      return `${formatDate(start)} - ${formatDate(end)}, ${start.getFullYear()}`;
+    }
+    return `${formatDate(start)}, ${start.getFullYear()} - ${formatDate(end)}, ${end.getFullYear()}`;
   };
 
   if (loading) {
