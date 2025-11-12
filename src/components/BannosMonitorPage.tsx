@@ -139,7 +139,12 @@ export function BannosMonitorPage() {
         if (!order.due_date) return;
         
         // Convert order's due_date to local date string to match week boundaries
-        const orderDateLocal = formatDateLocal(new Date(order.due_date));
+        const due = new Date(order.due_date);
+        if (Number.isNaN(due.getTime())) {
+          console.warn('Invalid due_date for order:', order.id, order.human_id, order.due_date);
+          return;
+        }
+        const orderDateLocal = formatDateLocal(due);
         
         // Only process orders within the current week's date range
         if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
