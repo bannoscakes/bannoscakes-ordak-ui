@@ -1,5 +1,5 @@
 // components/MainDashboardMessaging.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { v4 as uuid } from "uuid";
 import { toast } from "sonner";
 import { Card } from "./ui/card";
@@ -173,17 +173,17 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   }, [currentUserId, selectedConversation, markAsRead, loadConversations, loadUnreadCount]);
 
   // Debounced loadConversations to prevent excessive calls
-  const debouncedLoadConversations = useCallback(() => {
-    const timeoutId = setTimeout(() => {
-      // ✅ Background updates - no loading spinner flicker
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const handleConversationUpdate = useCallback(() => {
+    // Clear any existing timeout
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    // Set new timeout
+    debounceTimerRef.current = setTimeout(() => {
       loadConversations({ background: true });
     }, 150);
-    return () => clearTimeout(timeoutId);
   }, [loadConversations]);
-
-  const handleConversationUpdate = () => {
-    debouncedLoadConversations();
-  };
 
   const { isConnected } = useRealtimeMessages({
     conversationId: selectedConversation,
