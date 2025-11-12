@@ -217,19 +217,42 @@ BEGIN
         );
     END IF;
     
-    -- Block direct writes (Admin only)
+    -- Block writes and deletes (Admin only)
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies 
       WHERE schemaname = 'public' 
       AND tablename = 'users' 
-      AND policyname = 'users_write_admin_only'
+      AND policyname = 'users_insert_admin_only'
     ) THEN
-      CREATE POLICY "users_write_admin_only" ON users
-        FOR ALL TO authenticated
+      CREATE POLICY "users_insert_admin_only" ON users
+        FOR INSERT TO authenticated
+        WITH CHECK (
+          current_user_role() = 'Admin'
+        );
+    END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'users' 
+      AND policyname = 'users_update_admin_only'
+    ) THEN
+      CREATE POLICY "users_update_admin_only" ON users
+        FOR UPDATE TO authenticated
         USING (
           current_user_role() = 'Admin'
-        )
-        WITH CHECK (
+        );
+    END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'users' 
+      AND policyname = 'users_delete_admin_only'
+    ) THEN
+      CREATE POLICY "users_delete_admin_only" ON users
+        FOR DELETE TO authenticated
+        USING (
           current_user_role() = 'Admin'
         );
     END IF;
@@ -252,8 +275,7 @@ COMMIT;
 -- Check all public tables now have RLS enabled
 -- SELECT tablename, rowsecurity 
 -- FROM pg_tables 
--- WHERE schemaname = 'public' 
--- AND table_type = 'BASE TABLE'
+-- WHERE schemaname = 'public'
 -- ORDER BY rowsecurity DESC, tablename;
 
 -- Verify no more "RLS Disabled" warnings in Supabase Studio Advisor

@@ -25,7 +25,8 @@ npm run type-check  # Should pass (no code changes)
 
 ### Post-deployment
 
-**Test 1: Verify RLS enabled on all tables**
+### Test 1: Verify RLS enabled on all tables
+
 ```sql
 SELECT tablename, rowsecurity 
 FROM pg_tables 
@@ -35,12 +36,13 @@ ORDER BY tablename;
 ```
 Expected: All show `rowsecurity = true`
 
-**Test 2: Check Supabase Studio Advisor**
+### Test 2: Check Supabase Studio Advisor
 - Navigate to Supabase Dashboard → Advisors
 - Verify no more "RLS Disabled in Public" warnings
 - Should only see "Security Definer View" warnings (legacy views, low priority)
 
-**Test 3: Verify Admin can access system tables**
+### Test 3: Verify Admin can access system tables
+
 ```sql
 -- Login as Admin in Supabase Studio
 SELECT COUNT(*) FROM component_txns;
@@ -50,7 +52,7 @@ SELECT COUNT(*) FROM work_queue;
 ```
 Expected: All queries succeed (service role bypasses RLS)
 
-**Test 4: Verify Edge Functions still work**
+### Test 4: Verify Edge Functions still work
 ```bash
 # Trigger webhook (create test order in Shopify)
 # Expected: Order processed successfully
