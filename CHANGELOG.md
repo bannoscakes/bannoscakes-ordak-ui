@@ -1,7 +1,51 @@
+## v0.10.1-beta — RLS Coverage Complete: System Tables (2025-11-12)
+
+### 🎯 Overview
+Complete 100% RLS coverage by enabling Row-Level Security on remaining system tables (component_txns, processed_webhooks, dead_letter, work_queue, users). Eliminates all Supabase Studio Advisor "RLS Disabled" warnings and ensures comprehensive database security across entire public schema.
+
+### ✅ Added
+- **RLS on System Tables**:
+  - `component_txns` - Admin-only transaction history (2 policies)
+  - `processed_webhooks` - Admin-only webhook tracking (2 policies)
+  - `dead_letter` - Admin-only error queue (2 policies)
+  - `work_queue` - Admin-only job monitoring (2 policies)
+  - `users` - Users see own, Admin sees all (4 policies, conditional)
+- **Table Permissions**: GRANT statements for all system tables
+
+### 🔒 Security Model
+- **Admin**: Can view all system tables (debugging, monitoring)
+- **Supervisor/Staff**: No access to system tables (internal use only)
+- **Service Role**: Bypasses RLS automatically (Edge Functions, workers)
+
+### 📊 Impact
+- ✅ 100% RLS coverage on public schema (all tables protected)
+- ✅ No more Supabase Advisor warnings for missing RLS
+- ✅ System tables Admin-only (Staff cannot query via console)
+- ✅ Complete defense-in-depth security
+- ✅ Edge Functions and workers unaffected (service role bypass)
+
+### 🔧 Technical Details
+- **Migration**: `066_rls_remaining_tables.sql` (283 lines)
+- Uses `current_user_role()` helper (consistent with migration 065)
+- Conditional checks for optional tables (safe for all environments)
+- Idempotent (safe to run multiple times)
+- All policies block direct writes (service role only)
+
+### 📦 Files Changed
+- `supabase/migrations/066_rls_remaining_tables.sql` - System tables RLS
+- `PR_RLS_REMAINING_TABLES.md` - PR documentation
+
+### 🔗 References
+- Migration 065: Core tables RLS
+- Migration 058: Inventory tables RLS (already had some coverage)
+- PR #226 (merged to dev)
+
+---
+
 ## v0.10.0-beta — Task 16: Row-Level Security (RLS) Implementation (2025-11-12)
 
 ### 🎯 Overview
-Complete implementation of Row-Level Security (RLS) on all database tables with role-based access control. Adds defense-in-depth security at the database layer to prevent unauthorized data access even if UI security is bypassed (developer console, compromised credentials). Migration includes 2 SECURITY DEFINER helper functions, 44 RLS policies across 15+ tables, and comprehensive GRANT statements.
+Complete implementation of Row-Level Security (RLS) on all core database tables with role-based access control. Adds defense-in-depth security at the database layer to prevent unauthorized data access even if UI security is bypassed (developer console, compromised credentials). Migration includes 2 SECURITY DEFINER helper functions, 44 RLS policies across 15+ tables, and comprehensive GRANT statements.
 
 ### ✅ Added
 - **Helper Functions** (SECURITY DEFINER to prevent infinite recursion):
