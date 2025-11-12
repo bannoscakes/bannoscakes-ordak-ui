@@ -131,8 +131,8 @@ export function StaffPage() {
 
   const handleViewTimesheet = (staffMember: StaffMember) => {
     // Navigate to time & payroll page filtered to this staff member
-    window.history.pushState({}, '', `/admin/time?staff=${staffMember.id}`);
-    // Trigger a popstate event to notify the router
+    // Use query params to maintain single-URL architecture
+    window.history.pushState({}, '', `/?page=time-payroll&staff=${staffMember.user_id}`);
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 

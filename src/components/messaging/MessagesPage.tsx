@@ -94,6 +94,12 @@ export function MessagesPage() {
     }
   }, [showErrorWithRetry]);
 
+  // Track selected conversation to prevent stale updates
+  const selectedConversationRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedConversationRef.current = selectedConversation;
+  }, [selectedConversation]);
+
   // Load messages - wrapped in useCallback
   const loadMessages = useCallback(async (conversationId: string) => {
     try {
@@ -101,10 +107,13 @@ export function MessagesPage() {
       const transformed = data
         .map((m) => toUIMessage(m, currentUserId))
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      setMessages(transformed);
-
-      await markAsRead(conversationId);
-      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+      
+      // Only update if user hasn't switched conversations
+      if (selectedConversationRef.current === conversationId) {
+        setMessages(transformed);
+        await markAsRead(conversationId);
+        setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+      }
     } catch (err) {
       console.error("Failed to load messages:", err);
       showError(err, {
@@ -112,7 +121,7 @@ export function MessagesPage() {
         showRecoveryActions: true,
       });
     }
-  }, [currentUserId, showError]);
+  }, [currentUserId, showError, markAsRead]);
 
   // Mark messages as read
   const markAsRead = useCallback(async (conversationId: string) => {
