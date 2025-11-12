@@ -223,11 +223,6 @@ class AuthService {
       console.log('Supabase signOut successful');
       console.log('Supabase session after signout:', await this.supabase.auth.getSession());
       
-      // Force update auth state
-      console.log('Updating auth state to null...');
-      this.updateAuthState({ user: null, session: null, loading: false });
-      console.log('Auth state after update:', this.authState);
-      
       // Clear any persisted auth storage regardless of current config, since
       // a previous session may have been stored before persistence was
       // disabled.
@@ -236,11 +231,11 @@ class AuthService {
         clearSupabaseAuthStorage();
       }
       
-      console.log('=== SIGNOUT DEBUG END ===');
-      
-      // Update state - React will handle re-rendering
+      // Update auth state - React will handle re-rendering
+      console.log('Updating auth state to null...');
       this.updateAuthState({ user: null, session: null, loading: false });
       console.log('✅ Sign out complete - state cleared');
+      console.log('=== SIGNOUT DEBUG END ===');
       
     } catch (error) {
       console.error('Sign out error:', error);

@@ -43,12 +43,12 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     };
   }, [urlParams]);
   
-  // Type guard for stage keys
-  const isStage = (s: string): s is Stage =>
-    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
-
   // Load dashboard stats from real data - wrapped in useCallback to prevent stale closures
   const loadDashboardStats = useCallback(async () => {
+    // Type guard for stage keys - defined inside to avoid recreating useCallback
+    const isStage = (s: string): s is Stage =>
+      ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
+
     try {
       // Fetch orders from both stores
       const [bannosOrders, flourlaneOrders] = await Promise.all([
@@ -86,7 +86,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
     }
-  }, [isStage]);
+  }, []);
   
   // Load stats on mount and refresh every 30 seconds
   useEffect(() => {
