@@ -7,7 +7,6 @@ import {
   Calendar as CalendarIcon
 } from "lucide-react";
 import { TallCakeIcon } from "./TallCakeIcon";
-import { Stage } from "@/types/stage";
 import { useEffect, useState } from "react";
 import { getQueue } from "../lib/rpc-client";
 
