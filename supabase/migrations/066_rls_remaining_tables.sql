@@ -199,8 +199,8 @@ BEGIN
     
     ALTER TABLE users ENABLE ROW LEVEL SECURITY;
     
-    -- Grant table permissions
-    EXECUTE 'GRANT SELECT ON users TO authenticated';
+    -- Grant table permissions (Admin needs all operations)
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON users TO authenticated';
     
     -- Users see own record, Admin sees all
     IF NOT EXISTS (
