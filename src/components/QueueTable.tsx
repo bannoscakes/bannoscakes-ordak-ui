@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -64,11 +64,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const { showErrorWithRetry } = useErrorNotifications();
 
-  // Fetch real queue data from Supabase
-  useEffect(() => {
-    fetchQueueData();
-  }, [store, storageFilter]);
-
   // Fetch storage locations for the current store
   useEffect(() => {
     async function fetchStorageLocations() {
@@ -90,7 +85,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     fetchStorageLocations();
   }, [store]);
 
-  const fetchQueueData = async () => {
+  // Fetch queue data - wrapped in useCallback to prevent stale closures
+  const fetchQueueData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -153,7 +149,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [store, storageFilter, showErrorWithRetry]);
+
+  // Fetch real queue data from Supabase
+  useEffect(() => {
+    fetchQueueData();
+  }, [fetchQueueData]);
 
   // Set initial filter if provided
   useEffect(() => {

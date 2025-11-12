@@ -43,8 +43,12 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     };
   }, [urlParams]);
   
-  // Load dashboard stats from real data
-  async function loadDashboardStats() {
+  // Type guard for stage keys
+  const isStage = (s: string): s is Stage =>
+    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
+
+  // Load dashboard stats from real data - wrapped in useCallback to prevent stale closures
+  const loadDashboardStats = useCallback(async () => {
     try {
       // Fetch orders from both stores
       const [bannosOrders, flourlaneOrders] = await Promise.all([
@@ -82,20 +86,16 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
     }
-  }
-
-  // Type guard for stage keys
-  const isStage = (s: string): s is Stage =>
-    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
+  }, [isStage]);
   
-  // Load stats on mount and when view changes
+  // Load stats on mount and refresh every 30 seconds
   useEffect(() => {
     loadDashboardStats();
     
     // Refresh stats every 30 seconds
     const interval = setInterval(loadDashboardStats, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadDashboardStats]);
   
   // Check URL parameters to determine initial view
   useEffect(() => {
