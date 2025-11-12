@@ -122,6 +122,10 @@ CREATE POLICY "orders_insert_service_only" ON orders_flourlane
   FOR INSERT TO authenticated
   WITH CHECK (false);
 
+-- Grant table permissions (RLS policies control actual access)
+GRANT SELECT, UPDATE, DELETE ON orders_bannos TO authenticated;
+GRANT SELECT, UPDATE, DELETE ON orders_flourlane TO authenticated;
+
 COMMENT ON POLICY "orders_select_by_role" ON orders_bannos IS 'Admin/Supervisor see all orders, Staff see assigned only';
 COMMENT ON POLICY "orders_update_by_role" ON orders_bannos IS 'Admin/Supervisor update all, Staff update assigned (scanner RPCs need this)';
 COMMENT ON POLICY "orders_delete_admin_only" ON orders_bannos IS 'Only Admin can delete orders';
@@ -150,6 +154,9 @@ CREATE POLICY "settings_write_admin_only" ON settings
     current_user_role() = 'Admin'
   );
 
+-- Grant table permissions (RLS policies control actual access)
+GRANT SELECT, INSERT, UPDATE, DELETE ON settings TO authenticated;
+
 COMMENT ON POLICY "settings_select_admin_supervisor" ON settings IS 'Admin and Supervisor can read settings';
 COMMENT ON POLICY "settings_write_admin_only" ON settings IS 'Only Admin can modify settings (API tokens protected)';
 
@@ -161,6 +168,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'audit_log') THEN
     ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+    
+    -- Grant table permissions
+    GRANT SELECT, INSERT ON audit_log TO authenticated;
 
     -- SELECT: Admin only
     IF NOT EXISTS (
@@ -274,6 +284,9 @@ BEGIN
   END IF;
 END $$;
 
+-- Grant table permissions (RLS policies control actual access)
+GRANT SELECT, INSERT, UPDATE, DELETE ON staff_shared TO authenticated;
+
 COMMENT ON POLICY "staff_select_own_or_admin" ON staff_shared IS 'Users see own record, Admin sees all';
 COMMENT ON POLICY "staff_write_admin_only" ON staff_shared IS 'Only Admin can modify user accounts';
 
@@ -322,6 +335,11 @@ CREATE POLICY "shopify_sync_runs_no_direct_writes" ON shopify_sync_runs
   FOR ALL TO authenticated
   USING (false)
   WITH CHECK (false);
+
+-- Grant table permissions (RLS policies control actual access)
+GRANT SELECT ON webhook_inbox_bannos TO authenticated;
+GRANT SELECT ON webhook_inbox_flourlane TO authenticated;
+GRANT SELECT ON shopify_sync_runs TO authenticated;
 
 COMMENT ON POLICY "webhook_inbox_bannos_admin_only" ON webhook_inbox_bannos IS 'Only Admin can view webhook inbox (debugging)';
 COMMENT ON POLICY "shopify_sync_runs_admin_only" ON shopify_sync_runs IS 'Only Admin can view sync history';
@@ -380,6 +398,10 @@ CREATE POLICY "bom_items_delete_admin_only" ON bom_items
     current_user_role() = 'Admin'
   );
 
+-- Grant table permissions (RLS policies control actual access)
+GRANT SELECT, INSERT, UPDATE, DELETE ON boms TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON bom_items TO authenticated;
+
 COMMENT ON POLICY "boms_select_authenticated" ON boms IS 'All authenticated users can view BOMs';
 COMMENT ON POLICY "boms_insert_admin_only" ON boms IS 'Only Admin can insert BOMs';
 COMMENT ON POLICY "boms_update_admin_only" ON boms IS 'Only Admin can update BOMs';
@@ -394,6 +416,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'conversations') THEN
     ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+    
+    -- Grant table permissions
+    GRANT SELECT ON conversations TO authenticated;
     
     -- Users can see conversations they're participants in
     IF NOT EXISTS (
@@ -419,6 +444,9 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'messages') THEN
     ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
     
+    -- Grant table permissions
+    GRANT SELECT ON messages TO authenticated;
+    
     -- Users can see messages in conversations they're participants in
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies 
@@ -442,6 +470,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'conversation_participants') THEN
     ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
+    
+    -- Grant table permissions
+    GRANT SELECT ON conversation_participants TO authenticated;
     
     -- Users can only see participants in conversations they're part of
     IF NOT EXISTS (
@@ -479,6 +510,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'message_reads') THEN
     ALTER TABLE message_reads ENABLE ROW LEVEL SECURITY;
+    
+    -- Grant table permissions
+    GRANT SELECT ON message_reads TO authenticated;
     
     -- Users can only see read status for conversations they're part of
     IF NOT EXISTS (
@@ -519,6 +553,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'components') THEN
     ALTER TABLE components ENABLE ROW LEVEL SECURITY;
+    
+    -- Grant table permissions
+    GRANT SELECT, INSERT, UPDATE, DELETE ON components TO authenticated;
     
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies 
@@ -580,6 +617,9 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'order_photos') THEN
     ALTER TABLE order_photos ENABLE ROW LEVEL SECURITY;
+    
+    -- Grant table permissions
+    GRANT SELECT ON order_photos TO authenticated;
     
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies 
