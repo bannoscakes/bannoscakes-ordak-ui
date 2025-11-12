@@ -53,23 +53,80 @@ export function MessagesPage() {
 
   const { showError, showErrorWithRetry } = useErrorNotifications();
 
-  // Navigation function to return to dashboard
-  const handleBackToDashboard = () => {
-    try {
-      window.history.pushState({}, '', '/');
-      window.location.reload();
-    } catch (error) {
-      console.error('Navigation error:', error);
-    }
-  };
-
   // Current user id for own-message mapping
   useEffect(() => {
     getStaffMe().then((me) => setCurrentUserId(me?.user_id)).catch(() => {});
   }, []);
 
+  // Load unread count - wrapped in useCallback
+  const loadUnreadCount = useCallback(async (opts?: { background?: boolean }) => {
+    try {
+      const count = await getUnreadCount();
+      setUnreadCount(count);
+    } catch (err) {
+      console.error("Failed to load unread count:", err);
+      // Silently fail on background updates to avoid disrupting UX
+    }
+  }, []);
+
+  // Load conversations - wrapped in useCallback
+  const loadConversations = useCallback(async (opts?: { background?: boolean }) => {
+    try {
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
+      const data: RPCConversation[] = await getConversations();
+      setConversations(data.map(toUIConversation));
+    } catch (err) {
+      console.error("Failed to load conversations:", err);
+      if (!opts?.background) {
+        setError(err);
+        showErrorWithRetry(err, () => loadConversations(), {
+          title: "Failed to Load Conversations",
+          showRecoveryActions: true,
+        });
+      }
+    } finally {
+      if (!opts?.background) {
+        setLoading(false);
+      }
+    }
+  }, [showErrorWithRetry]);
+
+  // Load messages - wrapped in useCallback
+  const loadMessages = useCallback(async (conversationId: string) => {
+    try {
+      const data: RPCMessage[] = await getMessages(conversationId);
+      const transformed = data
+        .map((m) => toUIMessage(m, currentUserId))
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setMessages(transformed);
+
+      await markAsRead(conversationId);
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+      showError(err, {
+        title: "Failed to Load Messages",
+        showRecoveryActions: true,
+      });
+    }
+  }, [currentUserId, showError]);
+
+  // Mark messages as read
+  const markAsRead = useCallback(async (conversationId: string) => {
+    try {
+      await markMessagesRead(conversationId);
+      loadUnreadCount({ background: true });
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    } catch (err) {
+      console.error("Failed to mark messages as read:", err);
+    }
+  }, [loadUnreadCount]);
+
   // Realtime handlers
-  const handleNewMessage = (row: RealtimeMessageRow) => {
+  const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
     const uiMsg: Message = {
       id: toId(row.id),
       text: row.body ?? "",
@@ -92,7 +149,7 @@ export function MessagesPage() {
     // ✅ Background updates - no loading spinner flicker
     loadConversations({ background: true });
     loadUnreadCount({ background: true });
-  };
+  }, [currentUserId, selectedConversation, markAsRead, loadConversations, loadUnreadCount]);
 
   // Debounced loadConversations to prevent excessive calls
   const debouncedLoadConversations = useCallback(() => {
@@ -101,7 +158,7 @@ export function MessagesPage() {
       loadConversations({ background: true });
     }, 150);
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [loadConversations]);
 
   const handleConversationUpdate = () => {
     debouncedLoadConversations();
@@ -117,79 +174,12 @@ export function MessagesPage() {
   useEffect(() => {
     loadConversations();
     loadUnreadCount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadConversations, loadUnreadCount]);
 
   // Load messages when a conversation is selected
   useEffect(() => {
     if (selectedConversation) loadMessages(selectedConversation);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConversation, currentUserId]);
-
-  const loadConversations = async (opts?: { background?: boolean }) => {
-    try {
-      if (!opts?.background) {
-        setLoading(true);
-        setError(null);
-      }
-      const data: RPCConversation[] = await getConversations();
-      setConversations(data.map(toUIConversation));
-    } catch (err) {
-      console.error("Failed to load conversations:", err);
-      if (!opts?.background) {
-        setError(err);
-        showErrorWithRetry(err, () => loadConversations(), {
-          title: "Failed to Load Conversations",
-          showRecoveryActions: true,
-        });
-      }
-    } finally {
-      if (!opts?.background) {
-        setLoading(false);
-      }
-    }
-  };
-
-  const loadMessages = async (conversationId: string) => {
-    try {
-      const data: RPCMessage[] = await getMessages(conversationId);
-      const transformed = data
-        .map((m) => toUIMessage(m, currentUserId))
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      setMessages(transformed);
-
-      await markAsRead(conversationId);
-      // Note: markAsRead already calls loadUnreadCount with background: true
-      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-    } catch (err) {
-      console.error("Failed to load messages:", err);
-      showError(err, {
-        title: "Failed to Load Messages",
-        showRecoveryActions: true,
-      });
-    }
-  };
-
-  const loadUnreadCount = async (opts?: { background?: boolean }) => {
-    try {
-      const count = await getUnreadCount();
-      setUnreadCount(count);
-    } catch (err) {
-      console.error("Failed to load unread count:", err);
-      // Silently fail on background updates to avoid disrupting UX
-    }
-  };
-
-  const markAsRead = async (conversationId: string) => {
-    try {
-      await markMessagesRead(conversationId);
-      // ✅ Background update - no loading spinner flicker
-      loadUnreadCount({ background: true });
-      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-    } catch (err) {
-      console.error("Failed to mark messages as read:", err);
-    }
-  };
+  }, [selectedConversation, loadMessages]);
 
   const handleSelectConversation = (conversationId: string) => {
     setSelectedConversation(toId(conversationId));
