@@ -349,12 +349,21 @@ CREATE POLICY "boms_select_authenticated" ON boms
   FOR SELECT TO authenticated
   USING (true);
 
-CREATE POLICY "boms_write_admin_only" ON boms
-  FOR ALL TO authenticated
+CREATE POLICY "boms_insert_admin_only" ON boms
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    current_user_role() = 'Admin'
+  );
+
+CREATE POLICY "boms_update_admin_only" ON boms
+  FOR UPDATE TO authenticated
   USING (
     current_user_role() = 'Admin'
-  )
-  WITH CHECK (
+  );
+
+CREATE POLICY "boms_delete_admin_only" ON boms
+  FOR DELETE TO authenticated
+  USING (
     current_user_role() = 'Admin'
   );
 
@@ -365,17 +374,28 @@ CREATE POLICY "bom_items_select_authenticated" ON bom_items
   FOR SELECT TO authenticated
   USING (true);
 
-CREATE POLICY "bom_items_write_admin_only" ON bom_items
-  FOR ALL TO authenticated
-  USING (
-    current_user_role() = 'Admin'
-  )
+CREATE POLICY "bom_items_insert_admin_only" ON bom_items
+  FOR INSERT TO authenticated
   WITH CHECK (
     current_user_role() = 'Admin'
   );
 
+CREATE POLICY "bom_items_update_admin_only" ON bom_items
+  FOR UPDATE TO authenticated
+  USING (
+    current_user_role() = 'Admin'
+  );
+
+CREATE POLICY "bom_items_delete_admin_only" ON bom_items
+  FOR DELETE TO authenticated
+  USING (
+    current_user_role() = 'Admin'
+  );
+
 COMMENT ON POLICY "boms_select_authenticated" ON boms IS 'All authenticated users can view BOMs';
-COMMENT ON POLICY "boms_write_admin_only" ON boms IS 'Only Admin can modify BOMs';
+COMMENT ON POLICY "boms_insert_admin_only" ON boms IS 'Only Admin can insert BOMs';
+COMMENT ON POLICY "boms_update_admin_only" ON boms IS 'Only Admin can update BOMs';
+COMMENT ON POLICY "boms_delete_admin_only" ON boms IS 'Only Admin can delete BOMs';
 
 -- ============================================================================
 -- MESSAGING TABLES (if they exist)
@@ -527,14 +547,37 @@ BEGIN
       SELECT 1 FROM pg_policies 
       WHERE schemaname = 'public' 
       AND tablename = 'components' 
-      AND policyname = 'components_write_admin_only'
+      AND policyname = 'components_insert_admin_only'
     ) THEN
-      CREATE POLICY "components_write_admin_only" ON components
-        FOR ALL TO authenticated
+      CREATE POLICY "components_insert_admin_only" ON components
+        FOR INSERT TO authenticated
+        WITH CHECK (
+          current_user_role() = 'Admin'
+        );
+    END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'components' 
+      AND policyname = 'components_update_admin_only'
+    ) THEN
+      CREATE POLICY "components_update_admin_only" ON components
+        FOR UPDATE TO authenticated
         USING (
           current_user_role() = 'Admin'
-        )
-        WITH CHECK (
+        );
+    END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'components' 
+      AND policyname = 'components_delete_admin_only'
+    ) THEN
+      CREATE POLICY "components_delete_admin_only" ON components
+        FOR DELETE TO authenticated
+        USING (
           current_user_role() = 'Admin'
         );
     END IF;
@@ -561,16 +604,38 @@ BEGIN
         USING (true);
     END IF;
     
+    -- Block direct writes (managed by upload_order_photo RPC)
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies 
       WHERE schemaname = 'public' 
       AND tablename = 'order_photos' 
-      AND policyname = 'order_photos_write_via_rpc'
+      AND policyname = 'order_photos_insert_via_rpc'
     ) THEN
-      CREATE POLICY "order_photos_write_via_rpc" ON order_photos
-        FOR ALL TO authenticated
-        USING (false)
+      CREATE POLICY "order_photos_insert_via_rpc" ON order_photos
+        FOR INSERT TO authenticated
         WITH CHECK (false);
+    END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'order_photos' 
+      AND policyname = 'order_photos_update_via_rpc'
+    ) THEN
+      CREATE POLICY "order_photos_update_via_rpc" ON order_photos
+        FOR UPDATE TO authenticated
+        USING (false);
+    END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'order_photos' 
+      AND policyname = 'order_photos_delete_via_rpc'
+    ) THEN
+      CREATE POLICY "order_photos_delete_via_rpc" ON order_photos
+        FOR DELETE TO authenticated
+        USING (false);
     END IF;
   END IF;
 END $$;
