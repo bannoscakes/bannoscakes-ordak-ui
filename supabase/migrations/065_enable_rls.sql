@@ -148,40 +148,85 @@ COMMENT ON POLICY "settings_select_admin_supervisor" ON settings IS 'Admin and S
 COMMENT ON POLICY "settings_write_admin_only" ON settings IS 'Only Admin can modify settings (API tokens protected)';
 
 -- ============================================================================
--- CRITICAL: audit_log (tamper-proof audit trail)
+-- CRITICAL: audit_log (tamper-proof audit trail) - if exists
 -- ============================================================================
 
-ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'audit_log') THEN
+    ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
--- SELECT: Admin only
-CREATE POLICY "audit_log_select_admin_only" ON audit_log
-  FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
-  );
+    -- SELECT: Admin only
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'audit_log' 
+      AND policyname = 'audit_log_select_admin_only'
+    ) THEN
+      CREATE POLICY "audit_log_select_admin_only" ON audit_log
+        FOR SELECT TO authenticated
+        USING (
+          EXISTS (
+            SELECT 1 FROM staff_shared 
+            WHERE user_id = auth.uid() 
+            AND role = 'Admin'
+          )
+        );
+    END IF;
 
--- INSERT: Authenticated users can log (RPCs use this)
-CREATE POLICY "audit_log_insert_authenticated" ON audit_log
-  FOR INSERT TO authenticated
-  WITH CHECK (true);
+    -- INSERT: Authenticated users can log (RPCs use this)
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'audit_log' 
+      AND policyname = 'audit_log_insert_authenticated'
+    ) THEN
+      CREATE POLICY "audit_log_insert_authenticated" ON audit_log
+        FOR INSERT TO authenticated
+        WITH CHECK (true);
+    END IF;
 
--- UPDATE/DELETE: Blocked (audit logs are immutable)
-CREATE POLICY "audit_log_no_modifications" ON audit_log
-  FOR UPDATE TO authenticated
-  USING (false);
+    -- UPDATE/DELETE: Blocked (audit logs are immutable)
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'audit_log' 
+      AND policyname = 'audit_log_no_modifications'
+    ) THEN
+      CREATE POLICY "audit_log_no_modifications" ON audit_log
+        FOR UPDATE TO authenticated
+        USING (false);
+    END IF;
 
-CREATE POLICY "audit_log_no_deletes" ON audit_log
-  FOR DELETE TO authenticated
-  USING (false);
-
-COMMENT ON POLICY "audit_log_select_admin_only" ON audit_log IS 'Only Admin can read audit logs';
-COMMENT ON POLICY "audit_log_insert_authenticated" ON audit_log IS 'RPCs can log actions';
-COMMENT ON POLICY "audit_log_no_modifications" ON audit_log IS 'Audit logs are immutable (no updates)';
-COMMENT ON POLICY "audit_log_no_deletes" ON audit_log IS 'Audit logs cannot be deleted (tamper-proof)';
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies 
+      WHERE schemaname = 'public' 
+      AND tablename = 'audit_log' 
+      AND policyname = 'audit_log_no_deletes'
+    ) THEN
+      CREATE POLICY "audit_log_no_deletes" ON audit_log
+        FOR DELETE TO authenticated
+        USING (false);
+    END IF;
+  END IF;
+  
+  -- Add comments if policies exist
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'audit_log' AND policyname = 'audit_log_select_admin_only') THEN
+    COMMENT ON POLICY "audit_log_select_admin_only" ON audit_log IS 'Only Admin can read audit logs';
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'audit_log' AND policyname = 'audit_log_insert_authenticated') THEN
+    COMMENT ON POLICY "audit_log_insert_authenticated" ON audit_log IS 'RPCs can log actions';
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'audit_log' AND policyname = 'audit_log_no_modifications') THEN
+    COMMENT ON POLICY "audit_log_no_modifications" ON audit_log IS 'Audit logs are immutable (no updates)';
+  END IF;
+  
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'audit_log' AND policyname = 'audit_log_no_deletes') THEN
+    COMMENT ON POLICY "audit_log_no_deletes" ON audit_log IS 'Audit logs cannot be deleted (tamper-proof)';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- staff_shared (user records)
