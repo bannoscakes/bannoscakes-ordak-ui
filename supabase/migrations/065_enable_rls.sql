@@ -20,6 +20,29 @@
 BEGIN;
 
 -- ============================================================================
+-- HELPER FUNCTIONS: Role checks - SECURITY DEFINER bypasses RLS
+-- ============================================================================
+-- These functions are CRITICAL to avoid infinite recursion in RLS policies.
+-- They use SECURITY DEFINER to bypass RLS when checking user roles.
+
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT role FROM staff_shared
+  WHERE user_id = auth.uid()
+  LIMIT 1;
+$$;
+
+COMMENT ON FUNCTION public.current_user_role() IS 'Get current user role (SECURITY DEFINER bypasses RLS to prevent recursion)';
+
+-- Grant execute to authenticated users
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+
+-- ============================================================================
 -- CORE TABLES: orders_bannos, orders_flourlane
 -- ============================================================================
 
@@ -31,22 +54,14 @@ ALTER TABLE orders_flourlane ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "orders_select_by_role" ON orders_bannos
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role IN ('Admin', 'Supervisor')
-    )
+    current_user_role() IN ('Admin', 'Supervisor')  -- Uses SECURITY DEFINER helper to avoid recursion
     OR assignee_id = auth.uid()
   );
 
 CREATE POLICY "orders_select_by_role" ON orders_flourlane
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role IN ('Admin', 'Supervisor')
-    )
+    current_user_role() IN ('Admin', 'Supervisor')  -- Uses SECURITY DEFINER helper to avoid recursion
     OR assignee_id = auth.uid()
   );
 
@@ -55,22 +70,14 @@ CREATE POLICY "orders_select_by_role" ON orders_flourlane
 CREATE POLICY "orders_update_by_role" ON orders_bannos
   FOR UPDATE TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role IN ('Admin', 'Supervisor')
-    )
+    current_user_role() IN ('Admin', 'Supervisor')  -- Uses SECURITY DEFINER helper to avoid recursion
     OR assignee_id = auth.uid()
   );
 
 CREATE POLICY "orders_update_by_role" ON orders_flourlane
   FOR UPDATE TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role IN ('Admin', 'Supervisor')
-    )
+    current_user_role() IN ('Admin', 'Supervisor')  -- Uses SECURITY DEFINER helper to avoid recursion
     OR assignee_id = auth.uid()
   );
 
@@ -78,21 +85,13 @@ CREATE POLICY "orders_update_by_role" ON orders_flourlane
 CREATE POLICY "orders_delete_admin_only" ON orders_bannos
   FOR DELETE TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'  -- Uses SECURITY DEFINER helper to avoid recursion
   );
 
 CREATE POLICY "orders_delete_admin_only" ON orders_flourlane
   FOR DELETE TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'  -- Uses SECURITY DEFINER helper to avoid recursion
   );
 
 -- Policy 4: INSERT - Block direct inserts (service role only via webhooks)
@@ -119,29 +118,17 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "settings_select_admin_supervisor" ON settings
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role IN ('Admin', 'Supervisor')
-    )
+    current_user_role() IN ('Admin', 'Supervisor')
   );
 
 -- UPDATE/DELETE/INSERT: Admin only
 CREATE POLICY "settings_write_admin_only" ON settings
   FOR ALL TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   );
 
 COMMENT ON POLICY "settings_select_admin_supervisor" ON settings IS 'Admin and Supervisor can read settings';
@@ -166,11 +153,7 @@ BEGIN
       CREATE POLICY "audit_log_select_admin_only" ON audit_log
         FOR SELECT TO authenticated
         USING (
-          EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          current_user_role() = 'Admin'
         );
     END IF;
 
@@ -297,11 +280,7 @@ ALTER TABLE webhook_inbox_bannos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "webhook_inbox_bannos_admin_only" ON webhook_inbox_bannos
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   );
 
 CREATE POLICY "webhook_inbox_bannos_no_direct_writes" ON webhook_inbox_bannos
@@ -315,11 +294,7 @@ ALTER TABLE webhook_inbox_flourlane ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "webhook_inbox_flourlane_admin_only" ON webhook_inbox_flourlane
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   );
 
 CREATE POLICY "webhook_inbox_flourlane_no_direct_writes" ON webhook_inbox_flourlane
@@ -333,11 +308,7 @@ ALTER TABLE shopify_sync_runs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "shopify_sync_runs_admin_only" ON shopify_sync_runs
   FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   );
 
 CREATE POLICY "shopify_sync_runs_no_direct_writes" ON shopify_sync_runs
@@ -362,18 +333,10 @@ CREATE POLICY "boms_select_authenticated" ON boms
 CREATE POLICY "boms_write_admin_only" ON boms
   FOR ALL TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   );
 
 -- bom_items
@@ -386,18 +349,10 @@ CREATE POLICY "bom_items_select_authenticated" ON bom_items
 CREATE POLICY "bom_items_write_admin_only" ON bom_items
   FOR ALL TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM staff_shared 
-      WHERE user_id = auth.uid() 
-      AND role = 'Admin'
-    )
+    current_user_role() = 'Admin'
   );
 
 COMMENT ON POLICY "boms_select_authenticated" ON boms IS 'All authenticated users can view BOMs';
@@ -590,18 +545,10 @@ BEGIN
       CREATE POLICY "components_write_admin_only" ON components
         FOR ALL TO authenticated
         USING (
-          EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          current_user_role() = 'Admin'
         )
         WITH CHECK (
-          EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          current_user_role() = 'Admin'
         );
     END IF;
   END IF;
