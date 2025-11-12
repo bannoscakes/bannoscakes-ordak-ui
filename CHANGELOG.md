@@ -1,3 +1,96 @@
+## v0.10.0-beta — Task 16: Row-Level Security (RLS) Implementation (2025-11-12)
+
+### 🎯 Overview
+Complete implementation of Row-Level Security (RLS) on all database tables with role-based access control. Adds defense-in-depth security at the database layer to prevent unauthorized data access even if UI security is bypassed (developer console, compromised credentials). Migration includes 2 SECURITY DEFINER helper functions, 44 RLS policies across 15+ tables, and comprehensive GRANT statements.
+
+### ✅ Added
+- **Helper Functions** (SECURITY DEFINER to prevent infinite recursion):
+  - `current_user_role()` - Returns user's role without triggering RLS
+  - `is_conversation_participant(uuid)` - Checks conversation membership without recursion
+- **RLS Policies on Core Tables**:
+  - `orders_bannos`, `orders_flourlane` - Role-based SELECT/UPDATE/DELETE (4 policies each)
+  - `settings` - Admin/Supervisor read, Admin write (2 policies)
+  - `staff_shared` - Users see own record, Admin sees all (2 policies)
+  - `audit_log` - Admin read-only, authenticated insert, immutable (4 policies)
+- **RLS Policies on System Tables**:
+  - `webhook_inbox_bannos`, `webhook_inbox_flourlane` - Admin only (2 policies each)
+  - `shopify_sync_runs` - Admin only (2 policies)
+  - `boms`, `bom_items` - All read, Admin write (4 policies each)
+- **RLS Policies on Messaging Tables** (conditional if exist):
+  - `conversations` - Participant-scoped access (1 policy)
+  - `messages` - Participant-scoped access (1 policy)
+  - `conversation_participants` - Privacy-protected (2 policies)
+  - `message_reads` - Privacy-protected (2 policies)
+- **RLS Policies on Optional Tables** (conditional if exist):
+  - `components` - All read, Admin write (4 policies)
+  - `order_photos` - All read, RPC write (4 policies)
+- **Table Permissions** - GRANT statements for all protected tables
+
+### 🔒 Security Model
+- **Admin**: Full access to all tables (SELECT/UPDATE/DELETE)
+- **Supervisor**: View/manage all orders, read-only settings
+- **Staff**: View/update assigned orders only, no access to settings/audit logs
+- **Service Role**: Automatically bypasses RLS (Edge Functions, webhooks)
+
+### 🐛 Critical Bugs Fixed (8 total)
+1. **Missing Tables**: audit_log doesn't exist in all environments
+   - Fixed: Wrapped in conditional `DO $$ IF EXISTS` check
+2. **Infinite Recursion #1**: staff_shared policies querying staff_shared
+   - Fixed: Created `current_user_role()` SECURITY DEFINER helper
+3. **Infinite Recursion #2**: conversation_participants self-reference
+   - Fixed: Created `is_conversation_participant()` SECURITY DEFINER helper
+4. **FOR ALL Blocking**: `FOR ALL` policies blocking SELECT operations
+   - Fixed: Split into separate INSERT/UPDATE/DELETE policies
+5. **Privacy Leak**: conversation_participants missing RLS
+   - Fixed: Added participant-scoped SELECT policy
+6. **Privacy Leak**: message_reads missing RLS
+   - Fixed: Added participant-scoped SELECT policy
+7. **Staff Recursion**: staff_shared policies still had inline subqueries
+   - Fixed: All policies now use helper functions
+8. **Missing Permissions**: No table-level GRANT statements
+   - Fixed: Added GRANT SELECT/INSERT/UPDATE/DELETE for all tables
+
+### 🛡️ Attack Scenarios Prevented
+1. ✅ Staff cannot see unassigned orders via developer console
+2. ✅ Staff cannot view Shopify API tokens in settings
+3. ✅ Staff cannot delete or modify audit trail
+4. ✅ Staff cannot enumerate conversation participants
+5. ✅ Staff cannot view message read status of others
+6. ✅ External hacker with Staff credentials = contained damage
+
+### 🔧 Technical Details
+- **Migration**: `065_enable_rls.sql` (688 lines)
+- **Helper Functions**: Use SECURITY DEFINER to bypass RLS and prevent recursion
+- **Policy Pattern**: Separate policies for SELECT/INSERT/UPDATE/DELETE (no FOR ALL)
+- **GRANT Statements**: Required alongside RLS policies for operations to succeed
+- **Scanner Compatibility**: Staff can UPDATE assigned orders (RPCs need this)
+- **Service Role Bypass**: Edge Functions automatically bypass all RLS
+
+### ✅ Quality Assurance
+- Migration is idempotent (uses `DO $$` blocks, `IF NOT EXISTS` checks)
+- All 8 critical bugs caught and fixed during review
+- Zero recursion (verified with helper function architecture)
+- Comprehensive testing checklist provided
+- Rollback script documented
+
+### 📊 Impact
+- ✅ Database-level access control now active
+- ✅ API tokens visible to Admin/Supervisor only
+- ✅ Audit logs tamper-proof (no deletes, Admin read-only)
+- ✅ Staff workspace scanner operations still work
+- ✅ Edge Functions and webhooks unaffected (service role bypass)
+- ✅ Compromised Staff account damage limited to assigned orders
+
+### 📦 Files Changed
+- `supabase/migrations/065_enable_rls.sql` - Complete RLS implementation
+- `PR_TASK_16_RLS.md` - PR documentation with verification steps
+
+### 🔗 References
+- Master_Task.md - Task 16: Enable RLS Policies ✅
+- PR #224 (merged to dev, 8 commits with bug fixes)
+
+---
+
 ## v0.9.9-beta — Task 12: Shopify Admin API Order Sync (2025-11-11)
 
 ### 🎯 Overview
