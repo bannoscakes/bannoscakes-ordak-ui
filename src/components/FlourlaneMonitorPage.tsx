@@ -221,9 +221,9 @@ export function FlourlaneMonitorPage() {
         <CardContent>
           <div className="grid grid-cols-7 gap-4">
             {weekDays.map((day, index) => (
-              <div key={index} className="flex flex-col border-r last:border-r-0 pr-4 last:pr-0">
+              <div key={index} className="flex flex-col border-r last:border-r-0 last:pr-0">
                 {/* Day Header */}
-                <div className="mb-4 text-center">
+                <div className="mb-4 text-center px-2">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-2">
                     <div>
                       <div className="font-medium text-pink-600 text-sm">{day.dayName.toUpperCase()}</div>
@@ -240,16 +240,16 @@ export function FlourlaneMonitorPage() {
                 </div>
 
                 {/* Orders List */}
-                <div className="flex-1 space-y-2 overflow-y-auto max-h-[550px]">
+                <div className="flex-1 space-y-2 overflow-y-auto max-h-[550px] pr-2">
                   {day.orders.map((order) => {
                     const colors = getStageColorClasses(order.stage);
                     return (
                       <div
                         key={order.id}
-                        className={`flex items-center gap-2 px-3 py-2 ${colors.bg} border ${colors.border} rounded-md hover:shadow-sm transition-all duration-200`}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 ${colors.bg} border ${colors.border} rounded-md hover:shadow-sm transition-all duration-200`}
                       >
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${colors.dot}`}></div>
-                        <span className={`text-sm font-medium ${colors.text} truncate`}>
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`}></div>
+                        <span className={`text-[15px] font-medium ${colors.text} truncate`}>
                           {order.humanId}
                         </span>
                       </div>
