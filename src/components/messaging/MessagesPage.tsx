@@ -164,6 +164,15 @@ export function MessagesPage() {
     }, 150);
   }, [loadConversations]);
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   const { isConnected } = useRealtimeMessages({
     conversationId: selectedConversation,
     onNewMessage: handleNewMessage,
