@@ -1107,9 +1107,15 @@ export async function syncShopifyOrders(store: Store) {
   
   if (settingsError) throw settingsError;
   // Token is stored as JSONB via to_jsonb(p_token), extract as string
-  const token = typeof settingsData?.value === 'string' 
-    ? settingsData.value 
-    : String(settingsData?.value || '');
+  let token: string;
+  if (typeof settingsData?.value === 'string') {
+    token = settingsData.value;
+  } else if (settingsData?.value && typeof settingsData.value === 'object') {
+    // JSONB object - shouldn't happen, but throw error rather than stringify
+    throw new Error('Token is stored as object in database - expected string');
+  } else {
+    throw new Error('No token found in settings');
+  }
   
   // Step 3: Invoke Edge Function to actually sync orders
   const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('sync-shopify-orders', {
