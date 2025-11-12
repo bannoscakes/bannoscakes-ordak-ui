@@ -1,0 +1,163 @@
+0) Ground rules
+All writes via SECURITY DEFINER RPCs. Client never inserts/updates tables directly.
+Roles: Admin, Supervisor, Staff (enforced in app; RLS keeps data safe).
+Date-only system: “Due Date” (no time). Priority derived from Due Date: High=today/overdue, Medium=tomorrow, Low=later.
+
+1) Schema (minimum set to power all UIs)
+Core orders & events
+orders_bannos / orders_flourlane
+id text pk, order_number text, product_title text, size text, flavour text null,
+delivery_method text check ('delivery','pickup'),
+due_date date not null,
+priority text check ('high','medium','low'),
+assignee_id uuid null, notes text null, storage text null,
+status text check ('pending','in_progress','complete') default 'pending',
+indexes: (due_date, priority), (assignee_id).
+stage_events
+id uuid pk, store text check ('Bannos','Flourlane'), order_id text, stage text check ('Filling','Covering','Decorating','Packing','Complete'), event_type text check ('assign','complete','print'), at_ts timestamptz default now(), staff_id uuid null,
+indexes: (store, at_ts desc), (order_id, at_ts).
+order_photos (for QC Photo Check)
+id uuid pk, order_id text, url text, stage text, status text check ('ok','needs_review') default 'ok', created_at timestamptz default now().
+Staff & time
+staff_shared
+id uuid pk, full_name text, email text, role text check ('Admin','Supervisor','Staff'), is_active boolean default true, approved boolean default false, hourly_rate numeric(10,2) null.
+shifts
+id uuid pk, staff_id uuid, start_ts timestamptz, end_ts timestamptz null.
+breaks
+id uuid pk, shift_id uuid, start_ts timestamptz, end_ts timestamptz null.
+Settings (per store)
+store_settings_printing (ticket size, copies, barcode type/prefix)
+store_settings_due_date (default offset, allowed days, blackout dates)
+store_settings_monitor (auto-refresh, density)
+store_flavours (store, flavour text, position)
+store_storage_locations (store, 5 fixed labels)
+Shopify integration
+shopify_tokens (store, storefront_access_token, last_connected_at)
+shopify_sync_runs (store, started_at, finished_at, imported int, skipped int, errors int, status)
+Inventory/BOM (kept minimal, unified stock)
+inv_component (id, sku, name, type, qty_on_hand, reorder_point, shopify_variant_id null, oos_action)
+bom_header (id, store or 'shared', product_title, variant text null, active boolean)
+bom_item (bom_id → header, component_id → inv_component, qty_per numeric, stage_to_consume text)
+inv_txn (id, order_id, component_id, delta numeric, source text, at_ts timestamptz)
+accessory_keywords (keyword, component_id)
+product_requirements (product_title, variant text null, component_id) // only for “must-have” toppers
+We will deduct immediately on orders/create, with a simple Restock action for rare cancels/edits.
+
+2) RPC surface (what each screen calls)
+Production Queues (Filling / Covering / Decorating / Packing)
+get_queue(p_store text, p_stage text, p_filter text, p_search text, p_page int)Returns card fields sorted by Priority → Due Date → Size → Order #.
+assign_orders(p_store text, p_order_ids text[], p_staff uuid) (Supervisor only)
+set_storage(p_store text, p_order_id text, p_storage text) (Supervisor only)
+get_order(p_store text, p_order_id text) (for Order Detail)
+Order Detail (view) + Scanner
+print_barcode(p_store text, p_order_id text) → returns payload; logs stage_events(event_type='print'). If stage=Filling and first print, record start timestamp.
+complete_stage(p_store text, p_order_id text, p_stage text, p_staff uuid) → logs complete, moves to next stage.
+upload_order_photo(p_order_id text, url text, stage text) (optional now)
+find_order_store(p_order_number text) → returns which store has it (for “Find Order’s Store” assistant)
+Edit (when you’re ready)
+update_order_core(p_store text, p_order_id text, p_patch jsonb)Allowed keys: due_date, delivery_method, size, flavour, priority, storage, notes, writing_on_cake, accessories, product_title (with safety checks).
+Staff Workspace
+get_queue(..., p_assignee_id uuid) (same RPC with an assignee filter)
+start_shift(p_staff uuid), end_shift(p_staff uuid), start_break(p_staff uuid), end_break(p_staff uuid)
+get_staff_me() (name, role, approved)
+Supervisor Workspace
+same as Staff + deep links to production queues (no new RPCs)
+Complete (card grid)
+get_complete(p_store text, p_from date, p_to date, p_storage text, p_search text)
+Settings (store)
+get_settings_printing(p_store), set_settings_printing(p_store, jsonb)
+get_settings_due_date(p_store), set_settings_due_date(p_store, jsonb)
+get_settings_monitor(p_store), set_settings_monitor(p_store, jsonb)
+get_flavours(p_store), set_flavours(p_store, jsonb order[])
+get_storage_locations(p_store), set_storage_locations(p_store, text[5])
+Shopify Integration
+test_storefront_token(p_store text, token text)
+connect_catalog(p_store text, token text) // kicks off product sync job
+sync_shopify_orders(p_store text) // manual import of unfulfilled orders
+Webhook handlers (Edge Functions): orders_create_bannos, orders_create_flourlane
+call ingest_order(p_store, jsonb) → transform → insert into orders_*
+call deduct_on_order_create(p_store, order_id) (see inventory)
+Time & Payroll
+get_staff_times(p_from date, p_to date, p_staff uuid null) → summary rows
+get_staff_times_detail(p_from, p_to, p_staff) → daily rows
+update_time_entry(p_shift_id, jsonb patch) (Admin only)
+Inventory/BOM (simple admin flows)
+create_component, update_component, adjust_stock
+create_bom, update_bom_items
+map_keyword_to_component, set_product_requirement
+Inventory deduction (immediate)
+deduct_on_order_create(p_store, p_order_id) (idempotent)
+restock_order(p_store, p_order_id) (rare cancel/edit)
+Edge function flip_shopify_oos_on_threshold(component_id) (set variant OOS/In-stock when qty crosses 0)
+
+3) Data flows (end-to-end)
+Orders intake
+Webhook per store → verify HMAC → ingest_order → insert into orders_bannos/orders_flourlane with computed priority (from Due Date) and stage=Filling.
+Immediately call deduct_on_order_create to decrement BOM components (board/base/box/topper/accessories). If any tracked accessory hits 0, flip OOS in Shopify; optionally block cake variants marked in product_requirements.
+Queues & Workspaces
+Queues read via get_queue. Assign uses assign_orders.
+Scanner uses complete_stage (and logs in stage_events). Packing → Complete.
+Order Detail
+Displays read model from get_order. Print button → print_barcode.
+Complete
+get_complete returns cards filtered by Storage and Search.
+Settings
+Each card reads/writes its section via get_*/set_* RPCs.
+Time & Payroll
+Staff Workspace emits shift/break RPCs. /admin/time reads aggregates and details via get_staff_times*.
+
+4) Security & RLS
+Enable RLS on all tables.
+Read policies for orders_*, stage_events, etc.: using (auth.role() = 'authenticated').
+Deny client writes on tables: for all to authenticated using (false) with check (false).
+All mutations go through RPCs marked SECURITY DEFINER with explicit role checks (Admin/Supervisor only where needed).
+Separate buckets for order_photos if you store images; signed URLs only.
+
+5) Migration order (safe sequence)
+M0 — Core
+staff_shared, orders_bannos, orders_flourlane, stage_events, indexes, RLS scaffolding.
+M1 — Settings
+store_settings_printing, store_settings_due_date, store_settings_monitor,
+store_flavours, store_storage_locations; RPCs to read/write.
+M2 — Shopify
+shopify_tokens, shopify_sync_runs, RPCs test_storefront_token, connect_catalog, sync_shopify_orders.
+Edge function skeletons for webhooks with HMAC verify.
+M3 — Inventory/BOM
+inv_component, bom_header, bom_item, inv_txn, accessory_keywords, product_requirements.
+RPCs for BOM CRUD, deduct_on_order_create, restock_order.
+M4 — Workflows
+print_barcode, assign_orders, get_queue, complete_stage, get_order, set_storage.
+M5 — Media/QC
+order_photos, upload_order_photo.
+M6 — Time & Payroll
+shifts, breaks; RPCs start/end shift/break, get_staff_times*, update_time_entry.
+
+6) Vertical slices (how to wire screens in order)
+Queues + Scanner (Filling only)
+get_queue, complete_stage, print_barcode, get_order.
+Staff Workspace
+get_queue(... assignee), start_shift/end_shift, start_break/end_break.
+Supervisor Workspace
+only deep links to queues (no extra RPCs).
+Complete
+get_complete, storage filter, Search.
+Settings
+Printing, Due Date, Flavours, Storage, Monitor.
+Shopify
+tokens + manual order sync + webhooks.
+Inventory/BOM
+Components, BOMs, Keywords, Requirements, Transactions, Tools.
+Time & Payroll
+summaries, details, CSV.
+Each slice is one PR into dev with smoke tests.
+
+7) Smoke tests (per PR)
+Webhook orders/create inserts order and sets correct priority.
+get_queue respects filters and ordering: Priority → Due Date → Size → Order #.
+Assign updates assignee and logs stage_events.
+Print produces payload and logs print event (and sets filling start on first print).
+Scanner confirm completes stage and moves order; idempotent.
+Settings save & reflect (Flavours to Filling dropdown, Storage chips).
+Manual order sync shows progress and idempotently skips existing orders.
+Deduct-now: BOM components decrement on orders/create; out-of-stock flips in Shopify when ATP ≤ 0 (edge function stub ok).
+Shift/break RPCs compute net hours correctly in /admin/time.

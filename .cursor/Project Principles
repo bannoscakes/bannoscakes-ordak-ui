@@ -1,0 +1,819 @@
+Ordak v2 — UI‑First Plan (UI first, simple,
+documented)
+Owner: Panos • Date: 1 Sep 2025 (AEST)
+Project Principles
+•
+•
+•
+•
+•
+•
+Names: Use exact store names everywhere in the UI — Bannos, Flourlane.
+Strict separation by store: Separate webhooks and tables per store. No cross‑store views.
+Shared only: Staff and Inventory are shared (common kitchen + supplies).
+Stages: Four operational stages — Filling → Covering → Decorating → Packing — plus a
+read‑only Complete view in the UI.
+Minimalism: Fewer screens, fewer RPCs, fewer states; one order‑card design across all queue
+screens.
+Docs‑first: Everything is documented as we go (Lovable KB + in‑repo docs).
+Product Goals (v2)
+1.
+2.
+3.
+4.
+Reliable intake: Each store’s webhook inserts into that store’s queue as Unassigned.
+Fast production flow: Supervisor assigns; staff scan to complete their stage; next stage
+auto‑queues.
+Clear operations per store: One Queue table per stage (same card design), plus a read‑only
+Monitor per store.
+Traceable actions: Assignment logs and completion timestamps (from scanner). No extra start
+timestamps.
+Information Architecture (UI Only)
+Top level (no combined views):
+•
+•
+/bannos — Bannos workspace
+/flourlane — Flourlane workspace
+Inside each store workspace: - Queue — Filling / Covering / Decorating / Packing (single shared
+design: cards + filters) - Complete — read‑only card grid of completed orders (same OrderCard; Search
++ Storage dropdown; date scope handled in code) - Monitor — read‑only big cards (kitchen display) -
+Scanner — fullscreen modal/page: Complete with barcode (no Start) - Order Detail Drawer — slides
+over any screen; tabs: Details | Notes | Timeline - Inventory Viewer — read‑only shared supplies;
+hidden from Staff - Settings (store‑scoped) — Ticket print size, due‑time defaults, monitor mode
+Removed: Today Board, Weekly Calendar, separate Unassigned page (Unassigned is a
+filter state within Filling).
+1
+UI Routes & Components
+Routes - /[store]/queue/filling - /[store]/queue/covering - /[store]/queue/
+decorating - /[store]/queue/packing - /[store]/complete - /[store]/scanner - /
+[store]/monitor - /[store]/settings
+Components (per store) - <OrderCard> — title, size, due time, priority chip, delivery/pickup icon,
+optional notes dot, assignee, storage chip (if set) - <FilterBar> — primary dropdown (by stage) +
+Storage dropdown (All Locations by default) + Search - <StickyAssignBar> — multi‑select actions
+(Assign / Clear / Set Storage) - <OrderDetailDrawer> — tabs: Details | Notes | Timeline -
+<ScannerModal> — barcode input; Complete only (no Start tab) - <PrintTicketButton> — print
+barcode + minimal details
+UI state rules - Assign is visible only in Unassigned and Filling. - Completing a stage moves order to
+the next stage automatically; Packing → Complete. - Error toasts are clear and non‑technical.
+•
+•
+•
+Assign is visible only in Unassigned and Filling.
+Completing a stage moves order to the next stage automatically; Packing → Complete.
+Error toasts are clear and non‑technical.
+Minimal Backend Contract (from UI point of view)
+We are not implementing backend yet—this is the contract UI expects.
+Entities (store‑scoped unless noted)
+•
+•
+•
+orders_[store] : id, order_number, due_ts, stage, assignee_id (nullable), flavour(s), size,
+product, notes, timestamps
+staff_shared : id, full_name, role, is_active
+inventory_shared : id, sku, name, qty_on_hand, reorder_point
+RPCs (UI consumes)
+•
+•
+•
+•
+•
+•
+•
+assign_staff(order_id, staff_id)
+complete_stage(order_id, stage) → returns new stage
+print_barcode(order_id) → returns printable payload (handled client‑side)
+get_orders_today(store) / get_orders_week(store)
+get_unassigned(store)
+get_staff() (shared)
+get_inventory() (shared)
+Webhooks (per store)
+•
+•
+/webhooks/bannos/orders_create
+/webhooks/flourlane/orders_create → Insert into orders_bannos or
+orders_flourlane with stage = 'Unassigned'.
+2
+Diagrams
+A) System Context (C4‑style)
+C4Context
+title Ordak v2 — System Context
+Person(admin, "Admin/Supervisor")
+Person(staff, "Staff")
+System_Boundary(app, "Ordak v2 App"){
+System(ui, "React UI (Lovable)")
+System(spb, "Supabase (DB + RPCs)")
+}
+System_Ext(shop_b, "Shopify Bannos")
+System_Ext(shop_f, "Shopify Flourlane")
+System_Ext(printer, "Label/Printer")
+Rel(admin, ui, "Assign, monitor")
+Rel(staff, ui, "Scan & complete")
+Rel(shop_b, spb, "orders/create webhook → orders_bannos")
+Rel(shop_f, spb, "orders/create webhook → orders_flourlane")
+Rel(ui, spb, "RPCs: assign, complete, lists")
+Rel(ui, printer, "Print ticket")
+B) Production Flow (per store)
+flowchart LR
+A[Webhook: orders/create] --> B[orders_store: stage=Unassigned]
+B -->|Assign| C[Filling]
+C -->|Scan Complete| D[Covering]
+D -->|Scan Complete| E[Decorating]
+E -->|Scan Complete| F[Packing]
+F -->|Scan Complete| G[(Complete)]
+Lovable Knowledge Base — Document Map (living docs)
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+12.
+0-Overview
+What is Ordak v2? Principles, scope, store separation.
+1-Getting Started (Dev)
+Repo setup, required env vars, how to run Lovable project locally.
+2-UI Guide
+Routes, components, state rules, UI conventions (Tailwind, icons, modals).
+3-Data Model (Conceptual)
+Entities & relations; store‑scoped vs shared tables; stage lifecycle.
+4-API & RPC Contracts
+Request/response shapes; error codes; idempotency rules.
+5-Webhooks
+Separate endpoints; payload mapping; minimal validation; failure handling.
+3
+13.
+14.
+15.
+16.
+17.
+18.
+19.
+6-Deploy & Environments
+Railway/Supabase/Lovable; secrets, migration cadence.
+7-Runbook
+How to recover failed webhooks; how to unblock stuck orders; common errors.
+8-Changelog
+Versioned changes per date; who approved.
+9-ADRs (Architecture Decision Records)
+20.
+Short 1‑pager per key decision (store separation, 4 stages, shared only X/Y).
+21.
+10-Glossary
+22.
+Stage definitions, “Unassigned”, “Complete”, “Ticket”, etc.
+Analytics v1 — Simple, per‑store, no duplication
+Goals
+•
+•
+•
+Keep one shared events table; filter by store for Bannos vs Flourlane.
+Power day / week / year views with the same queries (date range only).
+Track stage completions per staff and simple throughput/quality KPIs.
+Data Model (shared)
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+stage_events (shared)
+id uuid PK
+store text CHECK (store IN ('Bannos','Flourlane'))
+order_id text NOT NULL
+stage text CHECK (stage IN ('Filling','Covering','Decorating','Packing','Complete'))
+event_type text CHECK (event_type IN ('assign','start','complete'))
+at_ts timestamptz NOT NULL DEFAULT now()
+staff_id uuid NULL — who performed it (for assign/complete)
+ok boolean NULL — success flag for quality (optional v1.1)
+meta jsonb NULL — optional (notes, reason)
+Indexes: ( store , at_ts ), ( store , stage, at_ts ), ( staff_id, at_ts ), ( order_id )
+We do not duplicate by store; store WHERE store='Bannos' or 'Flourlane' .
+column handles separation. UI queries just add
+Minimal SQL (Supabase)
+create table if not exists stage_events (
+id uuid primary key default gen_random_uuid(),
+store text not null check (store in ('Bannos','Flourlane')),
+order_id text not null,
+stage text not null check (stage in
+('Filling','Covering','Decorating','Packing','Complete')),
+event_type text not null check (event_type in
+4
+('assign','start','complete')),
+at_ts timestamptz not null default now(),
+staff_id uuid null references staff_shared(id),
+ok boolean null,
+meta jsonb null
+);
+create index if not exists idx_stage_events_store_ts on stage_events(store,
+at_ts desc);
+create index if not exists idx_stage_events_store_stage_ts on
+stage_events(store, stage, at_ts desc);
+create index if not exists idx_stage_events_staff_ts on
+stage_events(staff_id, at_ts desc);
+create index if not exists idx_stage_events_order on stage_events(order_id);
+Insert policy (via RPC only): UI calls complete_stage(order_id, stage) → backend writes a
+stage_events row with event_type='complete', store inferred from the order, and
+staff_id from auth.
+Queries that power the Dashboard cards
+Parameters
+•
+p_store text, p_from timestamptz, p_to timestamptz.
+•
+Total Orders (created in range)
+select count(*)
+from orders_all o
+where o.store = p_store and o.created_at >= p_from and o.created_at < p_to;
+(Use a view orders_all that union all from the two store tables or migrate to one shared orders
+table later.)
+1.
+Completed Today
+select count(*)
+from stage_events
+where store = p_store
+and stage = 'Packing' and event_type='complete'
+and at_ts >= p_from and at_ts < p_to;
+1.
+In Production (active orders with any non-complete stage open)
+5
+select count(distinct order_id)
+from orders_state_view
+where store=p_store and is_terminal=false;
+1.
+Quality Score (optional v1.1: % of completes with ok=true)
+select coalesce(100.0 * avg(case when ok then 1 else 0 end), 100) as
+quality_pct
+from stage_events
+where store=p_store and stage='Packing' and event_type='complete'
+and at_ts >= p_from and at_ts < p_to;
+1.
+Production Status per Stage (counts in range)
+select stage, count(*) as units
+from stage_events
+where store=p_store and event_type='complete'
+and at_ts >= p_from and at_ts < p_to
+group by stage order by
+array_position(array['Filling','Covering','Decorating','Packing'], stage);
+Staff Analytics (per stage, per staff)
+•
+How many cakes each staff completed per stage in the period:
+select staff_id, stage, count(*) as completed
+from stage_events
+where store=p_store and event_type='complete'
+and at_ts >= p_from and at_ts < p_to
+and staff_id is not null
+group by staff_id, stage
+order by staff_id;
+•
+Overall staff performance (total completed, avg per day):
+select staff_id,
+count(*) as total_completed,
+count(*)::float / greatest(1, date_part('day', p_to - p_from)) as
+avg_per_day
+from stage_events
+where store=p_store and event_type='complete'
+and at_ts >= p_from and at_ts < p_to
+and staff_id is not null
+group by staff_id
+order by total_completed desc;
+6
+RPCs (thin, simple)
+•
+•
+UI Wiring
+•
+•
+•
+rpc get_analytics_summary(p_store text, p_from timestamptz, p_to
+timestamptz) → returns: total_orders, completed, in_production, quality_pct, per_stage list.
+rpc get_staff_stage_counts(p_store text, p_from timestamptz, p_to
+timestamptz) → returns rows for the Staff analytics table.
+Dashboard toggle Bannos / Flourlane just flips p_store.
+Day / Week / Year switches only change p_from/p_to.
+No duplicated analytics tables; everything reads from stage_events.
+Definition of Done (UI v1)
+-
+Queue Table — Final (single design across stages)
+Design - One shared card/grid design for all stages. - Primary dropdown (stage‑specific) + Search in
+the filter bar. - No date/size controls in UI; those filters live in code.
+Primary dropdown by stage - Filling → Flavour (All Flavours + store list + Other) - Covering →
+Product Title (All Products + searchable titles) - Decorating → Product Title (same as Covering) -
+Packing → Method (All Methods, Delivery, Pickup)
+Sorting (code‑only) 1) Priority (from Due Date): High → Medium → Low
+2) Due Date (earliest first)
+3) Size (store-defined rank; fallback alphabetical)
+4) Order # (tiebreak)
+Assignment - Assign Selected available only in Unassigned and Filling.
+- Staff cannot self‑assign; they only scan to Complete.
+Complete - /[store]/complete date scope handled in code).
+shows a read‑only card grid of completed orders (Search + Storage;
+Barcode printing - Available from the OrderCard / Drawer; printing does not change state.
+MVP Execution Plan — Ordak v2 (Figma +
+Lovable + Supabase + GitHub)
+0) Ground Rules (so tools don’t break the project)
+•
+•
+Git branches: main (prod), dev (staging), feat/* (work). PRs only into dev / main .
+Secrets: real keys only in hosting envs. Repo keeps .env.example.
+7
+•
+•
+DB changes: SQL migrations via Supabase CLI; no ad‑hoc console edits.
+UI principle: One order card design across all stages. Filtering/sort live in code.
+1) MVP Scope (what we ship first)
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+Queues (per store): Filling · Covering · Decorating · Packing — grid of identical order cards.
+Filter bar: stage‑specific single dropdown + Search. (No date/size controls in UI.)
+Filling → Flavour
+Covering → Product Title
+Decorating → Product Title
+Packing → Method (Delivery/Pickup)
+Sorting (code‑only): Priority (from Due Date) → Delivery time → Size S→M→L → Order #.
+Multi‑select + Assign Selected (supervisor‑only).
+Scanner: Start/Complete per stage (staff only completes; no self‑assign).
+Quick Actions ⇢ Assistant tiles: Find Order’s Store · Bake List (This Week) · Urgent Jobs · QC
+Photo Check.
+No analytics v1 required for MVP (optional after queues are live).
+Definition of Done (MVP)
+-
+2) Architecture (concise)
+System Context (ref)
+C4Context
+title Ordak v2 — Context
+Person(admin, "Supervisor/Admin")
+Person(staff, "Staff")
+System_Boundary(app, "Ordak v2 App"){
+System(ui, "React UI (Lovable)")
+System(spb, "Supabase (DB + RPCs)")
+}
+System_Ext(shop_b, "Shopify Bannos")
+System_Ext(shop_f, "Shopify Flourlane")
+Rel(shop_b, spb, "orders/create → orders_bannos")
+Rel(shop_f, spb, "orders/create → orders_flourlane")
+Rel(ui, spb, "RPCs: get_queue, assign_orders, complete_stage")
+Rel(admin, ui, "Assign")
+Rel(staff, ui, "Scan complete")
+Data Model (ER)
+erDiagram
+STAFF_SHARED ||--o{ ORDERS_BANNOS : assignee
+8
+STAFF_SHARED ||--o{ ORDERS_FLOURLANE : assignee
+ORDERS_BANNOS ||--o{ STAGE_EVENTS : logs
+ORDERS_FLOURLANE ||--o{ STAGE_EVENTS : logs
+STAFF_SHARED {
+uuid id PK
+text full_name
+text role "Admin|Supervisor|Staff"
+bool is_active
+}
+ORDERS_BANNOS {
+text id PK
+text order_number
+text product_title
+text size "S|M|L"
+text delivery_type "delivery|pickup"
+timestamptz delivery_at
+text priority "high|medium|low"
+text notes
+uuid assignee_id FK
+}
+ORDERS_FLOURLANE {
+text id PK
+text order_number
+text product_title
+text size "S|M|L"
+text delivery_type "delivery|pickup"
+timestamptz delivery_at
+text priority "high|medium|low"
+text notes
+uuid assignee_id FK
+}
+STAGE_EVENTS {
+uuid id PK
+text store "Bannos|Flourlane"
+text order_id
+text stage "Filling|Covering|Decorating|Packing|Complete"
+text event_type "assign|complete"
+timestamptz at_ts
+uuid staff_id FK
+}
+3) Build Flow (week‑by‑week)
+Week 0 — Project & Staging
+-
+9
+Week 1 — UI Skeleton
+-
+Week 2 — DB + RPC Contract
+-
+Week 3 — Wiring & Scanner
+-
+Week 4 — Polish & Release
+-
+4) Dev Instruction List (checklist style)
+Queues
+-
+Assign
+-
+Scanner
+-
+Security
+-
+Assistants
+-
+5) Smoke Test Checklist (pre‑merge to dev / main )
+-
+6) Docs to maintain (living in repo + Lovable KB)
+1.
+MVP Spec (this plan)
+10
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+Architecture & ER (above diagrams)
+RPC Contracts (arguments + return shapes)
+UI Map (routes → components → props)
+Smoke Test Checklist (above)
+Runbook (how to recover failed webhook, stuck order, reassign)
+Changelog (date, change, approver)
+ADRs (short decisions: single card design, per‑stage dropdown, RPC‑only writes)
+7) Next Action
+•
+You confirm this MVP plan → I’ll generate the exact SQL migration files and a tiny TypeScript
+client wrapper ( getQueue, assignOrders, completeStage ) matching the UI props so
+devs can plug straight in.
+UI Specs — targeted additions
+Complete (UI) — Minimal view
+A simple, read‑only card grid to review finished orders; identical OrderCard design; fast Search +
+Storage filter.
+Route - /[store]/complete
+Design - Same card grid and spacing as Queue screens - Storage dropdown appears in the FilterBar
+(left); Search on the right - No Assign actions; Open Order only (via card or 3‑dot menu) - Date scope is
+handled in code (default Today)
+OrderCard — Single component spec
+Draw once in Figma and reuse in all queue screens; these fields are enough for MVP and match your
+current look.
+Content (top→bottom) - #ORDER • Due time - Product title • Size - Customer (optional
+small line) - Chips: Status (Pending/In Progress) • Priority (High/Med/Low) • tiny
+Delivery/Pickup icon - Footer meta (optional): Qty (shows only if >1)
+States - Unassigned (default) • Assigned (shows assignee name) • Disabled (when action in flight)
+Interactions - Click → Order Detail Drawer - Hover → checkbox for multi‑select (StickyAssignBar
+appears)
+11
+Workspaces — Staff & Supervisor
+Keep within each store; these are pre‑filtered views of the same queue UI so we don’t duplicate
+designs.
+Staff Workspace - Route: /[store]/workspace/staff - View: “Assigned to me” across stages (tabs
+remain: Filling/Covering/Decorating/Packing) - Actions: Open Order • Scan (opens Scanner modal
+prefilled) - Hidden: Assign controls
+Supervisor Workspace - Route: /[store]/workspace/supervisor - View: “Unassigned” across
+stages (same tabs) - Actions: Assign Selected • Open Scanner • Print Ticket - Extras (optional): small
+counters per stage
+Settings (Store) — Minimal fields
+Only what affects UI behavior/printing; keep it light.
+Route - /[store]/settings
+Sections - Printing: Ticket size, copies, barcode type - Due‑time defaults: pickup/delivery default
+times; time‑window labels - Priority thresholds: how Today/This Week map to High/Med/Low (code
+reads; UI doesn’t expose sliders) - Filling flavours (store list): Bannos fixed 5; Flourlane fixed 9;
+includes “Other” - Storage locations (store list): exactly 5 fixed labels per store — Store Fridge,
+Store Freezer , Kitchen Coolroom , Kitchen Freezer , Basement Coolroom . (Configured
+separately for Bannos and for Flourlane.) These populate the Storage dropdown and the storage chip
+on OrderCard. Each store maintains its own copy (not a shared system table). - Monitor: auto‑refresh
+interval; large‑card density** auto‑refresh interval; large‑card density
+Scanner — Modal/Page
+Simple success/fail loop; no separate table needed for MVP.
+Route - /[store]/scanner
+UI - Large barcode input (focus on load) - Last action strip: #ORDER • Stage completed •
+timestamp - Error toast on invalid/duplicate scan
+Behavior - Completes current stage and auto‑moves order to the next stage - Role gate: Staff can scan;
+Supervisor/Admin can scan too - Optional (later): “Scan log” table, but not required for MVP
+Storage Locations — UI rules
+Use a simple, consistent storage model to help people (and the assistants) find physical orders quickly.
+12
+What users see - Storage dropdown in the FilterBar (defaults to All Locations). - A tiny storage chip
+on the OrderCard when a location is set (e.g., Freezer ). - In Complete, the same OrderCard grid is
+shown; users can filter by Storage, and each card shows its storage chip.
+How it’s set (UI) - Via StickyAssignBar → Set Storage for selected cards (bulk) or inside Order Drawer
+(single). - Default storage can be inferred per product later, but not required for MVP.
+Configured per store - In Settings → Storage locations define the 5 labels for Bannos and the 5
+labels for Flourlane. Names must stay consistent (e.g., Freezer , Chiller , Cooling Rack,
+Pickup Shelf ).
+Assistant tie‑in - Find Order’s Store modal also shows Storage: <label> and deep‑links to the Queue
+prefiltered by that storage.
+OrderCard — Overflow Menu (final)
+Queue tabs (Filling/Covering/Decorating/Packing): Assign to Staff → Edit Order → Open Order →
+View Details (Shopify).
+Complete tab: Open Order → View Details (read‑only; no Assign, no Edit).
+Use existing menu typography, spacing, hover/active/shadow — no new styles.
+Order Detail Drawer — View & Edit (UI‑only)
+A single drawer used everywhere. View is default; Edit uses inline inputs. Keep visual style identical to
+your current details sheet.
+Open from: clicking an OrderCard or choosing Open Order from the 3‑dot menu.
+Width: same as current drawer; right‑side slide‑in.
+Header - Left: #ORDER + customer name (small) - Right: actions: Print Ticket, Set Storage, Close (✕)
+Tabs - Details (default) • Notes • Timeline
+Details — View mode - Store (Bannos / Flourlane) - Product title - Size (display exact size text from
+order) - Flavour (Filling only, if provided) - Priority (High/Med/Low) • Method (Delivery/Pickup) - Due Date
+- Storage (chip if set) - Qty (only if >1) - Writing on Cake (if present) - Customer (name) + optional phone
+Edit mode (Supervisor/Admin only) - Editable: Due Date (date only), Method (Delivery/Pickup), Product
+(searchable combobox), Size (variant dropdown if available, else free text), Flavour (Filling), Storage,
+Priority, Notes, Writing on Cake, Accessories, Upload Photo(s) - Read‑only: Store, Order #, Customer,
+Product image - Footer bar: Save (primary) • Cancel (secondary) - Validation: require Due Date (date
+only); no fixed size list; show non‑blocking warnings only
+Notes tab - Large textarea; shows existing notes (most recent on top)
+Timeline tab - Reverse‑chronological list of stage events (Assigned, Completed @ stage, Storage set,
+Printed)
+13
+Success/Errors - Save → toast “Order updated” and drawer stays open - Error → clear message, no
+technical codes
+Figma handoff — what to add now
+•
+•
+•
+•
+•
+Ensure the Order Detail Drawer has both View and Edit states with the fields above.
+Add the Edit Order item to the OrderCard menu per the final order above.
+On Complete, keep the menu read‑only (Open Order, View Details).
+Show the storage chip inside the drawer and on cards when Storage is set.
+No other style changes; match existing typography, paddings, and shadows.
+UI Consistency Fixes — Drawer, Overflow, Shopify link
+Drawer close control (all drawers) — Remove any duplicate "X". Keep a single close icon in the header
+(top‑right), 32×32 hit area; prototype also closes on scrim click and Esc.
+Overflow (3‑dot) menu standard — - Queues (Filling/Covering/Decorating/Packing): Assign to Staff
+→ Edit Order → Open Order → View Details.
+- Complete & Dashboard: Open Order → View Details (read‑only; no Assign, no Edit).
+Use one shared overflow component so updates propagate.
+Dashboard → Recent Orders wiring — Wire the row 3‑dot to the same overflow component. Open
+Order opens the Order Detail Drawer (view); View Details links to Shopify.
+Shopify handoff button (drawer footer) — Keep “View Details in Shopify” in the drawer footer; opens
+the Shopify order in a new tab. Style matches existing buttons; no extra actions.
+Settings (store) — Final UI brief
+Routes & scope
+•
+Create /bannos/settings and /flourlane/settings; values are store‑scoped. Header shows the
+store name. Access: Admin/Supervisor only.
+Page layout (group order)
+1) Shopify Integration - Storefront Access Token - Shopify Order Sync 2) Printing 3) Due Date defaults 4)
+Priority (read‑only note) 5) Filling flavours (per store) 6) Storage locations (per store) 7) Monitor options
+The Settings page uses a sticky footer: Save (primary) and Cancel for form sections. Integration cards
+have their own buttons and do not depend on Save.
+14
+Shopify Integration
+Storefront Access Token (card)
+•
+•
+•
+•
+•
+Title and helper: “Used to fetch product info/images. From: Shopify Admin → Apps → Private
+apps → Storefront API.”
+Input (password style) with Show/Hide; inline validation area.
+Buttons: Test Connection (secondary), Connect & Sync Complete Catalog (primary).
+Meta (top‑right of card): Last connected: <timestamp>.
+States: Testing/Running (disable inputs and show spinner), Success banner (“Connected. Catalog
+sync started.”), Error banner (“Connection failed. Check token and permissions.”).
+Shopify Order Sync (card)
+•
+•
+•
+•
+Subtext: “Pull unfulfilled orders when webhooks aren’t available, and for first‑time import.”
+Buttons: Sync Orders (primary, this store only), View Sync Log (text button).
+Progress region: thin progress bar and counters Imported X · Skipped Y · Errors Z
+while running; success/error banners after.
+Meta (top‑right): Last sync: <timestamp>.
+Printing (card)
+•
+•
+Fields: Ticket size (58 mm / 80 mm / Custom width in px), Copies (1–3), Barcode (type CODE128,
+content Order #, optional prefix).
+Button: Test print → confirm dialog “Send test ticket to printer?” → success toast “Sent to
+printer”.
+Due Date defaults (card)
+•
+•
+Controls: Default Due Date (Today / +1 day / +2 days), Allowed days (Mon–Sun toggles),
+Blackout dates (pill list with Add date).
+Note: UI uses date only (no time) across the system.
+Priority (read‑only info)
+•
+Info line: “Priority is derived from Due Date: High = today/overdue, Medium = tomorrow, Low =
+later.”
+Filling flavours (card, per store)
+•
+•
+•
+Reorderable list with Add/Remove; “Other” fixed at the end.
+Bannos maintains 5 items; Flourlane maintains 9 items.
+Helper: “Used by the Filling dropdown.”
+Storage locations (card, per store)
+•
+•
+Exactly 5 text inputs, default labels: Store Fridge, Store Freezer , Kitchen Coolroom ,
+Kitchen Freezer , Basement Coolroom .
+Helper: “Shown as a chip on cards; used by the Storage filter.”
+15
+Monitor options (card)
+•
+•
+Auto‑refresh (15 / 30 / 60 sec), Density (Compact / Cozy).
+Note: scope is date‑based; time is not collected.
+Visual rules
+•
+Reuse existing inputs, buttons, banners, borders, shadows, radii. Match current spacing rhythm;
+no new component styles. Buttons follow the project’s primary/secondary palette. Keep store
+names exactly “Bannos” and “Flourlane”.
+Acceptance checklist (for later testing)
+•
+•
+•
+•
+•
+•
+•
+Each store’s Settings saves independently.
+Token “Test Connection” and “Connect & Sync Complete Catalog” show clear banners/states;
+token masked by default.
+“Sync Orders” shows progress, updates Last sync, and exposes View Sync Log.
+“Test print” confirm + toast works.
+Flavours appear in Filling dropdowns; Storage labels show as chips and in the Storage filter.
+Priority note matches queue behavior (date only).
+Save/Cancel persist Printing / Due Date / Flavours / Storage / Monitor changes.
+Staff Workspace (shared) — Final UI brief
+Route & visibility - Route: /workspace/staff (shared across stores). Access via direct link/QR; not in
+sidebar. - Requires approved staff account (Email/ID + PIN).
+Sign‑in - Inputs: Email/Staff ID, PIN (6 digits). Secondary: Scan Staff Badge. Primary: Sign in (disabled
+until filled).
+Header (after sign‑in) - Title “Staff Workspace”, Staff name, Sign out. - Shift/Break controls: Start Shift
+→ On Shift (timer) + End Shift + Start Break → On Break (timer) + End Break.
+Filters - Search only (no stage pills). Optional later: Stage dropdown or Store filter.
+Assigned to me (today) - Grid/list of OrderCard items with: Store chip (Bannos/Flourlane), Order #,
+Product title (own line), Size (own line, exact text), chips for Priority, Due Date (date‑only), Method,
+Storage (if set). - Card overflow (3‑dot): Open Order only. (No card‑level Print/Scan; actions live in the
+modal.)
+Order Detail (modal, view‑only) - Header right button: Print Barcode (confirm → toast “Barcode sent
+to printer”). - Body: Customer, Store, Order #, Product title, Size, Flavour (if any), Qty, Priority, Due Date
+(date‑only), Method, Storage, Notes, Writing on Cake, Product image. - Footer: left View in Shopify;
+right Scan Barcode (opens scanner overlay).
+Scanner (overlay) - Camera view + text input fallback. On scan → confirm “Mark [Order #] [Stage]
+complete?” → Confirm/Cancel → success toast “Stage completed” and list update; invalid shows inline
+error.
+16
+Break state - While On Break, Scan actions disabled; subtle overlay text “Paused during break”.
+Notes - On Filling only, barcode printing also starts the Filling timestamp (logic only; no extra UI).
+Supervisor Workspace (shared) — Final UI brief
+(queue shortcuts)
+Route & visibility - Route: /workspace/supervisor (shared). Access via direct link; not in sidebar.
+Header - “Supervisor Workspace”, Supervisor name, Sign out. - Same Shift/Break controls as Staff
+(supervisors may also scan).
+Shortcuts to queues - Two CTA tiles/buttons: Open Bannos Queue and Open Flourlane Queue
+(deep‑link to each Production queue, prefiltered to Unassigned so Assign is available there).
+(Optional) Assigned to me - Same OrderCard grid as Staff. Card actions via 3‑dot → Open Order; Print/
+Scan inside the modal.
+Order Detail & Scanner - Same as Staff Workspace: modal with Print Barcode and Scan Barcode;
+scanner overlay with confirm + success toast.
+Notes - All assigning happens in the queue screens they open via shortcuts (role‑gated there). No
+Assign inside this workspace itself.
+Consistency checklist — final
+•
+•
+•
+•
+•
+•
+Names: Bannos, Flourlane (exact casing) everywhere.
+Due Date is date‑only across cards, drawers, settings; priority derives from Due Date:
+High=today/overdue, Medium=tomorrow, Low=later.
+OrderCard: product title and Size on separate lines; storage shown as chip when set.
+Overflow menus: Queues → Assign to Staff → Edit Order → Open Order → View Details.
+Complete & Dashboard → Open Order, View Details. Staff/Supervisor workspaces → Open Order
+only on cards; actions happen in modal.
+Print Barcode: available in Order Detail modals (all contexts); confirm + toast pattern reused.
+Settings (store): Shopify Integration, Printing, Due Date defaults, Priority note, Filling flavours,
+Storage locations, Monitor options (as specified above).
+Staff — Final UI brief (Admin only)
+Route & nav - Route: /staff. Sidebar: under Staff section. - Visibility: Admin only (hidden for Staff/
+Supervisor).
+Page layout - Header: title Staff + Add Staff button. - Table columns: Name • Role (Admin/Supervisor/
+Staff) • Status (Approved/Active) • Email/ID • On Shift • Wage (masked for non‑Admin) • Actions. -
+17
+Row actions: View/Edit, Deactivate/Activate, Reset PIN, View timesheet (deep links to /admin/time?
+staff=<id>).
+Profile modal (View/Edit) - Identity: Full name, Email/Staff ID. - Role: Admin / Supervisor / Staff. - Status
+toggles: Approved, Active. - Security: Reset PIN (generate + show once). - Wages (Admin only): Hourly
+rate; optional Overtime rule (placeholder, not required for MVP). - Store note: "Shared across Bannos &
+Flourlane" (read‑only text). - Save / Cancel.
+Patterns - Reuse existing form inputs, buttons, and spacing; no new styles.
+Acceptance - Add/Edit persists; PIN resets show a one‑time code; Wage masked for non‑Admin. - "View
+timesheet" opens Time & Payroll filtered to that staff member.
+Time & Payroll — Final UI brief (Admin only)
+Route & nav - Route: /admin/time. Sidebar: Time & Payroll under the Staff section. - Visibility: Admin
+only (optional read‑only for Supervisors later).
+Filter bar - Date range picker (Week quick pick). - Search staff input. - Optional Store filter: All /
+Bannos / Flourlane. - Actions: Export CSV (primary), Approve Period (secondary, optional).
+Summary table - Columns: Staff • Days worked • Shift hours • Break minutes • Net hours • Hourly
+rate • Pay • View details. - "View details" opens a per‑staff modal.
+Details modal (per staff) - Daily rows: Date • Shift start–end • Breaks • Net hours • Adjustment note.
+- Admin can edit a day (correct a shift or add/remove a break) and add an adjustment note. - Save /
+Cancel.
+Behavior (data rules) - Net hours = sum(shift_end − shift_start) − sum(breaks) in the range. - Rounding
+or overtime rules are out of scope for MVP (can be toggled later in Settings).
+Deep links - From /staff row action View timesheet → /admin/time?staff=<id> with that person
+preselected.
+Acceptance - Filters work; table populates; CSV exports selected range. - Details modal edits persist and
+affect the summary row totals and Pay. - Role‑gating enforced (Admin only).
+Packing stage — Staff access & QC additions
+(final)
+Access from Staff Workspace - Add two shortcuts in the Staff Workspace (header or a small CTA row):
+Open Packing Queue — Bannos and Open Packing Queue — Flourlane. These deep‑link to the
+existing Packing queue screens. Visibility is permission‑gated from the Staff page (toggle: Can access
+Packing Queue).
+18
+Order Detail (modal) — Packing stage only - Insert a Quality Control block above the footer when
+order.stage === "Packing" : - QC Issue (dropdown): None (default) · Damaged Cake · Wrong
+spelling. - QC comments (optional, multiline input). - Optional link: Run AI QC (invokes the QC assistant;
+may prefill Wrong spelling when issues are detected). - Footer button set for Packing only (right side): -
+Print Packing Slip (secondary) - Print Care Card QR (secondary) - Scan Barcode (primary) - Left footer
+remains View in Shopify.
+Behavior notes (for wiring) - No assignment required for Packing; staff reach Packing via the queue
+shortcuts or by scanning a Packing‑stage barcode. - If QC Issue is set to Damaged Cake or Wrong
+spelling, capture the selection and comments with the packing completion event (no automatic stage
+change here unless specified later). - Printing Packing Slip or Care Card QR does not change state.
+Consistency - Do not show the Packing QC controls on other stages. - Keep the Order Detail layout,
+spacing, and tokens identical to the existing modal.
+Inventory (unified) — Final UI brief
+Route & nav - Top-level Inventory with tabs/subpages: 1) Components (stock list) 2) BOMs (per
+product/variant) 3) Accessory Keywords (synonym map) 4) Product Requirements (cake → required
+topper) 5) Transactions (audit log) 6) Tools (Restock Order / Manual Adjust)
+Re-use existing table, filter, modal components; unified stock serves both Bannos & Flourlane.
+1) Components (stock list)
+Filters: Search • Type (All/Board/Base/Box/Topper/Accessory) • Low stock (toggle)
+Columns: - SKU - Name - Type (Board/Base/Box/Topper/Accessory) - On hand - Reorder point -
+Shopify variant (link icon if connected; “—” if not) - OOS Action (Component only / Also block cakes) -
+Actions → View/Edit, Adjust stock
+Edit modal: Name, SKU, Type, On hand, Reorder point, Shopify variant (optional), OOS Action; Save/
+Cancel.
+Adjust stock modal: Delta (+/−), Reason; Save → toast “Stock updated”.
+2) BOMs (per product/variant)
+Filters: Store (Bannos/Flourlane), Search Product Title (exact title used in orders)
+Table (headers): Product Title • Variant (optional) • Active • Actions → Open BOM
+BOM editor: - Product Title (read-only once created) • Variant (optional) - Items table: Component
+(picker) • Qty per • Stage to consume (Filling/Decorating/Packing) • Remove - Add component row;
+Save/Cancel.
+19
+3) Accessory Keywords (synonym map)
+Filters: Search Keyword • Component filter
+Columns: Keyword/Phrase • Component (picker) • Notes • Actions → Edit/Remove
+Add keyword modal: Keyword • Component • Save.
+4) Product Requirements (cake → required topper)
+Filters: Store • Search Product Title • Component filter
+Columns: Product Title • Variant (optional) • Required Component • Actions → Edit/Remove
+Add requirement modal: Product Title • Variant (optional) • Required Component • Save.
+5) Transactions (audit log)
+Filters: Date range • Search (Order # / SKU / Name) • Type (All/Deduct/Restock/Adjust)
+Columns: Timestamp • Order # • Component • Delta (−/+) • Source (Webhook/Restock/Manual) • Note
+Row click → small detail modal with full context.
+6) Tools (admin utilities)
+Cards:
+A) Restock Order — Field: Order # • Button: Restock → confirm “Reverse inventory for this order?” →
+toast “Restocked”.
+B) Manual Adjust — Fields: Component • Delta (+/−) • Reason • Button: Apply → toast “Stock updated”.
+Design rules
+•
+Inventory is shared across stores; do not duplicate stock rows. Page header “Inventory” with tabs
+listed above. Reuse existing inputs, buttons, banners, borders, shadows.
+Acceptance (later wiring)
+•
+•
+•
+Components editable; low-stock toggle highlights rows.
+BOMs created by exact Product Titles; items saved with qty and stage.
+Keyword mapping resolves accessory text to components.
+20
+•
+•
+Product Requirements capture required toppers per cake/variant.
+Transactions update when Tools simulate restock/adjust.

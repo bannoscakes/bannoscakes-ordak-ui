@@ -213,7 +213,7 @@ export function FlourlaneMonitorPage() {
         <CardContent>
           <div className="grid grid-cols-7 gap-4">
             {weekDays.map((day, index) => (
-              <div key={index} className="flex flex-col">
+              <div key={index} className="flex flex-col border-r last:border-r-0 pr-4 last:pr-0">
                 {/* Day Header */}
                 <div className="mb-4 text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-2">
