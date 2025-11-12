@@ -152,13 +152,13 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         case "bannos-monitor":
           return (
             <ErrorBoundary>
-              <BannosMonitorPage stats={dashboardStats.bannos} />
+              <BannosMonitorPage />
             </ErrorBoundary>
           );
         case "flourlane-monitor":
           return (
             <ErrorBoundary>
-              <FlourlaneMonitorPage stats={dashboardStats.flourlane} />
+              <FlourlaneMonitorPage />
             </ErrorBoundary>
           );
         case "bannos-analytics":
