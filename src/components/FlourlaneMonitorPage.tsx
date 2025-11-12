@@ -51,21 +51,47 @@ const getWeekDates = (startMonday: Date): WeekDay[] => {
   });
 };
 
-// Helper: Get stage color for pills
-const getStageColor = (stage: string): string => {
-  const stageMap: Record<string, string> = {
-    'Filling': 'bg-blue-500',
-    'Covering': 'bg-purple-500',
-    'Decorating': 'bg-pink-500',
-    'Packing': 'bg-orange-500',
-    'Complete': 'bg-green-500'
+// Helper: Get stage color classes for pills
+const getStageColorClasses = (stage: string) => {
+  const colorMap: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+    'Filling': {
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-700',
+      dot: 'bg-blue-500'
+    },
+    'Covering': {
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      text: 'text-purple-700',
+      dot: 'bg-purple-500'
+    },
+    'Decorating': {
+      bg: 'bg-pink-50',
+      border: 'border-pink-200',
+      text: 'text-pink-700',
+      dot: 'bg-pink-500'
+    },
+    'Packing': {
+      bg: 'bg-orange-50',
+      border: 'border-orange-200',
+      text: 'text-orange-700',
+      dot: 'bg-orange-500'
+    },
+    'Complete': {
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      text: 'text-green-700',
+      dot: 'bg-green-500'
+    }
   };
-  return stageMap[stage] || 'bg-gray-500';
+  return colorMap[stage] || {
+    bg: 'bg-gray-50',
+    border: 'border-gray-200',
+    text: 'text-gray-700',
+    dot: 'bg-gray-500'
+  };
 };
-
-interface FlourlaneMonitorPageProps {
-  stats?: Record<Stage, number>;
-}
 
 export function FlourlaneMonitorPage() {
   const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
@@ -187,35 +213,40 @@ export function FlourlaneMonitorPage() {
         <CardContent>
           <div className="grid grid-cols-7 gap-4">
             {weekDays.map((day, index) => (
-              <div key={index} className="flex flex-col border-r last:border-r-0 pr-4 last:pr-0">
+              <div key={index} className="flex flex-col">
                 {/* Day Header */}
-                <div className="mb-4 pb-3 border-b">
-                  <div className="text-center">
-                    <div className="font-semibold text-gray-700 text-sm uppercase">{day.dayName}</div>
-                    <div className="text-gray-500 text-xs mt-1">
-                      {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                <div className="mb-4 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-2">
+                    <div>
+                      <div className="font-medium text-pink-600 text-sm">{day.dayName.toUpperCase()}</div>
+                      <div className="text-xs text-pink-600">
+                        {day.date.getDate()}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center mt-2">
+                  <div className="flex items-center justify-center gap-2">
                     <Badge variant="secondary" className="text-xs">
-                      {day.orders.length} orders
+                      {day.orders.length}
                     </Badge>
                   </div>
                 </div>
 
                 {/* Orders List */}
-                <div className="flex-1 space-y-2 overflow-y-auto max-h-[600px]">
-                  {day.orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center gap-2 px-3 py-2 bg-white border rounded-lg shadow-sm hover:shadow transition-shadow"
-                    >
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStageColor(order.stage)}`}></div>
-                      <span className="text-sm font-medium text-gray-700 truncate">
-                        {order.humanId}
-                      </span>
-                    </div>
-                  ))}
+                <div className="flex-1 space-y-2 overflow-y-auto max-h-[550px]">
+                  {day.orders.map((order) => {
+                    const colors = getStageColorClasses(order.stage);
+                    return (
+                      <div
+                        key={order.id}
+                        className={`flex items-center gap-2 px-3 py-2 ${colors.bg} border ${colors.border} rounded-md hover:shadow-sm transition-all duration-200`}
+                      >
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${colors.dot}`}></div>
+                        <span className={`text-sm font-medium ${colors.text} truncate`}>
+                          {order.humanId}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
