@@ -115,6 +115,15 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Reset status states when switching stores (prevents cross-contamination)
+  useEffect(() => {
+    setConnectionStatus('idle');
+    setSyncStatus('idle');
+    setIsConnecting(false);
+    setIsSyncing(false);
+    setSyncProgress({ imported: 0, skipped: 0, errors: 0 });
+  }, [store]);
+
   // Fetch settings from database
   useEffect(() => {
     async function fetchSettings() {
