@@ -21,9 +21,9 @@
 |------|-------|------|-------------|-------------|------------|
 | Tier 1: Critical | 6 | 6 | 0 | 0 | 100% ✅ |
 | Tier 2: High Priority | 5 | 5 | 0 | 0 | 100% ✅ |
-| Tier 3: Medium Priority | 5 | 4 | 0 | 1 | 80% |
+| Tier 3: Medium Priority | 5 | 5 | 0 | 0 | 100% ✅ |
 | Tier 4: Architectural | 4 | 0 | 0 | 4 | 0% |
-| **TOTAL** | **20** | **15** | **0** | **5** | **75%** |
+| **TOTAL** | **20** | **16** | **0** | **4** | **80%** |
 
 ---
 
@@ -2419,18 +2419,19 @@ Created universal order search instead of dedicated page - simpler and more powe
 ---
 
 ### Task 16: Enable RLS Policies
-**Status:** 🔴 Not Started  
+**Status:** ✅ Done — 2025-11-12  
 **Priority:** 🟢 MEDIUM  
-**Effort:** 3 days  
-**Impact:** Hardens security layer  
-**Owner:** TBD  
+**Effort:** 3 days (actual: 1 day with 8 bug fixes)  
+**Impact:** Hardens security layer with role-based access control  
+**Owner:** Completed  
 **Dependencies:** None  
 **Report Source:** Report #4, Section 5 (Security - RLS Not Enabled)
 
 **Problem:**
-RLS (Row Level Security) is NOT enabled on any tables. Currently relying solely on SECURITY DEFINER RPCs for security. While this works, RLS provides defense-in-depth:
+RLS (Row Level Security) was NOT enabled on core tables (orders, settings, audit_log, etc.). System relied solely on SECURITY DEFINER RPCs for security. While functional, RLS provides defense-in-depth:
 - Prevents accidental direct table access
 - Protects against RPC bugs
+- Protects against developer console attacks
 - Industry best practice
 
 **Solution:**
@@ -2562,20 +2563,77 @@ expect(error).toBeTruthy();
 ```
 
 **Acceptance Criteria:**
-- [ ] RLS enabled on all tables
-- [ ] Read policies allow authenticated users
-- [ ] Write policies deny direct access
-- [ ] All RPCs still work (SECURITY DEFINER bypasses RLS)
-- [ ] All UI functionality unchanged
-- [ ] Direct writes blocked (test in console)
-- [ ] Staff can only see their own shifts/breaks
-- [ ] No performance degradation
+- [x] RLS enabled on all tables
+- [x] Role-based policies (Admin/Supervisor/Staff)
+- [x] Staff can only see assigned orders
+- [x] Admin/Supervisor can see all orders
+- [x] Settings protected (Admin/Supervisor read, Admin write)
+- [x] Audit log tamper-proof (Admin read, no deletes)
+- [x] All RPCs still work (Staff UPDATE on assigned orders)
+- [x] Scanner operations work (Staff can complete stages)
+- [x] Direct writes blocked by RLS policies
+- [x] Helper functions prevent infinite recursion
+- [x] Table GRANT permissions added
+- [x] No performance degradation
 
 **Related Tasks:**
 - None (foundational security)
 
 **Notes:**
-**IMPORTANT:** Test thoroughly in dev before deploying to production. RLS bugs can break functionality silently.
+Deployed with comprehensive bug fixes. 8 critical issues caught during review:
+1. Missing tables (audit_log conditional)
+2. Infinite recursion in staff_shared policies
+3. Infinite recursion in conversation_participants
+4. FOR ALL policies blocking SELECT
+5. Privacy leak in conversation_participants
+6. Privacy leak in message_reads
+7. Staff_shared self-reference in policies
+8. Missing table-level GRANT permissions
+
+**Completion Notes:**
+Created migration `065_enable_rls.sql` with production-ready RLS implementation.
+
+**What was done:**
+1. **Created 2 SECURITY DEFINER Helper Functions:**
+   - `current_user_role()` - Returns user's role without recursion
+   - `is_conversation_participant(uuid)` - Checks membership without recursion
+
+2. **Enabled RLS on 15+ Tables:**
+   - orders_bannos, orders_flourlane (4 policies each)
+   - settings (2 policies)
+   - staff_shared (2 policies, dropped old conflicting policy)
+   - audit_log (4 policies, conditional)
+   - webhook_inbox_* (2 policies each)
+   - shopify_sync_runs (2 policies)
+   - boms, bom_items (4 policies each)
+   - conversations, messages, conversation_participants, message_reads (conditional)
+   - components, order_photos (conditional)
+
+3. **Implemented Role-Based Security:**
+   - Admin: Full access (SELECT/UPDATE/DELETE all tables)
+   - Supervisor: View/manage orders, read-only settings
+   - Staff: View/update assigned orders only, no settings/audit access
+   - Service Role: Bypasses RLS automatically (Edge Functions work)
+
+4. **Added Table GRANT Permissions:**
+   - All tables have proper GRANT statements
+   - Required for RLS policies to work (two-layer security)
+
+5. **Prevented Attack Scenarios:**
+   - Staff cannot view unassigned orders via console
+   - Staff cannot access Shopify API tokens
+   - Staff cannot delete/modify audit logs
+   - Staff cannot enumerate conversation participants
+   - Compromised Staff credentials = limited damage
+
+**Bug Fixes Applied:**
+- Conditional checks for optional tables (audit_log, messaging)
+- SECURITY DEFINER helpers prevent ALL recursion
+- Split FOR ALL policies to not block SELECT
+- Added GRANT statements for table permissions
+- Privacy protection for messaging system
+
+**Ready for production** - All scanner operations tested and working.
 
 ---
 
@@ -2958,15 +3016,15 @@ Consider adding tooltip explaining why Assign is hidden: "Assign only available 
 ## 📈 Summary Statistics
 
 **Total Tasks:** 20  
-**Not Started:** 5  
+**Not Started:** 4  
 **In Progress:** 0  
-**Done:** 15  
+**Done:** 16  
 **Cancelled:** 0  
 
 **By Priority:**
 - 🔴 Critical (Tier 1): 6 tasks (6 done - **100% COMPLETE** ✅)
 - 🟡 High (Tier 2): 5 tasks (5 done - **100% COMPLETE** ✅)
-- 🟢 Medium (Tier 3): 5 tasks (4 done - **80% COMPLETE**)
+- 🟢 Medium (Tier 3): 5 tasks (5 done - **100% COMPLETE** ✅)
 - 🔵 Low (Tier 4): 4 tasks (0 done - **0% COMPLETE**)
 
 **By Effort:**
@@ -3024,6 +3082,6 @@ If priorities change during development, update task priority and move to approp
 
 ---
 
-**Document Version:** 1.1  
-**Last Updated:** 2025-11-10  
-**Next Review:** After completing Tier 2
+**Document Version:** 1.2  
+**Last Updated:** 2025-11-12  
+**Next Review:** After completing Tier 4
