@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardContent } from "./DashboardContent";

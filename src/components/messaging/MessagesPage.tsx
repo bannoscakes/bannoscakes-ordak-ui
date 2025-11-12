@@ -338,7 +338,10 @@ export function MessagesPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleBackToDashboard}
+                onClick={() => {
+                  window.history.pushState({}, '', '/');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
                 className="h-8 w-8 p-0 mr-2"
                 title="Back to Dashboard"
               >
