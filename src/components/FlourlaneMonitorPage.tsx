@@ -138,11 +138,12 @@ export function FlourlaneMonitorPage() {
       orders.forEach((order: any) => {
         if (!order.due_date) return;
         
-        const orderDate = order.due_date.split('T')[0]; // Get YYYY-MM-DD
+        // Convert order's due_date to local date string to match week boundaries
+        const orderDateLocal = formatDateLocal(new Date(order.due_date));
         
         // Only process orders within the current week's date range
-        if (orderDate >= weekStartStr && orderDate <= weekEndStr) {
-          const dayIndex = days.findIndex(d => d.dateStr === orderDate);
+        if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
+          const dayIndex = days.findIndex(d => d.dateStr === orderDateLocal);
           
           if (dayIndex !== -1) {
             days[dayIndex].orders.push({
