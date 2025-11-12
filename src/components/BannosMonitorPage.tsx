@@ -105,11 +105,6 @@ export function BannosMonitorPage() {
   const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getCurrentWeekStart());
 
-  // Reset to current week when component mounts
-  useEffect(() => {
-    setCurrentWeekStart(getCurrentWeekStart());
-  }, []);
-
   useEffect(() => {
     fetchWeeklyOrders();
   }, [currentWeekStart]);
