@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -114,14 +114,20 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Track current store to prevent race conditions with in-flight requests
+  const currentStoreRef = useRef(store);
 
-  // Reset status states when switching stores (prevents cross-contamination)
+  // Reset status and UI states when switching stores (prevents cross-contamination)
   useEffect(() => {
+    currentStoreRef.current = store;  // Update ref to current store
     setConnectionStatus('idle');
     setSyncStatus('idle');
     setIsConnecting(false);
     setIsSyncing(false);
     setSyncProgress({ imported: 0, skipped: 0, errors: 0 });
+    setHasUnsavedChanges(false);  // Clear "unsaved changes" footer
+    setNewBlackoutDate('');  // Clear partially-entered blackout date
   }, [store]);
 
   // Fetch settings from database
@@ -237,11 +243,18 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       return;
     }
 
+    const requestStore = store;  // Capture store at request time
     setIsConnecting(true);
     setConnectionStatus('idle');
     
     try {
       const result = await testAdminToken(store, settings.shopifyToken);
+      
+      // Check if user switched stores while request was in-flight
+      if (currentStoreRef.current !== requestStore) {
+        console.log('Store changed during token test - ignoring result');
+        return;
+      }
       
       if (result.valid) {
         setConnectionStatus('success');
@@ -253,20 +266,33 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       }
     } catch (error) {
       console.error('Token validation error:', error);
-      setConnectionStatus('error');
-      toast.error("Token validation failed. Check token and permissions.");
+      // Only update status if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setConnectionStatus('error');
+        toast.error("Token validation failed. Check token and permissions.");
+      }
     } finally {
-      setIsConnecting(false);
+      // Only clear loading state if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setIsConnecting(false);
+      }
     }
   };
 
   const handleSyncOrders = async () => {
+    const requestStore = store;  // Capture store at request time
     setIsSyncing(true);
     setSyncStatus('idle');
     setSyncProgress({ imported: 0, skipped: 0, errors: 0 });
     
     try {
       const result = await syncShopifyOrders(store);
+      
+      // Check if user switched stores while request was in-flight
+      if (currentStoreRef.current !== requestStore) {
+        console.log('Store changed during sync - ignoring result');
+        return;
+      }
       
       if (result.success) {
         setSyncStatus('success');
@@ -292,10 +318,16 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       }
     } catch (error) {
       console.error('Sync orders error:', error);
-      setSyncStatus('error');
-      toast.error("Sync failed");
+      // Only update status if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setSyncStatus('error');
+        toast.error("Sync failed");
+      }
     } finally {
-      setIsSyncing(false);
+      // Only clear loading state if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setIsSyncing(false);
+      }
     }
   };
 
