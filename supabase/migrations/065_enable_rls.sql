@@ -39,8 +39,27 @@ $$;
 
 COMMENT ON FUNCTION public.current_user_role() IS 'Get current user role (SECURITY DEFINER bypasses RLS to prevent recursion)';
 
--- Grant execute to authenticated users
 GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+
+-- Helper function to check if user is a participant in a conversation
+-- Used by conversation_participants policy to avoid infinite recursion
+CREATE OR REPLACE FUNCTION public.is_conversation_participant(p_conversation_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM conversation_participants
+    WHERE conversation_id = p_conversation_id
+    AND user_id = auth.uid()
+  );
+$$;
+
+COMMENT ON FUNCTION public.is_conversation_participant(uuid) IS 'Check if current user is participant in conversation (SECURITY DEFINER bypasses RLS to prevent recursion)';
+
+GRANT EXECUTE ON FUNCTION public.is_conversation_participant(uuid) TO authenticated;
 
 -- ============================================================================
 -- CORE TABLES: orders_bannos, orders_flourlane
@@ -379,16 +398,8 @@ BEGIN
         FOR SELECT TO authenticated
         USING (
           created_by = auth.uid()
-          OR EXISTS (
-            SELECT 1 FROM conversation_participants 
-            WHERE conversation_id = conversations.id 
-            AND user_id = auth.uid()
-          )
-          OR EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          OR is_conversation_participant(conversations.id)  -- Uses SECURITY DEFINER helper to avoid recursion
+          OR current_user_role() = 'Admin'
         );
     END IF;
   END IF;
@@ -411,16 +422,8 @@ BEGIN
         FOR SELECT TO authenticated
         USING (
           sender_id = auth.uid()
-          OR EXISTS (
-            SELECT 1 FROM conversation_participants 
-            WHERE conversation_id = messages.conversation_id 
-            AND user_id = auth.uid()
-          )
-          OR EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          OR is_conversation_participant(messages.conversation_id)  -- Uses SECURITY DEFINER helper to avoid recursion
+          OR current_user_role() = 'Admin'
         );
     END IF;
   END IF;
@@ -442,17 +445,9 @@ BEGIN
       CREATE POLICY "conversation_participants_select_own" ON conversation_participants
         FOR SELECT TO authenticated
         USING (
-          user_id = auth.uid()  -- Can see their own participation
-          OR EXISTS (
-            SELECT 1 FROM conversation_participants cp2
-            WHERE cp2.conversation_id = conversation_participants.conversation_id 
-            AND cp2.user_id = auth.uid()
-          )
-          OR EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          user_id = auth.uid()  -- Can see their own participation records
+          OR is_conversation_participant(conversation_participants.conversation_id)  -- Uses SECURITY DEFINER helper to avoid recursion
+          OR current_user_role() = 'Admin'
         );
     END IF;
     
@@ -488,16 +483,8 @@ BEGIN
         FOR SELECT TO authenticated
         USING (
           user_id = auth.uid()  -- Can see their own read status
-          OR EXISTS (
-            SELECT 1 FROM conversation_participants 
-            WHERE conversation_id = message_reads.conversation_id 
-            AND user_id = auth.uid()
-          )
-          OR EXISTS (
-            SELECT 1 FROM staff_shared 
-            WHERE user_id = auth.uid() 
-            AND role = 'Admin'
-          )
+          OR is_conversation_participant(message_reads.conversation_id)  -- Uses SECURITY DEFINER helper to avoid recursion
+          OR current_user_role() = 'Admin'
         );
     END IF;
     
