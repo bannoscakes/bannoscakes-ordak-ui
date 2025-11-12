@@ -108,19 +108,48 @@ Complete fix of Task 12 Shopify Integration with Admin API order sync. Removed u
 - `src/lib/rpc-client.ts` - Updated client functions with Edge Function invocation
 - `src/components/SettingsPage.tsx` - UI updates for Admin API
 
-**Branch:** `fix/task-12-admin-api-order-sync`  
-**PR:** #217  
-**Merged:** 2025-11-11  
-**Commits:** 5 commits squash-merged
-1. Initial implementation (Admin API switch, catalog removal)
-2. Timezone & Edge Function invocation fixes (bugs 1-3)
-3. Request body consumption fixes (bugs 4-5)
-4. Order number sanitization fix (bug 6)
-5. API version update with env configuration (bug 7)
+**Initial Implementation:**
+- **PR #217** - Admin API switch, 7 critical bugs fixed
+- **PR #218** - Documentation updates
+
+**Follow-up Bug Fixes (14 additional bugs found during testing):**
+- **PR #219** - Settings data cross-contamination (6 bugs)
+- **PR #220** - Status/UI cross-contamination + race conditions (5 bugs)
+- **PR #221** - JSONB token extraction (2 bugs)
+- **PR #222** - audit_log FK violation (1 bug)
+
+**Total:** 21 bugs fixed, 6 PRs merged, 2 migrations (063, 064)
+
+### 🐛 Complete Bug List (21 Total)
+
+**From PR #217 (Implementation):**
+1-7. Initial 7 bugs (timezone, Edge Function invocation, body consumption, order sanitization, API version)
+
+**From PR #219 (Data Isolation):**
+8. shopifyToken cross-contamination
+9. flavours cross-contamination  
+10. storage cross-contamination
+11. monitor.density cross-contamination
+12. monitor.autoRefresh cross-contamination
+13. dueDates.defaultDue cross-contamination
+
+**From PR #220 (Status Isolation):**
+14. Sync status cross-contamination
+15. hasUnsavedChanges persists
+16. newBlackoutDate persists
+17-18. Race conditions (in-flight requests)
+
+**From PR #221 (Token Extraction):**
+19. JSONB token not extracted
+20. String(object) corruption
+
+**From PR #222 (Database):**
+21. audit_log FK violation
 
 ### 🔗 References
-- Master_Task.md - Task 12 (marked complete)
-- TASK_12_FIX_COMPLETE.md - Full implementation details
+- Master_Task.md - Task 12 (21 bugs documented)
+- TASK_12_FIX_COMPLETE.md - Initial implementation
+- TASK_12_FINAL_STATUS.md - Complete verification
 
 ---
 

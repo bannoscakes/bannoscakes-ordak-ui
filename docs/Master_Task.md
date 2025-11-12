@@ -1701,9 +1701,9 @@ This is a large task. Consider breaking into:
 4. PR4: Edge Function for order sync
 
 **Completion Notes (2025-11-11):**
-**FIXED in PR #217** - Complete Admin API implementation with 7 critical bug fixes.
+**COMPLETE with 21 bugs fixed across 6 PRs!** Full Admin API implementation tested and working.
 
-**What was done:**
+**Implementation (PR #217):**
 1. **Migration 063_fix_shopify_integration.sql:**
    - ❌ Removed `connect_catalog()` RPC - Not needed (BOMs handle inventory)
    - ❌ Removed `test_storefront_token()` RPC - Wrong API
@@ -1721,36 +1721,58 @@ This is a large task. Consider breaking into:
    - Edge Functions properly invoked after RPC calls
    - SettingsPage: Removed catalog sync button, updated labels to Admin API
 
-**Critical Bug Fixes (7 total):**
-1. **Timezone Drift** - Use UTC midnight for date comparison (setUTCHours)
-2. **Order Sync Silent Failure** - Frontend now invokes Edge Function
-3. **Token Test Incomplete** - Frontend now invokes Edge Function
-4. **Body Consumption (test-shopify-token)** - Parse run_id outside try block
-5. **Body Consumption (sync-shopify-orders)** - Parse run_id outside try block
-6. **Order Number Corruption** - Use regex `/^#?B?/` instead of chained replace
-7. **Outdated API Version** - Configurable via env var, defaults to 2025-01
+**Critical Bugs Fixed (PR #217 - 7 bugs):**
+1. Timezone Drift - Use UTC midnight for date comparison
+2. Order Sync Silent Failure - Frontend now invokes Edge Function
+3. Token Test Incomplete - Frontend now invokes Edge Function
+4. Body Consumption (test-shopify-token) - Parse run_id outside try block
+5. Body Consumption (sync-shopify-orders) - Parse run_id outside try block
+6. Order Number Corruption - Use regex `/^#?B?/` instead of chained replace
+7. Outdated API Version - Configurable via env var, defaults to 2025-01
+
+**Cross-Contamination Bugs Fixed (PR #219 - 6 bugs):**
+8. shopifyToken cross-contamination between stores
+9. flavours cross-contamination (Bannos 4 → Flourlane 8)
+10. storage cross-contamination
+11. monitor.density cross-contamination
+12. monitor.autoRefresh cross-contamination
+13. dueDates.defaultDue cross-contamination
+
+**Status & UI Bugs Fixed (PR #220 - 5 bugs):**
+14. Sync status cross-contamination (Bannos error showing in Flourlane)
+15. hasUnsavedChanges footer persists across stores
+16. newBlackoutDate input persists across stores
+17. Race condition - in-flight token test updates wrong store
+18. Race condition - in-flight sync updates wrong store
+
+**Token Extraction Bugs Fixed (PR #221 - 2 bugs):**
+19. JSONB token not extracted (Failed to construct Request)
+20. String(object) produces "[object Object]" invalid token
+
+**Database Bugs Fixed (PR #222 - 1 bug):**
+21. audit_log FK violation preventing sync
+
+**Follow-up Migrations:**
+- Migration 064_fix_sync_audit_log_fkey.sql - Remove audit_log FK violation
 
 **Architecture:**
-- Button → RPC (creates run record, saves token) → Frontend invokes Edge Function → Edge Function updates run status
-- Tokens stored in `settings` table with key `'shopifyToken'` (matches webhooks)
+- Button → RPC → Frontend invokes Edge Function → Edge Function updates run status
+- Tokens stored per-store in `settings` table with key `'shopifyToken'`
 - Sync history tracked in `shopify_sync_runs`
+- Orders imported to `webhook_inbox_bannos` / `webhook_inbox_flourlane` (same as webhooks)
 - Store URLs: bannos.myshopify.com, flour-lane.myshopify.com
 
-**What works:**
+**Verified Working (Tested 2025-11-11):**
 - ✅ Test Admin API Token validates with real Shopify API
 - ✅ Sync Orders fetches unfulfilled orders with pagination
-- ✅ Filters by due date tags (format: "Fri 14 Nov 2025")
-- ✅ Skips past-due and duplicate orders
-- ✅ Inserts to webhook_inbox for existing webhook worker
-- ✅ All operations logged with complete audit trail
-- ✅ Error tracking works (sync runs update to success/error)
+- ✅ Imports old orders placed before webhooks enabled
+- ✅ Complete store isolation (Bannos ↔ Flourlane separate)
+- ✅ No cross-contamination (settings, status, UI state)
+- ✅ Race condition protection for in-flight requests
+- ✅ All 21 bugs fixed and tested
 
-**Deployment:**
-1. Migration already in dev: `063_fix_shopify_integration.sql`
-2. Edge Functions ready for deployment: `supabase functions deploy test-shopify-token sync-shopify-orders`
-3. Optional: Set `SHOPIFY_API_VERSION` env var for custom API version
-
-**Reference:** TASK_12_FIX_COMPLETE.md, PR #217, CHANGELOG.md v0.9.9-beta
+**PRs:** #217 (implementation), #218 (docs), #219 (data isolation), #220 (status isolation), #221 (token extraction), #222 (FK fix)  
+**Reference:** TASK_12_FIX_COMPLETE.md, TASK_12_FINAL_STATUS.md, CHANGELOG.md v0.9.9-beta
 
 ---
 
