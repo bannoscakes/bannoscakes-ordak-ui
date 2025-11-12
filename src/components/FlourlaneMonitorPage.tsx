@@ -24,6 +24,14 @@ interface WeekDay {
   orders: OrderPill[];
 }
 
+// Helper: Format date as YYYY-MM-DD in local timezone (not UTC)
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Helper: Get Monday of current week
 const getCurrentWeekStart = (): Date => {
   const today = new Date();
@@ -44,7 +52,7 @@ const getWeekDates = (startMonday: Date): WeekDay[] => {
     return {
       date,
       dayName,
-      dateStr: date.toISOString().split('T')[0],
+      dateStr: formatDateLocal(date), // Use local timezone, not UTC
       orders: []
     };
   });
@@ -128,8 +136,9 @@ export function FlourlaneMonitorPage() {
       const days = getWeekDates(currentWeekStart);
       
       // Group orders by due date - only include orders within the displayed week
-      const weekStartStr = weekStart.toISOString().split('T')[0];
-      const weekEndStr = weekEnd.toISOString().split('T')[0];
+      // Use local timezone formatting to avoid UTC date shift bugs
+      const weekStartStr = formatDateLocal(weekStart);
+      const weekEndStr = formatDateLocal(weekEnd);
       
       orders.forEach((order: any) => {
         if (!order.due_date) return;
