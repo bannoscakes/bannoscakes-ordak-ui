@@ -351,8 +351,7 @@ BEGIN
         90::numeric as target,  -- Default target: 90%
         COUNT(*)::bigint as output
       FROM public.%I
-      WHERE stage = ''Filling''
-        AND filling_start_ts IS NOT NULL
+      WHERE filling_start_ts IS NOT NULL
         AND filling_complete_ts IS NOT NULL
         AND filling_complete_ts >= (now() - (%L || '' days'')::interval)
       
@@ -373,8 +372,7 @@ BEGIN
         88::numeric as target,
         COUNT(*)::bigint as output
       FROM public.%I
-      WHERE stage = ''Covering''
-        AND filling_complete_ts IS NOT NULL
+      WHERE filling_complete_ts IS NOT NULL
         AND covering_complete_ts IS NOT NULL
         AND covering_complete_ts >= (now() - (%L || '' days'')::interval)
       
@@ -395,8 +393,7 @@ BEGIN
         85::numeric as target,
         COUNT(*)::bigint as output
       FROM public.%I
-      WHERE stage = ''Decorating''
-        AND covering_complete_ts IS NOT NULL
+      WHERE covering_complete_ts IS NOT NULL
         AND decorating_complete_ts IS NOT NULL
         AND decorating_complete_ts >= (now() - (%L || '' days'')::interval)
       
@@ -417,8 +414,7 @@ BEGIN
         92::numeric as target,
         COUNT(*)::bigint as output
       FROM public.%I
-      WHERE stage = ''Packing''
-        AND packing_start_ts IS NOT NULL
+      WHERE packing_start_ts IS NOT NULL
         AND packing_complete_ts IS NOT NULL
         AND packing_complete_ts >= (now() - (%L || '' days'')::interval)
     ) all_stations
@@ -429,7 +425,7 @@ BEGIN
         WHEN ''Decoration'' THEN 3
         WHEN ''Packing'' THEN 4
       END;
-  ', v_table_name, v_table_name, p_days, v_table_name, p_days, v_table_name, p_days, v_table_name, p_days);
+  ', v_table_name, p_days, v_table_name, p_days, v_table_name, p_days, v_table_name, p_days);
 END;
 $function$;
 
