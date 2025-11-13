@@ -45,7 +45,7 @@ export function MetricCards({ store }: MetricCardsProps) {
           {
             title: "Completed",
             value: stats.completed_orders?.toString() || "0",
-            subtitle: `${stats.in_production || 0} in production`,
+            subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
             icon: CheckCircle,
             bg: "bg-green-50",
             iconColor: "text-green-600"
