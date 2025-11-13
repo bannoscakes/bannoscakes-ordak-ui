@@ -1,3 +1,191 @@
+## v0.10.3-beta — React Performance: Fix Stale Closures & Hard Reloads (2025-11-13)
+
+### 🎯 Overview
+Fix critical React hooks issues causing app to require manual refreshes. Resolves stale closures in data fetch functions, adds JWT auto-recovery, removes hard reloads after auth transitions, and fixes messaging race conditions. Users can now navigate and update data seamlessly without manual page refreshes.
+
+### 🐛 Critical Issues Fixed
+
+**1. Dashboard Stats Stale Closure**
+- `loadDashboardStats` not wrapped in useCallback
+- 30-second interval called old function version
+- Stats didn't update without manual refresh
+- **Fix**: Wrapped in useCallback with stable dependencies
+
+**2. QueueTable Stale Closure**  
+- `fetchQueueData` missing from useEffect dependencies
+- Queue didn't refresh when filters changed
+- **Fix**: Wrapped in useCallback with `[store, storageFilter, showErrorWithRetry]`
+
+**3. JWT Expiry Forced Manual Refresh**
+- Session expiry threw error requiring page reload
+- No auto-recovery mechanism
+- **Fix**: Added `supabase.auth.refreshSession()` before failing
+
+**4. Messaging Stale Closures**
+- loadConversations, loadMessages, loadUnreadCount recreated on every render
+- eslint-disable comments hid real dependency issues
+- **Fix**: Wrapped all in useCallback, removed eslint-disable, proper dependencies
+
+**5. Hard Reloads Lost App State**
+- `window.location.reload()` after sign-in/sign-out
+- Heavy-handed navigation losing state
+- **Fix**: React state updates and PopStateEvent for navigation
+
+**6. Ineffective Debounce Pattern**
+- Debounce returned cleanup but caller didn't use it
+- Multiple timeouts fired instead of just one
+- **Fix**: useRef to track and clear previous timeout
+
+**7. Memory Leaks from Unmounted Timers**
+- Debounce timer not cleaned up on unmount
+- setTimeout fired after component destroyed
+- **Fix**: Added useEffect cleanup for timer
+
+**8. Stale Message Updates (Race Condition)**
+- Earlier loadMessages could overwrite newer conversation
+- Fast switching showed wrong messages
+- **Fix**: useRef to track selected conversation, guard state updates
+
+### ✅ Added
+- Automatic JWT session refresh in RPC error handler
+- useCallback wrappers for all data-fetching functions
+- useRef pattern for proper debounce implementation
+- Cleanup effects for timers to prevent memory leaks
+- Stale state guards for async operations
+
+### ❌ Removed
+- window.location.reload() calls (3 locations)
+- eslint-disable-next-line comments for exhaustive-deps
+- Duplicate function definitions in messaging components
+- Duplicate updateAuthState calls in auth.ts
+
+### 🔧 Changed
+- loadDashboardStats: async function → useCallback
+- fetchQueueData: async function → useCallback  
+- Messaging functions: async functions → useCallback
+- Navigation: hard reload → PopStateEvent
+- JWT error message: "refresh page" → "sign in again"
+
+### 📊 Impact
+- ✅ App updates automatically without manual refresh
+- ✅ 30-second stat intervals work correctly
+- ✅ JWT tokens auto-refresh seamlessly
+- ✅ Auth transitions smooth (no reload jarring)
+- ✅ Messaging updates in real-time
+- ✅ No memory leaks from abandoned timers
+- ✅ No stale data from race conditions
+
+### 🔧 Technical Details
+- **Migration**: None (frontend-only changes)
+- **Files Modified**: 8 files
+  - Dashboard.tsx, QueueTable.tsx
+  - MessagesPage.tsx, MainDashboardMessaging.tsx
+  - rpc-client.ts, auth.ts
+  - StaffPage.tsx, ProtectedRoute.tsx
+
+### 📦 Files Changed
+- `src/components/Dashboard.tsx` - useCallback for loadDashboardStats
+- `src/components/QueueTable.tsx` - useCallback for fetchQueueData
+- `src/lib/rpc-client.ts` - JWT auto-recovery with refreshSession()
+- `src/components/messaging/MessagesPage.tsx` - useCallback wrappers, debounce fix
+- `src/components/MainDashboardMessaging.tsx` - useCallback wrappers, debounce fix
+- `src/lib/auth.ts` - Remove hard reload after signOut
+- `src/components/StaffPage.tsx` - PopStateEvent navigation
+- `src/components/Auth/ProtectedRoute.tsx` - Remove reload after login
+
+### 🔗 References
+- PR #230 (merged to dev, 8 commits)
+- Issue: Users reporting frequent need to manually refresh app
+
+---
+
+## v0.10.2-beta — Weekly Calendar Monitors for Kitchen Displays (2025-11-13)
+
+### 🎯 Overview
+Implement weekly calendar monitors for Bannos and Flourlane kitchen wall displays. Replaces mock data with real orders from get_queue RPC, displays orders as stage-colored pills grouped by due date across a Monday-Sunday weekly view.
+
+### ✅ Added
+- **Weekly Calendar Layout**: 7-day grid (Monday-Sunday) with vertical separators
+- **Real Data Integration**: Fetches orders via `getQueue` RPC (limit 5000)
+- **Stage-Colored Pills**: Order badges colored by production stage
+  - Filling → Blue
+  - Covering → Purple
+  - Decorating → Pink
+  - Packing → Orange
+  - Complete → Green
+- **Week Navigation**: Arrow buttons to navigate previous/next weeks
+- **Dynamic Date Range**: Header updates to show current week dates
+- **New Year Week Handling**: Shows both years when week spans New Year (e.g., "Dec 29, 2025 - Jan 04, 2026")
+- **Timezone-Safe Dates**: Uses local timezone formatting instead of UTC
+- **Auto-Reset**: Returns to current week when switching between monitors
+- **Structured Error Logging**: Includes RPC name, store, date range, error details
+
+### 🐛 Critical Bugs Fixed
+
+**1. Timezone Date Shifts**
+- toISOString() caused date shifts in non-UTC timezones
+- **Fix**: formatDateLocal() using getFullYear(), getMonth(), getDate()
+
+**2. Missing Orders (500 Limit)**
+- Only first 500 orders fetched, future weeks empty
+- **Fix**: Increased limit to 5000, added date range filtering
+
+**3. Duplicate API Calls on Mount**
+- First useEffect set state triggering second useEffect
+- **Fix**: Removed redundant useEffect
+
+**4. Invalid Date Handling**
+- No validation for malformed due_date timestamps
+- **Fix**: Check Number.isNaN(due.getTime()) before processing
+
+**5. Loading Layout Shift**
+- Skeleton used gap-4 but content used gap-1
+- **Fix**: Matched skeleton grid spacing
+
+**6. Order Date UTC Mismatch**
+- Compared UTC order dates with local week boundaries
+- **Fix**: Convert order.due_date to local before comparison
+
+### ❌ Removed
+- All mock data arrays (bannosWeekData, flourlaneWeekData)
+- Unused priority/status helpers (getPriorityColor, getStatusIcon)
+- Delivery time displays (not in system)
+- stats prop from monitor components
+
+### 🔧 Changed
+- Monitor view: Card-based layout → Calendar grid layout
+- Data source: Mock arrays → getQueue RPC
+- Date display: Static "Sep 01 - Sep 06" → Dynamic current week
+- Order pills: Large cards with details → Compact colored badges
+- Grid: 6 columns → 7 columns (Mon-Sun)
+
+### 📊 Impact
+- ✅ Kitchen monitors show real orders from database
+- ✅ Orders grouped by actual due dates
+- ✅ Week navigation for planning future/past weeks
+- ✅ Stage colors match existing UI design patterns
+- ✅ Timezone-safe (works in any timezone)
+- ✅ Handles New Year week transitions properly
+- ✅ No layout shifts during loading
+
+### 🔧 Technical Details
+- **Data Flow**: getQueue RPC → Group by due_date → Display in week grid
+- **Date Calculations**: getCurrentWeekStart(), getWeekDates(), formatDateLocal()
+- **Color System**: Uses existing stage color classes (bg-50, border-200, text-700, dot-500)
+- **Performance**: Fetches 5000 orders once, filters client-side by week
+- **State Management**: currentWeekStart state triggers refetch on navigation
+
+### 📦 Files Changed
+- `src/components/BannosMonitorPage.tsx` - Complete rebuild (405→295 lines)
+- `src/components/FlourlaneMonitorPage.tsx` - Complete rebuild (397→295 lines)
+- `src/components/Dashboard.tsx` - Remove stats prop
+
+### 🔗 References
+- PR #229 (merged to dev, single clean commit)
+- Issue: Monitors not functional, showing mock data only
+
+---
+
 ## v0.10.1-beta — RLS Coverage Complete: System Tables (2025-11-12)
 
 ### 🎯 Overview
