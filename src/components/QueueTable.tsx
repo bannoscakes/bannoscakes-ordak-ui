@@ -48,6 +48,8 @@ interface QueueTableProps {
 export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
   const [loading, setLoading] = useState(true);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
@@ -88,16 +90,22 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   // Fetch queue data - wrapped in useCallback to prevent stale closures
   const fetchQueueData = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show full loading skeleton on initial load
+      if (!hasInitiallyLoaded) {
+        setLoading(true);
+      } else {
+        // Show subtle refresh indicator for subsequent loads
+        setIsRefreshing(true);
+      }
       setError(null);
-      
+
       // Fetch queue data using the new RPC
       const orders = await getQueue({
         store,
         storage: storageFilter,
         limit: 200,
       });
-      
+
       // Group orders by stage
       const grouped: { [key: string]: QueueItem[] } = {
         unassigned: [],
@@ -107,7 +115,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         packing: [],
         complete: [],
       };
-      
+
       orders.forEach((order: any) => {
         const item: QueueItem = {
           id: order.id,
@@ -124,7 +132,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           method: order.delivery_method === 'delivery' ? 'Delivery' : 'Pickup',
           storage: order.storage || '',
         };
-        
+
         // Group by stage
         const stageKey = order.stage?.toLowerCase() || 'unassigned';
         if (!order.assignee_id && stageKey === 'filling') {
@@ -137,8 +145,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           grouped[stageKey].push(item);
         }
       });
-      
+
       setQueueData(grouped);
+      setHasInitiallyLoaded(true);
     } catch (error) {
       console.error('Failed to fetch queue:', error);
       setError(error);
@@ -148,8 +157,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       });
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, [store, storageFilter, showErrorWithRetry]);
+  }, [store, storageFilter, showErrorWithRetry, hasInitiallyLoaded]);
 
   // Fetch real queue data from Supabase
   useEffect(() => {
@@ -273,9 +283,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           <div className="flex items-center justify-between mb-4">
             <h2>Production Queue - {store.charAt(0).toUpperCase() + store.slice(1)}</h2>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
+              <Clock className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-sm text-muted-foreground">
-                Last updated: {new Date().toLocaleTimeString()}
+                {isRefreshing ? 'Refreshing...' : `Last updated: ${new Date().toLocaleTimeString()}`}
               </span>
             </div>
           </div>
