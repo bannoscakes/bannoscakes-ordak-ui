@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { 
-  TrendingUp, 
-  TrendingDown, 
   Users, 
   Clock, 
   Target,
   Calendar,
-  Award,
-  AlertCircle,
   Star,
   CheckCircle,
   UserCheck,
@@ -21,7 +16,6 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
 import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance } from "../lib/rpc-client";
 import { toast } from "sonner";
-import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
 import ChartContainer from "@/components/analytics/ChartContainer";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 import KpiValue from "@/components/analytics/KpiValue";

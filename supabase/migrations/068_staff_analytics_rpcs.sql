@@ -1,4 +1,4 @@
--- Migration 068: Staff Analytics RPCs
+24-- Migration 068: Staff Analytics RPCs
 -- Date: 2025-11-13
 -- Purpose: Add RPCs for Staff Analytics metrics (Attendance Rate, Avg Productivity)
 --
@@ -283,6 +283,151 @@ GRANT EXECUTE ON FUNCTION public.get_department_performance(integer) TO authenti
 -- ============================================================================
 
 COMMENT ON FUNCTION public.get_department_performance IS 'Get department performance by store. Calculates efficiency from order completion times. Returns Bannos Production and Flourlane Production based on staff.store field.';
+
+-- ============================================================================
+-- RPC 4: get_store_production_efficiency
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.get_store_production_efficiency(
+  p_store text,
+  p_days integer DEFAULT 30
+)
+RETURNS TABLE(
+  station text,
+  efficiency numeric,
+  target numeric,
+  output bigint
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+DECLARE
+  v_table_name text;
+BEGIN
+  -- Validate store parameter
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %. Must be bannos or flourlane', p_store;
+  END IF;
+  
+  v_table_name := 'orders_' || p_store;
+  
+  RETURN QUERY EXECUTE format('
+    SELECT 
+      station,
+      efficiency,
+      target,
+      output
+    FROM (
+      SELECT 
+        ''Filling''::text as station,
+        CASE 
+          WHEN COUNT(*) > 0 THEN
+            LEAST(100, GREATEST(0, 
+              ROUND(
+                ((30 - COALESCE(AVG(EXTRACT(EPOCH FROM (filling_complete_ts - filling_start_ts)) / 60), 30)) / 30) * 100,
+                1
+              )
+            ))
+          ELSE 0::numeric
+        END as efficiency,
+        90::numeric as target,  -- Default target: 90%
+        COUNT(*)::bigint as output
+      FROM public.%I
+      WHERE stage = ''Filling''
+        AND filling_start_ts IS NOT NULL
+        AND filling_complete_ts IS NOT NULL
+        AND filling_complete_ts >= (now() - (%L || '' days'')::interval)
+      
+      UNION ALL
+      
+      SELECT 
+        ''Covering''::text as station,
+        CASE 
+          WHEN COUNT(*) > 0 THEN
+            LEAST(100, GREATEST(0, 
+              ROUND(
+                ((25 - COALESCE(AVG(EXTRACT(EPOCH FROM (covering_complete_ts - filling_complete_ts)) / 60), 25)) / 25) * 100,
+                1
+              )
+            ))
+          ELSE 0::numeric
+        END as efficiency,
+        88::numeric as target,
+        COUNT(*)::bigint as output
+      FROM public.%I
+      WHERE stage = ''Covering''
+        AND filling_complete_ts IS NOT NULL
+        AND covering_complete_ts IS NOT NULL
+        AND covering_complete_ts >= (now() - (%L || '' days'')::interval)
+      
+      UNION ALL
+      
+      SELECT 
+        ''Decoration''::text as station,
+        CASE 
+          WHEN COUNT(*) > 0 THEN
+            LEAST(100, GREATEST(0, 
+              ROUND(
+                ((35 - COALESCE(AVG(EXTRACT(EPOCH FROM (decorating_complete_ts - covering_complete_ts)) / 60), 35)) / 35) * 100,
+                1
+              )
+            ))
+          ELSE 0::numeric
+        END as efficiency,
+        85::numeric as target,
+        COUNT(*)::bigint as output
+      FROM public.%I
+      WHERE stage = ''Decorating''
+        AND covering_complete_ts IS NOT NULL
+        AND decorating_complete_ts IS NOT NULL
+        AND decorating_complete_ts >= (now() - (%L || '' days'')::interval)
+      
+      UNION ALL
+      
+      SELECT 
+        ''Packing''::text as station,
+        CASE 
+          WHEN COUNT(*) > 0 THEN
+            LEAST(100, GREATEST(0, 
+              ROUND(
+                ((20 - COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - packing_start_ts)) / 60), 20)) / 20) * 100,
+                1
+              )
+            ))
+          ELSE 0::numeric
+        END as efficiency,
+        92::numeric as target,
+        COUNT(*)::bigint as output
+      FROM public.%I
+      WHERE stage = ''Packing''
+        AND packing_start_ts IS NOT NULL
+        AND packing_complete_ts IS NOT NULL
+        AND packing_complete_ts >= (now() - (%L || '' days'')::interval)
+    ) all_stations
+    ORDER BY 
+      CASE station
+        WHEN ''Filling'' THEN 1
+        WHEN ''Covering'' THEN 2
+        WHEN ''Decoration'' THEN 3
+        WHEN ''Packing'' THEN 4
+      END;
+  ', v_table_name, v_table_name, p_days, v_table_name, p_days, v_table_name, p_days, v_table_name, p_days);
+END;
+$function$;
+
+-- ============================================================================
+-- GRANTS (updated)
+-- ============================================================================
+
+GRANT EXECUTE ON FUNCTION public.get_store_production_efficiency(text, integer) TO authenticated;
+
+-- ============================================================================
+-- COMMENTS (updated)
+-- ============================================================================
+
+COMMENT ON FUNCTION public.get_store_production_efficiency IS 'Get production station efficiency for a store. Calculates efficiency from stage completion times. Returns Filling, Covering, Decoration, Packing with efficiency %, target %, and output count.';
 
 COMMIT;
 

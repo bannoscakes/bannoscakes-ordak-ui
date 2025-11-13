@@ -1274,6 +1274,16 @@ export async function getDepartmentPerformance(days: number = 30) {
   return data || [];
 }
 
+export async function getStoreProductionEfficiency(store: Store, days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_store_production_efficiency', {
+    p_store: store,
+    p_days: days,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
 // =============================================
 // BULK OPERATIONS
 // =============================================
