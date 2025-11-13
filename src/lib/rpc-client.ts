@@ -1244,6 +1244,28 @@ export async function adjustStaffTime(
 }
 
 // =============================================
+// STAFF ANALYTICS
+// =============================================
+
+export async function getStaffAttendanceRate(days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_attendance_rate', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function getStaffAvgProductivity(days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_avg_productivity', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+// =============================================
 // BULK OPERATIONS
 // =============================================
 

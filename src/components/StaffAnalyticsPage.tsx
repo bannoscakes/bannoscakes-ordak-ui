@@ -19,7 +19,7 @@ import {
   Activity
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
-import { getStaffList } from "../lib/rpc-client";
+import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity } from "../lib/rpc-client";
 import { toast } from "sonner";
 import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
 import ChartContainer from "@/components/analytics/ChartContainer";
@@ -133,58 +133,29 @@ const shiftDistribution = [
   { name: "Weekend", value: 10, employees: 6, color: "#8b5cf6" }
 ];
 
-const kpiMetrics = [
-  {
-    title: "Total Staff",
-    value: "23",
-    change: "+2",
-    trend: "up",
-    icon: Users,
-    color: "text-blue-600",
-    bg: "bg-blue-50"
-  },
-  {
-    title: "Avg Productivity",
-    value: "97.1%",
-    change: "+2.2%", 
-    trend: "up",
-    icon: Target,
-    color: "text-green-600",
-    bg: "bg-green-50"
-  },
-  {
-    title: "Attendance Rate",
-    value: "96.8%",
-    change: "+1.1%",
-    trend: "up",
-    icon: CheckCircle,
-    color: "text-purple-600",
-    bg: "bg-purple-50"
-  },
-  {
-    title: "Training Complete",
-    value: "74%",
-    change: "+12%",
-    trend: "up", 
-    icon: Award,
-    color: "text-orange-600",
-    bg: "bg-orange-50"
-  }
-];
+// Mock metrics removed - now using real data from RPCs
 
 export function StaffAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [totalStaff, setTotalStaff] = useState(0);
-  const [activeStaff, setActiveStaff] = useState(0);
+  const [avgProductivity, setAvgProductivity] = useState<number | null>(null);
+  const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const isEnabled = useAnalyticsEnabled();
   
-  // Fetch real staff data
+  // Fetch real staff analytics data
   useEffect(() => {
     async function fetchStaffStats() {
       try {
-        const staffList = await getStaffList(null, true); // Get all active staff
+        // Fetch all metrics in parallel
+        const [staffList, productivityData, attendanceData] = await Promise.all([
+          getStaffList(null, true), // Get all active staff
+          getStaffAvgProductivity(30), // Last 30 days
+          getStaffAttendanceRate(30) // Last 30 days
+        ]);
+        
         setTotalStaff(staffList.length);
-        setActiveStaff(staffList.filter(s => s.is_active).length);
+        setAvgProductivity(productivityData?.avg_productivity || null);
+        setAttendanceRate(attendanceData?.attendance_rate || null);
       } catch (error) {
         console.error('Error fetching staff stats:', error);
         toast.error('Failed to load staff analytics');
@@ -195,18 +166,36 @@ export function StaffAnalyticsPage() {
     fetchStaffStats();
   }, []);
   
-  // Update KPI metrics with real data where available
+  // Build KPI metrics with real data
   const kpiMetricsWithRealData = [
     {
       title: "Total Staff",
       value: loading ? "..." : totalStaff.toString(),
-      change: "+2",
-      trend: "up",
+      change: "",
+      trend: "neutral" as const,
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50"
     },
-    ...kpiMetrics.slice(1) // Keep other mock metrics for now
+    {
+      title: "Avg Productivity",
+      value: loading ? "..." : (avgProductivity !== null ? `${avgProductivity.toFixed(1)}%` : "N/A"),
+      change: "",
+      trend: "neutral" as const,
+      icon: Target,
+      color: "text-green-600",
+      bg: "bg-green-50"
+    },
+    {
+      title: "Attendance Rate",
+      value: loading ? "..." : (attendanceRate !== null ? `${attendanceRate.toFixed(1)}%` : "N/A"),
+      change: "",
+      trend: "neutral" as const,
+      icon: CheckCircle,
+      color: "text-purple-600",
+      bg: "bg-purple-50"
+    }
+    // Training Complete removed - not useful per user request
   ];
 
   // Gate all mock datasets behind feature flag
