@@ -159,7 +159,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [store, storageFilter, showErrorWithRetry, hasInitiallyLoaded]);
+  }, [store, storageFilter, showErrorWithRetry]); // hasInitiallyLoaded is internal state, not a dependency
 
   // Fetch real queue data from Supabase
   useEffect(() => {

@@ -73,7 +73,7 @@ function FadeTransition({ children, transitionKey }: { children: React.ReactNode
 
     // Cancel all animations on cleanup
     return cancelAllAnimations;
-  }, [children, transitionKey]);
+  }, [transitionKey]); // Only depend on transitionKey - children will be captured from current render
 
   return (
     <div
