@@ -12,8 +12,6 @@ import { createError, handleError, logError, ErrorCode } from './error-handler';
 // MESSAGING TYPES
 // =============================================
 
-import type { ServerMessage } from '../types/messages';
-
 export interface Message {
   id: number;
   body: string;
@@ -1241,6 +1239,47 @@ export async function adjustStaffTime(
     p_note: note || null,
   });
   if (error) throw error;
+}
+
+// =============================================
+// STAFF ANALYTICS
+// =============================================
+
+export async function getStaffAttendanceRate(days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_attendance_rate', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function getStaffAvgProductivity(days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_avg_productivity', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function getDepartmentPerformance(days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_department_performance', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getStoreProductionEfficiency(store: Store, days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_store_production_efficiency', {
+    p_store: store,
+    p_days: days,
+  });
+  if (error) throw error;
+  return data || [];
 }
 
 // =============================================

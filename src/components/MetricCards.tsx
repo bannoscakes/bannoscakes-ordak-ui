@@ -45,7 +45,7 @@ export function MetricCards({ store }: MetricCardsProps) {
           {
             title: "Completed",
             value: stats.completed_orders?.toString() || "0",
-            subtitle: `${stats.high_priority_count || 0} high priority`,
+            subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
             icon: CheckCircle,
             bg: "bg-green-50",
             iconColor: "text-green-600"
@@ -53,7 +53,7 @@ export function MetricCards({ store }: MetricCardsProps) {
           {
             title: "In Production",
             value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
-            subtitle: `${stats.overdue_count || 0} overdue`,
+            subtitle: `${stats.unassigned_orders || 0} unassigned`,
             icon: Clock,
             bg: "bg-orange-50",
             iconColor: "text-orange-600"

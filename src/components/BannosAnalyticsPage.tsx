@@ -3,12 +3,8 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { 
-  TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Package, 
-  Users, 
-  Clock,
   Target,
   Calendar,
   Cake,
@@ -16,11 +12,13 @@ import {
   AlertCircle
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
-import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
 import ChartContainer from "@/components/analytics/ChartContainer";
 import KpiValue from "@/components/analytics/KpiValue";
 import { toNumberOrNull } from "@/lib/metrics";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
+import { getQueueStats, getStoreProductionEfficiency } from "../lib/rpc-client";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 // Mock data for Bannos Analytics
 const revenueData = [
@@ -53,26 +51,47 @@ const qualityMetrics = [
   { month: "Aug", score: 97.8, defects: 5, rework: 3 }
 ];
 
-const productionEfficiency = [
-  { station: "Filling", efficiency: 94.5, target: 90, output: 1250 },
-  { station: "Covering", efficiency: 92.1, target: 88, output: 1180 },
-  { station: "Decoration", efficiency: 89.7, target: 85, output: 980 },
-  { station: "Packing", efficiency: 96.2, target: 92, output: 1320 }
-];
+// productionEfficiency removed - now using real data from getStoreProductionEfficiency RPC
 
-const kpiMetrics: Array<{ title: string; value: number | null | undefined; change: string; trend: "up" | "down"; icon: any; color: string; bg: string }> = [
-  { title: "Monthly Revenue", value: undefined, change: "", trend: "up", icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-  { title: "Total Orders", value: undefined, change: "", trend: "up", icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
-  { title: "Average Order Value", value: undefined, change: "", trend: "down", icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
-  { title: "Quality Score", value: undefined, change: "", trend: "up", icon: Award, color: "text-purple-600", bg: "bg-purple-50" }
+// KPI metrics - Total Orders now uses real data, others still need data sources
+const getKpiMetrics = (totalOrders: number | null) => [
+  { title: "Monthly Revenue", value: undefined, change: "", trend: "up" as const, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+  { title: "Total Orders", value: totalOrders || undefined, change: "", trend: "up" as const, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
+  { title: "Average Order Value", value: undefined, change: "", trend: "down" as const, icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
+  { title: "Quality Score", value: undefined, change: "", trend: "up" as const, icon: Award, color: "text-purple-600", bg: "bg-purple-50" }
 ];
 
 export function BannosAnalyticsPage() {
   const isEnabled = useAnalyticsEnabled();
+  const [loading, setLoading] = useState(true);
+  const [totalOrders, setTotalOrders] = useState<number | null>(null);
+  const [productionEfficiencyData, setProductionEfficiencyData] = useState<any[]>([]);
+  
+  // Fetch real analytics data
+  useEffect(() => {
+    async function fetchAnalyticsData() {
+      try {
+        const [stats, efficiency] = await Promise.all([
+          getQueueStats('bannos'),
+          getStoreProductionEfficiency('bannos', 30)
+        ]);
+        
+        setTotalOrders(stats?.total_orders || null);
+        setProductionEfficiencyData(efficiency || []);
+      } catch (error) {
+        console.error('Error fetching Bannos analytics:', error);
+        toast.error('Failed to load analytics data');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAnalyticsData();
+  }, []);
+  
   const revenueDataUse = isEnabled ? revenueData : [];
   const productPerformanceUse = isEnabled ? productPerformance : [];
   const qualityMetricsUse = isEnabled ? qualityMetrics : [];
-  const productionEfficiencyUse = isEnabled ? productionEfficiency : [];
+  const productionEfficiencyUse = productionEfficiencyData;
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -99,7 +118,7 @@ export function BannosAnalyticsPage() {
 
       {/* KPI tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpiMetrics.map((metric) => {
+        {getKpiMetrics(totalOrders).map((metric) => {
           const raw = metric?.value as any;
           const num = toNumberOrNull(raw);
           const isEnabled = useAnalyticsEnabled();
@@ -301,15 +320,18 @@ export function BannosAnalyticsPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-6">
-                {productionEfficiency.map((station, index) => (
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading efficiency data...</div>
+                ) : productionEfficiencyUse.length > 0 ? (
+                  productionEfficiencyUse.map((station, index) => (
                   <div key={index} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <h4 className="font-medium text-foreground">{station.station}</h4>
-                        <p className="text-sm text-muted-foreground">Target: {station.target}% | Output: {station.output} units</p>
+                        <p className="text-sm text-muted-foreground">Target: {station.target.toFixed(0)}% | Output: {station.output} units</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-foreground">{station.efficiency}%</p>
+                        <p className="font-semibold text-foreground">{station.efficiency.toFixed(1)}%</p>
                         <Badge 
                           className={station.efficiency >= station.target ? 
                             "bg-green-100 text-green-700" : 
@@ -332,7 +354,10 @@ export function BannosAnalyticsPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">No efficiency data available</div>
+                )}
               </div>
             </CardContent>
           </Card>
