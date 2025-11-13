@@ -28,31 +28,51 @@ function FadeTransition({ children, transitionKey }: { children: React.ReactNode
   const [isVisible, setIsVisible] = useState(false);
   const [displayChildren, setDisplayChildren] = useState(children);
   const previousKey = useRef(transitionKey);
+  const timeoutRef = useRef<number | null>(null);
+  const rafRef1 = useRef<number | null>(null);
+  const rafRef2 = useRef<number | null>(null);
 
   useEffect(() => {
+    // Cleanup function to cancel all pending animations
+    const cancelAllAnimations = () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (rafRef1.current !== null) {
+        cancelAnimationFrame(rafRef1.current);
+        rafRef1.current = null;
+      }
+      if (rafRef2.current !== null) {
+        cancelAnimationFrame(rafRef2.current);
+        rafRef2.current = null;
+      }
+    };
+
     if (previousKey.current !== transitionKey) {
       // Key changed - fade out, then update children, then fade in
       setIsVisible(false);
 
-      const timer = setTimeout(() => {
+      timeoutRef.current = window.setTimeout(() => {
         setDisplayChildren(children);
         previousKey.current = transitionKey;
         // Small delay to ensure DOM update completes before fading in
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
+        rafRef1.current = requestAnimationFrame(() => {
+          rafRef2.current = requestAnimationFrame(() => {
             setIsVisible(true);
           });
         });
       }, 150); // Match the transition duration
-
-      return () => clearTimeout(timer);
     } else {
       // Initial render or same key - just fade in
       setDisplayChildren(children);
-      requestAnimationFrame(() => {
+      rafRef1.current = requestAnimationFrame(() => {
         setIsVisible(true);
       });
     }
+
+    // Cancel all animations on cleanup
+    return cancelAllAnimations;
   }, [children, transitionKey]);
 
   return (
