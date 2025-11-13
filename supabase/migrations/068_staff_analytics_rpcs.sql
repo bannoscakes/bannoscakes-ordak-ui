@@ -135,10 +135,13 @@ BEGIN
       WHEN COUNT(*) > 0 THEN
         -- Productivity: inverse of time (faster = higher productivity)
         -- Normalize to 0-100 scale: assume 2 hours (120 min) = 100%, scale accordingly
-        -- Formula: (120 - avg_time) / 120 * 100, clamped to 0-100
+        -- Formula: (120 / avg_time) * 100, clamped to 0-100
+        -- When avg_time = 120 min → 100% productivity
+        -- When avg_time = 60 min → 200% (capped at 100%)
+        -- When avg_time = 240 min → 50% productivity
         LEAST(100, GREATEST(0, 
           ROUND(
-            ((120 - COALESCE(AVG(total_minutes), 120)) / 120) * 100,
+            (120.0 / NULLIF(COALESCE(AVG(total_minutes), 120), 0)) * 100,
             1
           )
         ))
@@ -197,13 +200,14 @@ BEGIN
   ),
   store_efficiency AS (
     -- Calculate efficiency from order completion times per store
+    -- Formula: (120 / avg_time) * 100, where 120 min = 100% productivity
     SELECT 
       'bannos'::text as store_name,
       CASE 
         WHEN COUNT(*) > 0 THEN
           LEAST(100, GREATEST(0, 
             ROUND(
-              ((120 - COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - filling_start_ts)) / 60), 120)) / 120) * 100,
+              (120.0 / NULLIF(COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - filling_start_ts)) / 60), 120), 0)) * 100,
               1
             )
           ))
@@ -223,7 +227,7 @@ BEGIN
         WHEN COUNT(*) > 0 THEN
           LEAST(100, GREATEST(0, 
             ROUND(
-              ((120 - COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - filling_start_ts)) / 60), 120)) / 120) * 100,
+              (120.0 / NULLIF(COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - filling_start_ts)) / 60), 120), 0)) * 100,
               1
             )
           ))
@@ -236,29 +240,37 @@ BEGIN
       AND packing_complete_ts IS NOT NULL
   ),
   combined_data AS (
-    -- Bannos Production (bannos + both stores)
+    -- Bannos Production (bannos store only - 'both' staff counted separately to avoid double-counting)
     SELECT 
       'Bannos Production'::text as department,
-      (
-        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'bannos'), 0) +
-        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'both'), 0)
-      )::integer as members,
+      COALESCE((SELECT staff_count FROM store_staff WHERE store = 'bannos'), 0)::integer as members,
       COALESCE((SELECT eff FROM store_efficiency WHERE store_name = 'bannos'), 0::numeric) as efficiency,
       0::numeric as satisfaction,  -- Satisfaction not tracked - show 0
       '#3b82f6'::text as color
     
     UNION ALL
     
-    -- Flourlane Production (flourlane + both stores)
+    -- Flourlane Production (flourlane store only - 'both' staff counted separately to avoid double-counting)
     SELECT 
       'Flourlane Production'::text as department,
-      (
-        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'flourlane'), 0) +
-        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'both'), 0)
-      )::integer as members,
+      COALESCE((SELECT staff_count FROM store_staff WHERE store = 'flourlane'), 0)::integer as members,
       COALESCE((SELECT eff FROM store_efficiency WHERE store_name = 'flourlane'), 0::numeric) as efficiency,
       0::numeric as satisfaction,  -- Satisfaction not tracked - show 0
       '#ec4899'::text as color
+    
+    UNION ALL
+    
+    -- Both Stores (staff who work at both stores - counted once to avoid double-counting)
+    SELECT 
+      'Both Stores'::text as department,
+      COALESCE((SELECT staff_count FROM store_staff WHERE store = 'both'), 0)::integer as members,
+      -- Average efficiency across both stores
+      COALESCE((
+        SELECT AVG(eff) 
+        FROM store_efficiency
+      ), 0::numeric) as efficiency,
+      0::numeric as satisfaction,  -- Satisfaction not tracked - show 0
+      '#8b5cf6'::text as color
   )
   SELECT 
     department,
@@ -324,9 +336,13 @@ BEGIN
         ''Filling''::text as station,
         CASE 
           WHEN COUNT(*) > 0 THEN
+            -- Formula: (target_time / avg_time) * 100, where target_time = 100% efficiency
+            -- When avg_time = 30 min → 100% efficiency
+            -- When avg_time = 15 min → 200% (capped at 100%)
+            -- When avg_time = 60 min → 50% efficiency
             LEAST(100, GREATEST(0, 
               ROUND(
-                ((30 - COALESCE(AVG(EXTRACT(EPOCH FROM (filling_complete_ts - filling_start_ts)) / 60), 30)) / 30) * 100,
+                (30.0 / NULLIF(COALESCE(AVG(EXTRACT(EPOCH FROM (filling_complete_ts - filling_start_ts)) / 60), 30), 0)) * 100,
                 1
               )
             ))
@@ -348,7 +364,7 @@ BEGIN
           WHEN COUNT(*) > 0 THEN
             LEAST(100, GREATEST(0, 
               ROUND(
-                ((25 - COALESCE(AVG(EXTRACT(EPOCH FROM (covering_complete_ts - filling_complete_ts)) / 60), 25)) / 25) * 100,
+                (25.0 / NULLIF(COALESCE(AVG(EXTRACT(EPOCH FROM (covering_complete_ts - filling_complete_ts)) / 60), 25), 0)) * 100,
                 1
               )
             ))
@@ -370,7 +386,7 @@ BEGIN
           WHEN COUNT(*) > 0 THEN
             LEAST(100, GREATEST(0, 
               ROUND(
-                ((35 - COALESCE(AVG(EXTRACT(EPOCH FROM (decorating_complete_ts - covering_complete_ts)) / 60), 35)) / 35) * 100,
+                (35.0 / NULLIF(COALESCE(AVG(EXTRACT(EPOCH FROM (decorating_complete_ts - covering_complete_ts)) / 60), 35), 0)) * 100,
                 1
               )
             ))
@@ -392,7 +408,7 @@ BEGIN
           WHEN COUNT(*) > 0 THEN
             LEAST(100, GREATEST(0, 
               ROUND(
-                ((20 - COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - packing_start_ts)) / 60), 20)) / 20) * 100,
+                (20.0 / NULLIF(COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - packing_start_ts)) / 60), 20), 0)) * 100,
                 1
               )
             ))
