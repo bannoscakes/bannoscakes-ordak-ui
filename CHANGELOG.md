@@ -1,3 +1,84 @@
+## v0.10.4-beta — Post-PR #233 Cleanup & Production Metrics Fix (2025-11-13)
+
+### 🎯 Overview
+Follow-up fixes after PR #233 (auth flickering). Cleaned up TypeScript errors, optimized React dependencies to prevent unnecessary re-renders and stale closures, and fixed Production Status metrics to show only assigned orders (active work) instead of all orders.
+
+### 🐛 Bugs Fixed
+
+**PR #234: TypeScript Cleanup**
+1. **Unused `didRoute` state variable** - Removed from RoleBasedRouter
+2. **Unused `role` parameter** - Removed from `redirectToRoleLanding` function
+- Fixed 2 TypeScript TS6133 errors introduced in PR #233
+
+**PR #235: React Dependency Optimizations (4 bugs)**
+1. **Unnecessary Re-renders (App.tsx)** - Removed `children` from FadeTransition dependency array
+   - Children change on every parent render causing effect to run unnecessarily
+2. **Double-Fetch Loop (QueueTable.tsx)** - Removed `hasInitiallyLoaded` from fetchQueueData deps
+   - State change triggered infinite fetch loop
+3. **Stale Closure (QueueTable.tsx)** - Converted `hasInitiallyLoaded` from state to ref
+   - Callback always saw stale `false` value, showed wrong loading UI
+4. **Stale Loading State on Store Switch** - Reset ref when store changes
+   - Switching Bannos ↔ Flourlane showed subtle refresh instead of full skeleton
+
+**PR #236: Production Status Metrics**
+- **Misleading "In Production" counts** - Production Status showed ALL orders (assigned + unassigned)
+- Updated `get_queue_stats` RPC to count only assigned orders (`AND assignee_id IS NOT NULL`)
+- Production Status now shows actual active work, not waiting work
+
+### ✅ Added
+- Migration `067_fix_production_status_counts.sql` - Fixed stage count queries
+- Debug logging system for React dependency issues (removed after fix)
+- Ref-based pattern for `hasInitiallyLoaded` to prevent stale closures
+
+### ❌ Removed
+- Unused `didRoute` state variable and setters (2 locations)
+- Unused `role` parameter from `redirectToRoleLanding()`
+- `children` from FadeTransition dependency array
+- `hasInitiallyLoaded` state (converted to ref)
+- Debug SQL queries and console logs after verification
+
+### 🔧 Changed
+- **App.tsx**: Simplified router logic, removed unused variables
+- **QueueTable.tsx**: Ref-based loading state with store change reset
+- **get_queue_stats RPC**: Stage counts now filter by `assignee_id IS NOT NULL`
+
+### 📊 Impact
+
+**Before Fix:**
+- Production Status: "Filling: 15 units" (misleading - all unassigned)
+- Status badge: "Active" (wrong - nothing being produced)
+- Metrics: "In Production: 15" (includes waiting orders)
+
+**After Fix:**
+- Production Status: "Filling: 0 units" (correct - no assigned orders)
+- Will show "5 units" when 5 orders are assigned
+- Metrics: "In Production: 0" (only counts active work)
+- Clearer distinction between waiting vs active work
+
+### 🔧 Technical Details
+- **Migrations**: `067_fix_production_status_counts.sql`
+- **Files Modified**: 
+  - `src/App.tsx` - Removed unused variables (PR #234)
+  - `src/components/QueueTable.tsx` - Ref pattern and store reset (PR #235)
+  - `supabase/migrations/042_queue_orders.sql` - Updated via migration 067 (PR #236)
+- **Components Affected**:
+  - ProductionStatus.tsx - Shows accurate active work counts
+  - MetricCards.tsx - "In Production" metric more meaningful
+  - Dashboard displays - Clearer production vs waiting distinction
+
+### 📦 Files Changed
+- `src/App.tsx` - TypeScript cleanup (6 deletions, 2 insertions)
+- `src/components/QueueTable.tsx` - Ref pattern and optimizations (10 insertions, 6 deletions)
+- `supabase/migrations/067_fix_production_status_counts.sql` - Production metrics fix
+
+### 🔗 References
+- PR #234: TypeScript cleanup
+- PR #235: React optimizations (merged after conflict resolution and dependency fixes)
+- PR #236: Production status metrics fix
+- Base: PR #233 (auth flickering - completed before session)
+
+---
+
 ## v0.10.3-beta — React Performance: Fix Stale Closures & Hard Reloads (2025-11-13)
 
 ### 🎯 Overview
