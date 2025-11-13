@@ -111,7 +111,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       orders.forEach((order: any) => {
         const item: QueueItem = {
           id: order.id,
-          orderNumber: order.human_id || order.id,
+          orderNumber: order.human_id,
           customerName: order.customer_name || 'Unknown',
           product: order.product_title || 'Unknown',
           size: order.size || 'M',
