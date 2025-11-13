@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 // ✅ real auth system (from the audit)
 import { AuthProvider } from "./contexts/AuthContext";
@@ -21,6 +21,70 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 // Tiny spinner (fallback if you don't have one)
 function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+}
+
+// Fade transition wrapper to prevent flickering during auth state changes
+function FadeTransition({ children, transitionKey }: { children: React.ReactNode; transitionKey: string }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [displayChildren, setDisplayChildren] = useState(children);
+  const previousKey = useRef(transitionKey);
+  const timeoutRef = useRef<number | null>(null);
+  const rafRef1 = useRef<number | null>(null);
+  const rafRef2 = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Cleanup function to cancel all pending animations
+    const cancelAllAnimations = () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (rafRef1.current !== null) {
+        cancelAnimationFrame(rafRef1.current);
+        rafRef1.current = null;
+      }
+      if (rafRef2.current !== null) {
+        cancelAnimationFrame(rafRef2.current);
+        rafRef2.current = null;
+      }
+    };
+
+    if (previousKey.current !== transitionKey) {
+      // Key changed - fade out, then update children, then fade in
+      setIsVisible(false);
+
+      timeoutRef.current = window.setTimeout(() => {
+        setDisplayChildren(children);
+        previousKey.current = transitionKey;
+        // Small delay to ensure DOM update completes before fading in
+        rafRef1.current = requestAnimationFrame(() => {
+          rafRef2.current = requestAnimationFrame(() => {
+            setIsVisible(true);
+          });
+        });
+      }, 150); // Match the transition duration
+    } else {
+      // Initial render or same key - just fade in
+      setDisplayChildren(children);
+      rafRef1.current = requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    }
+
+    // Cancel all animations on cleanup
+    return cancelAllAnimations;
+  }, [children, transitionKey]);
+
+  return (
+    <div
+      style={{
+        transition: 'opacity 150ms ease-in-out',
+        opacity: isVisible ? 1 : 0,
+      }}
+    >
+      {displayChildren}
+    </div>
+  );
 }
 
 // Reconnecting indicator for auth recovery
@@ -49,19 +113,21 @@ export default function App() {
 function RootApp() {
   const { user, loading } = useAuth();
   const [showReconnecting, setShowReconnecting] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // ✅ CRITICAL: Hooks must be called unconditionally at the top level
   // If loading takes too long (> 3s), show reconnecting indicator
   useEffect(() => {
     if (!loading) {
       setShowReconnecting(false);
+      setHasInitialized(true);
       return;
     }
 
     const timer = setTimeout(() => {
       setShowReconnecting(true);
     }, 3000);
-    
+
     return () => clearTimeout(timer);
   }, [loading]);
 
@@ -69,17 +135,30 @@ function RootApp() {
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
     return <Logout />;
   }
-  
-  // Show loading while auth is initializing
-  if (loading) {
+
+  // Show loading while auth is initializing (only on initial load, not during transitions)
+  if (loading && !hasInitialized) {
     return showReconnecting ? <ReconnectingIndicator /> : <Spinner />;
   }
-  
+
+  // Use transition key based on auth state to enable smooth fades
+  const transitionKey = user ? `authenticated-${user.id}` : 'unauthenticated';
+
   // Show login form if not authenticated
-  if (!user) return <LoginForm onSuccess={() => {}} />;
+  if (!user) {
+    return (
+      <FadeTransition transitionKey={transitionKey}>
+        <LoginForm onSuccess={() => {}} />
+      </FadeTransition>
+    );
+  }
 
   // User is authenticated - route by role
-  return <RoleBasedRouter />;
+  return (
+    <FadeTransition transitionKey={transitionKey}>
+      <RoleBasedRouter />
+    </FadeTransition>
+  );
 }
 
 /**
