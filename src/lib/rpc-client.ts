@@ -12,8 +12,6 @@ import { createError, handleError, logError, ErrorCode } from './error-handler';
 // MESSAGING TYPES
 // =============================================
 
-import type { ServerMessage } from '../types/messages';
-
 export interface Message {
   id: number;
   body: string;

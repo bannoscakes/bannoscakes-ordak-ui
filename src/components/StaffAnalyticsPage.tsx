@@ -13,7 +13,7 @@ import {
   UserCheck,
   Activity
 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance } from "../lib/rpc-client";
 import { toast } from "sonner";
 import ChartContainer from "@/components/analytics/ChartContainer";
