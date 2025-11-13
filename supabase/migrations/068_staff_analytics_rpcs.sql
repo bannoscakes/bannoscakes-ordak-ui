@@ -164,5 +164,125 @@ GRANT EXECUTE ON FUNCTION public.get_staff_avg_productivity(integer) TO authenti
 COMMENT ON FUNCTION public.get_staff_attendance_rate IS 'Calculate attendance rate from shifts (last N days). Returns percentage of active staff who have completed shifts.';
 COMMENT ON FUNCTION public.get_staff_avg_productivity IS 'Calculate average productivity from barcode scan timestamps. Based on time from filling_start to packing_complete. Returns 0-100 scale.';
 
+-- ============================================================================
+-- RPC 3: get_department_performance
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.get_department_performance(
+  p_days integer DEFAULT 30
+)
+RETURNS TABLE(
+  department text,
+  members integer,
+  efficiency numeric,
+  satisfaction numeric,
+  color text
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+BEGIN
+  RETURN QUERY
+  WITH store_staff AS (
+    -- Count staff by store (bannos, flourlane, both)
+    SELECT 
+      store,
+      COUNT(*)::integer as staff_count
+    FROM staff_shared
+    WHERE is_active = true
+      AND store IN ('bannos', 'flourlane', 'both')
+    GROUP BY store
+  ),
+  store_efficiency AS (
+    -- Calculate efficiency from order completion times per store
+    SELECT 
+      'bannos'::text as store_name,
+      CASE 
+        WHEN COUNT(*) > 0 THEN
+          LEAST(100, GREATEST(0, 
+            ROUND(
+              ((120 - COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - filling_start_ts)) / 60), 120)) / 120) * 100,
+              1
+            )
+          ))
+        ELSE 0::numeric
+      END as eff
+    FROM orders_bannos
+    WHERE stage = 'Complete'
+      AND packing_complete_ts >= (now() - (p_days || ' days')::interval)
+      AND filling_start_ts IS NOT NULL
+      AND packing_complete_ts IS NOT NULL
+    
+    UNION ALL
+    
+    SELECT 
+      'flourlane'::text as store_name,
+      CASE 
+        WHEN COUNT(*) > 0 THEN
+          LEAST(100, GREATEST(0, 
+            ROUND(
+              ((120 - COALESCE(AVG(EXTRACT(EPOCH FROM (packing_complete_ts - filling_start_ts)) / 60), 120)) / 120) * 100,
+              1
+            )
+          ))
+        ELSE 0::numeric
+      END as eff
+    FROM orders_flourlane
+    WHERE stage = 'Complete'
+      AND packing_complete_ts >= (now() - (p_days || ' days')::interval)
+      AND filling_start_ts IS NOT NULL
+      AND packing_complete_ts IS NOT NULL
+  ),
+  combined_data AS (
+    -- Bannos Production (bannos + both stores)
+    SELECT 
+      'Bannos Production'::text as department,
+      (
+        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'bannos'), 0) +
+        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'both'), 0)
+      )::integer as members,
+      COALESCE((SELECT eff FROM store_efficiency WHERE store_name = 'bannos'), 0::numeric) as efficiency,
+      0::numeric as satisfaction,  -- Satisfaction not tracked - show 0
+      '#3b82f6'::text as color
+    
+    UNION ALL
+    
+    -- Flourlane Production (flourlane + both stores)
+    SELECT 
+      'Flourlane Production'::text as department,
+      (
+        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'flourlane'), 0) +
+        COALESCE((SELECT staff_count FROM store_staff WHERE store = 'both'), 0)
+      )::integer as members,
+      COALESCE((SELECT eff FROM store_efficiency WHERE store_name = 'flourlane'), 0::numeric) as efficiency,
+      0::numeric as satisfaction,  -- Satisfaction not tracked - show 0
+      '#ec4899'::text as color
+  )
+  SELECT 
+    department,
+    members,
+    efficiency,
+    satisfaction,
+    color
+  FROM combined_data
+  WHERE members > 0  -- Only show departments with staff
+  ORDER BY department;
+END;
+$function$;
+
+-- ============================================================================
+-- GRANTS (updated)
+-- ============================================================================
+
+GRANT EXECUTE ON FUNCTION public.get_department_performance(integer) TO authenticated;
+
+-- ============================================================================
+-- COMMENTS (updated)
+-- ============================================================================
+
+COMMENT ON FUNCTION public.get_department_performance IS 'Get department performance by store. Calculates efficiency from order completion times. Returns Bannos Production and Flourlane Production based on staff.store field.';
+
 COMMIT;
 

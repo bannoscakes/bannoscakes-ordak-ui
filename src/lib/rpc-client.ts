@@ -1265,6 +1265,15 @@ export async function getStaffAvgProductivity(days: number = 30) {
   return data?.[0] || null;
 }
 
+export async function getDepartmentPerformance(days: number = 30) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_department_performance', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
 // =============================================
 // BULK OPERATIONS
 // =============================================
