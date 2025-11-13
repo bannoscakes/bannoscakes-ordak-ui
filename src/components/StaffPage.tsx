@@ -131,9 +131,9 @@ export function StaffPage() {
 
   const handleViewTimesheet = (staffMember: StaffMember) => {
     // Navigate to time & payroll page filtered to this staff member
-    window.history.pushState({}, '', `/admin/time?staff=${staffMember.id}`);
-    // Force a reload to trigger the navigation (in a real app this would use proper routing)
-    window.location.reload();
+    // Use query params to maintain single-URL architecture
+    window.history.pushState({}, '', `/?page=time-payroll&staff=${staffMember.id}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const handleSaveProfile = () => {

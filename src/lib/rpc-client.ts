@@ -97,12 +97,26 @@ async function withErrorHandling<T>(
     
     // Check for JWT/auth errors first
     if (isJWTError(error) && retryCount < maxRetries) {
-      console.warn(`🔄 JWT error detected, retrying ${context.rpcName}... (attempt ${retryCount + 1}/${maxRetries})`);
+      console.warn(`🔄 JWT error detected, attempting session refresh for ${context.rpcName}... (attempt ${retryCount + 1}/${maxRetries})`);
       
-      // Wait a bit before retry to allow token refresh
+      // Try to refresh the session before retrying
+      try {
+        const supabase = getSupabase();
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (!refreshError && data.session) {
+          console.log('✅ Session refreshed successfully, retrying RPC call');
+          // Session refreshed, retry the RPC call
+          return withErrorHandling(rpcCall, { ...context, retryCount: retryCount + 1 });
+        } else {
+          console.warn('⚠️ Session refresh failed:', refreshError?.message || 'No session returned');
+        }
+      } catch (refreshErr) {
+        console.error('❌ Session refresh exception:', refreshErr);
+      }
+      
+      // If refresh failed, wait and retry anyway (token might auto-refresh)
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Retry the RPC call
       return withErrorHandling(rpcCall, { ...context, retryCount: retryCount + 1 });
     }
     
@@ -110,7 +124,7 @@ async function withErrorHandling<T>(
     if (isJWTError(error)) {
       const appError = createError(
         ErrorCode.AUTH003,
-        'Your session has expired. Please refresh the page or log in again.',
+        'Your session has expired. Please sign in again.',
         { rpcName: context.rpcName, params: context.params },
         { operation: context.operation, duration, retries: retryCount }
       );

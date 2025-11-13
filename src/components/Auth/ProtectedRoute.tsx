@@ -37,7 +37,10 @@ export function ProtectedRoute({
     console.log('ProtectedRoute - no user, showing login form');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <LoginForm onSuccess={() => window.location.reload()} userType={userType} />
+        <LoginForm onSuccess={() => {
+          // Auth state will update and trigger re-render - no reload needed
+          console.log('✅ Login successful - auth state will update');
+        }} userType={userType} />
       </div>
     );
   }
