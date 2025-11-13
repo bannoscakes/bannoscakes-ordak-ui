@@ -1,4 +1,4 @@
-24-- Migration 068: Staff Analytics RPCs
+-- Migration 068: Staff Analytics RPCs
 -- Date: 2025-11-13
 -- Purpose: Add RPCs for Staff Analytics metrics (Attendance Rate, Avg Productivity)
 --
