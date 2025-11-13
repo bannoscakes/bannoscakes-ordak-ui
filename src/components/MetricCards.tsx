@@ -37,14 +37,14 @@ export function MetricCards({ store }: MetricCardsProps) {
           {
             title: "Total Orders",
             value: stats.total_orders?.toString() || "0",
-            subtitle: `${stats.unassigned_count || 0} unassigned`,
+            subtitle: `${stats.unassigned_orders || 0} unassigned`,
             icon: TrendingUp,
             bg: "bg-blue-50",
             iconColor: "text-blue-600"
           },
           {
             title: "Completed",
-            value: stats.complete_count?.toString() || "0",
+            value: stats.completed_orders?.toString() || "0",
             subtitle: `${stats.high_priority_count || 0} high priority`,
             icon: CheckCircle,
             bg: "bg-green-50",
