@@ -166,6 +166,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     fetchQueueData();
   }, [fetchQueueData]);
 
+  // Reset loading state when store changes (different data source = full loading skeleton)
+  useEffect(() => {
+    hasInitiallyLoadedRef.current = false;
+  }, [store]);
+
   // Set initial filter if provided
   useEffect(() => {
     if (initialFilter) {
