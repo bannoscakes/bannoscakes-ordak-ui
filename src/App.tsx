@@ -169,7 +169,6 @@ function RoleBasedRouter() {
   // ✅ All hooks declared unconditionally at the top
   const { user, signOut } = useAuth();
   const [currentUrl, setCurrentUrl] = useState(window.location.href);
-  const [didRoute, setDidRoute] = useState(false);
 
   // Listen for URL changes (including browser back/forward)
   useEffect(() => {
@@ -213,7 +212,7 @@ function RoleBasedRouter() {
   };
 
   // Single URL architecture - all users stay on "/"
-  const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
+  const redirectToRoleLanding = () => {
     // Always redirect to root path "/" - role-based routing is internal
     safePushState('/');
   };
@@ -221,7 +220,6 @@ function RoleBasedRouter() {
   // ✅ Single effect that handles all routing logic - ROLE-BASED, not URL-based
   useEffect(() => {
     if (!user) {
-      setDidRoute(true);
       return;
     }
 
@@ -229,12 +227,10 @@ function RoleBasedRouter() {
     const workspace = getCurrentWorkspace();
     if (!workspace.isRootPath) {
       // Redirect to root path if not already there
-      redirectToRoleLanding((user as AuthUser).role);
+      redirectToRoleLanding();
     }
 
     console.log(`User ${(user as AuthUser).fullName} (${(user as AuthUser).role}) accessing single URL architecture`);
-
-    setDidRoute(true);
   }, [user, currentUrl]); // Re-evaluate on user or URL changes
 
   // ✅ Early returns AFTER all hooks have been declared
