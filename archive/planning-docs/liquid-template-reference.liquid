@@ -1,0 +1,133 @@
+{%- comment -%}
+Liquid Template for Order Processing
+Used to extract order data from Shopify webhook payload
+Paste your Liquid template code below
+{%- endcomment -%}
+
+
+<div class="wrapper">
+  <div class="header">
+    <h1>Kitchen Docket</h1>
+    <div class="order-info">
+      <p class="text-align-right large-order-number">
+        Order {{ order.name }}
+      </p>
+      <p class="text-align-right delivery-date-highlight">
+        {% assign delivery_date = order.attributes['Local Delivery Date and Time'] | split: 'between' | first | strip %}
+        {% assign delivery_method = order.attributes['Delivery Method'] | downcase %}
+
+        {% if delivery_method contains 'pickup' or delivery_method contains 'pick up' %}
+          Pickup Date: {{ delivery_date }}
+        {% else %}
+          Delivery Date: {{ delivery_date }}
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <hr class="thick-separator" />
+
+  <div class="customer-name">
+    <strong>Customer:</strong><br/>
+    {% assign customer_name = order.shipping_address.name %}
+    {% if customer_name == blank %}
+      {% assign customer_name = order.customer.name %}
+    {% endif %}
+    {{ customer_name }}
+  </div>
+
+  <hr class="thick-separator" />
+
+  <h2>Order Details</h2>
+  <table class="product-table" style="margin: 1em 0 0 0;">
+    <thead>
+      <tr>
+        <th style="width: 10%; text-align: left;">Image</th>
+        <th style="width: 10%; text-align: left;">Qty</th>
+        <th style="width: 80%; text-align: left;">Item</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% assign desired_image_size = 58 %}
+      {% assign resolution_adjusted_size = desired_image_size | times: 300 | divided_by: 72 | ceil %}
+      {% capture effective_image_dimensions %}
+        {{ resolution_adjusted_size }}x{{ resolution_adjusted_size }}
+      {% endcapture %}
+
+      {% for line_item in line_items %}
+      <tr>
+        <td class="product-image-cell">
+          {% assign item_image = line_item.image %}
+          {% if item_image == blank %}
+            {% assign item_image = line_item.product.featured_image %}
+          {% endif %}
+          {% if item_image != blank %}
+            <img src="{{ item_image | img_url: effective_image_dimensions }}" alt="{{ item_image.alt | escape }}" style="width: {{ desired_image_size }}px; height: {{ desired_image_size }}px; object-fit: contain;" />
+          {% else %}
+            <span style="font-size: 10px; color: #777;">No image</span>
+          {% endif %}
+        </td>
+        <td style="text-align: left; font-size: 1.2em; font-weight: bold;">{{ line_item.quantity }}</td>
+        <td style="text-align: left;">
+          <strong style="font-size: 1.1em;">{{ line_item.title }}</strong><br/>
+          {% if line_item.variant_title != blank %}
+            <small>{{ line_item.variant_title }}</small><br/>
+          {% endif %}
+          {% for property in line_item.properties %}
+            {% unless property.first contains "_origin" or property.first contains "_raw" or property.first contains "gwp" or property.first contains "_LocalDeliveryID" %}
+              {% if property.last != blank %}
+                <small style="font-size: 1.1em;"><strong>{{ property.first }}:</strong> {{ property.last }}</small><br/>
+              {% endif %}
+            {% endunless %}
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if order.note != blank %}
+  <div class="notes-section">
+    <strong>Notes:</strong> {{ order.note }}
+  </div>
+  {% endif %}
+
+  {% if delivery_method.instructions != blank %}
+  <div class="notes-section">
+    <strong>Delivery Instructions:</strong> {{ delivery_method.instructions }}
+  </div>
+  {% endif %}
+
+  <!-- Big Barcode -->
+  <div class="barcode-bottom-left">
+    <div class="barcode big-barcode">*{{ order.name | remove: "#" }}*</div>
+    <div class="barcode-label big-label">Order #: {{ order.name }}</div>
+  </div>
+</div>
+
+<!-- STYLES -->
+<link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
+<style type="text/css">
+  body { font-family: sans-serif; margin: 0; padding: 0; font-size: 14px; }
+  .wrapper { width: 8.5in; margin: 0 auto; padding: 0.5in; box-sizing: border-box; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5em; }
+  h1 { font-size: 2em; margin: 0; }
+  h2 { font-size: 1.5em; margin: 1.5em 0 0.5em; }
+  .order-info { text-align: right; margin-left: auto; }
+  .large-order-number { font-size: 2.5em; font-weight: bold; margin-bottom: 5px; color: black; }
+  .delivery-date-highlight { font-size: 1.6em; font-weight: bold; color: red; margin-top: 10px; }
+  .customer-name { font-size: 1.2em; margin-bottom: 1em; line-height: 1.6; }
+  hr.thick-separator { border: none; border-top: 2px solid #444; margin: 1.5em 0; }
+  table.product-table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+  table.product-table th, table.product-table td { padding: 10px; border-bottom: 2px solid #444; vertical-align: top; }
+  table.product-table th { text-align: left; background-color: #f0f0f0; font-weight: bold; }
+  table.product-table td small { font-size: 0.95em; color: #333; display: block; margin-top: 3px; }
+  td.product-image-cell { width: 10%; text-align: left; padding-right: 10px; vertical-align: top; }
+  .notes-section { margin-top: 1.5em; line-height: 1.5; }
+  .notes-section strong { display: block; margin-bottom: 0.3em; font-size: 1.1em; }
+  .barcode-bottom-left { text-align: left; margin: 2em 0 0 0; }
+  .barcode { font-family: 'Libre Barcode 39', cursive; letter-spacing: 2px; margin-top: 20px; }
+  .barcode-label { font-weight: bold; margin-top: 8px; }
+  .big-barcode { font-size: 64px; }
+  .big-label { font-size: 28px; }
+</style>
