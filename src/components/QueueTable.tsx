@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -48,7 +48,7 @@ interface QueueTableProps {
 export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
   const [loading, setLoading] = useState(true);
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const hasInitiallyLoadedRef = useRef(false); // Use ref to avoid stale closure
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,7 +91,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const fetchQueueData = useCallback(async () => {
     try {
       // Only show full loading skeleton on initial load
-      if (!hasInitiallyLoaded) {
+      if (!hasInitiallyLoadedRef.current) {
         setLoading(true);
       } else {
         // Show subtle refresh indicator for subsequent loads
@@ -147,7 +147,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       });
 
       setQueueData(grouped);
-      setHasInitiallyLoaded(true);
+      hasInitiallyLoadedRef.current = true; // Mark as loaded using ref (no re-render needed)
     } catch (error) {
       console.error('Failed to fetch queue:', error);
       setError(error);
@@ -159,7 +159,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [store, storageFilter, showErrorWithRetry]); // hasInitiallyLoaded is internal state, not a dependency
+  }, [store, storageFilter, showErrorWithRetry]); // No stale closure - ref always has current value
 
   // Fetch real queue data from Supabase
   useEffect(() => {
