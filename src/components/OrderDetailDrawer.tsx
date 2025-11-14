@@ -164,6 +164,8 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
   };
 
   const extendedOrder = getExtendedOrderData(realOrder || order, store);
+  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
+  const isPackingStage = currentStage === "packing";
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   if (!extendedOrder) return null;
@@ -359,7 +361,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
             </div>
 
             {/* Quality Control Section - Only for Packing stage */}
-            {order?.stage === "packing" && (
+            {isPackingStage && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
@@ -412,7 +414,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
           {/* Footer */}
           <div className="p-6">
-            {order?.stage === "packing" ? (
+            {isPackingStage ? (
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Button
