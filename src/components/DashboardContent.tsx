@@ -6,7 +6,7 @@ import { ProductionStatus } from "./ProductionStatus";
 import { RecentOrders } from "./RecentOrders";
 import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
-import { EquipmentStatus } from "./EquipmentStatus";
+// import { EquipmentStatus } from "./EquipmentStatus"; // Hidden - not in use
 import type { StatsByStore } from "@/types/stage";
 
 interface DashboardContentProps {
@@ -58,7 +58,8 @@ export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: Dashb
             <div className="col-span-12 lg:col-span-4 space-y-6">
               <QuickActions store="bannos" />
               <ProductionTimeline store="bannos" />
-              <EquipmentStatus store="bannos" />
+              {/* EquipmentStatus hidden - not in use */}
+              {/* <EquipmentStatus store="bannos" /> */}
             </div>
           </div>
         </TabsContent>
@@ -74,7 +75,8 @@ export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: Dashb
             <div className="col-span-12 lg:col-span-4 space-y-6">
               <QuickActions store="flourlane" />
               <ProductionTimeline store="flourlane" />
-              <EquipmentStatus store="flourlane" />
+              {/* EquipmentStatus hidden - not in use */}
+              {/* <EquipmentStatus store="flourlane" /> */}
             </div>
           </div>
         </TabsContent>
