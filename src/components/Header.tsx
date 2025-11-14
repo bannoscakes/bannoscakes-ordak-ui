@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Bell, User, CheckCircle2, AlertCircle } from "lucide-react";
+import { Search, User, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
@@ -82,17 +82,7 @@ export function Header({ onSignOut }: HeaderProps) {
             />
           </div>
           
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
-              3
-            </Badge>
-          </Button>
-          
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              Admin
-            </Badge>
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
             </Button>
