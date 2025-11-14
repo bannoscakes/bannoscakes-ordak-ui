@@ -33,7 +33,6 @@ export function ProductRequirements() {
     async function fetchComponents() {
       try {
         const componentsData = await getComponents();
-        console.log('Fetched Components:', componentsData); // Debug log
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -50,7 +49,6 @@ export function ProductRequirements() {
         const searchValue = searchQuery.trim() || null;
         
         const requirementsData = await getProductRequirements(null, searchValue);
-        console.log('Fetched requirements:', requirementsData); // Debug log
         
         setRequirements(requirementsData);
       } catch (error) {

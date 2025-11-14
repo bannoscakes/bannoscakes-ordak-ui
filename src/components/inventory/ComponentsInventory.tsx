@@ -53,7 +53,6 @@ export function ComponentsInventory() {
     async function fetchComponents() {
       try {
         const dbComponents = await getComponents({});
-        console.log('Fetched components:', dbComponents); // Debug log
         
         // Map database components to UI format
         const mappedComponents: Component[] = dbComponents.map((c: any) => ({
@@ -68,7 +67,6 @@ export function ComponentsInventory() {
           isLowStock: Number(c.current_stock || 0) <= Number(c.min_stock || 0),
         }));
         
-        console.log('Mapped components:', mappedComponents); // Debug log
         setComponents(mappedComponents);
       } catch (error) {
         console.error('Error fetching components:', error);

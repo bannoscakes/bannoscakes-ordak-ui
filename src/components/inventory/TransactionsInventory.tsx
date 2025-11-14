@@ -26,7 +26,6 @@ export function TransactionsInventory() {
     async function fetchTransactions() {
       try {
         const transactionsData = await getStockTransactions(null, null, null);
-        console.log('Fetched transactions:', transactionsData); // Debug log
         
         setTransactions(transactionsData);
       } catch (error) {

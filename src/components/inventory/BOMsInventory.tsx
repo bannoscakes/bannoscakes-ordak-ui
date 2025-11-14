@@ -27,7 +27,6 @@ export function BOMsInventory() {
     async function fetchComponents() {
       try {
         const componentsData = await getComponents();
-        console.log('Fetched Components:', componentsData); // Debug log
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -45,7 +44,6 @@ export function BOMsInventory() {
         const searchValue = searchQuery.trim() || null;
         
         const bomsData = await getBoms(storeFilterValue, true, searchValue);
-        console.log('Fetched BOMs:', bomsData); // Debug log
         
         setBOMs(bomsData);
       } catch (error) {
@@ -77,7 +75,6 @@ export function BOMsInventory() {
       updated_at: new Date().toISOString(),
       items: []
     };
-    console.log('Creating new BOM:', newBOM);
     setEditingBOM(newBOM);
     setIsBOMEditorOpen(true);
   };
@@ -110,7 +107,6 @@ export function BOMsInventory() {
         description: editingBOM.description,
         shopify_product_id: editingBOM.shopify_product_id
       });
-      console.log('Saved BOM ID:', bomId);
       
       // Update the BOM with the real ID from database
       const updatedBOM = { ...editingBOM, id: bomId };
@@ -152,9 +148,6 @@ export function BOMsInventory() {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
-    console.log('Adding BOM item:', newItem);
-    console.log('Current BOM items before:', editingBOM.items);
     
     setEditingBOM({
       ...editingBOM,
@@ -362,7 +355,6 @@ export function BOMsInventory() {
 
                 <div className="space-y-3">
                   {editingBOM.items?.map((item) => {
-                    console.log('Rendering BOM item:', item);
                     return (
                     <Card key={item.id} className="p-4">
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
