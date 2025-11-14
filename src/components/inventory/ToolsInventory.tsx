@@ -30,7 +30,6 @@ export function ToolsInventory() {
     async function fetchComponents() {
       try {
         const componentsData = await getComponents({});
-        console.log('Fetched components for tools:', componentsData); // Debug log
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);

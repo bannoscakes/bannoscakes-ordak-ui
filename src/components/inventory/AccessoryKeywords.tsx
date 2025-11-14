@@ -31,7 +31,6 @@ export function AccessoryKeywords() {
     async function fetchComponents() {
       try {
         const componentsData = await getComponents();
-        console.log('Fetched Components:', componentsData); // Debug log
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -48,7 +47,6 @@ export function AccessoryKeywords() {
         const searchValue = searchQuery.trim() || null;
         
         const keywordsData = await getAccessoryKeywords(searchValue, true);
-        console.log('Fetched keywords:', keywordsData); // Debug log
         
         setKeywords(keywordsData);
       } catch (error) {
