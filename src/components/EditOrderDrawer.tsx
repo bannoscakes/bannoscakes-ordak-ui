@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, RotateCcw, Upload, Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -29,6 +29,10 @@ interface QueueItem {
   dueTime: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
+  writingOnCake?: string;
+  accessories?: string[];
+  notes?: string;
+  deliveryDate?: string;
 }
 
 interface EditOrderDrawerProps {
@@ -56,31 +60,6 @@ interface FormData {
 interface DirtyFields {
   [key: string]: boolean;
 }
-
-// Sample extended order data
-const getExtendedOrderData = (order: QueueItem | null) => {
-  if (!order) return null;
-  
-  return {
-    ...order,
-    writingOnCake: order.id.includes("003") || order.id.includes("C03") 
-      ? "Happy Birthday Sarah! Love, Mom & Dad" 
-      : order.id.includes("015") || order.id.includes("C01")
-      ? "Congratulations on your Wedding!"
-      : "",
-    accessories: order.product.toLowerCase().includes("wedding") 
-      ? ["Cake Stand", "Decorative Flowers", "Cake Topper"]
-      : order.product.toLowerCase().includes("cupcake")
-      ? ["Cupcake Liners", "Decorative Picks"]
-      : [],
-    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
-    notes: order.priority === "High" 
-      ? "Customer requested early morning pickup. Handle with extra care - VIP client."
-      : order.method === "Delivery"
-      ? "Standard delivery. Contact customer 30 mins before arrival."
-      : "Customer will pickup. Ensure order is ready at specified time.",
-  };
-};
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
@@ -112,8 +91,15 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: EditOrderDrawerProps) {
-  // Memoize extendedOrder to prevent infinite re-renders
-  const extendedOrder = useMemo(() => getExtendedOrderData(order), [order]);
+  const normalizedOrder = order
+    ? {
+        ...order,
+        deliveryDate: order.deliveryDate || order.dueTime || order.deliveryTime || "",
+        writingOnCake: order.writingOnCake || "",
+        accessories: order.accessories || [],
+        notes: order.notes || "",
+      }
+    : null;
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   const [formData, setFormData] = useState<FormData>({
@@ -157,27 +143,27 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
 
   // Initialize form data when order changes
   useEffect(() => {
-    if (extendedOrder) {
+    if (normalizedOrder) {
       // Find the current product
-      const product = findProductByTitle(extendedOrder.product, store);
+      const product = findProductByTitle(normalizedOrder.product, store);
       setCurrentProduct(product);
       
       // Convert legacy size to variant if possible
       const initialSize = product && product.variants 
-        ? convertLegacySizeToVariant(extendedOrder.size as 'S' | 'M' | 'L', product)
-        : extendedOrder.size;
+        ? convertLegacySizeToVariant(normalizedOrder.size as 'S' | 'M' | 'L', product)
+        : normalizedOrder.size;
       
       const initialData: FormData = {
-        product: extendedOrder.product,
-        dueDate: formatDate(extendedOrder.deliveryDate),
-        method: extendedOrder.method || "Pickup",
+        product: normalizedOrder.product,
+        dueDate: formatDate(normalizedOrder.deliveryDate || new Date().toISOString()),
+        method: normalizedOrder.method || "Pickup",
         size: initialSize,
-        flavor: extendedOrder.flavor === "Other" ? "" : extendedOrder.flavor,
-        priority: extendedOrder.priority,
-        storage: extendedOrder.storage || "",
-        writingOnCake: extendedOrder.writingOnCake || "",
-        accessories: [...extendedOrder.accessories],
-        notes: extendedOrder.notes || "",
+        flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
+        priority: normalizedOrder.priority,
+        storage: normalizedOrder.storage || "",
+        writingOnCake: normalizedOrder.writingOnCake || "",
+        accessories: [...normalizedOrder.accessories],
+        notes: normalizedOrder.notes || "",
         photos: []
       };
       setFormData(initialData);
@@ -185,7 +171,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
       setDirtyFields({});
       setSizeRequiresConfirmation(false);
     }
-  }, [extendedOrder, store]);
+  }, [normalizedOrder, store]);
 
   // Memoize the onClose callback to prevent dependency changes
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -243,13 +229,13 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
       return;
     }
 
-    if (!extendedOrder) return;
+    if (!normalizedOrder) return;
 
     try {
       setSaving(true);
       
       // Update order in database
-      await updateOrderCore(extendedOrder.id, store, {
+      await updateOrderCore(normalizedOrder.id, store, {
         product_title: formData.product,
         size: formData.size,
         delivery_method: formData.method.toLowerCase(),
@@ -261,7 +247,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
 
       // Create updated order for UI
       const updatedOrder = {
-        ...extendedOrder,
+        ...normalizedOrder,
         product: formData.product,
         size: formData.size,
         priority: calculatePriority(formData.dueDate),
@@ -279,7 +265,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     } finally {
       setSaving(false);
     }
-  }, [formData, extendedOrder, onSaved, store]);
+  }, [formData, normalizedOrder, onSaved, store]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -356,11 +342,11 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
   }, [updateField]);
 
   // Early return after all hooks are called
-  if (!extendedOrder) return null;
+  if (!normalizedOrder) return null;
 
   return (
     <Sheet open={isOpen} onOpenChange={handleCancel}>
-      <SheetContent className="w-[480px] p-0">
+      <SheetContent className="!w-[540px] max-w-full sm:!max-w-[540px] p-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <SheetHeader className="p-6 pb-0">
@@ -370,20 +356,20 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
               </SheetTitle>
             </div>
             <SheetDescription className="sr-only">
-              Edit order {extendedOrder.orderNumber} for {extendedOrder.customerName}
+              Edit order {normalizedOrder.orderNumber} for {normalizedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
           {/* Subheader */}
           <div className="px-6 pt-4 pb-6 space-y-1">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Customer:</span> {extendedOrder.customerName}
+              <span className="font-medium">Customer:</span> {normalizedOrder.customerName}
             </p>
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Store:</span> {storeName}
             </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Order #:</span> {extendedOrder.orderNumber}
+              <span className="font-medium">Order #:</span> {normalizedOrder.orderNumber}
             </p>
           </div>
 
@@ -828,7 +814,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => window.open(`https://admin.shopify.com/orders/${extendedOrder.orderNumber}`, '_blank')}
+              onClick={() => window.open(`https://admin.shopify.com/orders/${normalizedOrder.orderNumber}`, '_blank')}
             >
               View Details in Shopify
             </Button>

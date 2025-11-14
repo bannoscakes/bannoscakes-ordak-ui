@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Bot, Printer, QrCode } from "lucide-react";
+import { Bot, Printer, QrCode } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
@@ -38,8 +38,6 @@ interface OrderDetailDrawerProps {
 // Sample extended order data
 const getExtendedOrderData = (order: QueueItem | null, store: "bannos" | "flourlane") => {
   if (!order) return null;
-  
-  const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   // Generate realistic size values based on product type and original size
   const getRealisticSize = (originalSize: string, product: string) => {
@@ -193,7 +191,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[480px] p-0">
+      <SheetContent className="!w-[540px] max-w-full sm:!max-w-[540px] p-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <SheetHeader className="p-6 pb-0">
@@ -216,16 +214,38 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
           {/* Subheader */}
           {!loading && (
-            <div className="px-6 pt-4 pb-6 space-y-1">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Customer:</span> {extendedOrder.customerName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Store:</span> {storeName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Order #:</span> {extendedOrder.orderNumber}
-              </p>
+            <div className="px-6 pt-4 pb-6 space-y-4">
+              <div className="grid gap-1 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Customer:</span> {extendedOrder.customerName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Store:</span> {storeName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
+                  <div className="mt-2">
+                    <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
+                      {extendedOrder.priority}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
+                  <p className="mt-2 text-foreground">
+                    {extendedOrder.deliveryDate}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Method</p>
+                  <p className="mt-2 text-foreground">{extendedOrder.method}</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -234,35 +254,51 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           {/* Body - Scrollable */}
           {!loading && (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Product */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.product}
-              </p>
-            </div>
-
-            {/* Size */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Size
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.size}
-              </p>
-            </div>
-
-            {/* Flavour */}
-            {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+            {/* Product Image + Product */}
+            <div className="space-y-4">
+              {extendedOrder.productImage && (
+                <div>
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted/30 border">
+                    <ImageWithFallback
+                      src={extendedOrder.productImage}
+                      alt={extendedOrder.product}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {extendedOrder.imageCaption && (
+                    <p className="mt-2 text-xs text-muted-foreground">{extendedOrder.imageCaption}</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Flavour
+                  Product
                 </label>
-                <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.product}
+                </p>
               </div>
-            )}
+            </div>
+
+            {/* Size + Flavour */}
+            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-2" : "grid-cols-1"}`}>
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Size
+                </label>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.size}
+                </p>
+              </div>
+              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-2">
+                    Flavour
+                  </label>
+                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                </div>
+              )}
+            </div>
 
             {/* Writing on Cake */}
             {extendedOrder.writingOnCake && (
@@ -300,34 +336,6 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
             </div>
 
-            {/* Priority */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Priority
-              </label>
-              <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                {extendedOrder.priority}
-              </Badge>
-            </div>
-
-            {/* Due Date */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Due Date
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.deliveryDate}
-              </p>
-            </div>
-
-            {/* Method */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Method
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.method}</p>
-            </div>
-
             {/* Storage */}
             {extendedOrder.storage && (
               <div>
@@ -347,27 +355,6 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border min-h-[80px]">
                 <p className="text-sm text-foreground">{extendedOrder.notes}</p>
-              </div>
-            </div>
-
-            {/* Product Image */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product Image
-              </label>
-              <div className="flex items-start gap-3">
-                <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted/30 border">
-                  <ImageWithFallback
-                    src={extendedOrder.productImage}
-                    alt={extendedOrder.product}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {extendedOrder.imageCaption && (
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">{extendedOrder.imageCaption}</p>
-                  </div>
-                )}
               </div>
             </div>
 
