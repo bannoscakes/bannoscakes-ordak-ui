@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { X, RotateCcw, Upload, Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -91,15 +91,16 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: EditOrderDrawerProps) {
-  const normalizedOrder = order
-    ? {
-        ...order,
-        deliveryDate: order.deliveryDate || order.dueTime || order.deliveryTime || "",
-        writingOnCake: order.writingOnCake || "",
-        accessories: order.accessories || [],
-        notes: order.notes || "",
-      }
-    : null;
+  const normalizedOrder = useMemo(() => {
+    if (!order) return null;
+    return {
+      ...order,
+      deliveryDate: order.deliveryDate || order.dueTime || order.deliveryTime || "",
+      writingOnCake: order.writingOnCake || "",
+      accessories: order.accessories || [],
+      notes: order.notes || "",
+    };
+  }, [order]);
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   const [formData, setFormData] = useState<FormData>({
