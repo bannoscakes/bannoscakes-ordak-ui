@@ -273,14 +273,14 @@ BEGIN
       '#8b5cf6'::text as color
   )
   SELECT 
-    department,
-    members,
-    efficiency,
-    satisfaction,
-    color
+    combined_data.department,
+    combined_data.members,
+    combined_data.efficiency,
+    combined_data.satisfaction,
+    combined_data.color
   FROM combined_data
-  WHERE members > 0  -- Only show departments with staff
-  ORDER BY department;
+  WHERE combined_data.members > 0  -- Only show departments with staff
+  ORDER BY combined_data.department;
 END;
 $function$;
 
