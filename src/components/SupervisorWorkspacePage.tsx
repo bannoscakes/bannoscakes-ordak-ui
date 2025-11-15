@@ -23,6 +23,7 @@ import { getQueue } from "../lib/rpc-client";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
