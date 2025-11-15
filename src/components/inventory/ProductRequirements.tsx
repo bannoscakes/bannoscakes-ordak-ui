@@ -59,10 +59,13 @@ export function ProductRequirements() {
       }
     }
     fetchRequirements();
-  }, [componentFilter, searchQuery]);
+  }, [searchQuery]); // Removed componentFilter from dependencies since it's client-side only
 
-  // Filtering is now handled by the RPC call, so we can use requirements directly
-  const filteredRequirements = requirements;
+  // Client-side filtering by component
+  const filteredRequirements = requirements.filter(requirement => {
+    const matchesComponent = componentFilter === "All" || requirement.component_id === componentFilter;
+    return matchesComponent;
+  });
 
   const handleAddRequirement = async () => {
     if (!newProductTitle || !newRequiredComponentId) {
