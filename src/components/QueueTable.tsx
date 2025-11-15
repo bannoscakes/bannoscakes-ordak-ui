@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Clock, Search, X } from "lucide-react";
+import { toast } from "sonner";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -25,6 +26,7 @@ import { useErrorNotifications } from "../lib/error-notifications";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -120,6 +122,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         const item: QueueItem = {
           id: order.id,
           orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+          shopifyOrderNumber: String(order.shopify_order_number || ''),
           customerName: order.customer_name || 'Unknown',
           product: order.product_title || 'Unknown',
           size: order.size || 'M',
@@ -191,7 +194,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const filteredItems = useMemo(() => {
     return currentItems.filter(item => {
-      const matchesSearch = 
+      const matchesSearch = !searchQuery || 
         item.orderNumber?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
         item.customerName?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
         item.product?.toLowerCase()?.includes(searchQuery.toLowerCase());
@@ -491,7 +494,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                                 setIsOrderDetailOpen(true);
                               }}
                               onViewDetails={(item) => {
-                                window.open(`https://admin.shopify.com/orders/${item.orderNumber}`, '_blank');
+                                const id = item.shopifyOrderNumber?.trim();
+                                if (!id) {
+                                  toast.error("Shopify order number not available");
+                                  return;
+                                }
+                                window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
                               }}
                             />
                           </div>
@@ -548,7 +556,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
             const newData = { ...prev };
             Object.keys(newData).forEach(stage => {
               newData[stage] = newData[stage].map(item => 
-                item.id === updatedOrder.id ? updatedOrder : item
+                item.id === updatedOrder.id ? { ...updatedOrder, shopifyOrderNumber: item.shopifyOrderNumber } : item
               );
             });
             return newData;

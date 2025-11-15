@@ -13,6 +13,7 @@ import { getOrder } from "../lib/rpc-client";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -122,6 +123,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
         const mappedOrder: QueueItem = {
           id: foundOrder.id,
           orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
           customerName: foundOrder.customer_name || "Unknown Customer",
           product: foundOrder.product_title || "Unknown Product",
           size: foundOrder.size || "M",
@@ -171,8 +173,12 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
   if (!extendedOrder) return null;
 
   const handleViewDetails = () => {
-    // This would link to Shopify order
-    window.open(`https://admin.shopify.com/orders/${extendedOrder.orderNumber}`, '_blank');
+    const id = extendedOrder?.shopifyOrderNumber?.trim();
+    if (!id) {
+      toast.error("Shopify order number not available");
+      return;
+    }
+    window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {
