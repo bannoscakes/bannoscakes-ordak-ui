@@ -15,7 +15,7 @@ interface DashboardContentProps {
   onNavigateToSignup?: () => void;
 }
 
-export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: DashboardContentProps) {
+export function DashboardContent({ onNavigateToSignup }: DashboardContentProps) {
   const [activeStore, setActiveStore] = useState("bannos");
 
   return (

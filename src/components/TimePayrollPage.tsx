@@ -257,7 +257,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
       });
       
       // Update selectedStaff with fresh data including updated totals
-      const freshStaffData = updatedData.find(s => s.id === selectedStaff.id);
+      const freshStaffData = updatedData.find((s: any) => s.id === selectedStaff.id);
       if (freshStaffData) {
         setSelectedStaff({ ...freshStaffData, timeEntries });
       }

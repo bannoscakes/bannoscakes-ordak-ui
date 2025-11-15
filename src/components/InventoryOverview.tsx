@@ -190,7 +190,7 @@ export function InventoryOverview() {
       </div>
 
       <div className="space-y-4">
-        {sharedInventoryData.map((item, index) => {
+        {sharedInventoryData.map((item) => {
           const stockPercentage = getStockPercentage(item.currentStock, item.maxStock);
           
           return (

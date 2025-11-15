@@ -209,8 +209,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             <ErrorBoundary>
               <BannosProductionPage 
                 initialFilter={viewFilter}
-                stats={dashboardStats.bannos}
-                onRefresh={() => loadDashboardStats(true)}
               />
             </ErrorBoundary>
           );
@@ -219,8 +217,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             <ErrorBoundary>
               <FlourlaneProductionPage 
                 initialFilter={viewFilter}
-                stats={dashboardStats.flourlane}
-                onRefresh={() => loadDashboardStats(true)}
               />
             </ErrorBoundary>
           );

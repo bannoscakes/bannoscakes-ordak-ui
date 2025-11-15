@@ -37,7 +37,6 @@ import {
 } from "../lib/messaging-adapters";
 
 import type { OptimisticMessage } from "../types/messages";
-import { isOptimistic } from "../features/messages/utils";
 
 import type { RealtimeMessageRow } from "../lib/messaging-types";
 import { ChatWindow } from "./messaging/ChatWindow";
@@ -66,12 +65,13 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   }, []);
 
   // Load unread count - wrapped in useCallback
-  const loadUnreadCount = useCallback(async (opts?: { background?: boolean }) => {
+  const loadUnreadCount = useCallback(async (_opts?: { background?: boolean }) => {
     try {
       const count = await getUnreadCount();
       setUnreadCount(count);
     } catch (err) {
       console.error("Failed to load unread count:", err);
+      // Silently fail on background updates to avoid disrupting UX
     }
   }, []);
 
@@ -106,6 +106,17 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
 
+  // Mark messages as read
+  const markAsRead = useCallback(async (conversationId: string) => {
+    try {
+      await markMessagesRead(conversationId);
+      loadUnreadCount({ background: true });
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    } catch (err) {
+      console.error("Failed to mark messages as read:", err);
+    }
+  }, [loadUnreadCount]);
+
   // Load messages - wrapped in useCallback
   const loadMessages = useCallback(async (conversationId: string) => {
     try {
@@ -127,18 +138,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         showRecoveryActions: true,
       });
     }
-  }, [currentUserId, showError]);
-
-  // Mark messages as read
-  const markAsRead = useCallback(async (conversationId: string) => {
-    try {
-      await markMessagesRead(conversationId);
-      loadUnreadCount({ background: true });
-      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-    } catch (err) {
-      console.error("Failed to mark messages as read:", err);
-    }
-  }, [loadUnreadCount]);
+  }, [currentUserId, showError, markAsRead]);
 
   // Handle initial conversation selection
   useEffect(() => {
@@ -288,7 +288,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
 
       // 4) Lightweight refresh for last-message preview (no spinner)
       loadConversations({ background: true });
-      loadUnreadCount?.({ background: true });
+      loadUnreadCount({ background: true });
     } catch (err) {
       console.error("Failed to send message:", err);
       // Remove optimistic on failure
