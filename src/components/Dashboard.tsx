@@ -97,33 +97,67 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     return () => clearInterval(interval);
   }, [loadDashboardStats]);
   
-  // Check URL parameters to determine initial view
+  // Parse URL parameters and update view reactively
   useEffect(() => {
-    try {
-      const currentUrlParams = new URLSearchParams(window.location.search);
-      const page = currentUrlParams.get('page');
-      const path = window.location.pathname;
-      
-      setUrlParams(currentUrlParams);
-      
-      // Handle settings routes
-      if (path === '/bannos/settings') {
-        setActiveView('bannos-settings');
-      } else if (path === '/flourlane/settings') {
-        setActiveView('flourlane-settings');
-      } else if (path === '/staff') {
-        setActiveView('staff');
-      } else if (path === '/admin/time') {
-        setActiveView('time-payroll');
-      } else if (page) {
-        setActiveView(page);
-      } else {
+    const handleUrlChange = () => {
+      try {
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        const page = currentUrlParams.get('page');
+        const view = currentUrlParams.get('view');
+        const path = window.location.pathname;
+        
+        setUrlParams(currentUrlParams);
+        
+        // Handle settings routes
+        if (path === '/bannos/settings') {
+          setActiveView('bannos-settings');
+        } else if (path === '/flourlane/settings') {
+          setActiveView('flourlane-settings');
+        } else if (path === '/staff') {
+          setActiveView('staff');
+        } else if (path === '/admin/time') {
+          setActiveView('time-payroll');
+        } else if (page) {
+          // Use 'page' parameter for page selection when present
+          // Note: 'view' parameter is used as a filter within that page (e.g., ?page=bannos-production&view=unassigned)
+          setActiveView(page);
+        } else if (view) {
+          // Sidebar navigation uses 'view' parameter for page selection (e.g., ?view=inventory, ?view=dashboard)
+          setActiveView(view);
+        } else {
+          setActiveView('dashboard');
+        }
+      } catch (error) {
+        console.error('Error parsing dashboard URL:', error);
         setActiveView('dashboard');
       }
-    } catch (error) {
-      console.error('Error parsing dashboard URL:', error);
-      setActiveView('dashboard');
-    }
+    };
+    
+    // Parse URL on mount
+    handleUrlChange();
+    
+    // Listen for browser back/forward navigation
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Hook into programmatic navigation (pushState/replaceState)
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      handleUrlChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(window.history, args);
+      handleUrlChange();
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
   }, []);
 
   const renderContent = () => {
