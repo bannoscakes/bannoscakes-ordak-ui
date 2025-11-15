@@ -210,7 +210,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               <BannosProductionPage 
                 initialFilter={viewFilter}
                 stats={dashboardStats.bannos}
-                onRefresh={loadDashboardStats}
+                onRefresh={() => loadDashboardStats(true)}
               />
             </ErrorBoundary>
           );
@@ -220,7 +220,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               <FlourlaneProductionPage 
                 initialFilter={viewFilter}
                 stats={dashboardStats.flourlane}
-                onRefresh={loadDashboardStats}
+                onRefresh={() => loadDashboardStats(true)}
               />
             </ErrorBoundary>
           );
@@ -324,7 +324,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         default:
           return (
             <ErrorBoundary>
-              <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+              <DashboardContent stats={dashboardStats} onRefresh={() => loadDashboardStats(true)} />
             </ErrorBoundary>
           );
       }
@@ -332,7 +332,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       console.error('Error rendering dashboard content:', error);
       return (
         <ErrorBoundary>
-          <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+          <DashboardContent stats={dashboardStats} onRefresh={() => loadDashboardStats(true)} />
         </ErrorBoundary>
       );
     }
