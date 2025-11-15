@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 // Import real RPCs
-import { getQueueCached } from "../lib/rpc-client";
+import { getQueue, getQueueCached } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -127,13 +127,17 @@ export function StaffWorkspacePage({
   // Mock unread message count
 
   // Load orders from real RPC
-  async function loadStaffOrders() {
+  async function loadStaffOrders(bypassCache = false) {
     setLoading(true);
     try {
-      // Fetch orders from both stores (use cached version for performance)
+      // Fetch orders from both stores (bypass cache for manual refresh)
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueueCached({ store: "bannos", limit: 100 }),
-        getQueueCached({ store: "flourlane", limit: 100 })
+        bypassCache
+          ? getQueue({ store: "bannos", limit: 100 })
+          : getQueueCached({ store: "bannos", limit: 100 }),
+        bypassCache
+          ? getQueue({ store: "flourlane", limit: 100 })
+          : getQueueCached({ store: "flourlane", limit: 100 })
       ]);
       
       // Combine all orders
@@ -184,9 +188,30 @@ export function StaffWorkspacePage({
     }
   };
 
-  // Load orders on mount
+  // Load orders on mount and set up auto-refresh
   useEffect(() => {
     loadStaffOrders();
+    
+    // Auto-refresh every 30 seconds (uses cache for performance)
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadStaffOrders();
+      }
+    }, 30000);
+    
+    // Refresh when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadStaffOrders();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Update elapsed time
@@ -280,7 +305,7 @@ export function StaffWorkspacePage({
   };
 
   const handleRefresh = () => {
-    loadStaffOrders();
+    loadStaffOrders(true); // Bypass cache for manual refresh
   };
 
   const getStoreColor = (store: string) => {
