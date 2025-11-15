@@ -26,7 +26,7 @@ export function BOMsInventory() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const componentsData = await getComponentsCached();
+        const componentsData = await getComponentsCached({});
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
