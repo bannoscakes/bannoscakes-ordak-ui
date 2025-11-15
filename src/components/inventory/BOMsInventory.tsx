@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
-import { getBoms, getBomsCached, upsertBom, getComponents, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
+import { getBomsCached, upsertBom, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
 
 export function BOMsInventory() {
   const [boms, setBOMs] = useState<BOM[]>([]);

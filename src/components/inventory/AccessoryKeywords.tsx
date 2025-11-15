@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getAccessoryKeywords, getAccessoryKeywordsCached, upsertAccessoryKeyword, getComponents, getComponentsCached, invalidateInventoryCache, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
+import { getAccessoryKeywordsCached, upsertAccessoryKeyword, getComponentsCached, invalidateInventoryCache, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
 
 // =============================================================================
 // MOCK DATA - TODO: Replace with real data from database when features are implemented

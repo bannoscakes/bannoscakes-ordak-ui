@@ -9,7 +9,7 @@ import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
-import { getProductRequirements, getProductRequirementsCached, upsertProductRequirement, getComponents, getComponentsCached, invalidateInventoryCache, type ProductRequirement, type Component } from "../../lib/rpc-client";
+import { getProductRequirementsCached, upsertProductRequirement, getComponentsCached, invalidateInventoryCache, type ProductRequirement, type Component } from "../../lib/rpc-client";
 
 export function ProductRequirements() {
   const [requirements, setRequirements] = useState<ProductRequirement[]>([]);

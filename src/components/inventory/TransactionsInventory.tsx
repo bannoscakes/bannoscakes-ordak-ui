@@ -9,7 +9,7 @@ import { Search, Calendar, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
-import { getStockTransactions, getStockTransactionsCached, getComponents, type StockTransaction } from "../../lib/rpc-client";
+import { getStockTransactionsCached, type StockTransaction } from "../../lib/rpc-client";
 import { toast } from "sonner";
 
 export function TransactionsInventory() {

@@ -12,7 +12,7 @@ import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getComponents, getComponentsCached, updateComponentStock, upsertComponent, invalidateInventoryCache } from "../../lib/rpc-client";
+import { getComponentsCached, updateComponentStock, upsertComponent, invalidateInventoryCache } from "../../lib/rpc-client";
 
 interface Component {
   id: string;

@@ -8,7 +8,7 @@ import { Textarea } from "../ui/textarea";
 import { RotateCcw, Settings, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
-import { restockOrder, updateComponentStock, getComponents, getComponentsCached, invalidateInventoryCache, type Component } from "../../lib/rpc-client";
+import { restockOrder, updateComponentStock, getComponentsCached, invalidateInventoryCache, type Component } from "../../lib/rpc-client";
 
 export function ToolsInventory() {
   // Restock Order states
