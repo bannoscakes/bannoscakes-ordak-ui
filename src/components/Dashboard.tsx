@@ -114,19 +114,19 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   
   // Load stats on mount and refresh every 30 seconds (only when tab is visible)
   useEffect(() => {
-    loadDashboardStats();
+    loadDashboardStats(); // Initial load uses cache for fast startup
     
-    // Refresh stats every 30 seconds, but only when tab is visible
+    // Refresh stats every 30 seconds, bypass cache for fresh data
     const interval = setInterval(() => {
       if (!document.hidden) {
-        loadDashboardStats();
+        loadDashboardStats(true); // Bypass cache for auto-refresh
       }
     }, 30000);
     
-    // Also refresh when tab becomes visible again
+    // Also refresh when tab becomes visible again, bypass cache for fresh data
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        loadDashboardStats();
+        loadDashboardStats(true); // Bypass cache when tab becomes visible
       }
     };
     
