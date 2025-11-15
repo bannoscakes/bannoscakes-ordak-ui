@@ -20,7 +20,7 @@ import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 // Import real RPCs for dashboard stats
-import { getQueueCached } from "../lib/rpc-client";
+import { getQueue, getQueueCached } from "../lib/rpc-client";
 import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
 import { makeEmptyCounts } from "@/types/stage";
 
@@ -46,7 +46,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   }, [urlParams]);
   
   // Load dashboard stats from real data - wrapped in useCallback to prevent stale closures
-  const loadDashboardStats = useCallback(async () => {
+  const loadDashboardStats = useCallback(async (bypassCache = false) => {
     // If already refreshing, return the existing promise to wait for completion
     if (isRefreshing.current && refreshPromise.current) {
       return refreshPromise.current;
@@ -64,10 +64,14 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
 
       try {
-      // Fetch orders from both stores
+      // Fetch orders from both stores (bypass cache if manual refresh)
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueueCached({ store: "bannos", limit: 1000 }),
-        getQueueCached({ store: "flourlane", limit: 1000 })
+        bypassCache 
+          ? getQueue({ store: "bannos", limit: 1000 })
+          : getQueueCached({ store: "bannos", limit: 1000 }),
+        bypassCache
+          ? getQueue({ store: "flourlane", limit: 1000 })
+          : getQueueCached({ store: "flourlane", limit: 1000 })
       ]);
       
       const orders = [...bannosOrders, ...flourlaneOrders];
@@ -346,7 +350,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <ErrorBoundary>
-          <Header onRefresh={loadDashboardStats} onSignOut={onSignOut} />
+          <Header onRefresh={() => loadDashboardStats(true)} onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
           {renderContent()}
