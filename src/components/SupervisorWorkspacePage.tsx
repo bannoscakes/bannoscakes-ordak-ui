@@ -139,9 +139,9 @@ export function SupervisorWorkspacePage({
   }, [shiftStatus, shiftStartTime, breakStartTime]);
 
   const filteredOrders = orders.filter(order =>
-    order.orderNumber.toLowerCase().includes(searchValue.toLowerCase()) ||
-    order.customerName.toLowerCase().includes(searchValue.toLowerCase()) ||
-    order.product.toLowerCase().includes(searchValue.toLowerCase())
+    order.orderNumber?.toLowerCase()?.includes(searchValue.toLowerCase()) ||
+    order.customerName?.toLowerCase()?.includes(searchValue.toLowerCase()) ||
+    order.product?.toLowerCase()?.includes(searchValue.toLowerCase())
   );
 
   // Load orders from database

@@ -248,14 +248,14 @@ export function StaffWorkspacePage({
   const filteredOrders = orders.filter(
     (order) =>
       order.orderNumber
-        .toLowerCase()
-        .includes(searchValue.toLowerCase()) ||
+        ?.toLowerCase()
+        ?.includes(searchValue.toLowerCase()) ||
       order.customerName
-        .toLowerCase()
-        .includes(searchValue.toLowerCase()) ||
+        ?.toLowerCase()
+        ?.includes(searchValue.toLowerCase()) ||
       order.product
-        .toLowerCase()
-        .includes(searchValue.toLowerCase()),
+        ?.toLowerCase()
+        ?.includes(searchValue.toLowerCase()),
   );
 
   const handleStartShift = () => {
