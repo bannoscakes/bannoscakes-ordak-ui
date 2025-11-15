@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -109,6 +109,7 @@ export function StaffWorkspacePage({
 
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasInitiallyLoaded = useRef(false); // Track initial load
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] =
     useState<ShiftStatus>("not-started");
@@ -128,7 +129,11 @@ export function StaffWorkspacePage({
 
   // Load orders from real RPC
   async function loadStaffOrders(bypassCache = false) {
-    setLoading(true);
+    // Only show loading skeleton on initial load, not during auto-refresh
+    if (!hasInitiallyLoaded.current) {
+      setLoading(true);
+    }
+    
     try {
       // Fetch orders from both stores (bypass cache for manual refresh)
       const [bannosOrders, flourlaneOrders] = await Promise.all([
@@ -174,6 +179,7 @@ export function StaffWorkspacePage({
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
+      hasInitiallyLoaded.current = true; // Mark initial load complete
     }
   }
 

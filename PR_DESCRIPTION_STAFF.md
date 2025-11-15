@@ -5,10 +5,11 @@ Apply data caching to staff workspace AND add missing auto-refresh features. Sta
 1. Open DevTools Network tab
 2. Load dashboard → observe queue API calls
 3. Navigate to Staff workspace within 30 seconds → should NOT see new queue API calls (cache hit)
-4. Wait 30 seconds on Staff workspace → should see fresh data fetch (auto-refresh)
-5. Switch to another tab, wait, then switch back → should see fresh data fetch (tab visibility)
+4. Wait 30 seconds on Staff workspace → should see API calls (auto-refresh uses cache, but cache expires)
+5. Switch to another tab, wait, then switch back → may or may not see API calls (uses cache if fresh)
 6. Click Refresh button → should ALWAYS see fresh data fetch (bypass cache)
 7. Navigating between dashboard and staff should feel instant within cache window
+8. Auto-refresh should NOT cause UI flicker (silent background update)
 
 ## Changes
 **Caching:**
