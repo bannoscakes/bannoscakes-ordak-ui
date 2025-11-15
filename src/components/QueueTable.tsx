@@ -25,6 +25,7 @@ import { useErrorNotifications } from "../lib/error-notifications";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
