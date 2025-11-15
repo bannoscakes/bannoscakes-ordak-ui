@@ -7,6 +7,7 @@ const testOrders = [
   {
     id: "TEST-1",
     orderNumber: "TEST-001",
+    shopifyOrderNumber: "1001",
     customerName: "Test Customer 1",
     product: "Chocolate Cupcakes",
     size: "M" as 'S' | 'M' | 'L',
@@ -21,6 +22,7 @@ const testOrders = [
   {
     id: "TEST-2",
     orderNumber: "TEST-002",
+    shopifyOrderNumber: "1002",
     customerName: "Test Customer 2",
     product: "Custom Wedding Cake",
     size: "L" as 'S' | 'M' | 'L',
@@ -35,6 +37,7 @@ const testOrders = [
   {
     id: "TEST-3",
     orderNumber: "TEST-003",
+    shopifyOrderNumber: "1003",
     customerName: "Test Customer 3",
     product: "Birthday Cake",
     size: "M" as 'S' | 'M' | 'L',

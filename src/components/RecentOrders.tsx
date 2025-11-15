@@ -13,6 +13,7 @@ interface RecentOrdersProps {
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -30,6 +31,7 @@ interface QueueItem {
 const convertToQueueItem = (order: any): QueueItem => ({
   id: order.id,
   orderNumber: order.id,
+  shopifyOrderNumber: String(order.shopify_order_number || ''),
   customerName: order.customer,
   product: order.product,
   size: 'M' as const, // Default size
