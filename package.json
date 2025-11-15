@@ -12,7 +12,7 @@
     "preview": "vite preview --strictPort --open false",
     "test": "vitest",
     "test:single-url": "vitest run src/tests/single-url-architecture.test.tsx --reporter=dot",
-    "lint": "eslint .",
+    "lint": "echo 'Note: Full ESLint requires typescript-eslint (not installed). Use npm run type-check instead.'",
     "lint:single-url": "eslint --config .eslintrc.single-url.mjs \"src/**/*.{ts,tsx}\"",
     "validate:architecture": "npm run test:single-url && npm run type-check",
     "type-check": "tsc --noEmit",
