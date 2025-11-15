@@ -99,6 +99,17 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
 
+  // Mark messages as read
+  const markAsRead = useCallback(async (conversationId: string) => {
+    try {
+      await markMessagesRead(conversationId);
+      loadUnreadCount();
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    } catch (err) {
+      console.error("Failed to mark messages as read:", err);
+    }
+  }, [loadUnreadCount]);
+
   // Load messages - wrapped in useCallback
   const loadMessages = useCallback(async (conversationId: string) => {
     try {
@@ -120,18 +131,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         showRecoveryActions: true,
       });
     }
-  }, [currentUserId, showError]);
-
-  // Mark messages as read
-  const markAsRead = useCallback(async (conversationId: string) => {
-    try {
-      await markMessagesRead(conversationId);
-      loadUnreadCount();
-      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-    } catch (err) {
-      console.error("Failed to mark messages as read:", err);
-    }
-  }, [loadUnreadCount]);
+  }, [currentUserId, showError, markAsRead]);
 
   // Handle initial conversation selection
   useEffect(() => {
