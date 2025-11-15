@@ -284,11 +284,21 @@ export function ComponentsInventory() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Loading components...
-                </TableCell>
-              </TableRow>
+              // Loading skeleton rows
+              <>
+                {[...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-32 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 bg-muted rounded w-24 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-12 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-12 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-32 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-24 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-8 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                  </TableRow>
+                ))}
+              </>
             ) : filteredComponents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">

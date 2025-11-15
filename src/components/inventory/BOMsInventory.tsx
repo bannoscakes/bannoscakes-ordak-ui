@@ -238,11 +238,19 @@ export function BOMsInventory() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Loading BOMs...
-                </TableCell>
-              </TableRow>
+              // Loading skeleton rows
+              <>
+                {[...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><div className="h-4 bg-muted rounded w-48 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-32 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 bg-muted rounded w-16 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-muted rounded w-24 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-8 bg-muted rounded w-20 animate-pulse" /></TableCell>
+                  </TableRow>
+                ))}
+              </>
             ) : filteredBOMs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
