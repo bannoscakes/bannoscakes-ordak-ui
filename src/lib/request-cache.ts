@@ -91,10 +91,10 @@ class RequestCache {
       try {
         const data = await promise;
         
-        // Update cache with successful result
+        // Update cache with successful result (refresh timestamp to start TTL from completion)
         this.cache.set(key, {
           data,
-          timestamp: now,
+          timestamp: Date.now(), // Use current time, not original request start time
           ttl: ttl,
         });
 
