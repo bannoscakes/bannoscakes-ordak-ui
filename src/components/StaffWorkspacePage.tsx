@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 // Import real RPCs
-import { getQueue } from "../lib/rpc-client";
+import { getQueueCached } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -126,14 +126,14 @@ export function StaffWorkspacePage({
 
   // Mock unread message count
 
-  // Load orders from mock
+  // Load orders from real RPC
   async function loadStaffOrders() {
     setLoading(true);
     try {
-      // Fetch orders from both stores
+      // Fetch orders from both stores (use cached version for performance)
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 100 }),
-        getQueue({ store: "flourlane", limit: 100 })
+        getQueueCached({ store: "bannos", limit: 100 }),
+        getQueueCached({ store: "flourlane", limit: 100 })
       ]);
       
       // Combine all orders
