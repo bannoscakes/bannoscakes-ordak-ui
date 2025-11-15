@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { Search, Plus, Edit, TrendingDown, ExternalLink, Minus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Textarea } from "../ui/textarea";
@@ -155,19 +155,39 @@ export function ComponentsInventory() {
     }
   };
 
-  const handleSaveComponent = () => {
+  const handleSaveComponent = async () => {
     if (!editingComponent) return;
     
-    setComponents(prev => prev.map(c => 
-      c.id === editingComponent.id ? {
-        ...editingComponent,
-        isLowStock: editingComponent.onHand <= editingComponent.reorderPoint
-      } : c
-    ));
-    
-    setIsEditDialogOpen(false);
-    setEditingComponent(null);
-    toast.success("Component updated successfully");
+    try {
+      // Update component in database
+      await upsertComponent({
+        id: editingComponent.id,
+        sku: editingComponent.sku,
+        name: editingComponent.name,
+        category: editingComponent.type,
+        current_stock: editingComponent.onHand,
+        min_stock: editingComponent.reorderPoint,
+        is_active: true
+      });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
+
+      // Update local state
+      setComponents(prev => prev.map(c => 
+        c.id === editingComponent.id ? {
+          ...editingComponent,
+          isLowStock: editingComponent.onHand <= editingComponent.reorderPoint
+        } : c
+      ));
+      
+      setIsEditDialogOpen(false);
+      setEditingComponent(null);
+      toast.success("Component updated successfully");
+    } catch (error) {
+      console.error('Error updating component:', error);
+      toast.error('Failed to update component');
+    }
   };
 
   const handleAdjustStock = (component: Component) => {

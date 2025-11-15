@@ -7,16 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
 import { getAccessoryKeywordsCached, upsertAccessoryKeyword, getComponentsCached, invalidateInventoryCache, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
-
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Accessory Keywords management (add/remove keywords)
-// =============================================================================
-
-const mockKeywords: AccessoryKeyword[] = []; // Using real data from database
 
 export function AccessoryKeywords() {
   const [keywords, setKeywords] = useState<AccessoryKeyword[]>([]);
