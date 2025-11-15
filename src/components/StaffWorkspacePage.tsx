@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 // Import real RPCs
-import { getQueue } from "../lib/rpc-client";
+import { getQueue, getQueueCached } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -109,6 +109,7 @@ export function StaffWorkspacePage({
 
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasInitiallyLoaded = useRef(false); // Track initial load
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] =
     useState<ShiftStatus>("not-started");
@@ -126,14 +127,22 @@ export function StaffWorkspacePage({
 
   // Mock unread message count
 
-  // Load orders from mock
-  async function loadStaffOrders() {
-    setLoading(true);
+  // Load orders from real RPC
+  async function loadStaffOrders(bypassCache = false) {
+    // Only show loading skeleton on initial load, not during auto-refresh
+    if (!hasInitiallyLoaded.current) {
+      setLoading(true);
+    }
+    
     try {
-      // Fetch orders from both stores
+      // Fetch orders from both stores (bypass cache for manual refresh)
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 100 }),
-        getQueue({ store: "flourlane", limit: 100 })
+        bypassCache
+          ? getQueue({ store: "bannos", limit: 100 })
+          : getQueueCached({ store: "bannos", limit: 100 }),
+        bypassCache
+          ? getQueue({ store: "flourlane", limit: 100 })
+          : getQueueCached({ store: "flourlane", limit: 100 })
       ]);
       
       // Combine all orders
@@ -170,6 +179,7 @@ export function StaffWorkspacePage({
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
+      hasInitiallyLoaded.current = true; // Mark initial load complete
     }
   }
 
@@ -184,9 +194,30 @@ export function StaffWorkspacePage({
     }
   };
 
-  // Load orders on mount
+  // Load orders on mount and set up auto-refresh
   useEffect(() => {
     loadStaffOrders();
+    
+    // Auto-refresh every 30 seconds (uses cache for performance)
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadStaffOrders();
+      }
+    }, 30000);
+    
+    // Refresh when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadStaffOrders();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Update elapsed time
@@ -275,12 +306,12 @@ export function StaffWorkspacePage({
     setScannerOpen(false);
     setSelectedOrder(null);
     
-    // Reload orders to get updated state
-    await loadStaffOrders();
+    // Reload orders with fresh data (bypass cache to avoid stale data)
+    await loadStaffOrders(true);
   };
 
   const handleRefresh = () => {
-    loadStaffOrders();
+    loadStaffOrders(true); // Bypass cache for manual refresh
   };
 
   const getStoreColor = (store: string) => {
