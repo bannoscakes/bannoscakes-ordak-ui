@@ -167,6 +167,9 @@ export function AccessoryKeywords() {
           is_active: false
         });
 
+        // Invalidate cache after mutation
+        invalidateInventoryCache();
+
         setKeywords(prev => prev.filter(k => k.id !== id));
         toast.success("Keyword deleted");
       } catch (error) {

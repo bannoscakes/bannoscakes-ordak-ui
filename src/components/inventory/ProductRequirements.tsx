@@ -132,6 +132,9 @@ export function ProductRequirements() {
         auto_deduct: editingRequirement.auto_deduct
       });
 
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
+
       setRequirements(prev => prev.map(r => 
         r.id === editingRequirement.id ? editingRequirement : r
       ));
