@@ -451,7 +451,14 @@ export function SupervisorWorkspacePage({
                           onOpenOrder={() => handleOpenOrder(order)}
                           onEditOrder={undefined}
                           onAssignToStaff={undefined}
-                          onViewDetails={() => window.open(`https://admin.shopify.com/orders/${order.orderNumber}`, '_blank')}
+                          onViewDetails={() => {
+                            const id = order.shopifyOrderNumber?.trim();
+                            if (!id) {
+                              toast.error("Shopify order number not available");
+                              return;
+                            }
+                            window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+                          }}
                           isCompleteTab={false}
                         />
                       </div>

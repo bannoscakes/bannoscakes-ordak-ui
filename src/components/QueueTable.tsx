@@ -493,7 +493,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                                 setIsOrderDetailOpen(true);
                               }}
                               onViewDetails={(item) => {
-                                window.open(`https://admin.shopify.com/orders/${item.orderNumber}`, '_blank');
+                                const id = item.shopifyOrderNumber?.trim();
+                                if (!id) {
+                                  toast.error("Shopify order number not available");
+                                  return;
+                                }
+                                window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
                               }}
                             />
                           </div>
