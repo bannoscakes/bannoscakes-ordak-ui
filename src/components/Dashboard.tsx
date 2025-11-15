@@ -324,7 +324,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         default:
           return (
             <ErrorBoundary>
-              <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+              <DashboardContent stats={dashboardStats} onRefresh={() => loadDashboardStats(true)} />
             </ErrorBoundary>
           );
       }
@@ -332,7 +332,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       console.error('Error rendering dashboard content:', error);
       return (
         <ErrorBoundary>
-          <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+          <DashboardContent stats={dashboardStats} onRefresh={() => loadDashboardStats(true)} />
         </ErrorBoundary>
       );
     }

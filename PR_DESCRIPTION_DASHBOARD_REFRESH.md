@@ -21,7 +21,11 @@ npm test
 
 ## Changes
 
-- `src/components/Dashboard.tsx` lines 213 & 223: Changed `onRefresh={loadDashboardStats}` to `onRefresh={() => loadDashboardStats(true)}` for both production pages
+- `src/components/Dashboard.tsx` lines 213, 223, 327, 335: Changed all `onRefresh={loadDashboardStats}` to `onRefresh={() => loadDashboardStats(true)}`
+  - BannosProductionPage (line 213)
+  - FlourlaneProductionPage (line 223)  
+  - DashboardContent default case (line 327)
+  - DashboardContent error fallback (line 335)
 
 ## Checklist
 
