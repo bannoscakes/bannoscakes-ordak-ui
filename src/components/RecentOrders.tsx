@@ -202,7 +202,8 @@ export function RecentOrders({ store }: RecentOrdersProps) {
         status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
         priority: order.priority || 'Medium',
         dueDate: order.due_date || 'N/A',
-        progress: order.stage === 'Complete' ? 100 : order.stage === 'Packing' ? 75 : order.stage === 'Decorating' ? 50 : order.stage === 'Covering' ? 25 : 0
+        progress: order.stage === 'Complete' ? 100 : order.stage === 'Packing' ? 75 : order.stage === 'Decorating' ? 50 : order.stage === 'Covering' ? 25 : 0,
+        shopify_order_number: order.shopify_order_number
       }));
       
       setOrders(mapped);
