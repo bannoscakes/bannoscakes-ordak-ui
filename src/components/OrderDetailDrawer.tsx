@@ -123,6 +123,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
         const mappedOrder: QueueItem = {
           id: foundOrder.id,
           orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
           customerName: foundOrder.customer_name || "Unknown Customer",
           product: foundOrder.product_title || "Unknown Product",
           size: foundOrder.size || "M",
