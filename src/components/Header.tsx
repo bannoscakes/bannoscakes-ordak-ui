@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, CheckCircle2, AlertCircle } from "lucide-react";
+import { Search, User, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
@@ -8,12 +8,14 @@ import { findOrder } from "../lib/rpc-client";
 
 interface HeaderProps {
   onSignOut?: () => void;
+  onRefresh?: () => void | Promise<void>;
 }
 
-export function Header({ onSignOut }: HeaderProps) {
+export function Header({ onSignOut, onRefresh }: HeaderProps) {
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchResult, setSearchResult] = useState<{
     store: string;
     orderNumber: string;
@@ -54,6 +56,17 @@ export function Header({ onSignOut }: HeaderProps) {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!onRefresh || refreshing) return;
+    
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <>
     <header className="bg-background border-b border-border px-6 py-4">
@@ -83,6 +96,19 @@ export function Header({ onSignOut }: HeaderProps) {
           </div>
           
           <div className="flex items-center gap-2">
+            {onRefresh && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="gap-2"
+                aria-label={refreshing ? "Refreshing dashboard" : "Refresh dashboard"}
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {!refreshing && <span className="hidden sm:inline">Refresh</span>}
+              </Button>
+            )}
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
             </Button>
