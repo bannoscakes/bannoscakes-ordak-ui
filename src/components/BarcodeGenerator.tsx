@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import JsBarcode from 'jsbarcode';
 import { Button } from './ui/button';
 import { Printer, Download } from 'lucide-react';

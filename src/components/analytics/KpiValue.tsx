@@ -1,5 +1,3 @@
-import React from "react";
-
 type KpiUnit = "percent" | "count" | "currency" | "raw";
 
 export default function KpiValue({
