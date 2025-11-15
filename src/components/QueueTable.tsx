@@ -550,7 +550,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
             const newData = { ...prev };
             Object.keys(newData).forEach(stage => {
               newData[stage] = newData[stage].map(item => 
-                item.id === updatedOrder.id ? updatedOrder : item
+                item.id === updatedOrder.id ? { ...updatedOrder, shopifyOrderNumber: item.shopifyOrderNumber } : item
               );
             });
             return newData;
