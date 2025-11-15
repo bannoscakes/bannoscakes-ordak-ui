@@ -157,7 +157,7 @@ export function StaffWorkspacePage({
       // Map database orders to UI format
       const mappedOrders = ordersToShow.map((order: any) => ({
         id: order.id,
-        orderNumber: order.human_id || order.shopify_order_number || order.id,
+        orderNumber: String(order.human_id || order.shopify_order_number || order.id),
         customerName: order.customer_name || "Unknown Customer",
         product: order.product_title || "Unknown Product",
         size: order.size || "M",
