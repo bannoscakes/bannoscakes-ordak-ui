@@ -62,10 +62,6 @@ export function ProductRequirements() {
   }, [searchQuery]); // Removed componentFilter from dependencies since it's client-side only
 
   // Client-side filtering by component
-  const filteredRequirements = requirements.filter(requirement => {
-    const matchesComponent = componentFilter === "All" || requirement.component_id === componentFilter;
-    return matchesComponent;
-  });
 
   const handleAddRequirement = async () => {
     if (!newProductTitle || !newRequiredComponentId) {

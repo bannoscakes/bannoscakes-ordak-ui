@@ -59,15 +59,6 @@ export function AccessoryKeywords() {
   const [newPriority, setNewPriority] = useState(0);
   const [newMatchType, setNewMatchType] = useState<'contains' | 'exact' | 'starts_with' | 'ends_with'>('contains');
 
-  const filteredKeywords = keywords.filter(keyword => {
-    const matchesSearch = searchQuery === "" || 
-      keyword.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      keyword.component_name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesComponent = componentFilter === "All" || keyword.component_id === componentFilter;
-    
-    return matchesSearch && matchesComponent;
-  });
 
   const handleAddKeyword = async () => {
     if (!newKeyword || !newComponentId) {
