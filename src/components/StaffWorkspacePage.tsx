@@ -306,8 +306,8 @@ export function StaffWorkspacePage({
     setScannerOpen(false);
     setSelectedOrder(null);
     
-    // Reload orders to get updated state
-    await loadStaffOrders();
+    // Reload orders with fresh data (bypass cache to avoid stale data)
+    await loadStaffOrders(true);
   };
 
   const handleRefresh = () => {
