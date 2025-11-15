@@ -158,6 +158,7 @@ export function StaffWorkspacePage({
       const mappedOrders = ordersToShow.map((order: any) => ({
         id: order.id,
         orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+        shopifyOrderNumber: String(order.shopify_order_number || ''),
         customerName: order.customer_name || "Unknown Customer",
         product: order.product_title || "Unknown Product",
         size: order.size || "M",
@@ -530,7 +531,7 @@ export function StaffWorkspacePage({
                           onAssignToStaff={undefined}
                           onViewDetails={() =>
                             window.open(
-                              `https://admin.shopify.com/orders/${order.orderNumber}`,
+                              `https://admin.shopify.com/orders/${order.shopifyOrderNumber}`,
                               "_blank",
                             )
                           }

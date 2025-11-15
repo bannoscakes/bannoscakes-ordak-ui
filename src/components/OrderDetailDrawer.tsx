@@ -13,6 +13,7 @@ import { getOrder } from "../lib/rpc-client";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -172,7 +173,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
   const handleViewDetails = () => {
     // This would link to Shopify order
-    window.open(`https://admin.shopify.com/orders/${extendedOrder.orderNumber}`, '_blank');
+    window.open(`https://admin.shopify.com/orders/${extendedOrder.shopifyOrderNumber}`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {
