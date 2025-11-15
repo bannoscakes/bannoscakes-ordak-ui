@@ -33,9 +33,6 @@ export type CompleteMinimalRow = {
   created_at: string;
 };
 
-// Use RPC functions for all data fetching
-const MODE = 'rpc';
-
 export async function fetchQueue(store: Store | null, limit = 100, offset = 0): Promise<QueueMinimalRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_queue_minimal', {

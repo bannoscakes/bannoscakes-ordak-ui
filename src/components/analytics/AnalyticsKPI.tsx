@@ -3,7 +3,6 @@ import { toNumberOrNull } from "@/lib/metrics";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 
 export default function AnalyticsKPI({
-  title,
   rawValue,
   unit = "raw",
   captionWhenEmpty = "No data yet",

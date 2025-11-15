@@ -1,6 +1,5 @@
 // lib/messaging-adapters.ts
 import type { Message as RPCMessage, Conversation as RPCConversation } from './rpc-client';
-import type { Message as BaseMessage } from '../types/messages';
 
 export interface UIMessage {
   id: string;

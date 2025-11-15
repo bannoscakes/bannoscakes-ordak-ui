@@ -37,7 +37,6 @@ import {
 } from "../../lib/messaging-adapters";
 
 import type { OptimisticMessage } from "../../types/messages";
-import { isOptimistic } from "../../features/messages/utils";
 import type { RealtimeMessageRow } from "../../lib/messaging-types";
 
 export function MessagesPage() {
@@ -59,7 +58,7 @@ export function MessagesPage() {
   }, []);
 
   // Load unread count - wrapped in useCallback
-  const loadUnreadCount = useCallback(async (opts?: { background?: boolean }) => {
+  const loadUnreadCount = useCallback(async () => {
     try {
       const count = await getUnreadCount();
       setUnreadCount(count);
@@ -70,27 +69,21 @@ export function MessagesPage() {
   }, []);
 
   // Load conversations - wrapped in useCallback
-  const loadConversations = useCallback(async (opts?: { background?: boolean }) => {
+  const loadConversations = useCallback(async () => {
     try {
-      if (!opts?.background) {
-        setLoading(true);
-        setError(null);
-      }
+      setLoading(true);
+      setError(null);
       const data: RPCConversation[] = await getConversations();
       setConversations(data.map(toUIConversation));
     } catch (err) {
       console.error("Failed to load conversations:", err);
-      if (!opts?.background) {
-        setError(err);
-        showErrorWithRetry(err, () => loadConversations(), {
-          title: "Failed to Load Conversations",
-          showRecoveryActions: true,
-        });
-      }
+      setError(err);
+      showErrorWithRetry(err, () => loadConversations(), {
+        title: "Failed to Load Conversations",
+        showRecoveryActions: true,
+      });
     } finally {
-      if (!opts?.background) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [showErrorWithRetry]);
 
@@ -99,6 +92,17 @@ export function MessagesPage() {
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
+
+  // Mark messages as read
+  const markAsRead = useCallback(async (conversationId: string) => {
+    try {
+      await markMessagesRead(conversationId);
+      loadUnreadCount();
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    } catch (err) {
+      console.error("Failed to mark messages as read:", err);
+    }
+  }, [loadUnreadCount]);
 
   // Load messages - wrapped in useCallback
   const loadMessages = useCallback(async (conversationId: string) => {
@@ -123,17 +127,6 @@ export function MessagesPage() {
     }
   }, [currentUserId, showError, markAsRead]);
 
-  // Mark messages as read
-  const markAsRead = useCallback(async (conversationId: string) => {
-    try {
-      await markMessagesRead(conversationId);
-      loadUnreadCount({ background: true });
-      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
-    } catch (err) {
-      console.error("Failed to mark messages as read:", err);
-    }
-  }, [loadUnreadCount]);
-
   // Realtime handlers
   const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
     const uiMsg: Message = {
@@ -156,8 +149,8 @@ export function MessagesPage() {
     }
 
     // ✅ Background updates - no loading spinner flicker
-    loadConversations({ background: true });
-    loadUnreadCount({ background: true });
+    loadConversations();
+    loadUnreadCount();
   }, [currentUserId, selectedConversation, markAsRead, loadConversations, loadUnreadCount]);
 
   // Debounced loadConversations to prevent excessive calls
@@ -169,7 +162,7 @@ export function MessagesPage() {
     }
     // Set new timeout
     debounceTimerRef.current = setTimeout(() => {
-      loadConversations({ background: true });
+      loadConversations();
     }, 150);
   }, [loadConversations]);
 
@@ -262,8 +255,8 @@ export function MessagesPage() {
       );
 
       // 4) Lightweight refresh for last-message preview (no spinner)
-      loadConversations({ background: true });
-      loadUnreadCount?.({ background: true });
+      loadConversations();
+      loadUnreadCount();
     } catch (err) {
       console.error("Failed to send message:", err);
       // Remove optimistic on failure

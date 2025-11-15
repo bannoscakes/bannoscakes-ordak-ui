@@ -191,7 +191,7 @@ class AuthService {
   // Public methods
   async signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await this.supabase.auth.signInWithPassword({
+      const { error } = await this.supabase.auth.signInWithPassword({
         email,
         password
       });

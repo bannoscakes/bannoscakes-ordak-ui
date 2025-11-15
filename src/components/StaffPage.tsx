@@ -8,10 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { 
-  Users, 
   Plus, 
   Search, 
   MoreHorizontal, 
@@ -23,7 +22,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
-import { getStaffList, type StaffMember as RpcStaffMember } from "../lib/rpc-client";
+import { getStaffList } from "../lib/rpc-client";
 
 interface StaffMember {
   id: string;

@@ -12,7 +12,7 @@ interface BannosProductionPageProps {
   onRefresh?: () => Promise<void>;
 }
 
-export function BannosProductionPage({ initialFilter, stats, onRefresh }: BannosProductionPageProps) {
+export function BannosProductionPage({ initialFilter }: BannosProductionPageProps) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">

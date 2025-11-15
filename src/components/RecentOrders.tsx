@@ -45,113 +45,6 @@ const convertToQueueItem = (order: any): QueueItem => ({
   storage: order.status === "Completed" ? "Store Fridge" : undefined
 });
 
-const storeOrders = {
-  bannos: [
-    {
-      id: "BAN-001",
-      customer: "Sweet Delights Co.",
-      product: "Chocolate Cupcakes",
-      quantity: 150,
-      status: "In Production",
-      priority: "High",
-      dueDate: "Sep 3, 2025",
-      progress: 45
-    },
-    {
-      id: "BAN-002", 
-      customer: "City Bakery",
-      product: "Vanilla Cake",
-      quantity: 75,
-      status: "Pending",
-      priority: "Medium",
-      dueDate: "Sep 5, 2025",
-      progress: 0
-    },
-    {
-      id: "BAN-003",
-      customer: "Wedding Bells",
-      product: "Custom Wedding Cake",
-      quantity: 1,
-      status: "Quality Check",
-      priority: "High",
-      dueDate: "Sep 2, 2025",
-      progress: 85
-    },
-    {
-      id: "BAN-004",
-      customer: "Local Café",
-      product: "Assorted Muffins",
-      quantity: 200,
-      status: "Completed",
-      priority: "Low",
-      dueDate: "Sep 1, 2025",
-      progress: 100
-    },
-    {
-      id: "BAN-005",
-      customer: "Party Palace",
-      product: "Birthday Cupcakes",
-      quantity: 120,
-      status: "Scheduled",
-      priority: "Medium",
-      dueDate: "Sep 4, 2025",
-      progress: 0
-    }
-  ],
-  flourlane: [
-    {
-      id: "FLR-001",
-      customer: "Gourmet Treats Inc.",
-      product: "Artisan Bread Loaves",
-      quantity: 80,
-      status: "In Production",
-      priority: "High",
-      dueDate: "Sep 3, 2025",
-      progress: 65
-    },
-    {
-      id: "FLR-002", 
-      customer: "Corner Deli",
-      product: "Sourdough Rolls",
-      quantity: 200,
-      status: "Quality Check",
-      priority: "Medium",
-      dueDate: "Sep 2, 2025",
-      progress: 90
-    },
-    {
-      id: "FLR-003",
-      customer: "Farm Fresh Market",
-      product: "Whole Wheat Bread",
-      quantity: 150,
-      status: "Completed",
-      priority: "Low",
-      dueDate: "Sep 1, 2025",
-      progress: 100
-    },
-    {
-      id: "FLR-004",
-      customer: "Bistro Central",
-      product: "French Baguettes",
-      quantity: 60,
-      status: "Scheduled",
-      priority: "High",
-      dueDate: "Sep 4, 2025",
-      progress: 0
-    },
-    {
-      id: "FLR-005",
-      customer: "Health Food Store",
-      product: "Gluten-Free Muffins",
-      quantity: 100,
-      status: "Pending",
-      priority: "Medium",
-      dueDate: "Sep 6, 2025",
-      progress: 0
-    }
-  ]
-};
-
 const getStatusColor = (status: string) => {
   const colors = {
     "In Production": "bg-blue-100 text-blue-700 border-blue-200",
@@ -174,7 +67,6 @@ const getPriorityColor = (priority: string) => {
 
 export function RecentOrders({ store }: RecentOrdersProps) {
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
 
@@ -184,7 +76,6 @@ export function RecentOrders({ store }: RecentOrdersProps) {
 
   const fetchRecentOrders = async () => {
     try {
-      setLoading(true);
       // Get recent orders (limit to last 5)
       const data = await getQueue({
         store,
@@ -210,8 +101,6 @@ export function RecentOrders({ store }: RecentOrdersProps) {
     } catch (error) {
       console.error('Failed to fetch recent orders:', error);
       setOrders([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -256,7 +145,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order, index) => (
+            {orders.map((order) => (
               <tr key={order.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                 <td className="py-4 font-medium text-foreground">{order.id}</td>
                 <td className="py-4 text-foreground">{order.customer}</td>

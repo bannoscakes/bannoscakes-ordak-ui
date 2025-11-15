@@ -135,10 +135,9 @@ export function formatDueDate(date: Date): string {
 
 /**
  * Get default due date settings for a store
- * @param store - Store identifier
  * @returns Default due date settings
  */
-export function getDefaultDueDateSettings(store: 'bannos' | 'flourlane'): DueDateSettings {
+export function getDefaultDueDateSettings(): DueDateSettings {
   return {
     defaultDue: '+1 day',
     allowedDays: [true, true, true, true, true, true, false], // Mon-Sat
