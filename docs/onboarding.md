@@ -69,6 +69,14 @@ Add the /docs folder as Context so models follow our rules
 
 Use the dev branch for daily work; open PRs to dev; after review merge to main
 
+> ⚠️ **Hotfix workflow reminder**
+>
+> Even for urgent fixes, never patch `dev` directly. Create a short-lived branch,
+> push the commit, and open a focused PR (ideally touching only the files needed
+> for the fix). Let the automated checks run on that PR; once they succeed the
+> reviewer can merge it into `dev` and follow up with the normal promotion to
+> `main`.
+
 6) Branch & Commit Rules
 Branches:
 
