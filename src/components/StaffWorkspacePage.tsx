@@ -248,6 +248,7 @@ export function StaffWorkspacePage({
 
   const filteredOrders = orders.filter(
     (order) =>
+      !searchValue ||
       order.orderNumber
         ?.toLowerCase()
         ?.includes(searchValue.toLowerCase()) ||
