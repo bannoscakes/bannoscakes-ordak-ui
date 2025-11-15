@@ -89,8 +89,8 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
           }
           
-          // Count unassigned
-          if (order.assignee_id === null && order.stage !== 'Complete') {
+          // Count unassigned (use lowercased stage for consistency)
+          if (order.assignee_id === null && stageLower !== 'complete') {
             stats[store].unassigned++;
           }
         }
