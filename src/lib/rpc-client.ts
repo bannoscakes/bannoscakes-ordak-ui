@@ -7,6 +7,7 @@
 import { getSupabase } from './supabase';
 import type { Stage, Store, Priority } from '../types/db';
 import { createError, handleError, logError, ErrorCode } from './error-handler';
+import { requestCache } from './request-cache';
 
 // =============================================
 // MESSAGING TYPES
@@ -296,6 +297,32 @@ export async function getQueueStats(store?: Store | null) {
   });
   if (error) throw error;
   return data?.[0] || null;
+}
+
+/**
+ * Cached version of getQueue with 30-second TTL
+ * Use this for dashboard and monitoring pages where stale data is acceptable
+ */
+export const getQueueCached = requestCache.cached(getQueue, {
+  ttl: 30000, // 30 seconds
+  keyPrefix: 'rpc.getQueue', // Stable prefix for cache keys (survives minification)
+});
+
+/**
+ * Cached version of getQueueStats with 30-second TTL  
+ * Use this for dashboard stats that don't need real-time updates
+ */
+export const getQueueStatsCached = requestCache.cached(getQueueStats, {
+  ttl: 30000, // 30 seconds
+  keyPrefix: 'rpc.getQueueStats', // Stable prefix for cache keys (survives minification)
+});
+
+/**
+ * Invalidate queue-related cache entries
+ * Call this after mutations (create, update, delete orders)
+ */
+export function invalidateQueueCache(): void {
+  requestCache.invalidate(/rpc\.getQueue/);
 }
 
 export async function getUnassignedCounts(store?: Store | null) {
