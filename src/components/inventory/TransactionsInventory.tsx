@@ -5,11 +5,11 @@ import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Search, Calendar, Eye } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
-import { getStockTransactions, getComponents, type StockTransaction } from "../../lib/rpc-client";
+import { getStockTransactionsCached, type StockTransaction } from "../../lib/rpc-client";
 import { toast } from "sonner";
 
 export function TransactionsInventory() {
@@ -25,7 +25,7 @@ export function TransactionsInventory() {
   useEffect(() => {
     async function fetchTransactions() {
       try {
-        const transactionsData = await getStockTransactions(null, null, null);
+        const transactionsData = await getStockTransactionsCached(null, null, null);
         
         setTransactions(transactionsData);
       } catch (error) {

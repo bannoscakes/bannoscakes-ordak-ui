@@ -9,7 +9,7 @@ import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
-import { getProductRequirements, upsertProductRequirement, getComponents, type ProductRequirement, type Component } from "../../lib/rpc-client";
+import { getProductRequirementsCached, upsertProductRequirement, getComponentsCached, invalidateInventoryCache, type ProductRequirement, type Component } from "../../lib/rpc-client";
 
 export function ProductRequirements() {
   const [requirements, setRequirements] = useState<ProductRequirement[]>([]);
@@ -32,7 +32,7 @@ export function ProductRequirements() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const componentsData = await getComponents();
+        const componentsData = await getComponentsCached({});
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -48,7 +48,7 @@ export function ProductRequirements() {
       try {
         const searchValue = searchQuery.trim() || null;
         
-        const requirementsData = await getProductRequirements(null, searchValue);
+        const requirementsData = await getProductRequirementsCached(null, searchValue);
         
         setRequirements(requirementsData);
       } catch (error) {
@@ -59,10 +59,9 @@ export function ProductRequirements() {
       }
     }
     fetchRequirements();
-  }, [componentFilter, searchQuery]);
+  }, [searchQuery]); // Removed componentFilter from dependencies since it's client-side only
 
-  // Filtering is now handled by the RPC call, so we can use requirements directly
-  const filteredRequirements = requirements;
+  // Client-side filtering by component
 
   const handleAddRequirement = async () => {
     if (!newProductTitle || !newRequiredComponentId) {
@@ -83,6 +82,9 @@ export function ProductRequirements() {
         is_optional: false,
         auto_deduct: true
       });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
 
       const requirement: ProductRequirement = {
         id: requirementId,
@@ -128,6 +130,9 @@ export function ProductRequirements() {
         is_optional: editingRequirement.is_optional,
         auto_deduct: editingRequirement.auto_deduct
       });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
 
       setRequirements(prev => prev.map(r => 
         r.id === editingRequirement.id ? editingRequirement : r

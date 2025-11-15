@@ -7,16 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getAccessoryKeywords, upsertAccessoryKeyword, getComponents, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
-
-// =============================================================================
-// MOCK DATA - TODO: Replace with real data from database when features are implemented
-// - Accessory Keywords management (add/remove keywords)
-// =============================================================================
-
-const mockKeywords: AccessoryKeyword[] = []; // Using real data from database
+import { getAccessoryKeywordsCached, upsertAccessoryKeyword, getComponentsCached, invalidateInventoryCache, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
 
 export function AccessoryKeywords() {
   const [keywords, setKeywords] = useState<AccessoryKeyword[]>([]);
@@ -30,7 +22,7 @@ export function AccessoryKeywords() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const componentsData = await getComponents();
+        const componentsData = await getComponentsCached({});
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -46,7 +38,7 @@ export function AccessoryKeywords() {
       try {
         const searchValue = searchQuery.trim() || null;
         
-        const keywordsData = await getAccessoryKeywords(searchValue, true);
+        const keywordsData = await getAccessoryKeywordsCached(searchValue, true);
         
         setKeywords(keywordsData);
       } catch (error) {
@@ -67,15 +59,6 @@ export function AccessoryKeywords() {
   const [newPriority, setNewPriority] = useState(0);
   const [newMatchType, setNewMatchType] = useState<'contains' | 'exact' | 'starts_with' | 'ends_with'>('contains');
 
-  const filteredKeywords = keywords.filter(keyword => {
-    const matchesSearch = searchQuery === "" || 
-      keyword.keyword.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      keyword.component_name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesComponent = componentFilter === "All" || keyword.component_id === componentFilter;
-    
-    return matchesSearch && matchesComponent;
-  });
 
   const handleAddKeyword = async () => {
     if (!newKeyword || !newComponentId) {
@@ -94,6 +77,9 @@ export function AccessoryKeywords() {
         match_type: newMatchType,
         is_active: true
       });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
 
       const newAccessoryKeyword: AccessoryKeyword = {
         id: keywordId,
@@ -136,6 +122,9 @@ export function AccessoryKeywords() {
         is_active: editingKeyword.is_active
       });
 
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
+
       setKeywords(prev => prev.map(k => 
         k.id === editingKeyword.id ? editingKeyword : k
       ));
@@ -160,6 +149,9 @@ export function AccessoryKeywords() {
           component_id: '', // Required field, but not used for deactivation
           is_active: false
         });
+
+        // Invalidate cache after mutation
+        invalidateInventoryCache();
 
         setKeywords(prev => prev.filter(k => k.id !== id));
         toast.success("Keyword deleted");

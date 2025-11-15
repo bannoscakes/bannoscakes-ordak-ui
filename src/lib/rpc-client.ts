@@ -878,6 +878,63 @@ export async function restockOrder(orderId: string) {
 }
 
 // =============================================
+// CACHED INVENTORY FUNCTIONS
+// =============================================
+
+/**
+ * Cached version of getComponents with 60-second TTL
+ * Use this for inventory browsing where stale data is acceptable
+ */
+export const getComponentsCached = requestCache.cached(getComponents, {
+  ttl: 60000, // 60 seconds (inventory changes less frequently than orders)
+  keyPrefix: 'rpc.getComponents',
+});
+
+/**
+ * Cached version of getBoms with 60-second TTL
+ * Use this for BOM browsing where stale data is acceptable
+ */
+export const getBomsCached = requestCache.cached(getBoms, {
+  ttl: 60000, // 60 seconds
+  keyPrefix: 'rpc.getBoms',
+});
+
+/**
+ * Cached version of getAccessoryKeywords with 60-second TTL
+ * Use this for keyword browsing where stale data is acceptable
+ */
+export const getAccessoryKeywordsCached = requestCache.cached(getAccessoryKeywords, {
+  ttl: 60000, // 60 seconds
+  keyPrefix: 'rpc.getAccessoryKeywords',
+});
+
+/**
+ * Cached version of getProductRequirements with 60-second TTL
+ * Use this for requirements browsing where stale data is acceptable
+ */
+export const getProductRequirementsCached = requestCache.cached(getProductRequirements, {
+  ttl: 60000, // 60 seconds
+  keyPrefix: 'rpc.getProductRequirements',
+});
+
+/**
+ * Cached version of getStockTransactions with 60-second TTL
+ * Use this for transaction browsing where stale data is acceptable
+ */
+export const getStockTransactionsCached = requestCache.cached(getStockTransactions, {
+  ttl: 60000, // 60 seconds
+  keyPrefix: 'rpc.getStockTransactions',
+});
+
+/**
+ * Invalidate inventory-related cache entries
+ * Call this after mutations (create, update, delete components/BOMs/requirements)
+ */
+export function invalidateInventoryCache(): void {
+  requestCache.invalidate(/rpc\.(getComponents|getBoms|getAccessoryKeywords|getProductRequirements|getStockTransactions)/);
+}
+
+// =============================================
 // SETTINGS MANAGEMENT
 // =============================================
 

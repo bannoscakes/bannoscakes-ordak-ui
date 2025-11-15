@@ -6,12 +6,12 @@ import { Card } from "../ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
-import { Search, Plus, Edit, X } from "lucide-react";
+import { Search, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
-import { getBoms, upsertBom, getComponents, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
+import { getBomsCached, upsertBom, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
 
 export function BOMsInventory() {
   const [boms, setBOMs] = useState<BOM[]>([]);
@@ -26,7 +26,7 @@ export function BOMsInventory() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const componentsData = await getComponents();
+        const componentsData = await getComponentsCached({});
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -43,7 +43,7 @@ export function BOMsInventory() {
         const storeFilterValue = storeFilter === "All" ? null : (storeFilter.toLowerCase() as "bannos" | "flourlane");
         const searchValue = searchQuery.trim() || null;
         
-        const bomsData = await getBoms(storeFilterValue, true, searchValue);
+        const bomsData = await getBomsCached(storeFilterValue, true, searchValue);
         
         setBOMs(bomsData);
       } catch (error) {
@@ -107,6 +107,9 @@ export function BOMsInventory() {
         description: editingBOM.description,
         shopify_product_id: editingBOM.shopify_product_id
       });
+      
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
       
       // Update the BOM with the real ID from database
       const updatedBOM = { ...editingBOM, id: bomId };

@@ -8,7 +8,7 @@ import { Textarea } from "../ui/textarea";
 import { RotateCcw, Settings, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
 import { toast } from "sonner";
-import { restockOrder, updateComponentStock, getComponents, type Component } from "../../lib/rpc-client";
+import { restockOrder, updateComponentStock, getComponentsCached, invalidateInventoryCache, type Component } from "../../lib/rpc-client";
 
 export function ToolsInventory() {
   // Restock Order states
@@ -29,7 +29,7 @@ export function ToolsInventory() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const componentsData = await getComponents({});
+        const componentsData = await getComponentsCached({});
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -55,6 +55,10 @@ export function ToolsInventory() {
     
     try {
       await restockOrder(restockOrderNumber);
+      
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
+      
       setRestockOrderNumber("");
       toast.success("Order restocked successfully");
     } catch (error) {
@@ -94,6 +98,9 @@ export function ToolsInventory() {
         delta: delta,
         reason: adjustReason,
       });
+      
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
       
       setAdjustComponentId("");
       setAdjustDelta("");
