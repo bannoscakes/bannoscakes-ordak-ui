@@ -121,6 +121,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         const item: QueueItem = {
           id: order.id,
           orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+          shopifyOrderNumber: String(order.shopify_order_number || ''),
           customerName: order.customer_name || 'Unknown',
           product: order.product_title || 'Unknown',
           size: order.size || 'M',
