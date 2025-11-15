@@ -816,7 +816,14 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => window.open(`https://admin.shopify.com/orders/${normalizedOrder.shopifyOrderNumber}`, '_blank')}
+              onClick={() => {
+                const id = normalizedOrder.shopifyOrderNumber?.trim();
+                if (!id) {
+                  toast.error("Shopify order number not available");
+                  return;
+                }
+                window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+              }}
             >
               View Details in Shopify
             </Button>

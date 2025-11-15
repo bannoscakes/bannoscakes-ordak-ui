@@ -33,6 +33,7 @@ import { getQueue, getQueueCached } from "../lib/rpc-client";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: "S" | "M" | "L";
@@ -530,12 +531,17 @@ export function StaffWorkspacePage({
                           }
                           onEditOrder={undefined}
                           onAssignToStaff={undefined}
-                          onViewDetails={() =>
+                          onViewDetails={() => {
+                            const id = order.shopifyOrderNumber?.trim();
+                            if (!id) {
+                              toast.error("Shopify order number not available");
+                              return;
+                            }
                             window.open(
-                              `https://admin.shopify.com/orders/${order.shopifyOrderNumber}`,
+                              `https://admin.shopify.com/orders/${encodeURIComponent(id)}`,
                               "_blank",
-                            )
-                          }
+                            );
+                          }}
                           isCompleteTab={false}
                         />
                       </div>

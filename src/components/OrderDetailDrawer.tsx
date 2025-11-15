@@ -173,8 +173,12 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
   if (!extendedOrder) return null;
 
   const handleViewDetails = () => {
-    // This would link to Shopify order
-    window.open(`https://admin.shopify.com/orders/${extendedOrder.shopifyOrderNumber}`, '_blank');
+    const id = extendedOrder?.shopifyOrderNumber?.trim();
+    if (!id) {
+      toast.error("Shopify order number not available");
+      return;
+    }
+    window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {
