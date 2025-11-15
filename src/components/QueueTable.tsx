@@ -193,7 +193,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const filteredItems = useMemo(() => {
     return currentItems.filter(item => {
-      const matchesSearch = 
+      const matchesSearch = !searchQuery || 
         item.orderNumber?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
         item.customerName?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
         item.product?.toLowerCase()?.includes(searchQuery.toLowerCase());
