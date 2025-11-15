@@ -65,31 +65,38 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   }, []);
 
   // Load unread count - wrapped in useCallback
-  const loadUnreadCount = useCallback(async () => {
+  const loadUnreadCount = useCallback(async (_opts?: { background?: boolean }) => {
     try {
       const count = await getUnreadCount();
       setUnreadCount(count);
     } catch (err) {
       console.error("Failed to load unread count:", err);
+      // Silently fail on background updates to avoid disrupting UX
     }
   }, []);
 
   // Load conversations - wrapped in useCallback
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (opts?: { background?: boolean }) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!opts?.background) {
+        setLoading(true);
+        setError(null);
+      }
       const data: RPCConversation[] = await getConversations();
       setConversations(data.map(toUIConversation));
     } catch (err) {
       console.error("Failed to load conversations:", err);
-      setError(err);
-      showErrorWithRetry(err, () => loadConversations(), {
-        title: "Failed to Load Conversations",
-        showRecoveryActions: true,
-      });
+      if (!opts?.background) {
+        setError(err);
+        showErrorWithRetry(err, () => loadConversations(), {
+          title: "Failed to Load Conversations",
+          showRecoveryActions: true,
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.background) {
+        setLoading(false);
+      }
     }
   }, [showErrorWithRetry]);
 
@@ -103,7 +110,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   const markAsRead = useCallback(async (conversationId: string) => {
     try {
       await markMessagesRead(conversationId);
-      loadUnreadCount();
+      loadUnreadCount({ background: true });
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
     } catch (err) {
       console.error("Failed to mark messages as read:", err);
@@ -170,8 +177,8 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     }
 
     // ✅ Background updates - no loading spinner flicker
-    loadConversations();
-    loadUnreadCount();
+    loadConversations({ background: true });
+    loadUnreadCount({ background: true });
   }, [currentUserId, selectedConversation, markAsRead, loadConversations, loadUnreadCount]);
 
   // Debounced loadConversations to prevent excessive calls
@@ -183,7 +190,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     }
     // Set new timeout
     debounceTimerRef.current = setTimeout(() => {
-      loadConversations();
+      loadConversations({ background: true });
     }, 150);
   }, [loadConversations]);
 
@@ -280,8 +287,8 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
       );
 
       // 4) Lightweight refresh for last-message preview (no spinner)
-      loadConversations();
-      loadUnreadCount();
+      loadConversations({ background: true });
+      loadUnreadCount({ background: true });
     } catch (err) {
       console.error("Failed to send message:", err);
       // Remove optimistic on failure
