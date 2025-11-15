@@ -12,7 +12,7 @@ import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getComponents, updateComponentStock, upsertComponent } from "../../lib/rpc-client";
+import { getComponents, getComponentsCached, updateComponentStock, upsertComponent, invalidateInventoryCache } from "../../lib/rpc-client";
 
 interface Component {
   id: string;
@@ -52,7 +52,7 @@ export function ComponentsInventory() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const dbComponents = await getComponents({});
+        const dbComponents = await getComponentsCached({});
         
         // Map database components to UI format
         const mappedComponents: Component[] = dbComponents.map((c: any) => ({
@@ -121,6 +121,9 @@ export function ComponentsInventory() {
         min_stock: newComponent.reorderPoint || 0,
         is_active: true
       });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
 
       // Add to local state
       const newComponentData: Component = {
@@ -192,6 +195,9 @@ export function ComponentsInventory() {
         delta: delta,
         reason: adjustmentReason,
       });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
 
       // Update local state
       setComponents(prev => prev.map(c => 

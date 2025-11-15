@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
-import { getAccessoryKeywords, upsertAccessoryKeyword, getComponents, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
+import { getAccessoryKeywords, getAccessoryKeywordsCached, upsertAccessoryKeyword, getComponents, getComponentsCached, invalidateInventoryCache, type AccessoryKeyword, type Component } from "../../lib/rpc-client";
 
 // =============================================================================
 // MOCK DATA - TODO: Replace with real data from database when features are implemented
@@ -30,7 +30,7 @@ export function AccessoryKeywords() {
   useEffect(() => {
     async function fetchComponents() {
       try {
-        const componentsData = await getComponents();
+        const componentsData = await getComponentsCached();
         setComponents(componentsData);
       } catch (error) {
         console.error('Error fetching components:', error);
@@ -46,7 +46,7 @@ export function AccessoryKeywords() {
       try {
         const searchValue = searchQuery.trim() || null;
         
-        const keywordsData = await getAccessoryKeywords(searchValue, true);
+        const keywordsData = await getAccessoryKeywordsCached(searchValue, true);
         
         setKeywords(keywordsData);
       } catch (error) {
@@ -95,6 +95,9 @@ export function AccessoryKeywords() {
         is_active: true
       });
 
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
+
       const newAccessoryKeyword: AccessoryKeyword = {
         id: keywordId,
         keyword: newKeyword,
@@ -135,6 +138,9 @@ export function AccessoryKeywords() {
         match_type: editingKeyword.match_type,
         is_active: editingKeyword.is_active
       });
+
+      // Invalidate cache after mutation
+      invalidateInventoryCache();
 
       setKeywords(prev => prev.map(k => 
         k.id === editingKeyword.id ? editingKeyword : k
