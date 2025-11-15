@@ -1,4 +1,3 @@
-import React from "react";
 import KpiValue from "./KpiValue";
 import { toNumberOrNull } from "@/lib/metrics";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
