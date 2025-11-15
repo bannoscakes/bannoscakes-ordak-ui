@@ -1,17 +1,29 @@
 import { toast } from 'sonner';
 import { AppError, getErrorMessage, getErrorCode, getRecoveryActions, ErrorCode } from './error-handler';
 
+/**
+ * Options for error notifications
+ * Note: description is NOT supported - it's built automatically from the error message,
+ * recovery actions, and technical details
+ */
 export interface ErrorNotificationOptions {
+  /** Title of the notification (defaults to "Error" or "Warning") */
   title?: string;
+  /** Duration in milliseconds (default: 5000) */
   duration?: number;
+  /** Whether to show recovery action suggestions (default: false) */
   showRecoveryActions?: boolean;
+  /** Whether to show technical details like error codes (default: false) */
   showTechnicalDetails?: boolean;
+  /** Callback for retry button */
   onRetry?: () => void;
+  /** Callback for dismiss button */
   onDismiss?: () => void;
 }
 
 /**
  * Show error notification using toast
+ * Description is built automatically from error message, recovery actions, and technical details
  */
 export const showErrorNotification = (
   error: unknown,
