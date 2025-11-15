@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardContent } from "./DashboardContent";
@@ -28,6 +28,8 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
+  const isRefreshing = useRef(false);
+  const refreshPromise = useRef<Promise<void> | null>(null);
   const [dashboardStats, setDashboardStats] = useState<StatsByStore>({
     bannos: makeEmptyCounts(),
     flourlane: makeEmptyCounts(),
@@ -45,11 +47,23 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   
   // Load dashboard stats from real data - wrapped in useCallback to prevent stale closures
   const loadDashboardStats = useCallback(async () => {
-    // Type guard for stage keys - defined inside to avoid recreating useCallback
-    const isStage = (s: string): s is Stage =>
-      ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
+    // If already refreshing, return the existing promise to wait for completion
+    if (isRefreshing.current && refreshPromise.current) {
+      return refreshPromise.current;
+    }
+    
+    // Prevent concurrent loads using ref to avoid re-renders
+    if (isRefreshing.current) return;
+    
+    isRefreshing.current = true;
+    
+    // Create and store the refresh promise
+    refreshPromise.current = (async () => {
+      // Type guard for stage keys - defined inside to avoid recreating useCallback
+      const isStage = (s: string): s is Stage =>
+        ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
 
-    try {
+      try {
       // Fetch orders from both stores
       const [bannosOrders, flourlaneOrders] = await Promise.all([
         getQueue({ store: "bannos", limit: 1000 }),
@@ -82,19 +96,42 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         }
       });
       
-      setDashboardStats(stats);
-    } catch (error) {
-      console.error('Failed to load dashboard stats:', error);
-    }
+        setDashboardStats(stats);
+      } catch (error) {
+        console.error('Failed to load dashboard stats:', error);
+      } finally {
+        isRefreshing.current = false;
+        refreshPromise.current = null;
+      }
+    })();
+    
+    return refreshPromise.current;
   }, []);
   
-  // Load stats on mount and refresh every 30 seconds
+  // Load stats on mount and refresh every 30 seconds (only when tab is visible)
   useEffect(() => {
     loadDashboardStats();
     
-    // Refresh stats every 30 seconds
-    const interval = setInterval(loadDashboardStats, 30000);
-    return () => clearInterval(interval);
+    // Refresh stats every 30 seconds, but only when tab is visible
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadDashboardStats();
+      }
+    }, 30000);
+    
+    // Also refresh when tab becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadDashboardStats();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadDashboardStats]);
   
   // Parse URL parameters and update view reactively
