@@ -20,7 +20,7 @@ import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 // Import real RPCs for dashboard stats
-import { getQueue } from "../lib/rpc-client";
+import { getQueueCached } from "../lib/rpc-client";
 import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
 import { makeEmptyCounts } from "@/types/stage";
 
@@ -66,8 +66,8 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       try {
       // Fetch orders from both stores
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 1000 }),
-        getQueue({ store: "flourlane", limit: 1000 })
+        getQueueCached({ store: "bannos", limit: 1000 }),
+        getQueueCached({ store: "flourlane", limit: 1000 })
       ]);
       
       const orders = [...bannosOrders, ...flourlaneOrders];
