@@ -179,16 +179,24 @@ function RoleBasedRouter() {
     // Listen for popstate events (browser back/forward)
     window.addEventListener('popstate', handleUrlChange);
     
-    // Also listen for programmatic navigation
+    // Also listen for programmatic navigation (both pushState and replaceState)
     const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
     window.history.pushState = function(...args) {
       originalPushState.apply(window.history, args);
+      handleUrlChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(window.history, args);
       handleUrlChange();
     };
 
     return () => {
       window.removeEventListener('popstate', handleUrlChange);
       window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
     };
   }, []);
 
