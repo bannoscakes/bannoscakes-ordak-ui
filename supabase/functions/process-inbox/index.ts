@@ -177,35 +177,74 @@ function extractAllProperties(item: any): any[] {
 }
 
 function extractFlavour(item: any): string | null {
-  const properties = extractAllProperties(item)
-  
-  if (properties.length === 0) {
-    return null
+  // Strategy 1: Try variant_title for regular cakes (e.g., "Medium / Vanilla")
+  if (item.variant_title && item.variant_title.trim()) {
+    const variantTitle = item.variant_title.trim()
+    const parts = variantTitle.split('/')
+    
+    if (parts.length >= 2) {
+      const flavour = parts[1].trim()
+      if (flavour) return flavour  // Found flavour in variant_title
+    }
   }
   
-  return properties.map(p => p.display).join(' | ')
+  // Strategy 2: Check properties for gelato flavours (e.g., "Gelato Flavours: Chocolate, Vanilla")
+  const properties = extractAllProperties(item)
+  
+  // Look for gelato-specific flavour properties
+  const gelatoFlavour = properties.find(p => 
+    p.name.toLowerCase().includes('gelato flavour')
+  )
+  
+  if (gelatoFlavour && gelatoFlavour.value.trim()) {
+    return gelatoFlavour.value.trim()
+  }
+  
+  // No flavour found in either variant_title or properties
+  return null
 }
 
 function extractSize(item: any): string | null {
-  if (!item.variant_title) {
+  if (!item.variant_title || !item.variant_title.trim()) {
     return null
   }
   
-  const variantTitle = item.variant_title
+  const variantTitle = item.variant_title.trim()
   
+  // Parse "Size / Flavour" format - split on '/', take first part
+  const parts = variantTitle.split('/')
+  
+  if (parts.length >= 2) {
+    const size = parts[0].trim()
+    return size || null  // Return null if empty after trim
+  }
+  
+  // If no slash, check for known size patterns
   if (variantTitle.toLowerCase().includes('gift size')) return 'Gift Size'
   if (variantTitle.toLowerCase().includes('small tall')) return 'Small Tall'
   if (variantTitle.toLowerCase().includes('medium tall')) return 'Medium Tall'
   if (variantTitle.toLowerCase().includes('large tall')) return 'Large Tall'
   
-  const sizePart = variantTitle.split('#')[0].trim()
+  // Return the full variant_title as size (already trimmed, guaranteed non-empty)
+  return variantTitle
+}
+
+function extractCakeWriting(item: any): string | null {
+  const properties = extractAllProperties(item)
   
-  if (sizePart.toLowerCase().includes('small')) return 'Small'
-  if (sizePart.toLowerCase().includes('medium')) return 'Medium'
-  if (sizePart.toLowerCase().includes('large')) return 'Large'
-  if (sizePart.toLowerCase().includes('tall')) return 'Tall'
+  // Find properties where name contains "Writing"
+  const writingProps = properties.filter(p => 
+    p.name.toLowerCase().includes('writing') && p.value.trim() !== ''
+  )
   
-  return sizePart || variantTitle
+  if (writingProps.length === 0) {
+    return null
+  }
+  
+  // Join multiple writing lines with " / "
+  return writingProps
+    .map(p => p.value.trim())
+    .join(' / ')
 }
 
 function extractNotes(shopifyOrder: any): string | null {
@@ -324,9 +363,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       shopify_order_gid: shopifyOrder.admin_graphql_api_id || shopifyOrder.id,
       shopify_order_number: shopifyOrder.order_number,
       customer_name: customerName,
-      product_title: cakeItem ? cakeItem.title : 'Custom Order',
+      product_title: cakeItem ? cakeItem.title : null,
       flavour: cakeItem ? extractFlavour(cakeItem) : null,
       size: cakeItem ? extractSize(cakeItem) : null,
+      cake_writing: cakeItem ? extractCakeWriting(cakeItem) : null,
       notes: notes,
       currency: shopifyOrder.currency || 'AUD',
       total_amount: parseFloat(shopifyOrder.total_price || 0),
@@ -368,6 +408,7 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         product_title: cakeItem.title,
         flavour: extractFlavour(cakeItem),
         size: extractSize(cakeItem),
+        cake_writing: extractCakeWriting(cakeItem),
         notes: notes,
         currency: shopifyOrder.currency || 'AUD',
         total_amount: isFirstOrder ? parseFloat(shopifyOrder.total_price || 0) : null,
