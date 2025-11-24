@@ -1,3 +1,104 @@
+## v0.11.1-beta — Webhook Automation Documentation (2025-11-24)
+
+### 🎯 Overview
+Comprehensive documentation for webhook automation setup without hardcoded credentials. Provides safe alternatives for processing webhook backlog and automating future webhook processing using Supabase Database Webhooks.
+
+### 📋 Documentation Added
+
+**New Guide: `docs/WEBHOOK_AUTOMATION_SETUP.md`**
+- Complete setup guide for webhook automation
+- Explains security risks of hardcoded credentials in migrations
+- Recommends Supabase Database Webhooks (environment-specific)
+- Provides safe alternatives for backlog processing
+
+### 🔒 Security Improvements
+
+**Why NOT pg_cron with hardcoded URLs:**
+- ❌ Cross-environment contamination (dev/staging calling production)
+- ❌ Broken jobs on key rotation (hardcoded JWT becomes invalid)
+- ❌ Security risk (credentials committed to version control)
+
+**Recommended Solution:**
+- ✅ Supabase Database Webhooks (configured per environment in dashboard)
+- ✅ No hardcoded credentials
+- ✅ Environment-specific (each env has own webhooks)
+- ✅ Triggers immediately on new webhook inserts
+- ✅ No cross-environment contamination
+
+### 🔧 Alternative Solutions for Backlog
+
+**For Existing 1,141 Unprocessed Webhooks:**
+
+**Option 1: Local Script**
+- Uses environment variables (`$SUPABASE_URL`, `$SUPABASE_ANON_KEY`)
+- Includes validation for required environment variables
+- No hardcoded production URLs
+
+**Option 2: GitHub Actions Workflow**
+- Uses GitHub Secrets for credentials
+- Scheduled or manual trigger
+- Environment-specific configuration
+
+### 📊 Current Status
+
+**Backlog at time of documentation:**
+- Bannos: 454 unprocessed webhooks
+- Flourlane: 687 unprocessed webhooks
+- Total: 1,141 webhooks
+
+**Recommendation:**
+1. Set up Database Webhooks in Supabase Dashboard (for future webhooks)
+2. Run manual backlog processing script until backlog is cleared
+3. Once backlog is cleared, Database Webhooks handle all new orders automatically
+
+### ✅ Testing Queries
+
+**Check unprocessed webhooks:**
+```sql
+SELECT 
+  'bannos' as store, COUNT(*) as unprocessed 
+FROM webhook_inbox_bannos WHERE processed = false
+UNION ALL
+SELECT 'flourlane', COUNT(*) 
+FROM webhook_inbox_flourlane WHERE processed = false;
+```
+
+**Check recent orders (both stores):**
+```sql
+SELECT 'bannos' as store, COUNT(*) as recent_orders 
+FROM orders_bannos 
+WHERE created_at > NOW() - INTERVAL '10 minutes'
+UNION ALL
+SELECT 'flourlane', COUNT(*) 
+FROM orders_flourlane 
+WHERE created_at > NOW() - INTERVAL '10 minutes';
+```
+
+### 📦 Files Added
+
+- `docs/WEBHOOK_AUTOMATION_SETUP.md` - Complete automation setup guide (159 lines)
+
+### 🔗 References
+
+- **PR #267**: docs: enable automatic webhook processing
+- **Merged**: 2025-11-24 05:19:23Z
+- **Branch**: `feature/auto-webhook-processing` → `dev`
+
+### 🎯 Impact
+
+**Before:**
+- ❌ Risk of hardcoded credentials in migrations
+- ❌ Unclear how to automate webhook processing
+- ❌ No guidance on safe backlog processing
+
+**After:**
+- ✅ Clear security guidelines documented
+- ✅ Safe automation approach via Database Webhooks
+- ✅ Multiple safe options for backlog processing
+- ✅ No credentials in version control
+
+---
+
 ## v0.11.0-beta — Inbox Processor with Image Extraction (2025-11-24)
 
 ### 🎯 Overview
