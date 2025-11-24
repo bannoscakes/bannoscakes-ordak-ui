@@ -472,11 +472,13 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
       
     } catch (error) {
       console.error(`Failed to process webhook ${webhook.id}:`, error)
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
+      console.error('Error details:', JSON.stringify(error, null, 2))
       
       results.push({
         webhookId: webhook.id,
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : String(error)
       })
       
       failCount++
