@@ -5,7 +5,7 @@ Comprehensive documentation for webhook automation setup without hardcoded crede
 
 ### 📋 Documentation Added
 
-**New Guide: `docs/WEBHOOK_AUTOMATION_SETUP.md`**
+#### New Guide: `docs/WEBHOOK_AUTOMATION_SETUP.md`
 - Complete setup guide for webhook automation
 - Explains security risks of hardcoded credentials in migrations
 - Recommends Supabase Database Webhooks (environment-specific)
@@ -13,12 +13,12 @@ Comprehensive documentation for webhook automation setup without hardcoded crede
 
 ### 🔒 Security Improvements
 
-**Why NOT pg_cron with hardcoded URLs:**
+#### Why NOT pg_cron with hardcoded URLs:
 - ❌ Cross-environment contamination (dev/staging calling production)
 - ❌ Broken jobs on key rotation (hardcoded JWT becomes invalid)
 - ❌ Security risk (credentials committed to version control)
 
-**Recommended Solution:**
+#### Recommended Solution:
 - ✅ Supabase Database Webhooks (configured per environment in dashboard)
 - ✅ No hardcoded credentials
 - ✅ Environment-specific (each env has own webhooks)
@@ -27,33 +27,33 @@ Comprehensive documentation for webhook automation setup without hardcoded crede
 
 ### 🔧 Alternative Solutions for Backlog
 
-**For Existing 1,141 Unprocessed Webhooks:**
+#### For Existing 1,141 Unprocessed Webhooks:
 
-**Option 1: Local Script**
+#### Option 1: Local Script
 - Uses environment variables (`$SUPABASE_URL`, `$SUPABASE_ANON_KEY`)
 - Includes validation for required environment variables
 - No hardcoded production URLs
 
-**Option 2: GitHub Actions Workflow**
+#### Option 2: GitHub Actions Workflow
 - Uses GitHub Secrets for credentials
 - Scheduled or manual trigger
 - Environment-specific configuration
 
 ### 📊 Current Status
 
-**Backlog at time of documentation:**
+#### Backlog at time of documentation:
 - Bannos: 454 unprocessed webhooks
 - Flourlane: 687 unprocessed webhooks
 - Total: 1,141 webhooks
 
-**Recommendation:**
+#### Recommendation:
 1. Set up Database Webhooks in Supabase Dashboard (for future webhooks)
 2. Run manual backlog processing script until backlog is cleared
 3. Once backlog is cleared, Database Webhooks handle all new orders automatically
 
 ### ✅ Testing Queries
 
-**Check unprocessed webhooks:**
+#### Check unprocessed webhooks:
 ```sql
 SELECT 
   'bannos' as store, COUNT(*) as unprocessed 
@@ -63,7 +63,7 @@ SELECT 'flourlane', COUNT(*)
 FROM webhook_inbox_flourlane WHERE processed = false;
 ```
 
-**Check recent orders (both stores):**
+#### Check recent orders (both stores):
 ```sql
 SELECT 'bannos' as store, COUNT(*) as recent_orders 
 FROM orders_bannos 
@@ -86,12 +86,12 @@ WHERE created_at > NOW() - INTERVAL '10 minutes';
 
 ### 🎯 Impact
 
-**Before:**
+#### Before:
 - ❌ Risk of hardcoded credentials in migrations
 - ❌ Unclear how to automate webhook processing
 - ❌ No guidance on safe backlog processing
 
-**After:**
+#### After:
 - ✅ Clear security guidelines documented
 - ✅ Safe automation approach via Database Webhooks
 - ✅ Multiple safe options for backlog processing
