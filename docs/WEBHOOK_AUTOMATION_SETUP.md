@@ -55,7 +55,7 @@ Use Supabase's built-in Database Webhooks feature to trigger the Edge Function w
 
 ## Alternative: Manual Cron (For Existing Backlog)
 
-For processing the existing backlog of 1,091 webhooks, use a temporary manual approach:
+For processing the existing backlog of 1,141 webhooks, use a temporary manual approach:
 
 ### Option 1: Local Script
 Create a local script that calls the Edge Function periodically:
