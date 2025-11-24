@@ -177,17 +177,18 @@ function extractAllProperties(item: any): any[] {
 }
 
 function extractFlavour(item: any): string | null {
-  if (!item.variant_title) {
+  if (!item.variant_title || !item.variant_title.trim()) {
     return null
   }
   
-  const variantTitle = item.variant_title
+  const variantTitle = item.variant_title.trim()
   
   // Parse "Size / Flavour" format - split on '/', take second part
   const parts = variantTitle.split('/')
   
   if (parts.length >= 2) {
-    return parts[1].trim()  // "Medium / Chocolate" → "Chocolate"
+    const flavour = parts[1].trim()
+    return flavour || null  // Return null if empty after trim
   }
   
   // If no slash, variant_title might be just size, no flavour
@@ -195,17 +196,18 @@ function extractFlavour(item: any): string | null {
 }
 
 function extractSize(item: any): string | null {
-  if (!item.variant_title) {
+  if (!item.variant_title || !item.variant_title.trim()) {
     return null
   }
   
-  const variantTitle = item.variant_title
+  const variantTitle = item.variant_title.trim()
   
   // Parse "Size / Flavour" format - split on '/', take first part
   const parts = variantTitle.split('/')
   
   if (parts.length >= 2) {
-    return parts[0].trim()  // "Medium / Chocolate" → "Medium"
+    const size = parts[0].trim()
+    return size || null  // Return null if empty after trim
   }
   
   // If no slash, check for known size patterns
@@ -214,8 +216,8 @@ function extractSize(item: any): string | null {
   if (variantTitle.toLowerCase().includes('medium tall')) return 'Medium Tall'
   if (variantTitle.toLowerCase().includes('large tall')) return 'Large Tall'
   
-  // Return the full variant_title as size
-  return variantTitle.trim()
+  // Return the full variant_title as size (already trimmed, guaranteed non-empty)
+  return variantTitle
 }
 
 function extractCakeWriting(item: any): string | null {
