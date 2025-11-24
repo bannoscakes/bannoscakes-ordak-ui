@@ -333,7 +333,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       order_json: shopifyOrder, // Store normalized version
       due_date: deliveryDate,
       delivery_method: deliveryMethod,
-      product_image: productImage
+      product_image: productImage,
+      item_qty: 1 // Each order represents 1 item (even if original had multiple)
     }
     
     orders.push(order)
@@ -373,7 +374,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         order_json: shopifyOrder, // Store normalized version
         due_date: deliveryDate,
         delivery_method: deliveryMethod,
-        product_image: productImage
+        product_image: productImage,
+        item_qty: 1 // Each split order represents 1 item from the original quantity
       }
       
       orders.push(order)
