@@ -147,9 +147,13 @@ SELECT 'flourlane', COUNT(*)
 FROM webhook_inbox_flourlane WHERE processed = false;
 ```
 
-Check recent orders:
+Check recent orders (both stores):
 ```sql
-SELECT COUNT(*) as recent_orders 
+SELECT 'bannos' as store, COUNT(*) as recent_orders 
 FROM orders_bannos 
+WHERE created_at > NOW() - INTERVAL '10 minutes'
+UNION ALL
+SELECT 'flourlane', COUNT(*) 
+FROM orders_flourlane 
 WHERE created_at > NOW() - INTERVAL '10 minutes';
 ```
