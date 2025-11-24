@@ -23,6 +23,20 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const shopifyOrder = JSON.parse(await req.text())
 
+    // DEBUG: Log what Shopify actually sends
+    console.log('=== SHOPIFY WEBHOOK RECEIVED ===')
+    console.log('Order number:', shopifyOrder.order_number)
+    console.log('Line items count:', shopifyOrder.line_items?.length)
+    if (shopifyOrder.line_items?.[0]) {
+      const firstItem = shopifyOrder.line_items[0]
+      console.log('First item title:', firstItem.title)
+      console.log('Has image field?', firstItem.image ? 'YES' : 'NO')
+      console.log('Image value:', firstItem.image)
+      console.log('Has variant.image?', firstItem.variant?.image ? 'YES' : 'NO')
+      console.log('First item keys:', Object.keys(firstItem))
+    }
+    console.log('=== END DEBUG ===')
+
     // Just dump it - NO EXTRACTION
     const { error } = await supabase.from('webhook_inbox_bannos').upsert({
       id: `bannos-${shopifyOrder.order_number || shopifyOrder.id}`,
