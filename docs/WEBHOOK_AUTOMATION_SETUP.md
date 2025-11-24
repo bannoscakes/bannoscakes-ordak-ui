@@ -64,16 +64,26 @@ Create a local script that calls the Edge Function periodically:
 #!/bin/bash
 # scripts/process-webhook-backlog.sh
 
+# Load environment variables (never hardcode production URLs!)
+# Set these in your environment or .env file:
+# export SUPABASE_URL="https://your-project.supabase.co"
+# export SUPABASE_ANON_KEY="your-anon-key"
+
+if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+  echo "Error: SUPABASE_URL and SUPABASE_ANON_KEY must be set"
+  exit 1
+fi
+
 while true; do
   echo "Processing Bannos..."
-  curl -s "https://iwavciibrspfjezujydc.supabase.co/functions/v1/process-inbox" \
-    -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  curl -s "${SUPABASE_URL}/functions/v1/process-inbox" \
+    -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
     -H "Content-Type: application/json" \
     -d '{"store": "bannos", "limit": 100}'
   
   echo "Processing Flourlane..."
-  curl -s "https://iwavciibrspfjezujydc.supabase.co/functions/v1/process-inbox" \
-    -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  curl -s "${SUPABASE_URL}/functions/v1/process-inbox" \
+    -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
     -H "Content-Type: application/json" \
     -d '{"store": "flourlane", "limit": 100}'
   
