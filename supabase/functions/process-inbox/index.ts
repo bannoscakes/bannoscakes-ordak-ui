@@ -304,8 +304,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       : `bannos-${shopifyOrder.order_number}`
     
     // Fetch product image from Shopify Admin API
-    const productImage = cakeItem && cakeItem.product_id
-      ? await fetchProductImage(cakeItem.product_id, storeSource)
+    // Use variant_id (REST format) or product_id (GraphQL normalized format)
+    const variantId = cakeItem && (cakeItem.variant_id || cakeItem.product_id)
+    const productImage = variantId
+      ? await fetchProductImage(variantId.toString(), storeSource)
       : null
     
     const order: any = {
@@ -342,8 +344,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         : `bannos-${shopifyOrder.order_number}-${suffix}`
       
       // Fetch product image from Shopify Admin API
-      const productImage = cakeItem.product_id
-        ? await fetchProductImage(cakeItem.product_id, storeSource)
+      // Use variant_id (REST format) or product_id (GraphQL normalized format)
+      const variantId = cakeItem.variant_id || cakeItem.product_id
+      const productImage = variantId
+        ? await fetchProductImage(variantId.toString(), storeSource)
         : null
       
       const order: any = {
