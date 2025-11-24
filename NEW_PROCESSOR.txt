@@ -1,74 +1,34 @@
-// Order Inbox Processor - Processes webhooks from inbox tables to orders tables
-// Reads from: webhook_inbox_bannos, webhook_inbox_flourlane
-// Outputs to: orders_bannos, orders_flourlane
+// Paste your new Processor code here
+// Order Processor - Processes Shopify webhooks and populates orders tables
+// Reads from: webhooks_inbox
+// Outputs to: orders_table_bannos, orders_table_flourlane
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
 // ============================================================================
-// WEBHOOK FORMAT NORMALIZATION (GraphQL → REST)
+// CONFIGURATION
 // ============================================================================
 
-function normalizeWebhook(payload: any): any {
-  // If it's already REST format, return as-is
-  if (payload.order_number && payload.line_items) {
-    return payload
-  }
-  
-  // If it's GraphQL, convert to REST structure for Liquid code
-  if (payload.name && payload.lineItems?.edges) {
-    const orderNumber = payload.name.match(/\d+/)?.[0]
-    const lineItems = payload.lineItems.edges.map((edge: any) => ({
-      id: edge.node.id,
-      title: edge.node.title,
-      quantity: edge.node.quantity || 1,
-      product_id: edge.node.variant?.id?.match(/\d+/)?.[0],
-      variant_id: edge.node.variant?.id?.match(/\d+/)?.[0],
-      variant_title: edge.node.variant?.title,
-      price: edge.node.variant?.price || '0',
-      properties: edge.node.customAttributes || [],
-      vendor: edge.node.vendor
-    }))
-    
-    return {
-      ...payload,
-      order_number: parseInt(orderNumber || '0'),
-      line_items: lineItems,
-      customer: payload.customer ? {
-        name: `${payload.customer.firstName || ''} ${payload.customer.lastName || ''}`.trim(),
-        first_name: payload.customer.firstName,
-        last_name: payload.customer.lastName,
-        email: payload.customer.email
-      } : null,
-      shipping_address: payload.shippingAddress,
-      note: payload.note,
-      note_attributes: payload.customAttributes || [],
-      currency: payload.totalPriceSet?.shopMoney?.currencyCode || 'AUD',
-      total_price: payload.totalPriceSet?.shopMoney?.amount || '0',
-      admin_graphql_api_id: payload.id,
-      created_at: payload.createdAt
-    }
-  }
-  
-  return payload
-}
+const supabaseUrl = Deno.env.get('SUPABASE_URL')
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const shopifyAdminTokenBannos = Deno.env.get('SHOPIFY_ADMIN_TOKEN')
+const shopifyAdminTokenFlourlane = Deno.env.get('SHOPIFY_ADMIN_TOKEN_FLOURLANE')
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // ============================================================================
-// ITEM CATEGORIZATION
+// ITEM CATEGORIZATION (FROM LOVABLE)
 // ============================================================================
 
-function isCakeItem(item: any): boolean {
+function isCakeItem(item) {
   const title = (item.title || '').toLowerCase()
   
+  // If it's an accessory, it's NOT a cake (priority rule)
   if (isAccessoryItem(item)) {
     return false
   }
   
+  // Contains "cake" but exclude accessory patterns
   if (title.includes('cake')) {
     if (title.includes('topper') || title.includes('decoration') || title.includes('pick')) {
       return false
@@ -79,16 +39,18 @@ function isCakeItem(item: any): boolean {
   return false
 }
 
-function isAccessoryItem(item: any): boolean {
+function isAccessoryItem(item) {
   const title = (item.title || '').toLowerCase()
   return title.includes('candle') || title.includes('balloon') || title.includes('topper')
 }
 
 // ============================================================================
-// LIQUID TEMPLATE EXTRACTION LOGIC
+// LIQUID TEMPLATE EXTRACTION LOGIC - EXACT REPLICA
 // ============================================================================
 
-function extractCustomerName(shopifyOrder: any): string {
+function extractCustomerName(shopifyOrder) {
+  // Liquid: {% assign customer_name = order.shipping_address.name %}
+  // {% if customer_name == blank %}{% assign customer_name = order.customer.name %}{% endif %}
   let customerName = shopifyOrder.shipping_address?.name
   if (!customerName || customerName.trim() === '') {
     customerName = shopifyOrder.customer?.name || 
@@ -97,10 +59,11 @@ function extractCustomerName(shopifyOrder: any): string {
   return customerName || 'Customer'
 }
 
-function extractDeliveryDate(shopifyOrder: any): string | null {
+function extractDeliveryDate(shopifyOrder) {
+  // Liquid: {% assign delivery_date = order.attributes['Local Delivery Date and Time'] | split: 'between' | first | strip %}
   const noteAttributes = shopifyOrder.note_attributes || []
   
-  const deliveryDateAttr = noteAttributes.find((attr: any) => 
+  const deliveryDateAttr = noteAttributes.find(attr => 
     attr.name === 'Local Delivery Date and Time'
   )
   
@@ -111,7 +74,7 @@ function extractDeliveryDate(shopifyOrder: any): string | null {
     try {
       const parsedDate = new Date(datePart)
       if (!isNaN(parsedDate.getTime())) {
-        return parsedDate.toISOString().split('T')[0]
+        return parsedDate.toISOString().split('T')[0] // Return YYYY-MM-DD for database
       }
     } catch (error) {
       console.error('Failed to parse delivery date:', error)
@@ -121,10 +84,12 @@ function extractDeliveryDate(shopifyOrder: any): string | null {
   return null
 }
 
-function extractDeliveryMethod(shopifyOrder: any): string {
+function extractDeliveryMethod(shopifyOrder) {
+  // Liquid: {% assign delivery_method = order.attributes['Delivery Method'] | downcase %}
+  // {% if delivery_method contains 'pickup' or delivery_method contains 'pick up' %}
   const noteAttributes = shopifyOrder.note_attributes || []
   
-  const deliveryMethodAttr = noteAttributes.find((attr: any) => 
+  const deliveryMethodAttr = noteAttributes.find(attr => 
     attr.name === 'Delivery Method'
   )
   
@@ -137,10 +102,21 @@ function extractDeliveryMethod(shopifyOrder: any): string {
     }
   }
   
+  // Fallback: check shipping_address
   return shopifyOrder.shipping_address ? 'Delivery' : 'Pickup'
 }
 
-function extractAllProperties(item: any): any[] {
+function extractAllProperties(item) {
+  // Liquid template logic - EXACTLY as written:
+  // {% for property in line_item.properties %}
+  //   {% unless property.first contains "_origin" or property.first contains "_raw" 
+  //      or property.first contains "gwp" or property.first contains "_LocalDeliveryID" %}
+  //     {% if property.last != blank %}
+  //       {{ property.first }}: {{ property.last }}
+  //     {% endif %}
+  //   {% endunless %}
+  // {% endfor %}
+  
   const properties = item.properties || []
   const extracted = []
   
@@ -148,14 +124,17 @@ function extractAllProperties(item: any): any[] {
     const name = (prop.name || '').toString()
     const value = (prop.value || '').toString()
     
+    // Skip if name is blank
     if (!name) continue
     
+    // UNLESS conditions - skip these
     if (name.includes('_origin')) continue
     if (name.includes('_raw')) continue
     if (name.includes('gwp')) continue
     if (name.includes('_LocalDeliveryID')) continue
-    if (name.startsWith('_')) continue
+    if (name.startsWith('_')) continue // Covers _mws_* and other _prefixed
     
+    // IF property.last != blank
     if (value.trim() !== '') {
       extracted.push({
         name: name,
@@ -168,28 +147,38 @@ function extractAllProperties(item: any): any[] {
   return extracted
 }
 
-function extractFlavour(item: any): string | null {
+function extractFlavour(item) {
+  // Get all non-filtered properties and join them
   const properties = extractAllProperties(item)
   
   if (properties.length === 0) {
     return null
   }
   
+  // Join with " | " separator
   return properties.map(p => p.display).join(' | ')
 }
 
-function extractSize(item: any): string | null {
+function extractSize(item) {
+  // Extract size from variant_title
+  // Liquid shows: {% if line_item.variant_title != blank %}{{ line_item.variant_title }}{% endif %}
+  
   if (!item.variant_title) {
     return null
   }
   
   const variantTitle = item.variant_title
   
+  // Parse out size from variant_title
+  // Examples: "Small", "Medium #MWS Options 1", "Large Tall"
+  
+  // Check for compound sizes first
   if (variantTitle.toLowerCase().includes('gift size')) return 'Gift Size'
   if (variantTitle.toLowerCase().includes('small tall')) return 'Small Tall'
   if (variantTitle.toLowerCase().includes('medium tall')) return 'Medium Tall'
   if (variantTitle.toLowerCase().includes('large tall')) return 'Large Tall'
   
+  // Check for basic sizes (before any #MWS or other suffixes)
   const sizePart = variantTitle.split('#')[0].trim()
   
   if (sizePart.toLowerCase().includes('small')) return 'Small'
@@ -197,22 +186,31 @@ function extractSize(item: any): string | null {
   if (sizePart.toLowerCase().includes('large')) return 'Large'
   if (sizePart.toLowerCase().includes('tall')) return 'Tall'
   
+  // Return the cleaned variant title if no standard size found
   return sizePart || variantTitle
 }
 
-function extractNotes(shopifyOrder: any): string | null {
-  const notes = shopifyOrder.note || ''
+function extractNotes(shopifyOrder) {
+  // Liquid: {% if order.note != blank %}{{ order.note }}{% endif %}
+  // {% if delivery_method.instructions != blank %}{{ delivery_method.instructions }}{% endif %}
+  
+  let notes = shopifyOrder.note || ''
+  
+  // Note: delivery_method.instructions doesn't exist in webhook JSON
+  // It's part of the shipping_lines but not directly accessible
+  // The Liquid template might be using a Shopify object that's not in webhook
+  
   return notes.trim() || null
 }
 
 // ============================================================================
-// ADMIN API - IMAGE FETCHING (THE ONLY NEW ADDITION)
+// ADMIN API - IMAGE FETCHING
 // ============================================================================
 
-async function fetchProductImage(productId: string, storeSource: string): Promise<string | null> {
+async function fetchProductImage(productId, storeSource) {
   const adminToken = storeSource === 'Flourlane' 
-    ? Deno.env.get('SHOPIFY_ADMIN_TOKEN_FLOURLANE')
-    : Deno.env.get('SHOPIFY_ADMIN_TOKEN_BANNOS')
+    ? shopifyAdminTokenFlourlane
+    : shopifyAdminTokenBannos
   
   const storeDomain = storeSource === 'Flourlane'
     ? 'flour-lane.myshopify.com'
@@ -267,16 +265,18 @@ async function fetchProductImage(productId: string, storeSource: string): Promis
 }
 
 // ============================================================================
-// ORDER SPLITTING LOGIC
+// ORDER SPLITTING LOGIC (FROM LOVABLE)
 // ============================================================================
 
-async function processOrderItems(shopifyOrder: any, storeSource: string): Promise<any[]> {
+async function processOrderItems(shopifyOrder, storeSource) {
   const lineItems = shopifyOrder.line_items || []
   const cakeItems = []
   const accessoryItems = []
   
+  // Categorize items
   for (const item of lineItems) {
     if (isCakeItem(item)) {
+      // Add each cake as separate item (respecting quantity)
       for (let i = 0; i < item.quantity; i++) {
         cakeItems.push(item)
       }
@@ -287,6 +287,17 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   
   console.log(`Categorized: ${cakeItems.length} cakes, ${accessoryItems.length} accessories`)
   
+  // Create accessories array for database
+  const accessoriesForDB = accessoryItems.map(item => ({
+    title: item.title,
+    quantity: item.quantity,
+    shopify_variant_id: item.variant_id?.toString(),
+    shopify_product_id: item.product_id?.toString(),
+    price: item.price,
+    vendor: item.vendor
+  }))
+  
+  // Extract common order data using Liquid template logic
   const customerName = extractCustomerName(shopifyOrder)
   const deliveryDate = extractDeliveryDate(shopifyOrder)
   const deliveryMethod = extractDeliveryMethod(shopifyOrder)
@@ -294,6 +305,7 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   
   const orders = []
   
+  // If only one cake or no cakes, create single order
   if (cakeItems.length <= 1) {
     const cakeItem = cakeItems[0]
     
@@ -301,13 +313,14 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       ? `flourlane-${shopifyOrder.order_number}`
       : `bannos-${shopifyOrder.order_number}`
     
-    // Fetch product image from Shopify Admin API
+    // Fetch product image from Admin API
     const productImage = cakeItem && cakeItem.product_id
       ? await fetchProductImage(cakeItem.product_id, storeSource)
       : null
     
-    const order: any = {
+    const order = {
       id: humanId,
+      human_id: humanId,
       shopify_order_id: shopifyOrder.id?.toString(),
       shopify_order_gid: shopifyOrder.admin_graphql_api_id,
       shopify_order_number: shopifyOrder.order_number,
@@ -315,13 +328,19 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       product_title: cakeItem ? cakeItem.title : 'Custom Order',
       flavour: cakeItem ? extractFlavour(cakeItem) : null,
       size: cakeItem ? extractSize(cakeItem) : null,
+      item_qty: cakeItem ? cakeItem.quantity : 1,
       notes: notes,
       currency: shopifyOrder.currency || 'AUD',
       total_amount: parseFloat(shopifyOrder.total_price || 0),
-      order_json: shopifyOrder, // Store normalized version
+      order_json: shopifyOrder,
       due_date: deliveryDate,
       delivery_method: deliveryMethod,
       product_image: productImage
+    }
+    
+    // Add accessories only if they exist
+    if (accessoriesForDB.length > 0) {
+      order.accessories = accessoriesForDB
     }
     
     orders.push(order)
@@ -339,13 +358,14 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         ? `flourlane-${shopifyOrder.order_number}-${suffix}`
         : `bannos-${shopifyOrder.order_number}-${suffix}`
       
-      // Fetch product image from Shopify Admin API
+      // Fetch product image from Admin API
       const productImage = cakeItem.product_id
         ? await fetchProductImage(cakeItem.product_id, storeSource)
         : null
       
-      const order: any = {
+      const order = {
         id: humanId,
+        human_id: humanId,
         shopify_order_id: shopifyOrder.id?.toString(),
         shopify_order_gid: shopifyOrder.admin_graphql_api_id,
         shopify_order_number: shopifyOrder.order_number,
@@ -353,13 +373,19 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         product_title: cakeItem.title,
         flavour: extractFlavour(cakeItem),
         size: extractSize(cakeItem),
+        item_qty: 1,
         notes: notes,
         currency: shopifyOrder.currency || 'AUD',
-        total_amount: isFirstOrder ? parseFloat(shopifyOrder.total_price || 0) : null,
-        order_json: shopifyOrder, // Store normalized version
+        total_amount: parseFloat(shopifyOrder.total_price || 0),
+        order_json: shopifyOrder,
         due_date: deliveryDate,
         delivery_method: deliveryMethod,
         product_image: productImage
+      }
+      
+      // Accessories ONLY on first order (KEY RULE from Lovable)
+      if (isFirstOrder && accessoriesForDB.length > 0) {
+        order.accessories = accessoriesForDB
       }
       
       orders.push(order)
@@ -373,164 +399,137 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
 // MAIN PROCESSOR
 // ============================================================================
 
-async function processInboxOrders(storeSource: string, limit: number = 50) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase credentials')
-  }
-  
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-  
-  const inboxTable = storeSource === 'Flourlane' 
-    ? 'webhook_inbox_flourlane'
-    : 'webhook_inbox_bannos'
+export async function processWebhook(webhookId) {
+  try {
+    console.log(`Processing webhook: ${webhookId}`)
     
-  const orderTable = storeSource === 'Flourlane' 
-    ? 'orders_flourlane'
-    : 'orders_bannos'
-  
-  console.log(`Processing ${storeSource} inbox (limit: ${limit})`)
-  
-  const { data: webhooks, error: fetchError } = await supabase
-    .from(inboxTable)
-    .select('*')
-    .eq('processed', false)
-    .order('id', { ascending: true })
-    .limit(limit)
-  
-  if (fetchError) {
-    console.error('Error fetching webhooks:', fetchError)
-    throw fetchError
-  }
-  
-  console.log(`Found ${webhooks.length} unprocessed webhooks`)
-  
-  const results = []
-  let successCount = 0
-  let failCount = 0
-  
-  for (const webhook of webhooks) {
-    try {
-      // Normalize webhook (convert GraphQL to REST if needed)
-      const shopifyOrder = normalizeWebhook(webhook.payload)
-      
-      console.log(`Processing order: ${shopifyOrder.order_number}`)
-      
-      const orders = await processOrderItems(shopifyOrder, storeSource)
-      
-      if (orders.length === 0) {
-        console.log('No production items - skipping')
-        
-        await supabase
-          .from(inboxTable)
-          .update({ processed: true })
-          .eq('id', webhook.id)
-        
-        results.push({
-          webhookId: webhook.id,
-          orderNumber: shopifyOrder.order_number,
-          success: true,
-          message: 'No production items'
-        })
-        
-        successCount++
-        continue
-      }
-      
-      for (const order of orders) {
-        console.log(`Inserting order: ${order.id}`)
-        
-        const { error: insertError } = await supabase
-          .from(orderTable)
-          .upsert(order, {
-            onConflict: 'id',
-            ignoreDuplicates: false
-          })
-        
-        if (insertError) {
-          console.error('Error inserting order:', insertError)
-          throw insertError
-        }
-      }
-      
-      await supabase
-        .from(inboxTable)
-        .update({ processed: true })
-        .eq('id', webhook.id)
-      
-      results.push({
-        webhookId: webhook.id,
-        orderNumber: shopifyOrder.order_number,
-        success: true,
-        ordersCreated: orders.length,
-        orderIds: orders.map((o: any) => o.id)
-      })
-      
-      successCount++
-      
-    } catch (error) {
-      console.error(`Failed to process webhook ${webhook.id}:`, error)
-      
-      results.push({
-        webhookId: webhook.id,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
-      
-      failCount++
+    // Read webhook from webhooks_inbox
+    const { data: webhook, error: fetchError } = await supabase
+      .from('webhooks_inbox')
+      .select('*')
+      .eq('id', webhookId)
+      .single()
+    
+    if (fetchError) {
+      console.error('Error fetching webhook:', fetchError)
+      return { success: false, error: fetchError.message }
     }
-  }
-  
-  return {
-    success: true,
-    store: storeSource,
-    totalProcessed: webhooks.length,
-    successCount,
-    failCount,
-    results
+    
+    const shopifyOrder = webhook.payload
+    const shopDomain = webhook.shop_domain || ''
+    
+    // Determine store source
+    const storeSource = shopDomain.includes('flour-lane') ? 'Flourlane' : 'Bannos'
+    
+    console.log(`Processing ${storeSource} order: ${shopifyOrder.order_number}`)
+    
+    // NO TAGS REJECTION RULE (from Lovable)
+    // Only reject if completely empty AND no legitimacy indicators
+    const orderTags = shopifyOrder.tags || ''
+    if (!orderTags || orderTags.trim() === '') {
+      const hasDeliveryInfo = shopifyOrder.note_attributes?.some(attr =>
+        attr.name?.toLowerCase().includes('delivery')
+      )
+      const hasCustomer = shopifyOrder.customer?.first_name && shopifyOrder.customer?.last_name
+      const hasLineItems = shopifyOrder.line_items?.length > 0
+      
+      if (!hasDeliveryInfo && !hasCustomer && !hasLineItems) {
+        console.log(`Rejecting order - no tags and no legitimacy indicators`)
+        return { success: false, error: 'No tags and insufficient data' }
+      }
+    }
+    
+    // Process order items and apply splitting logic
+    const orders = await processOrderItems(shopifyOrder, storeSource)
+    
+    if (orders.length === 0) {
+      console.log('No orders to process')
+      return { success: true, message: 'No production items' }
+    }
+    
+    // Insert into appropriate table
+    const orderTable = storeSource === 'Flourlane' 
+      ? 'orders_table_flourlane'
+      : 'orders_table_bannos'
+    
+    for (const order of orders) {
+      console.log(`Inserting order: ${order.id}`)
+      
+      const { error: insertError } = await supabase
+        .from(orderTable)
+        .upsert(order, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        })
+      
+      if (insertError) {
+        console.error('Error inserting order:', insertError)
+        return { success: false, error: insertError.message }
+      }
+    }
+    
+    console.log(`Successfully processed ${orders.length} order(s)`)
+    
+    return { 
+      success: true, 
+      ordersCreated: orders.length,
+      orderIds: orders.map(o => o.id)
+    }
+    
+  } catch (error) {
+    console.error('Processor error:', error)
+    return { success: false, error: error.message }
   }
 }
 
 // ============================================================================
-// EDGE FUNCTION HANDLER
+// BATCH PROCESSOR - Process all unprocessed webhooks
 // ============================================================================
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
+export async function processPendingWebhooks() {
   try {
-    const { store, limit } = await req.json()
+    // Fetch unprocessed webhooks
+    const { data: webhooks, error: fetchError } = await supabase
+      .from('webhooks_inbox')
+      .select('*')
+      .eq('processed', false)
+      .order('created_at', { ascending: true })
     
-    if (!store || !['bannos', 'flourlane'].includes(store.toLowerCase())) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid store. Must be "bannos" or "flourlane"' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (fetchError) {
+      console.error('Error fetching webhooks:', fetchError)
+      return { success: false, error: fetchError.message }
     }
     
-    const storeSource = store.toLowerCase() === 'flourlane' ? 'Flourlane' : 'Bannos'
-    const processLimit = limit || 50
+    console.log(`Found ${webhooks.length} unprocessed webhooks`)
     
-    const result = await processInboxOrders(storeSource, processLimit)
+    const results = []
     
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    for (const webhook of webhooks) {
+      const result = await processWebhook(webhook.id)
+      results.push({
+        webhookId: webhook.id,
+        ...result
+      })
+      
+      // Mark as processed if successful
+      if (result.success) {
+        await supabase
+          .from('webhooks_inbox')
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq('id', webhook.id)
+      }
+    }
+    
+    return {
+      success: true,
+      totalProcessed: results.filter(r => r.success).length,
+      totalFailed: results.filter(r => !r.success).length,
+      results
+    }
     
   } catch (error) {
-    console.error('Processor error:', error)
-    
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('Batch processor error:', error)
+    return { success: false, error: error.message }
   }
-})
+}
+
