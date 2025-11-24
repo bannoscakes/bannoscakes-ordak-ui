@@ -293,9 +293,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       product_image: productImage
     }
     
-    if (accessoriesForDB.length > 0) {
-      order.accessories = accessoriesForDB
-    }
+    // Note: accessories are in order_json and can be extracted from there if needed
+    // Not storing separately as 'accessories' column doesn't exist in schema
     
     orders.push(order)
     
@@ -335,10 +334,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         product_image: productImage
       }
       
-      // Accessories ONLY on first order
-      if (isFirstOrder && accessoriesForDB.length > 0) {
-        order.accessories = accessoriesForDB
-      }
+      // Note: accessories attached only to first order, stored in order_json
+      // Can be extracted from there if needed (no separate 'accessories' column in schema)
       
       orders.push(order)
     }
