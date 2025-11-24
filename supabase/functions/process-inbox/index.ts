@@ -168,7 +168,7 @@ function extractNotes(shopifyOrder: any): string | null {
 async function fetchProductImage(productId: string, storeSource: string): Promise<string | null> {
   const adminToken = storeSource === 'Flourlane' 
     ? Deno.env.get('SHOPIFY_ADMIN_TOKEN_FLOURLANE')
-    : Deno.env.get('SHOPIFY_ADMIN_TOKEN')
+    : Deno.env.get('SHOPIFY_ADMIN_TOKEN_BANNOS')
   
   const storeDomain = storeSource === 'Flourlane'
     ? 'flour-lane.myshopify.com'
