@@ -31,7 +31,11 @@ function normalizeWebhook(payload: any): any {
       variant_id: edge.node.variant?.id?.match(/\d+/)?.[0],
       variant_title: edge.node.variant?.title,
       price: edge.node.variant?.price || '0',
-      properties: edge.node.customAttributes || [],
+      // Map GraphQL customAttributes (key/value) to REST properties (name/value)
+      properties: (edge.node.customAttributes || []).map((attr: any) => ({
+        name: attr.key,
+        value: attr.value
+      })),
       vendor: edge.node.vendor
     }))
     
@@ -47,7 +51,11 @@ function normalizeWebhook(payload: any): any {
       } : null,
       shipping_address: payload.shippingAddress,
       note: payload.note,
-      note_attributes: payload.customAttributes || [],
+      // Map GraphQL customAttributes (key/value) to REST note_attributes (name/value)
+      note_attributes: (payload.customAttributes || []).map((attr: any) => ({
+        name: attr.key,
+        value: attr.value
+      })),
       currency: payload.totalPriceSet?.shopMoney?.currencyCode || 'AUD',
       total_price: payload.totalPriceSet?.shopMoney?.amount || '0',
       admin_graphql_api_id: payload.id,
