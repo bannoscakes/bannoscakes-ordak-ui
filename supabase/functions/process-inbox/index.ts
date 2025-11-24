@@ -209,7 +209,7 @@ function extractNotes(shopifyOrder: any): string | null {
 // ADMIN API - IMAGE FETCHING (THE ONLY NEW ADDITION)
 // ============================================================================
 
-async function fetchProductImage(productId: string, storeSource: string): Promise<string | null> {
+async function fetchProductImage(variantId: string, storeSource: string): Promise<string | null> {
   const adminToken = storeSource === 'Flourlane' 
     ? Deno.env.get('SHOPIFY_ADMIN_TOKEN_FLOURLANE')
     : Deno.env.get('SHOPIFY_ADMIN_TOKEN_BANNOS')
@@ -223,15 +223,17 @@ async function fetchProductImage(productId: string, storeSource: string): Promis
     return null
   }
   
-  const shopifyProductId = `gid://shopify/Product/${productId}`
+  const shopifyVariantId = `gid://shopify/ProductVariant/${variantId}`
   
   const query = `
-    query getProductImages($id: ID!) {
-      product(id: $id) {
-        images(first: 1) {
-          edges {
-            node {
-              originalSrc
+    query getProductImageFromVariant($id: ID!) {
+      productVariant(id: $id) {
+        product {
+          images(first: 1) {
+            edges {
+              node {
+                originalSrc
+              }
             }
           }
         }
@@ -248,13 +250,13 @@ async function fetchProductImage(productId: string, storeSource: string): Promis
       },
       body: JSON.stringify({
         query,
-        variables: { id: shopifyProductId }
+        variables: { id: shopifyVariantId }
       }),
     })
     
     if (response.ok) {
       const data = await response.json()
-      const images = data.data?.product?.images?.edges || []
+      const images = data.data?.productVariant?.product?.images?.edges || []
       if (images.length > 0) {
         return images[0].node.originalSrc
       }
@@ -308,8 +310,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
     
     const order: any = {
       id: humanId,
-      shopify_order_id: shopifyOrder.id?.toString(),
-      shopify_order_gid: shopifyOrder.admin_graphql_api_id,
+      shopify_order_id: shopifyOrder.id?.toString().match(/\d+/)?.[0] ? parseInt(shopifyOrder.id.toString().match(/\d+/)[0]) : null,
+      shopify_order_gid: shopifyOrder.admin_graphql_api_id || shopifyOrder.id,
       shopify_order_number: shopifyOrder.order_number,
       customer_name: customerName,
       product_title: cakeItem ? cakeItem.title : 'Custom Order',
@@ -346,8 +348,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       
       const order: any = {
         id: humanId,
-        shopify_order_id: shopifyOrder.id?.toString(),
-        shopify_order_gid: shopifyOrder.admin_graphql_api_id,
+        shopify_order_id: shopifyOrder.id?.toString().match(/\d+/)?.[0] ? parseInt(shopifyOrder.id.toString().match(/\d+/)[0]) : null,
+        shopify_order_gid: shopifyOrder.admin_graphql_api_id || shopifyOrder.id,
         shopify_order_number: shopifyOrder.order_number,
         customer_name: customerName,
         product_title: cakeItem.title,
@@ -475,10 +477,20 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
       console.error('Error details:', JSON.stringify(error, null, 2))
       
+      // Better error serialization for Supabase errors
+      let errorMessage = 'Unknown error'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (error && typeof error === 'object') {
+        errorMessage = JSON.stringify(error)
+      } else {
+        errorMessage = String(error)
+      }
+      
       results.push({
         webhookId: webhook.id,
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMessage
       })
       
       failCount++
