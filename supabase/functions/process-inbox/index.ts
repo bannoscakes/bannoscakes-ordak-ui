@@ -1,0 +1,520 @@
+// Order Inbox Processor - Processes webhooks from inbox tables to orders tables
+// Reads from: webhook_inbox_bannos, webhook_inbox_flourlane
+// Outputs to: orders_bannos, orders_flourlane
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// ============================================================================
+// ITEM CATEGORIZATION
+// ============================================================================
+
+function isCakeItem(item: any): boolean {
+  const title = (item.title || '').toLowerCase()
+  
+  // If it's an accessory, it's NOT a cake (priority rule)
+  if (isAccessoryItem(item)) {
+    return false
+  }
+  
+  // Contains "cake" but exclude accessory patterns
+  if (title.includes('cake')) {
+    if (title.includes('topper') || title.includes('decoration') || title.includes('pick')) {
+      return false
+    }
+    return true
+  }
+  
+  return false
+}
+
+function isAccessoryItem(item: any): boolean {
+  const title = (item.title || '').toLowerCase()
+  return title.includes('candle') || title.includes('balloon') || title.includes('topper')
+}
+
+// ============================================================================
+// LIQUID TEMPLATE EXTRACTION LOGIC
+// ============================================================================
+
+function extractCustomerName(shopifyOrder: any): string {
+  let customerName = shopifyOrder.shipping_address?.name
+  if (!customerName || customerName.trim() === '') {
+    customerName = shopifyOrder.customer?.name || 
+                   `${shopifyOrder.customer?.first_name || ''} ${shopifyOrder.customer?.last_name || ''}`.trim()
+  }
+  return customerName || 'Customer'
+}
+
+function extractDeliveryDate(shopifyOrder: any): string | null {
+  const noteAttributes = shopifyOrder.note_attributes || []
+  
+  const deliveryDateAttr = noteAttributes.find((attr: any) => 
+    attr.name === 'Local Delivery Date and Time'
+  )
+  
+  if (deliveryDateAttr && deliveryDateAttr.value) {
+    const dateText = deliveryDateAttr.value
+    const datePart = dateText.split(' between ')[0].trim()
+    
+    try {
+      const parsedDate = new Date(datePart)
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split('T')[0]
+      }
+    } catch (error) {
+      console.error('Failed to parse delivery date:', error)
+    }
+  }
+  
+  return null
+}
+
+function extractDeliveryMethod(shopifyOrder: any): string {
+  const noteAttributes = shopifyOrder.note_attributes || []
+  
+  const deliveryMethodAttr = noteAttributes.find((attr: any) => 
+    attr.name === 'Delivery Method'
+  )
+  
+  if (deliveryMethodAttr && deliveryMethodAttr.value) {
+    const methodValue = deliveryMethodAttr.value.toLowerCase()
+    if (methodValue.includes('pick up') || methodValue.includes('pickup')) {
+      return 'Pickup'
+    } else if (methodValue.includes('delivery')) {
+      return 'Delivery'
+    }
+  }
+  
+  return shopifyOrder.shipping_address ? 'Delivery' : 'Pickup'
+}
+
+function extractAllProperties(item: any): any[] {
+  const properties = item.properties || []
+  const extracted = []
+  
+  for (const prop of properties) {
+    const name = (prop.name || '').toString()
+    const value = (prop.value || '').toString()
+    
+    if (!name) continue
+    
+    // Skip filtered properties
+    if (name.includes('_origin')) continue
+    if (name.includes('_raw')) continue
+    if (name.includes('gwp')) continue
+    if (name.includes('_LocalDeliveryID')) continue
+    if (name.startsWith('_')) continue
+    
+    if (value.trim() !== '') {
+      extracted.push({
+        name: name,
+        value: value,
+        display: `${name}: ${value}`
+      })
+    }
+  }
+  
+  return extracted
+}
+
+function extractFlavour(item: any): string | null {
+  const properties = extractAllProperties(item)
+  
+  if (properties.length === 0) {
+    return null
+  }
+  
+  return properties.map(p => p.display).join(' | ')
+}
+
+function extractSize(item: any): string | null {
+  if (!item.variant_title) {
+    return null
+  }
+  
+  const variantTitle = item.variant_title
+  
+  // Check for compound sizes first
+  if (variantTitle.toLowerCase().includes('gift size')) return 'Gift Size'
+  if (variantTitle.toLowerCase().includes('small tall')) return 'Small Tall'
+  if (variantTitle.toLowerCase().includes('medium tall')) return 'Medium Tall'
+  if (variantTitle.toLowerCase().includes('large tall')) return 'Large Tall'
+  
+  const sizePart = variantTitle.split('#')[0].trim()
+  
+  if (sizePart.toLowerCase().includes('small')) return 'Small'
+  if (sizePart.toLowerCase().includes('medium')) return 'Medium'
+  if (sizePart.toLowerCase().includes('large')) return 'Large'
+  if (sizePart.toLowerCase().includes('tall')) return 'Tall'
+  
+  return sizePart || variantTitle
+}
+
+function extractNotes(shopifyOrder: any): string | null {
+  const notes = shopifyOrder.note || ''
+  return notes.trim() || null
+}
+
+// ============================================================================
+// ADMIN API - IMAGE FETCHING
+// ============================================================================
+
+async function fetchProductImage(productId: string, storeSource: string): Promise<string | null> {
+  const adminToken = storeSource === 'Flourlane' 
+    ? Deno.env.get('SHOPIFY_ADMIN_TOKEN_FLOURLANE')
+    : Deno.env.get('SHOPIFY_ADMIN_TOKEN')
+  
+  const storeDomain = storeSource === 'Flourlane'
+    ? 'flour-lane.myshopify.com'
+    : 'bannos.myshopify.com'
+  
+  if (!adminToken) {
+    console.error(`Admin token not found for ${storeSource}`)
+    return null
+  }
+  
+  const shopifyProductId = `gid://shopify/Product/${productId}`
+  
+  const query = `
+    query getProductImages($id: ID!) {
+      product(id: $id) {
+        images(first: 1) {
+          edges {
+            node {
+              originalSrc
+            }
+          }
+        }
+      }
+    }
+  `
+  
+  try {
+    const response = await fetch(`https://${storeDomain}/admin/api/2025-01/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Access-Token': adminToken,
+      },
+      body: JSON.stringify({
+        query,
+        variables: { id: shopifyProductId }
+      }),
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      const images = data.data?.product?.images?.edges || []
+      if (images.length > 0) {
+        return images[0].node.originalSrc
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch image from Admin API:', error)
+  }
+  
+  return null
+}
+
+// ============================================================================
+// ORDER SPLITTING LOGIC
+// ============================================================================
+
+async function processOrderItems(shopifyOrder: any, storeSource: string): Promise<any[]> {
+  const lineItems = shopifyOrder.line_items || []
+  const cakeItems = []
+  const accessoryItems = []
+  
+  // Categorize items
+  for (const item of lineItems) {
+    if (isCakeItem(item)) {
+      for (let i = 0; i < item.quantity; i++) {
+        cakeItems.push(item)
+      }
+    } else if (isAccessoryItem(item)) {
+      accessoryItems.push(item)
+    }
+  }
+  
+  console.log(`Categorized: ${cakeItems.length} cakes, ${accessoryItems.length} accessories`)
+  
+  // Create accessories array for database
+  const accessoriesForDB = accessoryItems.map((item: any) => ({
+    title: item.title,
+    quantity: item.quantity,
+    shopify_variant_id: item.variant_id?.toString(),
+    shopify_product_id: item.product_id?.toString(),
+    price: item.price,
+    vendor: item.vendor
+  }))
+  
+  // Extract common order data
+  const customerName = extractCustomerName(shopifyOrder)
+  const deliveryDate = extractDeliveryDate(shopifyOrder)
+  const deliveryMethod = extractDeliveryMethod(shopifyOrder)
+  const notes = extractNotes(shopifyOrder)
+  
+  const orders = []
+  
+  // If only one cake or no cakes, create single order
+  if (cakeItems.length <= 1) {
+    const cakeItem = cakeItems[0]
+    
+    const humanId = storeSource === 'Flourlane' 
+      ? `flourlane-${shopifyOrder.order_number}`
+      : `bannos-${shopifyOrder.order_number}`
+    
+    // Fetch product image from Admin API
+    const productImage = cakeItem && cakeItem.product_id
+      ? await fetchProductImage(cakeItem.product_id, storeSource)
+      : null
+    
+    const order: any = {
+      id: humanId,
+      shopify_order_id: shopifyOrder.id?.toString(),
+      shopify_order_gid: shopifyOrder.admin_graphql_api_id,
+      shopify_order_number: shopifyOrder.order_number,
+      customer_name: customerName,
+      product_title: cakeItem ? cakeItem.title : 'Custom Order',
+      flavour: cakeItem ? extractFlavour(cakeItem) : null,
+      size: cakeItem ? extractSize(cakeItem) : null,
+      notes: notes,
+      currency: shopifyOrder.currency || 'AUD',
+      total_amount: parseFloat(shopifyOrder.total_price || 0),
+      order_json: shopifyOrder,
+      due_date: deliveryDate,
+      delivery_method: deliveryMethod,
+      product_image: productImage
+    }
+    
+    if (accessoriesForDB.length > 0) {
+      order.accessories = accessoriesForDB
+    }
+    
+    orders.push(order)
+    
+  } else {
+    // Multiple cakes - split into separate orders
+    const suffixes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+    
+    for (let i = 0; i < cakeItems.length; i++) {
+      const cakeItem = cakeItems[i]
+      const suffix = suffixes[i] || (i + 1).toString()
+      const isFirstOrder = i === 0
+      
+      const humanId = storeSource === 'Flourlane'
+        ? `flourlane-${shopifyOrder.order_number}-${suffix}`
+        : `bannos-${shopifyOrder.order_number}-${suffix}`
+      
+      // Fetch product image from Admin API
+      const productImage = cakeItem.product_id
+        ? await fetchProductImage(cakeItem.product_id, storeSource)
+        : null
+      
+      const order: any = {
+        id: humanId,
+        shopify_order_id: shopifyOrder.id?.toString(),
+        shopify_order_gid: shopifyOrder.admin_graphql_api_id,
+        shopify_order_number: shopifyOrder.order_number,
+        customer_name: customerName,
+        product_title: cakeItem.title,
+        flavour: extractFlavour(cakeItem),
+        size: extractSize(cakeItem),
+        notes: notes,
+        currency: shopifyOrder.currency || 'AUD',
+        total_amount: parseFloat(shopifyOrder.total_price || 0),
+        order_json: shopifyOrder,
+        due_date: deliveryDate,
+        delivery_method: deliveryMethod,
+        product_image: productImage
+      }
+      
+      // Accessories ONLY on first order
+      if (isFirstOrder && accessoriesForDB.length > 0) {
+        order.accessories = accessoriesForDB
+      }
+      
+      orders.push(order)
+    }
+  }
+  
+  return orders
+}
+
+// ============================================================================
+// MAIN PROCESSOR
+// ============================================================================
+
+async function processInboxOrders(storeSource: string, limit: number = 50) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase credentials')
+  }
+  
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  
+  // Determine table names based on store
+  const inboxTable = storeSource === 'Flourlane' 
+    ? 'webhook_inbox_flourlane'
+    : 'webhook_inbox_bannos'
+    
+  const orderTable = storeSource === 'Flourlane' 
+    ? 'orders_flourlane'
+    : 'orders_bannos'
+  
+  console.log(`Processing ${storeSource} inbox (limit: ${limit})`)
+  
+  // Fetch unprocessed webhooks
+  const { data: webhooks, error: fetchError } = await supabase
+    .from(inboxTable)
+    .select('*')
+    .eq('processed', false)
+    .order('id', { ascending: true })
+    .limit(limit)
+  
+  if (fetchError) {
+    console.error('Error fetching webhooks:', fetchError)
+    throw fetchError
+  }
+  
+  console.log(`Found ${webhooks.length} unprocessed webhooks`)
+  
+  const results = []
+  let successCount = 0
+  let failCount = 0
+  
+  for (const webhook of webhooks) {
+    try {
+      const shopifyOrder = webhook.payload
+      
+      console.log(`Processing order: ${shopifyOrder.order_number}`)
+      
+      // Process order items and apply splitting logic
+      const orders = await processOrderItems(shopifyOrder, storeSource)
+      
+      if (orders.length === 0) {
+        console.log('No production items - skipping')
+        
+        // Mark as processed anyway
+        await supabase
+          .from(inboxTable)
+          .update({ processed: true })
+          .eq('id', webhook.id)
+        
+        results.push({
+          webhookId: webhook.id,
+          orderNumber: shopifyOrder.order_number,
+          success: true,
+          message: 'No production items'
+        })
+        
+        successCount++
+        continue
+      }
+      
+      // Insert orders
+      for (const order of orders) {
+        console.log(`Inserting order: ${order.id}`)
+        
+        const { error: insertError } = await supabase
+          .from(orderTable)
+          .upsert(order, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
+        
+        if (insertError) {
+          console.error('Error inserting order:', insertError)
+          throw insertError
+        }
+      }
+      
+      // Mark as processed
+      await supabase
+        .from(inboxTable)
+        .update({ processed: true })
+        .eq('id', webhook.id)
+      
+      results.push({
+        webhookId: webhook.id,
+        orderNumber: shopifyOrder.order_number,
+        success: true,
+        ordersCreated: orders.length,
+        orderIds: orders.map((o: any) => o.id)
+      })
+      
+      successCount++
+      
+    } catch (error) {
+      console.error(`Failed to process webhook ${webhook.id}:`, error)
+      
+      results.push({
+        webhookId: webhook.id,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+      
+      failCount++
+    }
+  }
+  
+  return {
+    success: true,
+    store: storeSource,
+    totalProcessed: webhooks.length,
+    successCount,
+    failCount,
+    results
+  }
+}
+
+// ============================================================================
+// EDGE FUNCTION HANDLER
+// ============================================================================
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const { store, limit } = await req.json()
+    
+    if (!store || !['bannos', 'flourlane'].includes(store.toLowerCase())) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid store. Must be "bannos" or "flourlane"' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    const storeSource = store.toLowerCase() === 'flourlane' ? 'Flourlane' : 'Bannos'
+    const processLimit = limit || 50
+    
+    const result = await processInboxOrders(storeSource, processLimit)
+    
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+    
+  } catch (error) {
+    console.error('Processor error:', error)
+    
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})
+
