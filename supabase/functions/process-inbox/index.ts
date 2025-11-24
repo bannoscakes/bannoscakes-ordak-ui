@@ -177,21 +177,30 @@ function extractAllProperties(item: any): any[] {
 }
 
 function extractFlavour(item: any): string | null {
-  if (!item.variant_title || !item.variant_title.trim()) {
-    return null
+  // Strategy 1: Try variant_title for regular cakes (e.g., "Medium / Vanilla")
+  if (item.variant_title && item.variant_title.trim()) {
+    const variantTitle = item.variant_title.trim()
+    const parts = variantTitle.split('/')
+    
+    if (parts.length >= 2) {
+      const flavour = parts[1].trim()
+      if (flavour) return flavour  // Found flavour in variant_title
+    }
   }
   
-  const variantTitle = item.variant_title.trim()
+  // Strategy 2: Check properties for gelato flavours (e.g., "Gelato Flavours: Chocolate, Vanilla")
+  const properties = extractAllProperties(item)
   
-  // Parse "Size / Flavour" format - split on '/', take second part
-  const parts = variantTitle.split('/')
+  // Look for gelato-specific flavour properties
+  const gelatoFlavour = properties.find(p => 
+    p.name.toLowerCase().includes('gelato flavour')
+  )
   
-  if (parts.length >= 2) {
-    const flavour = parts[1].trim()
-    return flavour || null  // Return null if empty after trim
+  if (gelatoFlavour && gelatoFlavour.value.trim()) {
+    return gelatoFlavour.value.trim()
   }
   
-  // If no slash, variant_title might be just size, no flavour
+  // No flavour found in either variant_title or properties
   return null
 }
 
