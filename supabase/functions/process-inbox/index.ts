@@ -1,7 +1,6 @@
 // Order Inbox Processor - Processes webhooks from inbox tables to orders tables
 // Reads from: webhook_inbox_bannos, webhook_inbox_flourlane
 // Outputs to: orders_bannos, orders_flourlane
-// Supports BOTH REST and GraphQL webhook formats
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -12,103 +11,16 @@ const corsHeaders = {
 }
 
 // ============================================================================
-// WEBHOOK FORMAT DETECTION
-// ============================================================================
-
-function detectWebhookFormat(payload: any): 'REST' | 'GraphQL' {
-  // GraphQL has 'lineItems' (camelCase) and 'edges'
-  if (payload.lineItems && Array.isArray(payload.lineItems?.edges)) {
-    return 'GraphQL'
-  }
-  // REST has 'line_items' (snake_case)
-  if (payload.line_items && Array.isArray(payload.line_items)) {
-    return 'REST'
-  }
-  // Default to REST for backwards compatibility
-  return 'REST'
-}
-
-// ============================================================================
-// GRAPHQL FORMAT ADAPTERS
-// ============================================================================
-
-function normalizeGraphQLOrder(graphqlOrder: any): any {
-  // Convert GraphQL format to normalized format
-  const lineItems = (graphqlOrder.lineItems?.edges || []).map((edge: any) => {
-    const node = edge.node
-    return {
-      id: node.id,
-      title: node.title,
-      quantity: node.quantity || 1,
-      product_id: extractProductIdFromGid(node.variant?.id || node.id),
-      variant_id: extractProductIdFromGid(node.variant?.id),
-      variant_title: node.variant?.title,
-      price: node.variant?.price || '0',
-      properties: node.customAttributes || [],
-      vendor: node.vendor
-    }
-  })
-  
-  // Extract order number from name (e.g., "#B22588" -> 22588)
-  const orderNumber = extractOrderNumber(graphqlOrder.name || '')
-  
-  return {
-    id: graphqlOrder.id,
-    order_number: orderNumber,
-    admin_graphql_api_id: graphqlOrder.id,
-    line_items: lineItems,
-    customer: {
-      name: graphqlOrder.customer ? 
-        `${graphqlOrder.customer.firstName || ''} ${graphqlOrder.customer.lastName || ''}`.trim() : null,
-      first_name: graphqlOrder.customer?.firstName,
-      last_name: graphqlOrder.customer?.lastName,
-      email: graphqlOrder.customer?.email
-    },
-    shipping_address: graphqlOrder.shippingAddress ? {
-      name: graphqlOrder.shippingAddress.name,
-      address1: graphqlOrder.shippingAddress.address1,
-      address2: graphqlOrder.shippingAddress.address2,
-      city: graphqlOrder.shippingAddress.city,
-      province: graphqlOrder.shippingAddress.province,
-      zip: graphqlOrder.shippingAddress.zip,
-      country: graphqlOrder.shippingAddress.country
-    } : null,
-    note: graphqlOrder.note,
-    note_attributes: graphqlOrder.customAttributes || [],
-    currency: graphqlOrder.totalPriceSet?.shopMoney?.currencyCode || 'AUD',
-    total_price: graphqlOrder.totalPriceSet?.shopMoney?.amount || '0',
-    created_at: graphqlOrder.createdAt,
-    tags: Array.isArray(graphqlOrder.tags) ? graphqlOrder.tags.join(', ') : (graphqlOrder.tags || '')
-  }
-}
-
-function extractProductIdFromGid(gid: string): string | null {
-  if (!gid) return null
-  // Extract number from "gid://shopify/Product/123" or "gid://shopify/ProductVariant/456"
-  const match = gid.match(/\/(\d+)$/)
-  return match ? match[1] : null
-}
-
-function extractOrderNumber(name: string): number | null {
-  if (!name) return null
-  // Extract number from "#B22588" or "#F12345"
-  const match = name.match(/\d+/)
-  return match ? parseInt(match[0], 10) : null
-}
-
-// ============================================================================
 // ITEM CATEGORIZATION
 // ============================================================================
 
 function isCakeItem(item: any): boolean {
   const title = (item.title || '').toLowerCase()
   
-  // If it's an accessory, it's NOT a cake (priority rule)
   if (isAccessoryItem(item)) {
     return false
   }
   
-  // Contains "cake" but exclude accessory patterns
   if (title.includes('cake')) {
     if (title.includes('topper') || title.includes('decoration') || title.includes('pick')) {
       return false
@@ -190,7 +102,6 @@ function extractAllProperties(item: any): any[] {
     
     if (!name) continue
     
-    // Skip filtered properties
     if (name.includes('_origin')) continue
     if (name.includes('_raw')) continue
     if (name.includes('gwp')) continue
@@ -226,7 +137,6 @@ function extractSize(item: any): string | null {
   
   const variantTitle = item.variant_title
   
-  // Check for compound sizes first
   if (variantTitle.toLowerCase().includes('gift size')) return 'Gift Size'
   if (variantTitle.toLowerCase().includes('small tall')) return 'Small Tall'
   if (variantTitle.toLowerCase().includes('medium tall')) return 'Medium Tall'
@@ -248,7 +158,7 @@ function extractNotes(shopifyOrder: any): string | null {
 }
 
 // ============================================================================
-// ADMIN API - IMAGE FETCHING
+// ADMIN API - IMAGE FETCHING (THE ONLY NEW ADDITION)
 // ============================================================================
 
 async function fetchProductImage(productId: string, storeSource: string): Promise<string | null> {
@@ -312,12 +222,11 @@ async function fetchProductImage(productId: string, storeSource: string): Promis
 // ORDER SPLITTING LOGIC
 // ============================================================================
 
-async function processOrderItems(shopifyOrder: any, storeSource: string, originalPayload: any): Promise<any[]> {
+async function processOrderItems(shopifyOrder: any, storeSource: string): Promise<any[]> {
   const lineItems = shopifyOrder.line_items || []
   const cakeItems = []
   const accessoryItems = []
   
-  // Categorize items
   for (const item of lineItems) {
     if (isCakeItem(item)) {
       for (let i = 0; i < item.quantity; i++) {
@@ -330,7 +239,6 @@ async function processOrderItems(shopifyOrder: any, storeSource: string, origina
   
   console.log(`Categorized: ${cakeItems.length} cakes, ${accessoryItems.length} accessories`)
   
-  // Extract common order data
   const customerName = extractCustomerName(shopifyOrder)
   const deliveryDate = extractDeliveryDate(shopifyOrder)
   const deliveryMethod = extractDeliveryMethod(shopifyOrder)
@@ -338,7 +246,6 @@ async function processOrderItems(shopifyOrder: any, storeSource: string, origina
   
   const orders = []
   
-  // If only one cake or no cakes, create single order
   if (cakeItems.length <= 1) {
     const cakeItem = cakeItems[0]
     
@@ -346,7 +253,7 @@ async function processOrderItems(shopifyOrder: any, storeSource: string, origina
       ? `flourlane-${shopifyOrder.order_number}`
       : `bannos-${shopifyOrder.order_number}`
     
-    // Fetch product image from Admin API
+    // ONLY NEW PART: Fetch product image
     const productImage = cakeItem && cakeItem.product_id
       ? await fetchProductImage(cakeItem.product_id, storeSource)
       : null
@@ -363,10 +270,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string, origina
       notes: notes,
       currency: shopifyOrder.currency || 'AUD',
       total_amount: parseFloat(shopifyOrder.total_price || 0),
-      order_json: originalPayload, // Store original payload (REST or GraphQL)
+      order_json: shopifyOrder,
       due_date: deliveryDate,
       delivery_method: deliveryMethod,
-      product_image: productImage
+      product_image: productImage // NEW FIELD
     }
     
     orders.push(order)
@@ -378,12 +285,13 @@ async function processOrderItems(shopifyOrder: any, storeSource: string, origina
     for (let i = 0; i < cakeItems.length; i++) {
       const cakeItem = cakeItems[i]
       const suffix = suffixes[i] || (i + 1).toString()
+      const isFirstOrder = i === 0
       
       const humanId = storeSource === 'Flourlane'
         ? `flourlane-${shopifyOrder.order_number}-${suffix}`
         : `bannos-${shopifyOrder.order_number}-${suffix}`
       
-      // Fetch product image from Admin API
+      // ONLY NEW PART: Fetch product image
       const productImage = cakeItem.product_id
         ? await fetchProductImage(cakeItem.product_id, storeSource)
         : null
@@ -399,11 +307,11 @@ async function processOrderItems(shopifyOrder: any, storeSource: string, origina
         size: extractSize(cakeItem),
         notes: notes,
         currency: shopifyOrder.currency || 'AUD',
-        total_amount: parseFloat(shopifyOrder.total_price || 0),
-        order_json: originalPayload, // Store original payload (REST or GraphQL)
+        total_amount: isFirstOrder ? parseFloat(shopifyOrder.total_price || 0) : null, // FIXED: Only first order gets total
+        order_json: shopifyOrder,
         due_date: deliveryDate,
         delivery_method: deliveryMethod,
-        product_image: productImage
+        product_image: productImage // NEW FIELD
       }
       
       orders.push(order)
@@ -427,7 +335,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
   
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
   
-  // Determine table names based on store
   const inboxTable = storeSource === 'Flourlane' 
     ? 'webhook_inbox_flourlane'
     : 'webhook_inbox_bannos'
@@ -438,7 +345,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
   
   console.log(`Processing ${storeSource} inbox (limit: ${limit})`)
   
-  // Fetch unprocessed webhooks
   const { data: webhooks, error: fetchError } = await supabase
     .from(inboxTable)
     .select('*')
@@ -456,36 +362,18 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
   const results = []
   let successCount = 0
   let failCount = 0
-  let restCount = 0
-  let graphqlCount = 0
   
   for (const webhook of webhooks) {
     try {
-      const originalPayload = webhook.payload
-      const webhookFormat = detectWebhookFormat(originalPayload)
+      const shopifyOrder = webhook.payload
       
-      console.log(`Processing webhook ${webhook.id} - Format: ${webhookFormat}`)
+      console.log(`Processing order: ${shopifyOrder.order_number}`)
       
-      if (webhookFormat === 'GraphQL') {
-        graphqlCount++
-      } else {
-        restCount++
-      }
-      
-      // Normalize to common format
-      const shopifyOrder = webhookFormat === 'GraphQL' 
-        ? normalizeGraphQLOrder(originalPayload)
-        : originalPayload
-      
-      console.log(`Order number: ${shopifyOrder.order_number}`)
-      
-      // Process order items and apply splitting logic
-      const orders = await processOrderItems(shopifyOrder, storeSource, originalPayload)
+      const orders = await processOrderItems(shopifyOrder, storeSource)
       
       if (orders.length === 0) {
         console.log('No production items - skipping')
         
-        // Mark as processed anyway
         await supabase
           .from(inboxTable)
           .update({ processed: true })
@@ -494,7 +382,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
         results.push({
           webhookId: webhook.id,
           orderNumber: shopifyOrder.order_number,
-          format: webhookFormat,
           success: true,
           message: 'No production items'
         })
@@ -503,7 +390,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
         continue
       }
       
-      // Insert orders
       for (const order of orders) {
         console.log(`Inserting order: ${order.id}`)
         
@@ -520,7 +406,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
         }
       }
       
-      // Mark as processed
       await supabase
         .from(inboxTable)
         .update({ processed: true })
@@ -529,7 +414,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
       results.push({
         webhookId: webhook.id,
         orderNumber: shopifyOrder.order_number,
-        format: webhookFormat,
         success: true,
         ordersCreated: orders.length,
         orderIds: orders.map((o: any) => o.id)
@@ -556,8 +440,6 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
     totalProcessed: webhooks.length,
     successCount,
     failCount,
-    restFormatCount: restCount,
-    graphqlFormatCount: graphqlCount,
     results
   }
 }
