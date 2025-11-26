@@ -148,9 +148,9 @@ function extractDeliveryMethod(shopifyOrder: any): string {
   return shopifyOrder.shipping_address ? 'Delivery' : 'Pickup'
 }
 
-function extractAllProperties(item: any): any[] {
+function extractAllProperties(item: any): { name: string; value: string; display: string }[] {
   const properties = item.properties || []
-  const extracted = []
+  const extracted: { name: string; value: string; display: string }[] = []
   
   for (const prop of properties) {
     const name = (prop.name || '').toString()
