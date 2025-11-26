@@ -321,8 +321,8 @@ async function fetchProductImage(variantId: string, storeSource: string): Promis
 
 async function processOrderItems(shopifyOrder: any, storeSource: string): Promise<any[]> {
   const lineItems = shopifyOrder.line_items || []
-  const cakeItems = []
-  const accessoryItems = []
+  const cakeItems: any[] = []
+  const accessoryItems: any[] = []
   
   for (const item of lineItems) {
     if (isCakeItem(item)) {
@@ -341,7 +341,7 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   const deliveryMethod = extractDeliveryMethod(shopifyOrder)
   const notes = extractNotes(shopifyOrder)
   
-  const orders = []
+  const orders: any[] = []
   
   if (cakeItems.length <= 1) {
     const cakeItem = cakeItems[0]
@@ -464,7 +464,7 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
   
   console.log(`Found ${webhooks.length} unprocessed webhooks`)
   
-  const results = []
+  const results: { webhookId: any; orderNumber: any; success: boolean; message?: string; error?: string }[] = []
   let successCount = 0
   let failCount = 0
   
