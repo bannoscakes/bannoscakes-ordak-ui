@@ -29,7 +29,7 @@ CREATE OR REPLACE FUNCTION public.get_order(
   assignee_id uuid,
   assignee_name text,
   store text,
-  currency character,
+  currency character(3),
   total_amount numeric,
   created_at timestamp with time zone,
   updated_at timestamp with time zone
