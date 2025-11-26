@@ -36,49 +36,25 @@ interface OrderDetailDrawerProps {
   store: "bannos" | "flourlane";
 }
 
-// Sample extended order data
-const getExtendedOrderData = (order: QueueItem | null, store: "bannos" | "flourlane") => {
+// Extended order data - uses real values from database, no mock overrides
+const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flourlane") => {
   if (!order) return null;
   
-  // Generate realistic size values based on product type and original size
-  const getRealisticSize = (originalSize: string, product: string) => {
-    if (product.toLowerCase().includes("cupcake")) {
-      return originalSize === 'S' ? 'Mini' : originalSize === 'M' ? 'Standard' : 'Jumbo';
-    } else if (product.toLowerCase().includes("wedding")) {
-      return originalSize === 'S' ? '6-inch Round' : originalSize === 'M' ? '8-inch Round' : '10-inch Round';
-    } else if (product.toLowerCase().includes("birthday") || product.toLowerCase().includes("cake")) {
-      return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium Tall' : '8-inch Round';
-    } else if (store === "flourlane") {
-      // Bread/bakery items
-      return originalSize === 'S' ? 'Small Loaf' : originalSize === 'M' ? 'Standard' : 'Large Batch';
-    }
-    // Default fallback
-    return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium' : 'Large';
-  };
-  
-  // Sample data that would come from a full order object
+  // Use real values from the order, with safe fallbacks
   return {
     ...order,
-    size: getRealisticSize(order.size, order.product), // Override with realistic size
-    writingOnCake: order.id.includes("BAN-C03") || order.id.includes("FLR-C03") 
-      ? "Happy Birthday Sarah! Love, Mom & Dad" 
-      : order.id.includes("015") || order.id.includes("C01")
-      ? "Congratulations on your Wedding!"
-      : "",
-    accessories: order.product.toLowerCase().includes("wedding") 
-      ? ["Cake Stand", "Decorative Flowers", "Cake Topper"]
-      : order.product.toLowerCase().includes("cupcake")
-      ? ["Cupcake Liners", "Decorative Picks"]
-      : [],
+    // Use real size from database (no mock override)
+    size: order.size || 'Unknown',
+    // Use real cake writing from database
+    writingOnCake: (order as any).cakeWriting || '',
+    // Accessories not currently stored in database
+    accessories: [],
+    // Use real due date
     deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
-    notes: order.priority === "High" 
-      ? "Customer requested early morning pickup. Handle with extra care - VIP client."
-      : order.method === "Delivery"
-      ? "Standard delivery. Contact customer 30 mins before arrival."
-      : "Customer will pickup. Ensure order is ready at specified time.",
-    productImage: store === "bannos" 
-      ? "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop"
-      : "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop",
+    // Use real notes from database (null means no notes)
+    notes: (order as any).notes || '',
+    // Use real product image from database
+    productImage: (order as any).productImage || null,
     imageCaption: order.product
   };
 };
@@ -120,23 +96,28 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
       
       if (foundOrder) {
         // Map database order to UI format
-        const mappedOrder: QueueItem = {
+        const mappedOrder: QueueItem & { cakeWriting?: string; notes?: string; productImage?: string } = {
           id: foundOrder.id,
           orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
           shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
           customerName: foundOrder.customer_name || "Unknown Customer",
           product: foundOrder.product_title || "Unknown Product",
-          size: foundOrder.size || "M",
+          size: foundOrder.size || "Unknown",
           quantity: foundOrder.item_qty || 1,
           deliveryTime: foundOrder.due_date || new Date().toISOString(),
           priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
           status: mapStageToStatus(foundOrder.stage),
-          flavor: foundOrder.flavour || "Unknown",
+          flavor: foundOrder.flavour || "",
           dueTime: foundOrder.due_date || new Date().toISOString(),
-          method: foundOrder.delivery_method === "delivery" ? "Delivery" : "Pickup",
+          // Fix case-insensitive check for delivery_method
+          method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
           storage: foundOrder.storage || "Default",
           store: foundOrder.store || store,
-          stage: foundOrder.stage || "Filling"
+          stage: foundOrder.stage || "Filling",
+          // Add real data from database
+          cakeWriting: foundOrder.cake_writing || '',
+          notes: foundOrder.notes || '',
+          productImage: foundOrder.product_image || null
         };
         
         setRealOrder(mappedOrder);
