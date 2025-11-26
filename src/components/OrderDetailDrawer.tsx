@@ -27,6 +27,10 @@ interface QueueItem {
   storage?: string;
   store?: 'bannos' | 'flourlane';
   stage?: string;
+  // Database fields for order details
+  cakeWriting?: string;
+  notes?: string;
+  productImage?: string | null;
 }
 
 interface OrderDetailDrawerProps {
@@ -46,15 +50,15 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
     // Use real size from database (no mock override)
     size: order.size || 'Unknown',
     // Use real cake writing from database
-    writingOnCake: (order as any).cakeWriting || '',
+    writingOnCake: order.cakeWriting || '',
     // Accessories not currently stored in database
     accessories: [],
     // Use real due date
     deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
     // Use real notes from database (null means no notes)
-    notes: (order as any).notes || '',
+    notes: order.notes || '',
     // Use real product image from database
-    productImage: (order as any).productImage || null,
+    productImage: order.productImage || null,
     imageCaption: order.product
   };
 };
@@ -96,7 +100,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
       
       if (foundOrder) {
         // Map database order to UI format
-        const mappedOrder: QueueItem & { cakeWriting?: string; notes?: string; productImage?: string } = {
+        const mappedOrder: QueueItem = {
           id: foundOrder.id,
           orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
           shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
