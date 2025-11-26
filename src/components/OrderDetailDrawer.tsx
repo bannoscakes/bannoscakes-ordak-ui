@@ -16,7 +16,7 @@ interface QueueItem {
   shopifyOrderNumber: string;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
