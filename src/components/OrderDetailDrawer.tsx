@@ -52,19 +52,6 @@ interface OrderDetailDrawerProps {
 const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flourlane") => {
   if (!order) return null;
   
-  // Format accessories for display
-  const formattedAccessories = (order.accessories || []).map(acc => {
-    // Build display string: "Title" or "Title - Variant" with quantity if > 1
-    let display = acc.title;
-    if (acc.variant_title) {
-      display += ` - ${acc.variant_title}`;
-    }
-    if (acc.quantity > 1) {
-      display += ` (×${acc.quantity})`;
-    }
-    return display;
-  });
-  
   // Use real values from the order, with safe fallbacks
   return {
     ...order,
@@ -72,8 +59,8 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
     size: order.size || 'Unknown',
     // Use real cake writing from database
     writingOnCake: order.cakeWriting || '',
-    // Use real accessories from database
-    accessories: formattedAccessories,
+    // Pass raw accessories for flexible rendering (not pre-formatted strings)
+    accessories: order.accessories || [],
     // Use real due date
     deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
     // Use real notes from database (null means no notes)
@@ -295,8 +282,8 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </div>
             </div>
 
-            {/* Size + Flavour */}
-            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-2" : "grid-cols-1"}`}>
+            {/* Size + Flavour + Quantity (cake details together) */}
+            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Size
@@ -313,6 +300,12 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                   <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
                 </div>
               )}
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Quantity
+                </label>
+                <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
+              </div>
             </div>
 
             {/* Writing on Cake */}
@@ -327,29 +320,27 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </div>
             )}
 
-            {/* Accessories */}
+            {/* Accessories - list format with per-item quantities */}
             {extendedOrder.accessories && extendedOrder.accessories.length > 0 && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Accessories
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {extendedOrder.accessories.map((accessory, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {accessory}
-                    </Badge>
+                <div className="p-3 bg-muted/30 rounded-lg border space-y-2">
+                  {extendedOrder.accessories.map((acc, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">
+                        {acc.title}
+                        {acc.variant_title && (
+                          <span className="text-muted-foreground ml-1">#{acc.variant_title}</span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground font-medium">× {acc.quantity}</span>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {/* Quantity */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Quantity
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
-            </div>
 
             {/* Storage */}
             {extendedOrder.storage && (
