@@ -153,7 +153,7 @@ export function FlourlaneMonitorPage() {
           if (dayIndex !== -1) {
             days[dayIndex].orders.push({
               id: order.id,
-              humanId: order.human_id || `#F${order.id}`,
+              humanId: order.human_id || `#F${order.shopify_order_number || order.id}`,
               stage: order.stage || 'Filling',
               dueDate: order.due_date
             });
