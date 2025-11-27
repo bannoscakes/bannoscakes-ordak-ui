@@ -10,6 +10,13 @@ import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { getOrder } from "../lib/rpc-client";
 
+interface AccessoryItem {
+  title: string;
+  quantity: number;
+  price: string;
+  variant_title?: string | null;
+}
+
 interface QueueItem {
   id: string;
   orderNumber: string;
@@ -31,6 +38,7 @@ interface QueueItem {
   cakeWriting?: string;
   notes?: string;
   productImage?: string | null;
+  accessories?: AccessoryItem[] | null;
 }
 
 interface OrderDetailDrawerProps {
@@ -44,6 +52,19 @@ interface OrderDetailDrawerProps {
 const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flourlane") => {
   if (!order) return null;
   
+  // Format accessories for display
+  const formattedAccessories = (order.accessories || []).map(acc => {
+    // Build display string: "Title" or "Title - Variant" with quantity if > 1
+    let display = acc.title;
+    if (acc.variant_title) {
+      display += ` - ${acc.variant_title}`;
+    }
+    if (acc.quantity > 1) {
+      display += ` (×${acc.quantity})`;
+    }
+    return display;
+  });
+  
   // Use real values from the order, with safe fallbacks
   return {
     ...order,
@@ -51,8 +72,8 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
     size: order.size || 'Unknown',
     // Use real cake writing from database
     writingOnCake: order.cakeWriting || '',
-    // Accessories not currently stored in database
-    accessories: [],
+    // Use real accessories from database
+    accessories: formattedAccessories,
     // Use real due date
     deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
     // Use real notes from database (null means no notes)
@@ -121,7 +142,8 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           // Add real data from database
           cakeWriting: foundOrder.cake_writing || '',
           notes: foundOrder.notes || '',
-          productImage: foundOrder.product_image || null
+          productImage: foundOrder.product_image || null,
+          accessories: foundOrder.accessories || null
         };
         
         setRealOrder(mappedOrder);
