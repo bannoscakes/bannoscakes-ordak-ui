@@ -1,7 +1,7 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useEffect, useState } from "react";
-import { getQueueStats } from "../lib/rpc-client";
+import { getQueueStatsCached } from "../lib/rpc-client";
 
 interface ProductionStatusProps {
   store: "bannos" | "flourlane";
@@ -162,7 +162,7 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
   const fetchProductionStats = async () => {
     try {
       setLoading(true);
-      const stats = await getQueueStats(store);
+      const stats = await getQueueStatsCached(store);
       
       if (stats) {
         // Update only the counts with real data, keep everything else the same
