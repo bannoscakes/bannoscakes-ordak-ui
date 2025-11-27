@@ -4,7 +4,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
-import { getQueue } from "../lib/rpc-client";
+import { getQueueCached } from "../lib/rpc-client";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
@@ -77,7 +77,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
   const fetchRecentOrders = async () => {
     try {
       // Get recent orders (limit to last 5)
-      const data = await getQueue({
+      const data = await getQueueCached({
         store,
         limit: 5,
         sort_by: 'due_date',

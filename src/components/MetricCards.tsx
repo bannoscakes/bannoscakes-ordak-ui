@@ -1,7 +1,7 @@
 import { TrendingUp, CheckCircle, Clock, Zap } from "lucide-react";
 import { Card } from "./ui/card";
 import { useEffect, useState } from "react";
-import { getQueueStats } from "../lib/rpc-client";
+import { getQueueStatsCached } from "../lib/rpc-client";
 
 interface MetricCardsProps {
   store: "bannos" | "flourlane";
@@ -30,7 +30,7 @@ export function MetricCards({ store }: MetricCardsProps) {
       setLoading(true);
       
       // Fetch real stats from Supabase
-      const stats = await getQueueStats(store);
+      const stats = await getQueueStatsCached(store);
       
       if (stats) {
         const metricsData: Metric[] = [
