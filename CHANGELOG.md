@@ -1,3 +1,47 @@
+## v0.11.2-beta — Order Accessories Storage & Display (2025-11-27)
+
+### 🎯 Overview
+Fix missing order accessories (candles, balloons, toppers) that were identified but never stored. Accessories now persist to database and display in order detail drawer. For split orders (multiple cakes), accessories attach to first order only.
+
+### 🐛 Bug Fixed
+- **Missing Accessories**: Order B24720 and others showed no accessories despite Shopify having candles/toppers
+- **Root Cause**: `process-inbox` identified accessories but never stored them (collected but discarded)
+
+### ✅ Added
+- **Database Column**: `accessories jsonb` column on `orders_bannos` and `orders_flourlane`
+- **Processor Update**: `formatAccessories()` helper populates accessories field
+- **Split Order Logic**: Accessories only on first order (A) for multi-cake orders
+- **UI Display**: `OrderDetailDrawer` now shows accessories from database
+
+### 🔧 Technical Details
+
+**Migrations Applied:**
+- `072_add_accessories_column.sql` - Add `accessories jsonb` to both order tables
+- `073_update_get_order_with_accessories.sql` - Update RPC to return accessories
+
+**Edge Function Updated:**
+- `process-inbox/index.ts` - Added `formatAccessories()` and populates field
+
+**UI Updated:**
+- `OrderDetailDrawer.tsx` - Displays accessories with variant info and quantity
+
+**Backfill:**
+- One-time SQL backfill populated accessories for existing orders from `order_json`
+
+### 📊 Data Format
+```json
+[
+  {"title": "Rainbow Tall Candles", "quantity": 1, "price": "4.90", "variant_title": null},
+  {"title": "Metallic Rainbow Number Candles", "quantity": 1, "price": "4.50", "variant_title": "3"}
+]
+```
+
+### 🔗 References
+- **PR #273**: fix: store and display order accessories
+- **Merged**: 2025-11-27
+
+---
+
 ## v0.11.1-beta — Webhook Automation Documentation (2025-11-24)
 
 ### 🎯 Overview
