@@ -1,0 +1,123 @@
+-- Migration: Update get_order RPC to include accessories
+-- Purpose: Return accessories field in order detail queries
+
+BEGIN;
+
+-- Must drop first because return type is changing (adding accessories column)
+DROP FUNCTION IF EXISTS public.get_order(text, text);
+
+-- Recreate get_order function with accessories field
+CREATE OR REPLACE FUNCTION public.get_order(
+  p_order_id text,
+  p_store text
+) RETURNS TABLE(
+  id text,
+  shopify_order_id bigint,
+  shopify_order_number integer,
+  human_id text,
+  customer_name text,
+  product_title text,
+  flavour text,
+  size text,
+  item_qty integer,
+  notes text,
+  cake_writing text,
+  product_image text,
+  delivery_method text,
+  due_date date,
+  stage stage_type,
+  priority priority_level,
+  storage text,
+  assignee_id uuid,
+  assignee_name text,
+  store text,
+  currency character(3),
+  total_amount numeric,
+  accessories jsonb,
+  created_at timestamp with time zone,
+  updated_at timestamp with time zone
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+BEGIN
+  IF p_order_id IS NULL OR trim(p_order_id) = '' THEN
+    RAISE EXCEPTION 'Order ID is required';
+  END IF;
+
+  IF p_store IS NULL OR p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Store must be "bannos" or "flourlane"';
+  END IF;
+
+  IF p_store = 'bannos' THEN
+    RETURN QUERY
+    SELECT 
+      o.id,
+      o.shopify_order_id,
+      o.shopify_order_number,
+      o.human_id,
+      o.customer_name,
+      o.product_title,
+      o.flavour,
+      o.size,
+      o.item_qty,
+      o.notes,
+      o.cake_writing,
+      o.product_image,
+      o.delivery_method,
+      o.due_date,
+      o.stage,
+      o.priority,
+      o.storage,
+      o.assignee_id,
+      s.full_name as assignee_name,
+      'bannos'::text as store,
+      o.currency,
+      o.total_amount,
+      o.accessories,
+      o.created_at,
+      o.updated_at
+    FROM public.orders_bannos o
+    LEFT JOIN public.staff_shared s ON o.assignee_id = s.user_id
+    WHERE o.id = p_order_id;
+  ELSE
+    RETURN QUERY
+    SELECT 
+      o.id,
+      o.shopify_order_id,
+      o.shopify_order_number,
+      o.human_id,
+      o.customer_name,
+      o.product_title,
+      o.flavour,
+      o.size,
+      o.item_qty,
+      o.notes,
+      o.cake_writing,
+      o.product_image,
+      o.delivery_method,
+      o.due_date,
+      o.stage,
+      o.priority,
+      o.storage,
+      o.assignee_id,
+      s.full_name as assignee_name,
+      'flourlane'::text as store,
+      o.currency,
+      o.total_amount,
+      o.accessories,
+      o.created_at,
+      o.updated_at
+    FROM public.orders_flourlane o
+    LEFT JOIN public.staff_shared s ON o.assignee_id = s.user_id
+    WHERE o.id = p_order_id;
+  END IF;
+END;
+$function$;
+
+-- Update comment
+COMMENT ON FUNCTION public.get_order IS 'Fetch a single order by ID with all fields needed for order detail view. Returns cake_writing, product_image, delivery_method, and accessories correctly.';
+
+COMMIT;

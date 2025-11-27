@@ -92,6 +92,17 @@ function isAccessoryItem(item: any): boolean {
   return title.includes('candle') || title.includes('balloon') || title.includes('topper')
 }
 
+function formatAccessories(items: any[]): any[] | null {
+  if (!items || items.length === 0) return null
+  
+  return items.map(item => ({
+    title: item.title,
+    quantity: item.quantity || 1,
+    price: item.price || '0',
+    variant_title: item.variant_title || null
+  }))
+}
+
 // ============================================================================
 // LIQUID TEMPLATE EXTRACTION LOGIC
 // ============================================================================
@@ -374,7 +385,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       due_date: deliveryDate,
       delivery_method: deliveryMethod,
       product_image: productImage,
-      item_qty: 1 // Each order represents 1 item (even if original had multiple)
+      item_qty: 1, // Each order represents 1 item (even if original had multiple)
+      accessories: formatAccessories(accessoryItems)
     }
     
     orders.push(order)
@@ -416,7 +428,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         due_date: deliveryDate,
         delivery_method: deliveryMethod,
         product_image: productImage,
-        item_qty: 1 // Each split order represents 1 item from the original quantity
+        item_qty: 1, // Each split order represents 1 item from the original quantity
+        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null // Accessories only on first order
       }
       
       orders.push(order)
