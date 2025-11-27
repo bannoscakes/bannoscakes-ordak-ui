@@ -37,6 +37,7 @@ interface DisplayOrder {
   dueDate: string;
   progress: number;
   shopify_order_id?: number;
+  shopify_order_number?: number;
 }
 
 // Map internal store name to Shopify store slug
@@ -60,7 +61,7 @@ const getProgressFromStage = (stage: string | undefined): number => {
 const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   id: order.id,
   orderNumber: order.id,
-  shopifyOrderNumber: order.shopify_order_id ? String(order.shopify_order_id) : '',
+  shopifyOrderNumber: order.shopify_order_number ? String(order.shopify_order_number) : '',
   customerName: order.customer,
   product: order.product,
   size: 'M' as const, // Default size
@@ -112,7 +113,8 @@ export function RecentOrders({ store }: RecentOrdersProps) {
       priority: order.priority || 'Medium',
       dueDate: order.due_date || 'N/A',
       progress: getProgressFromStage(order.stage),
-      shopify_order_id: order.shopify_order_id
+      shopify_order_id: order.shopify_order_id,
+      shopify_order_number: order.shopify_order_number
     }));
   }, [data]);
 
