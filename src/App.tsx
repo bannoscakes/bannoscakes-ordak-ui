@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/query-client";
 
 // ✅ real auth system (from the audit)
 import { AuthProvider } from "./contexts/AuthContext";
@@ -104,9 +106,11 @@ function ReconnectingIndicator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <RootApp />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RootApp />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

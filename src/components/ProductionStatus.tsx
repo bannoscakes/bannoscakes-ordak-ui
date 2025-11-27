@@ -1,7 +1,7 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { useEffect, useState } from "react";
-import { getQueueStatsCached } from "../lib/rpc-client";
+import { useMemo } from "react";
+import { useQueueStats } from "../hooks/useDashboardQueries";
 
 interface ProductionStatusProps {
   store: "bannos" | "flourlane";
@@ -152,51 +152,39 @@ const getStatusColor = (status: string) => {
 };
 
 export function ProductionStatus({ store }: ProductionStatusProps) {
-  const [storeData, setStoreData] = useState(storeProductionData[store]);
-  const [loading, setLoading] = useState(true);
+  const { data: stats, isLoading } = useQueueStats(store);
 
-  useEffect(() => {
-    fetchProductionStats();
-  }, [store]);
+  // Transform stats to store data format with real counts
+  const storeData = useMemo(() => {
+    const baseData = storeProductionData[store];
+    
+    if (!stats) return baseData;
+    
+    return {
+      ...baseData,
+      stations: baseData.stations.map(station => {
+        let count = 0;
+        switch (station.name) {
+          case 'Filling':
+            count = Number(stats.filling_count) || 0;
+            break;
+          case 'Covering':
+            count = Number(stats.covering_count) || 0;
+            break;
+          case 'Decoration':
+            count = Number(stats.decorating_count) || 0;
+            break;
+          case 'Packing':
+            count = Number(stats.packing_count) || 0;
+            break;
+        }
+        return { ...station, count };
+      })
+    };
+  }, [store, stats]);
 
-  const fetchProductionStats = async () => {
-    try {
-      setLoading(true);
-      const stats = await getQueueStatsCached(store);
-      
-      if (stats) {
-        // Update only the counts with real data, keep everything else the same
-        const updatedData = {
-          ...storeProductionData[store],
-          stations: storeProductionData[store].stations.map(station => {
-            let count = 0;
-            switch (station.name) {
-              case 'Filling':
-                count = Number(stats.filling_count) || 0;
-                break;
-              case 'Covering':
-                count = Number(stats.covering_count) || 0;
-                break;
-              case 'Decoration':
-                count = Number(stats.decorating_count) || 0;
-                break;
-              case 'Packing':
-                count = Number(stats.packing_count) || 0;
-                break;
-            }
-            return { ...station, count };
-          })
-        };
-        setStoreData(updatedData);
-      }
-    } catch (error) {
-      console.error('Failed to fetch production stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  // Only show skeleton on initial load, not on refetch
+  if (isLoading) {
     return (
       <Card className="p-6">
         <div className="animate-pulse">

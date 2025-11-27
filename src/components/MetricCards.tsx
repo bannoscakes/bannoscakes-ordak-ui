@@ -1,7 +1,7 @@
 import { TrendingUp, CheckCircle, Clock, Zap } from "lucide-react";
 import { Card } from "./ui/card";
-import { useEffect, useState } from "react";
-import { getQueueStatsCached } from "../lib/rpc-client";
+import { useMemo } from "react";
+import { useQueueStats } from "../hooks/useDashboardQueries";
 
 interface MetricCardsProps {
   store: "bannos" | "flourlane";
@@ -17,66 +17,47 @@ interface Metric {
 }
 
 export function MetricCards({ store }: MetricCardsProps) {
-  // TODO: Replace with real metrics data from API
-  const [metrics, setMetrics] = useState<Metric[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: stats, isLoading } = useQueueStats(store);
 
-  useEffect(() => {
-    fetchMetrics();
-  }, [store]);
-
-  const fetchMetrics = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch real stats from Supabase
-      const stats = await getQueueStatsCached(store);
-      
-      if (stats) {
-        const metricsData: Metric[] = [
-          {
-            title: "Total Orders",
-            value: stats.total_orders?.toString() || "0",
-            subtitle: `${stats.unassigned_orders || 0} unassigned`,
-            icon: TrendingUp,
-            bg: "bg-blue-50",
-            iconColor: "text-blue-600"
-          },
-          {
-            title: "Completed",
-            value: stats.completed_orders?.toString() || "0",
-            subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
-            icon: CheckCircle,
-            bg: "bg-green-50",
-            iconColor: "text-green-600"
-          },
-          {
-            title: "In Production",
-            value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
-            subtitle: `${stats.unassigned_orders || 0} unassigned`,
-            icon: Clock,
-            bg: "bg-orange-50",
-            iconColor: "text-orange-600"
-          },
-          {
-            title: "By Stage",
-            value: `${stats.filling_count || 0}/${stats.decorating_count || 0}`,
-            subtitle: "Filling/Decorating",
-            icon: Zap,
-            bg: "bg-purple-50",
-            iconColor: "text-purple-600"
-          }
-        ];
-        
-        setMetrics(metricsData);
+  // Transform stats to metrics display format
+  const metrics = useMemo<Metric[]>(() => {
+    if (!stats) return [];
+    
+    return [
+      {
+        title: "Total Orders",
+        value: stats.total_orders?.toString() || "0",
+        subtitle: `${stats.unassigned_orders || 0} unassigned`,
+        icon: TrendingUp,
+        bg: "bg-blue-50",
+        iconColor: "text-blue-600"
+      },
+      {
+        title: "Completed",
+        value: stats.completed_orders?.toString() || "0",
+        subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
+        icon: CheckCircle,
+        bg: "bg-green-50",
+        iconColor: "text-green-600"
+      },
+      {
+        title: "In Production",
+        value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
+        subtitle: `${stats.unassigned_orders || 0} unassigned`,
+        icon: Clock,
+        bg: "bg-orange-50",
+        iconColor: "text-orange-600"
+      },
+      {
+        title: "By Stage",
+        value: `${stats.filling_count || 0}/${stats.decorating_count || 0}`,
+        subtitle: "Filling/Decorating",
+        icon: Zap,
+        bg: "bg-purple-50",
+        iconColor: "text-purple-600"
       }
-    } catch (error) {
-      console.error('Failed to fetch metrics:', error);
-      setMetrics([]); // Will show default metrics
-    } finally {
-      setLoading(false);
-    }
-  };
+    ];
+  }, [stats]);
 
   // Default metric structure for when no data is available
   const defaultMetrics: Metric[] = [
@@ -116,7 +97,8 @@ export function MetricCards({ store }: MetricCardsProps) {
 
   const displayMetrics = metrics.length > 0 ? metrics : defaultMetrics;
 
-  if (loading) {
+  // Only show skeleton on initial load, not on refetch
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
