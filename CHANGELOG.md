@@ -1,3 +1,44 @@
+## v0.11.3-beta — Dashboard Performance & Monitor Display Fix (2025-11-27)
+
+### 🎯 Overview
+Major performance improvements to dashboard with TanStack Query implementation, eliminating loading flashes on tab switches. Fixed kitchen monitor displays to show readable order numbers for staff.
+
+### ⚡ Performance Improvements
+- **TanStack Query**: Replaced manual fetch/useState with React Query for all dashboard data
+- **Stale-While-Revalidate**: Shows cached data instantly, refreshes in background
+- **Shared Queries**: `MetricCards` and `ProductionStatus` share single cached request
+- **Tab Prefetching**: Hovering over Bannos/Flourlane tabs preloads data before click
+- **No Skeleton Flash**: Cached data displays immediately on tab switch
+
+### 🐛 Bugs Fixed
+- **Monitor Order Numbers**: Kitchen monitors showed `#Bbann...` instead of `#B25073`
+- **Root Cause**: Used internal `order.id` (e.g., `bannos-25073`) instead of `shopify_order_number`
+- **Shopify URL Fix**: Order drawer now opens correct Shopify admin URL using `shopify_order_id`
+
+### 🔧 Technical Details
+
+**New Files:**
+- `src/lib/query-client.ts` - TanStack Query client configuration
+- `src/hooks/useDashboardQueries.ts` - Custom hooks for dashboard data fetching
+
+**Components Updated:**
+- `App.tsx` - Added QueryClientProvider
+- `DashboardContent.tsx` - Added tab prefetching on hover
+- `MetricCards.tsx` - Migrated to useQueueStats hook
+- `ProductionStatus.tsx` - Migrated to useQueueStats hook
+- `UnassignedStations.tsx` - Migrated to useUnassignedCounts hook
+- `RecentOrders.tsx` - Migrated to useRecentOrders hook, fixed Shopify URL
+- `BannosMonitorPage.tsx` - Fixed order number display
+- `FlourlaneMonitorPage.tsx` - Fixed order number display
+
+### 🔗 References
+- **PR #276**: perf: use cached RPC calls to reduce duplicate API requests
+- **PR #277**: perf: implement TanStack Query for dashboard data fetching
+- **PR #278**: fix: display correct order numbers in monitors and drawer
+- **Merged**: 2025-11-27
+
+---
+
 ## v0.11.2-beta — Order Accessories Storage & Display (2025-11-27)
 
 ### 🎯 Overview
