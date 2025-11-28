@@ -79,20 +79,34 @@ export function Header({ onSignOut, onRefresh }: HeaderProps) {
         </div>
         
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search Orders"
-              className="pl-10 w-64 bg-input-background border-border focus:bg-background"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && searchValue.trim()) {
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search Orders"
+                className="pl-10 w-64 bg-input-background border-border focus:bg-background"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchValue.trim()) {
+                    setSearchOpen(true);
+                    handleSearch();
+                  }
+                }}
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (searchValue.trim()) {
                   setSearchOpen(true);
                   handleSearch();
                 }
               }}
-            />
+              disabled={!searchValue.trim()}
+            >
+              Search
+            </Button>
           </div>
           
           <div className="flex items-center gap-2">
