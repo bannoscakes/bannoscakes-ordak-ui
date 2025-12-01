@@ -93,6 +93,9 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error('[ERROR] Unexpected error in order-monitor:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 })
