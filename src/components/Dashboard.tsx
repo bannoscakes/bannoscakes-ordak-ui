@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardContent } from "./DashboardContent";
@@ -19,21 +19,10 @@ import { BarcodeTest } from "./BarcodeTest";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-// Import real RPCs for dashboard stats
-import { getQueue, getQueueCached } from "../lib/rpc-client";
-import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
-import { makeEmptyCounts } from "@/types/stage";
-
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
-  const isRefreshing = useRef(false);
-  const refreshPromise = useRef<Promise<void> | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<StatsByStore>({
-    bannos: makeEmptyCounts(),
-    flourlane: makeEmptyCounts(),
-  });
   
   // Parse URL parameters once and cache them
   const { viewFilter, staffFilter } = useMemo(() => {
@@ -44,99 +33,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       staffFilter: urlParams.get('staff')
     };
   }, [urlParams]);
-  
-  // Load dashboard stats from real data - wrapped in useCallback to prevent stale closures
-  const loadDashboardStats = useCallback(async (bypassCache = false) => {
-    // If already refreshing, return the existing promise to wait for completion
-    if (isRefreshing.current && refreshPromise.current) {
-      return refreshPromise.current;
-    }
-    
-    // Prevent concurrent loads using ref to avoid re-renders
-    if (isRefreshing.current) return;
-    
-    isRefreshing.current = true;
-    
-    // Create and store the refresh promise
-    refreshPromise.current = (async () => {
-      // Type guard for stage keys - defined inside to avoid recreating useCallback
-      const isStage = (s: string): s is Stage =>
-        ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
-
-      try {
-      // Fetch orders from both stores (bypass cache if manual refresh)
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        bypassCache 
-          ? getQueue({ store: "bannos", limit: 1000 })
-          : getQueueCached({ store: "bannos", limit: 1000 }),
-        bypassCache
-          ? getQueue({ store: "flourlane", limit: 1000 })
-          : getQueueCached({ store: "flourlane", limit: 1000 })
-      ]);
-      
-      const orders = [...bannosOrders, ...flourlaneOrders];
-      
-      // Count orders by store and stage
-      const stats: StatsByStore = {
-        bannos: makeEmptyCounts(),
-        flourlane: makeEmptyCounts(),
-      };
-      
-      orders.forEach((order: any) => {
-        const store = (order.store || (order.id.startsWith('bannos') ? 'bannos' : 'flourlane')) as StoreKey;
-        if (store in stats) {
-          stats[store].total++;
-          
-          // Count by stage
-          const stageLower = order.stage?.toLowerCase() || 'filling';
-          if (isStage(stageLower)) {
-            stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
-          }
-          
-          // Count unassigned (use lowercased stage for consistency)
-          if (order.assignee_id === null && stageLower !== 'complete') {
-            stats[store].unassigned++;
-          }
-        }
-      });
-      
-        setDashboardStats(stats);
-      } catch (error) {
-        console.error('Failed to load dashboard stats:', error);
-      } finally {
-        isRefreshing.current = false;
-        refreshPromise.current = null;
-      }
-    })();
-    
-    return refreshPromise.current;
-  }, []);
-  
-  // Load stats on mount and refresh every 30 seconds (only when tab is visible)
-  useEffect(() => {
-    loadDashboardStats(); // Initial load uses cache for fast startup
-    
-    // Refresh stats every 30 seconds, bypass cache for fresh data
-    const interval = setInterval(() => {
-      if (!document.hidden) {
-        loadDashboardStats(true); // Bypass cache for auto-refresh
-      }
-    }, 30000);
-    
-    // Also refresh when tab becomes visible again, bypass cache for fresh data
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadDashboardStats(true); // Bypass cache when tab becomes visible
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [loadDashboardStats]);
   
   // Parse URL parameters and update view reactively
   useEffect(() => {
@@ -320,7 +216,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         default:
           return (
             <ErrorBoundary>
-              <DashboardContent stats={dashboardStats} onRefresh={() => loadDashboardStats(true)} />
+              <DashboardContent />
             </ErrorBoundary>
           );
       }
@@ -328,7 +224,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       console.error('Error rendering dashboard content:', error);
       return (
         <ErrorBoundary>
-          <DashboardContent stats={dashboardStats} onRefresh={() => loadDashboardStats(true)} />
+          <DashboardContent />
         </ErrorBoundary>
       );
     }
@@ -346,7 +242,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <ErrorBoundary>
-          <Header onRefresh={() => loadDashboardStats(true)} onSignOut={onSignOut} />
+          <Header onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
           {renderContent()}
