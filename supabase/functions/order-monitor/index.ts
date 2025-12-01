@@ -54,6 +54,9 @@ serve(async (req) => {
     if (flourlane.count === 0) alerts.push('Flourlane')
 
     if (alerts.length > 0) {
+      // Get alert email from environment (fallback for backwards compatibility)
+      const alertEmail = Deno.env.get('ALERT_EMAIL') || 'panos@bannos.com.au'
+      
       // Send email via Resend
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -63,7 +66,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           from: 'onboarding@resend.dev',
-          to: 'panos@bannos.com.au',
+          to: alertEmail,
           subject: `[ALERT] ${alerts.join(' & ')} - No orders processed in 2 hours`,
           html: `<p>No new orders have been processed in the last 2 hours for: <strong>${alerts.join(', ')}</strong></p>
                  <p>Bannos count: ${bannos.count}</p>
