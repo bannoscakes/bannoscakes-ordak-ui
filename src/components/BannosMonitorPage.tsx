@@ -153,7 +153,7 @@ export function BannosMonitorPage() {
           if (dayIndex !== -1) {
             days[dayIndex].orders.push({
               id: order.id,
-              humanId: order.human_id || `#B${order.shopify_order_number || order.id}`,
+              humanId: order.shopify_order_number ? `#B${order.shopify_order_number}` : (order.human_id || order.id),
               stage: order.stage || 'Filling',
               dueDate: order.due_date
             });
