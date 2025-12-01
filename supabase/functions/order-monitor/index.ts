@@ -1,12 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.0'
 
 serve(async (req) => {
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    // Check required environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl) {
+      console.error('[ERROR] SUPABASE_URL environment variable is not set')
+      return new Response(
+        JSON.stringify({ error: 'Server misconfiguration: SUPABASE_URL not set' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!supabaseServiceRoleKey) {
+      console.error('[ERROR] SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
+      return new Response(
+        JSON.stringify({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY not set' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
 
@@ -18,24 +35,18 @@ serve(async (req) => {
         .gte('created_at', twoHoursAgo)
     ])
 
-    // Check for database errors
-    if (bannos.error) {
-      console.error('[ERROR] Failed to query orders_bannos:', bannos.error)
-      return new Response(JSON.stringify({ error: 'Failed to query Bannos orders' }), { status: 500 })
-    }
-    if (flourlane.error) {
-      console.error('[ERROR] Failed to query orders_flourlane:', flourlane.error)
-      return new Response(JSON.stringify({ error: 'Failed to query Flourlane orders' }), { status: 500 })
-    }
-
-    // Check for null counts (indicates query failure without explicit error)
-    if (bannos.count === null) {
-      console.error('[ERROR] Bannos query returned null count')
-      return new Response(JSON.stringify({ error: 'Bannos query returned null count' }), { status: 500 })
-    }
-    if (flourlane.count === null) {
-      console.error('[ERROR] Flourlane query returned null count')
-      return new Response(JSON.stringify({ error: 'Flourlane query returned null count' }), { status: 500 })
+    // Check for database errors or null counts
+    if (bannos.error || flourlane.error || bannos.count == null || flourlane.count == null) {
+      console.error('[ERROR] Failed to query order counts:', {
+        bannos_error: bannos.error,
+        flourlane_error: flourlane.error,
+        bannos_count: bannos.count,
+        flourlane_count: flourlane.count
+      })
+      return new Response(
+        JSON.stringify({ error: 'Failed to query order counts' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
     const alerts: string[] = []
