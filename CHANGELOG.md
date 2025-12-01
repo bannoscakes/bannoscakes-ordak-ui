@@ -1,3 +1,156 @@
+## v0.11.6-beta — Order Monitoring System & Environment Configuration (2025-12-01)
+
+### 🎯 Overview
+Complete implementation of automated order monitoring system with email alerts, plus comprehensive bug fixes for dashboard auto-refresh, monitor displays, and webhook HMAC validation. This release adds critical production monitoring capabilities to detect when order processing stops.
+
+### 🚀 Major Features Added
+
+**Order Monitoring System (PR #284, #285)**
+- **Edge Function**: `order-monitor` - Checks both stores for order processing stalls
+- **Email Alerts**: Sends alert via Resend API when no orders processed in 2 hours
+- **Cron Job**: Runs every 30 minutes via `pg_cron`
+- **Configurable**: `ALERT_EMAIL` environment variable for alert recipient
+- **Production Ready**: Comprehensive error handling, null count validation, pinned dependencies
+
+**Monitoring Features:**
+- Queries `orders_bannos` and `orders_flourlane` for orders in last 2 hours
+- Sends email alert if either store has 0 orders (during business hours)
+- Returns JSON with counts and alert status
+- Validates environment variables with fail-fast error responses
+- Checks database query errors and null counts
+
+### 🐛 Critical Bugs Fixed
+
+**Dashboard Auto-Refresh (PR #282)**
+- **Duplicate Refresh Mechanisms**: Removed legacy `setInterval` in `Dashboard.tsx`
+- **Background Polling**: Added `refetchIntervalInBackground: true` to TanStack Query hooks
+- **Spinner Timing**: Fixed `handleRefresh` to await actual query completion
+- **Issue**: PR #281 added `refetchInterval` but old `loadDashboardStats` still ran every 30s
+- **Fix**: Removed entire legacy refresh system, updated header to use `useInvalidateDashboard`
+
+**Monitor Display Format (PR #283)**
+- **Wrong Order Numbers**: Kitchen monitors showed internal IDs (`bannos-25073`) not Shopify numbers (`#B25073`)
+- **Root Cause**: Used `order.human_id` (internal format) instead of `shopify_order_number`
+- **Fix**: Updated `BannosMonitorPage.tsx` and `FlourlaneMonitorPage.tsx` to prioritize `shopify_order_number`
+- **Format**: Now displays `#B25073` for Bannos, `#F19070` for Flourlane
+
+**HMAC Validation Logging (PR #281)**
+- **Safe Rollout**: Added HMAC validation to Shopify webhook handlers (log-only, no blocking)
+- **Issue**: HMAC validation was disabled after initial webhook stabilization
+- **Fix**: Added `verifyHmac()` function to both webhook Edge Functions
+- **Validation**: Logs `[HMAC] PASS` or `[HMAC] FAIL` with reason and order ID
+- **Non-blocking**: Continues processing regardless of HMAC result (safe deployment)
+
+### 🔧 Technical Details
+
+**Order Monitor Edge Function** (`supabase/functions/order-monitor/index.ts`)
+- Environment variable guards for `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+- Pinned supabase-js dependency to `@2.43.0` for reproducible builds
+- Consolidated error checking for database queries (errors and null counts)
+- Resend API error handling with status code checking
+- Consistent `Content-Type: application/json` headers on all responses
+- Comprehensive try/catch with detailed error logging
+
+**Database Migration** (`supabase/migrations/20251201_order_monitor_cron.sql`)
+- Creates `pg_cron` and `pg_net` extensions if not exist
+- Schedules cron job every 30 minutes (`*/30 * * * *`)
+- Uses `service_role_key` for proper authentication
+- Calls order-monitor Edge Function via HTTP POST
+- Documented limitation of hardcoded URLs in pg_cron (inherent constraint)
+
+**Dashboard Changes** (`src/hooks/useDashboardQueries.ts`, `src/components/Dashboard.tsx`, `src/components/Header.tsx`)
+- Added `DASHBOARD_REFETCH_INTERVAL = 30_000` constant
+- Added `refetchInterval` and `refetchIntervalInBackground` to all dashboard queries
+- Modified `useInvalidateDashboard` to use `queryClient.refetchQueries` and return Promise
+- Removed legacy `loadDashboardStats` function and `setInterval` mechanism
+- Updated `Header.tsx` to await `invalidateDashboard()` for accurate spinner timing
+
+**Monitor Display Updates** (`src/components/BannosMonitorPage.tsx`, `src/components/FlourlaneMonitorPage.tsx`)
+- Changed `humanId` assignment to prioritize `shopify_order_number`
+- Format: `order.shopify_order_number ? \`#B\${order.shopify_order_number}\` : (order.human_id || order.id)`
+- Ensures kitchen staff see readable order numbers instead of internal IDs
+
+**HMAC Validation** (`supabase/functions/shopify-webhooks-bannos/index.ts`, `supabase/functions/shopify-webhooks-flourlane/index.ts`)
+- Added `verifyHmac()` utility function using Web Crypto API
+- Reads raw request body before parsing JSON
+- Compares computed HMAC-SHA256 with `x-shopify-hmac-sha256` header
+- Logs validation result with order context
+- Non-blocking: continues processing regardless of validation result
+
+### 🔐 Security & Configuration
+
+**pg_cron URL Hardcoding**
+- ⚠️ **Known Limitation**: pg_cron runs inside database and cannot access environment variables
+- Hardcoded production URL required for cron job to call Edge Function
+- Matches existing pattern used by `process-webhooks-bannos` and `process-webhooks-flourlane`
+- Comprehensive documentation added to migration file explaining limitation
+- Alternative approaches (Database Webhooks, GitHub Actions, client polling) not suitable for time-based monitoring
+
+**Environment Variables**
+- `ALERT_EMAIL` - Configurable alert recipient (defaults to `panos@bannos.com.au`)
+- `RESEND_API_KEY` - Email sending via Resend API
+- `SUPABASE_URL` - Database connection
+- `SUPABASE_SERVICE_ROLE_KEY` - Database authentication
+- `SHOPIFY_WEBHOOK_SECRET_BANNOS` - HMAC validation for Bannos webhooks
+- `SHOPIFY_WEBHOOK_SECRET_FLOURLANE` - HMAC validation for Flourlane webhooks
+
+### 📊 Production Results
+
+**Order Processing (Last 2 Hours - 2025-12-01)**
+- ✅ Bannos: 6 new orders processed
+- ✅ Flourlane: 4 new orders processed
+- ✅ Total: 10 orders successfully processed
+
+**Webhook Processing**
+- ✅ Bannos: 0 unprocessed, 909 total processed
+- ✅ Flourlane: 0 unprocessed, 1,140 total processed
+- ✅ No backlog - All webhooks caught up
+
+**Cron Jobs (All Active)**
+- ✅ `process-webhooks-bannos` - Every 2 minutes
+- ✅ `process-webhooks-flourlane` - Every 2 minutes (offset 1 min)
+- ✅ `order-monitor` - Every 30 minutes (NEW!)
+
+**Edge Functions (All ACTIVE)**
+- ✅ `shopify-webhooks-bannos` (v22) - HMAC logging enabled
+- ✅ `shopify-webhooks-flourlane` (v22) - HMAC logging enabled
+- ✅ `order-monitor` (v6) - Deployed with all error handling
+
+### 🔗 References
+- **PR #281**: feat: add HMAC validation logging for Shopify webhooks
+- **PR #282**: fix: restore 30-second auto-refresh for dashboard queries
+- **PR #283**: fix: prioritize shopify_order_number for monitor display
+- **PR #284**: feat: add order monitoring with email alerts
+- **PR #285**: fix: use ALERT_EMAIL env var and document pg_cron URL limitation
+- **Merged**: 2025-12-01
+- **Branches**: `feature/hmac-logging`, `fix/dashboard-auto-refresh`, `fix/monitor-display`, `feature/order-monitoring`, `fix/order-monitor-env-vars` → `dev`
+
+### 🎯 Impact
+
+**Before:**
+- ❌ No monitoring for order processing failures
+- ❌ Dashboard auto-refresh duplicated (wasteful API calls)
+- ❌ Kitchen monitors showed cryptic internal IDs
+- ❌ HMAC validation disabled (security concern)
+- ❌ Manual refresh spinner timing inaccurate
+
+**After:**
+- ✅ Automated monitoring alerts if order processing stops
+- ✅ Efficient single-source auto-refresh every 30 seconds
+- ✅ Kitchen staff see readable order numbers (#B25073)
+- ✅ HMAC validation logged for security auditing
+- ✅ Refresh spinner accurately reflects loading state
+- ✅ Comprehensive error handling prevents silent failures
+
+**System Reliability:**
+- ✅ Will detect and alert on order processing stalls within 30 minutes
+- ✅ Email alerts sent to configurable recipient
+- ✅ Database query failures caught and reported
+- ✅ Null count validation prevents false negatives
+- ✅ Resend API failures logged and handled
+
+---
+
 ## v0.11.3-beta — Dashboard Performance & Monitor Display Fix (2025-11-27)
 
 ### 🎯 Overview
