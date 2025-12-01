@@ -5,13 +5,14 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { findOrder } from "../lib/rpc-client";
+import { useInvalidateDashboard } from "../hooks/useDashboardQueries";
 
 interface HeaderProps {
   onSignOut?: () => void;
-  onRefresh?: () => void | Promise<void>;
 }
 
-export function Header({ onSignOut, onRefresh }: HeaderProps) {
+export function Header({ onSignOut }: HeaderProps) {
+  const invalidateDashboard = useInvalidateDashboard();
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -57,11 +58,12 @@ export function Header({ onSignOut, onRefresh }: HeaderProps) {
   };
 
   const handleRefresh = async () => {
-    if (!onRefresh || refreshing) return;
+    if (refreshing) return;
     
     setRefreshing(true);
     try {
-      await onRefresh();
+      // Refetch all dashboard queries - waits for completion
+      await invalidateDashboard();
     } finally {
       setRefreshing(false);
     }
@@ -110,19 +112,17 @@ export function Header({ onSignOut, onRefresh }: HeaderProps) {
           </div>
           
           <div className="flex items-center gap-2">
-            {onRefresh && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="gap-2"
-                aria-label={refreshing ? "Refreshing dashboard" : "Refresh dashboard"}
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                {!refreshing && <span className="hidden sm:inline">Refresh</span>}
-              </Button>
-            )}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="gap-2"
+              aria-label={refreshing ? "Refreshing dashboard" : "Refresh dashboard"}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {!refreshing && <span className="hidden sm:inline">Refresh</span>}
+            </Button>
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
             </Button>

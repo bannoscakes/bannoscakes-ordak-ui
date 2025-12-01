@@ -7,12 +7,9 @@ import { RecentOrders } from "./RecentOrders";
 import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
 // import { EquipmentStatus } from "./EquipmentStatus"; // Hidden - not in use
-import type { StatsByStore } from "@/types/stage";
 import { usePrefetchStore } from "../hooks/useDashboardQueries";
 
 interface DashboardContentProps {
-  stats?: StatsByStore;
-  onRefresh?: () => Promise<void>;
   onNavigateToSignup?: () => void;
 }
 

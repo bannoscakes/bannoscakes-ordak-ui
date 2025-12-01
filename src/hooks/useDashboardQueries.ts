@@ -2,6 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getQueueStats, getUnassignedCounts, getQueue } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
+// Auto-refresh interval for dashboard data (30 seconds)
+const DASHBOARD_REFETCH_INTERVAL = 30_000;
+
 /**
  * Hook for queue statistics (total orders, stage counts, etc.)
  * Used by: MetricCards, ProductionStatus
@@ -10,6 +13,8 @@ export function useQueueStats(store: Store) {
   return useQuery({
     queryKey: ['queueStats', store],
     queryFn: () => getQueueStats(store),
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -21,6 +26,8 @@ export function useUnassignedCounts(store: Store) {
   return useQuery({
     queryKey: ['unassignedCounts', store],
     queryFn: () => getUnassignedCounts(store),
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -37,6 +44,8 @@ export function useRecentOrders(store: Store, limit = 5) {
       sort_by: 'due_date',
       sort_order: 'ASC',
     }),
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -72,22 +81,27 @@ export function usePrefetchStore() {
 }
 
 /**
- * Hook to invalidate all dashboard queries (used for manual refresh)
+ * Hook to refetch all dashboard queries (used for manual refresh)
+ * Returns a promise that resolves when all refetches complete
  */
 export function useInvalidateDashboard() {
   const queryClient = useQueryClient();
 
-  return (store?: Store) => {
+  return async (store?: Store): Promise<void> => {
     if (store) {
-      // Invalidate specific store
-      queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
-      queryClient.invalidateQueries({ queryKey: ['unassignedCounts', store] });
-      queryClient.invalidateQueries({ queryKey: ['recentOrders', store] });
+      // Refetch specific store queries
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['queueStats', store] }),
+        queryClient.refetchQueries({ queryKey: ['unassignedCounts', store] }),
+        queryClient.refetchQueries({ queryKey: ['recentOrders', store] }),
+      ]);
     } else {
-      // Invalidate all dashboard queries
-      queryClient.invalidateQueries({ queryKey: ['queueStats'] });
-      queryClient.invalidateQueries({ queryKey: ['unassignedCounts'] });
-      queryClient.invalidateQueries({ queryKey: ['recentOrders'] });
+      // Refetch all dashboard queries
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['queueStats'] }),
+        queryClient.refetchQueries({ queryKey: ['unassignedCounts'] }),
+        queryClient.refetchQueries({ queryKey: ['recentOrders'] }),
+      ]);
     }
   };
 }
