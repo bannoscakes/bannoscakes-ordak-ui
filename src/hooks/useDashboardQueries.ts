@@ -14,6 +14,7 @@ export function useQueueStats(store: Store) {
     queryKey: ['queueStats', store],
     queryFn: () => getQueueStats(store),
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -26,6 +27,7 @@ export function useUnassignedCounts(store: Store) {
     queryKey: ['unassignedCounts', store],
     queryFn: () => getUnassignedCounts(store),
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -43,6 +45,7 @@ export function useRecentOrders(store: Store, limit = 5) {
       sort_order: 'ASC',
     }),
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
   });
 }
 
