@@ -57,14 +57,16 @@ export function Header({ onSignOut }: HeaderProps) {
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (refreshing) return;
     
     setRefreshing(true);
-    // Invalidate all dashboard queries - TanStack Query handles the refetch
-    invalidateDashboard();
-    // Brief visual feedback for the refresh action
-    setTimeout(() => setRefreshing(false), 500);
+    try {
+      // Refetch all dashboard queries - waits for completion
+      await invalidateDashboard();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
