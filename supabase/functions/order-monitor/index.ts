@@ -28,6 +28,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Failed to query Flourlane orders' }), { status: 500 })
     }
 
+    // Check for null counts (indicates query failure without explicit error)
+    if (bannos.count === null) {
+      console.error('[ERROR] Bannos query returned null count')
+      return new Response(JSON.stringify({ error: 'Bannos query returned null count' }), { status: 500 })
+    }
+    if (flourlane.count === null) {
+      console.error('[ERROR] Flourlane query returned null count')
+      return new Response(JSON.stringify({ error: 'Flourlane query returned null count' }), { status: 500 })
+    }
+
     const alerts: string[] = []
     if (bannos.count === 0) alerts.push('Bannos')
     if (flourlane.count === 0) alerts.push('Flourlane')
