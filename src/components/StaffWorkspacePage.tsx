@@ -199,6 +199,11 @@ export function StaffWorkspacePage({
 
   // Load orders on mount and set up auto-refresh
   useEffect(() => {
+    // Only set up polling when user is loaded
+    if (!user?.id) {
+      return;
+    }
+    
     loadStaffOrders();
     
     // Auto-refresh every 30 seconds (uses cache for performance)
@@ -221,7 +226,7 @@ export function StaffWorkspacePage({
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [user?.id]); // Re-establish interval when user becomes available
 
   // Update elapsed time
   useEffect(() => {
