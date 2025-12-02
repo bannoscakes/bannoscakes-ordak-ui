@@ -1,3 +1,42 @@
+## v0.11.8-beta — Edit Order Drawer Simplification (2025-12-02)
+
+### 🎯 Overview
+Simplified the Edit Order drawer by replacing complex searchable inputs with simple text fields, and fixed the broken "View Details in Shopify" button URL.
+
+### 🔧 Changes
+
+**Edit Order Drawer Simplification (PR #289)**
+- **Product Field**: Changed from searchable combobox (`ProductCombobox`) to simple text input
+- **Size Field**: Simplified to always show text input (removed variant dropdown logic)
+- **Flavour Field**: Changed from dropdown to simple text input, now shows for both Bannos and Flourlane stores
+- **Method & Storage**: Kept as dropdowns (unchanged)
+- **Accessories & Notes**: Kept as free text (unchanged)
+
+**View Details in Shopify Button Fix**
+- **Issue**: Button used wrong URL format (`/orders/{number}`) and wrong ID type
+- **Fix**: 
+  - Use correct format: `https://admin.shopify.com/store/{slug}/orders/{id}`
+  - Prefer `shopify_order_id` for direct link
+  - Fallback to `shopify_order_number` with search query if ID unavailable
+  - Added `shopifyOrderId` to `QueueItem` interface and data passthrough
+
+### 🗑️ Code Removed (~100 lines)
+- `ProductCombobox` component import
+- `ProductData` imports (`Product`, `findProductByTitle`, `convertLegacySizeToVariant`)
+- `getFlavours` RPC import and loading effect
+- State variables: `sizeRequiresConfirmation`, `currentProduct`, `availableFlavours`
+- Product change handler with variant validation
+- Size confirmation logic
+
+### 📋 Files Modified
+- `src/components/EditOrderDrawer.tsx` (-158 lines, +65 lines)
+- `src/components/QueueTable.tsx` (+2 lines)
+
+### 📋 PRs in This Release
+- PR #289: `fix: simplify Edit Order drawer fields and fix Shopify URL`
+
+---
+
 ## v0.11.7-beta — Staff & Supervisor Workspace Fixes (2025-12-02)
 
 ### 🎯 Overview
