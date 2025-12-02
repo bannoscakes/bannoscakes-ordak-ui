@@ -10,15 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { ProductCombobox } from "./ProductCombobox";
-import { Product, findProductByTitle, convertLegacySizeToVariant } from "./ProductData";
 import { toast } from "sonner";
-import { updateOrderCore, getFlavours } from "../lib/rpc-client";
+import { updateOrderCore } from "../lib/rpc-client";
+
+// Map internal store name to Shopify store slug
+const SHOPIFY_STORE_SLUGS: Record<string, string> = {
+  bannos: 'bannos',
+  flourlane: 'flour-lane',
+};
 
 interface QueueItem {
   id: string;
   orderNumber: string;
   shopifyOrderNumber: string;
+  shopifyOrderId?: number;
   customerName: string;
   product: string;
   size: string;
@@ -135,10 +140,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
   const [dirtyFields, setDirtyFields] = useState<DirtyFields>({});
   const [newAccessory, setNewAccessory] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [sizeRequiresConfirmation, setSizeRequiresConfirmation] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
-  const [availableFlavours, setAvailableFlavours] = useState<string[]>([]);
 
   // Calculate hasChanges from dirtyFields
   const hasChanges = Object.values(dirtyFields).some(Boolean);
@@ -146,20 +148,11 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
   // Initialize form data when order changes
   useEffect(() => {
     if (normalizedOrder) {
-      // Find the current product
-      const product = findProductByTitle(normalizedOrder.product, store);
-      setCurrentProduct(product);
-      
-      // Convert legacy size to variant if possible
-      const initialSize = product && product.variants 
-        ? convertLegacySizeToVariant(normalizedOrder.size as 'S' | 'M' | 'L', product)
-        : normalizedOrder.size;
-      
       const initialData: FormData = {
         product: normalizedOrder.product,
         dueDate: formatDate(normalizedOrder.deliveryDate || new Date().toISOString()),
         method: normalizedOrder.method || "Pickup",
-        size: initialSize,
+        size: normalizedOrder.size,
         flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
         priority: normalizedOrder.priority,
         storage: normalizedOrder.storage || "",
@@ -171,9 +164,8 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
       setFormData(initialData);
       setOriginalData({ ...initialData });
       setDirtyFields({});
-      setSizeRequiresConfirmation(false);
     }
-  }, [normalizedOrder, store]);
+  }, [normalizedOrder]);
 
   // Memoize the onClose callback to prevent dependency changes
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -189,35 +181,13 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     }
   }, [isOpen, handleKeyDown]);
 
-  // Load available flavours from settings
-  useEffect(() => {
-    async function loadFlavours() {
-      try {
-        const flavours = await getFlavours(store);
-        setAvailableFlavours(flavours);
-      } catch (error) {
-        console.error('Error loading flavours:', error);
-        // Fallback to hardcoded flavours
-        setAvailableFlavours(['Vanilla', 'Chocolate', 'Strawberry', 'Caramel']);
-      }
-    }
-    if (isOpen) {
-      loadFlavours();
-    }
-  }, [store, isOpen]);
-
   const updateField = useCallback((field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Check if field is dirty
     const isDirty = JSON.stringify(originalData[field]) !== JSON.stringify(value);
     setDirtyFields(prev => ({ ...prev, [field]: isDirty }));
-    
-    // Handle size confirmation when changing non-size fields
-    if (field !== 'size' && sizeRequiresConfirmation) {
-      setSizeRequiresConfirmation(false);
-    }
-  }, [originalData, sizeRequiresConfirmation]);
+  }, [originalData]);
 
   const resetField = useCallback((field: keyof FormData) => {
     const originalValue = originalData[field];
@@ -310,39 +280,6 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     updateField('photos', newPhotos);
   }, [formData.photos, updateField]);
 
-  // Handle product change
-  const handleProductChange = useCallback((product: Product) => {
-    const previousProduct = currentProduct;
-    setCurrentProduct(product);
-    updateField('product', product.title);
-    
-    // Check if current size is valid for new product
-    if (previousProduct && previousProduct.id !== product.id) {
-      const currentSize = formData.size;
-      let sizeIsValid = false;
-      
-      if (product.variants) {
-        // Check if current size matches any variant
-        sizeIsValid = product.variants.some(variant => 
-          variant.title === currentSize || variant.id === currentSize
-        );
-      } else {
-        // For custom size products, any size is valid
-        sizeIsValid = true;
-      }
-      
-      if (!sizeIsValid && currentSize) {
-        setSizeRequiresConfirmation(true);
-      }
-    }
-  }, [currentProduct, formData.size, updateField]);
-
-  // Handle size change (also clears confirmation state)
-  const handleSizeChange = useCallback((size: string) => {
-    updateField('size', size);
-    setSizeRequiresConfirmation(false);
-  }, [updateField]);
-
   // Early return after all hooks are called
   if (!normalizedOrder) return null;
 
@@ -396,11 +333,11 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   </Button>
                 )}
               </div>
-              <ProductCombobox
-                store={store}
+              <Input
                 value={formData.product}
-                onValueChange={handleProductChange}
-                isDirty={dirtyFields.product}
+                onChange={(e) => updateField('product', e.target.value)}
+                placeholder="Enter product name..."
+                className={dirtyFields.product ? 'border-orange-300 bg-orange-50' : ''}
               />
             </div>
 
@@ -421,52 +358,12 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   </Button>
                 )}
               </div>
-              
-              {currentProduct?.variants ? (
-                // Show dropdown for products with variants
-                <Select value={formData.size} onValueChange={handleSizeChange}>
-                  <SelectTrigger className={`${
-                    dirtyFields.size ? 'border-orange-300 bg-orange-50' : ''
-                  } ${
-                    sizeRequiresConfirmation ? 'border-red-300 bg-red-50' : ''
-                  }`}>
-                    <SelectValue placeholder="Select size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentProduct.variants.map((variant) => (
-                      <SelectItem key={variant.id} value={variant.title} disabled={!variant.available}>
-                        {variant.title}
-                        {!variant.available && " (Unavailable)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                // Show input for custom size products or when no variants
-                <div className="space-y-2">
-                  <Input
-                    value={formData.size}
-                    onChange={(e) => handleSizeChange(e.target.value)}
-                    placeholder="Enter custom size..."
-                    className={`${
-                      dirtyFields.size ? 'border-orange-300 bg-orange-50' : ''
-                    } ${
-                      sizeRequiresConfirmation ? 'border-red-300 bg-red-50' : ''
-                    }`}
-                  />
-                  {currentProduct?.allowCustomSize && (
-                    <p className="text-xs text-muted-foreground">
-                      This product allows custom sizing
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              {sizeRequiresConfirmation && (
-                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                  Size "{formData.size}" is not available for this product. Please select a new size.
-                </div>
-              )}
+              <Input
+                value={formData.size}
+                onChange={(e) => updateField('size', e.target.value)}
+                placeholder="Enter size..."
+                className={dirtyFields.size ? 'border-orange-300 bg-orange-50' : ''}
+              />
             </div>
 
             {/* Due Date */}
@@ -542,36 +439,29 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             </div>
 
             {/* Flavour */}
-            {store === "bannos" && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Flavour
-                  </label>
-                  {dirtyFields.flavor && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0"
-                      onClick={() => resetField('flavor')}
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                <Select value={formData.flavor || "none"} onValueChange={(value) => updateField('flavor', value === "none" ? "" : value)}>
-                  <SelectTrigger className={dirtyFields.flavor ? 'border-orange-300 bg-orange-50' : ''}>
-                    <SelectValue placeholder="Select flavour" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No specific flavour</SelectItem>
-                    {availableFlavours.map(flavour => (
-                      <SelectItem key={flavour} value={flavour}>{flavour}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-sm font-medium text-foreground">
+                  Flavour
+                </label>
+                {dirtyFields.flavor && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={() => resetField('flavor')}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
-            )}
+              <Input
+                value={formData.flavor}
+                onChange={(e) => updateField('flavor', e.target.value)}
+                placeholder="Enter flavour..."
+                className={dirtyFields.flavor ? 'border-orange-300 bg-orange-50' : ''}
+              />
+            </div>
 
             {/* Priority - Auto-calculated from due date */}
             <div>
@@ -800,7 +690,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             <div className="flex gap-2">
               <Button
                 onClick={handleSave}
-                disabled={!hasChanges || !formData.dueDate || !formData.product || !formData.size || sizeRequiresConfirmation || saving}
+                disabled={!hasChanges || !formData.dueDate || !formData.product || !formData.size || saving}
                 className="flex-1"
               >
                 {saving ? "Saving..." : "Save Changes"}
@@ -817,12 +707,27 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
               variant="outline"
               className="w-full"
               onClick={() => {
-                const id = normalizedOrder.shopifyOrderNumber?.trim();
-                if (!id) {
-                  toast.error("Shopify order number not available");
+                const storeSlug = SHOPIFY_STORE_SLUGS[store];
+                if (!storeSlug) {
+                  toast.error("Unknown store");
                   return;
                 }
-                window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+                
+                // Prefer shopifyOrderId (direct link), fall back to shopifyOrderNumber (search)
+                const shopifyId = normalizedOrder.shopifyOrderId;
+                if (shopifyId) {
+                  window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${shopifyId}`, '_blank');
+                  return;
+                }
+                
+                // Fallback: use order number with search query
+                const orderNumber = normalizedOrder.shopifyOrderNumber?.trim();
+                if (orderNumber) {
+                  window.open(`https://admin.shopify.com/store/${storeSlug}/orders?query=${encodeURIComponent(orderNumber)}`, '_blank');
+                  return;
+                }
+                
+                toast.error("No Shopify order information available");
               }}
             >
               View Details in Shopify
