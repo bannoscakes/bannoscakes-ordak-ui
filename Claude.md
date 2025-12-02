@@ -7,7 +7,92 @@
 **Project**: Bannos Cakes Ordak UI - Order Management System
 
 ## Summary
-Critical bug fixes for Staff Workspace and Supervisor Workspace "My Orders" sections. Both pages were incorrectly showing all orders instead of filtering by the logged-in user's assigned orders. Delivered 2 production-ready PRs.
+Edit Order drawer simplification and Shopify URL fix, plus critical bug fixes for Staff Workspace and Supervisor Workspace "My Orders" sections. Delivered 3 production-ready PRs.
+
+---
+
+## Development Session: Edit Order Drawer Simplification (December 2, 2025)
+
+### Task
+Simplify the Edit Order drawer by converting complex inputs to simple text fields, and fix the broken "View Details in Shopify" button.
+
+### Investigation Findings
+
+**Edit Order Modal Analysis**:
+1. Product field used `ProductCombobox` - complex searchable component
+2. Size field had conditional logic (dropdown for variants, text for custom)
+3. Flavour field was a dropdown fetched from `getFlavours()` RPC, only shown for Bannos
+4. "View Details in Shopify" button used wrong URL format and wrong ID type
+
+**Database Investigation**:
+- Both Bannos and Flourlane stores have flavour data (Vanilla, Chocolate, etc.)
+- Original Bannos-only restriction for flavour field was incorrect
+
+### Implementation
+
+**Simplified Fields**:
+```typescript
+// Product: combobox → text input
+<Input
+  value={formData.product}
+  onChange={(e) => updateField('product', e.target.value)}
+  placeholder="Enter product name..."
+/>
+
+// Size: always text input (removed variant dropdown logic)
+<Input
+  value={formData.size}
+  onChange={(e) => updateField('size', e.target.value)}
+  placeholder="Enter size..."
+/>
+
+// Flavour: dropdown → text input, now shows for both stores
+<Input
+  value={formData.flavor}
+  onChange={(e) => updateField('flavor', e.target.value)}
+  placeholder="Enter flavour..."
+/>
+```
+
+**View Details URL Fix**:
+```typescript
+// Prefer shopifyOrderId (direct link), fall back to shopifyOrderNumber (search)
+const shopifyId = normalizedOrder.shopifyOrderId;
+if (shopifyId) {
+  window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${shopifyId}`, '_blank');
+  return;
+}
+
+// Fallback: use order number with search query
+const orderNumber = normalizedOrder.shopifyOrderNumber?.trim();
+if (orderNumber) {
+  window.open(`https://admin.shopify.com/store/${storeSlug}/orders?query=${encodeURIComponent(orderNumber)}`, '_blank');
+  return;
+}
+```
+
+**Code Removed** (~100 lines):
+- `ProductCombobox`, `ProductData` imports
+- `getFlavours` RPC import and loading effect
+- State: `sizeRequiresConfirmation`, `currentProduct`, `availableFlavours`
+- Product variant validation logic
+- Size confirmation logic
+
+### Key Decisions
+
+1. **Simple Text Inputs**: User requested simpler inputs for editing - staff know what values they need
+2. **Flavour for Both Stores**: Database showed both stores use flavours, so removed Bannos-only restriction
+3. **URL Fallback Pattern**: If `shopify_order_id` unavailable, fall back to search URL with order number
+4. **Keep Dropdowns for Method/Storage**: These have fixed options, dropdowns still make sense
+
+### Files Modified
+- `src/components/EditOrderDrawer.tsx` (-158 lines, +65 lines)
+- `src/components/QueueTable.tsx` (+2 lines for `shopifyOrderId` passthrough)
+
+### PR Delivered
+| PR | Title | Status |
+|----|-------|--------|
+| #289 | fix: simplify Edit Order drawer fields and fix Shopify URL | ✅ Merged |
 
 ---
 
