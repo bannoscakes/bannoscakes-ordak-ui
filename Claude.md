@@ -1,12 +1,107 @@
 # Claude AI Development Session Log
 
 ## Session Overview
-**Date**: December 1, 2025  
-**AI Model**: Claude Sonnet 4.5 (via Cursor IDE)  
+**Date**: December 2, 2025  
+**AI Model**: Claude Opus 4 (via Cursor IDE)  
 **Developer**: Panos Panayi  
 **Project**: Bannos Cakes Ordak UI - Order Management System
 
 ## Summary
+Critical bug fixes for Staff Workspace and Supervisor Workspace "My Orders" sections. Both pages were incorrectly showing all orders instead of filtering by the logged-in user's assigned orders. Delivered 2 production-ready PRs.
+
+---
+
+## Development Session: Workspace Filter Fixes (December 2, 2025)
+
+### Phase 1: Staff Workspace Investigation & Fix (PR #287)
+
+**Issue Reported**: Staff Workspace showing 5 orders (24718, 24719, 24720, 24721, 24722) when no orders had been assigned to any staff member.
+
+**Investigation Findings**:
+1. `getQueue()` calls in `loadStaffOrders()` were missing the `assignee_id` parameter
+2. Client-side filtering checked for `assignee_id !== null` but then had incorrect fallback logic
+3. Line 156: `const ordersToShow = assignedOrders.length > 0 ? assignedOrders : allOrders.slice(0, 5);`
+4. This fallback showed random unassigned orders when no assigned orders existed
+
+**Fix Implementation**:
+```typescript
+// BEFORE (broken):
+const [bannosOrders, flourlaneOrders] = await Promise.all([
+  getQueue({ store: "bannos", limit: 100 }),
+  getQueue({ store: "flourlane", limit: 100 })
+]);
+const assignedOrders = allOrders.filter(o => o.assignee_id !== null);
+const ordersToShow = assignedOrders.length > 0 ? assignedOrders : allOrders.slice(0, 5);
+
+// AFTER (fixed):
+if (!user?.id) {
+  console.warn("Cannot load staff orders: user not loaded");
+  setOrders([]);
+  return;
+}
+const [bannosOrders, flourlaneOrders] = await Promise.all([
+  getQueue({ store: "bannos", assignee_id: user.id, limit: 100 }),
+  getQueue({ store: "flourlane", assignee_id: user.id, limit: 100 })
+]);
+```
+
+**Stale Closure Bug**: Also identified and fixed a stale closure issue where the `useEffect` had empty dependency array `[]`, causing the auto-refresh interval to capture a stale version of `loadStaffOrders` where `user` was undefined.
+
+**Files Modified**: `src/components/StaffWorkspacePage.tsx`
+
+---
+
+### Phase 2: Supervisor Workspace Fix (PR #288)
+
+**Issue Reported**: Supervisor "My Orders" section showing 200 orders when it should only show orders assigned to the supervisor.
+
+**Investigation Findings**: Identical bug to Staff Workspace - `getQueue()` calls missing `assignee_id` parameter.
+
+**Fix Implementation**: Same pattern as Staff Workspace:
+1. Added `assignee_id: user.id` to `getQueue()` calls
+2. Added user guard check in `loadSupervisorOrders()`
+3. Fixed `useEffect` dependency array to include `user?.id`
+4. Updated empty state message
+
+**Files Modified**: `src/components/SupervisorWorkspacePage.tsx`
+
+---
+
+### Key Technical Decisions
+
+1. **Database-Level Filtering**: Filter by `assignee_id` at the RPC level rather than client-side. More efficient and respects RLS policies.
+
+2. **User Guard Pattern**: Added explicit `if (!user?.id) return;` guards in both the useEffect and the load function to handle auth loading state gracefully.
+
+3. **Dependency Array Fix**: Changed `[]` to `[user?.id]` to ensure the interval is re-established when user becomes available, preventing stale closure issues.
+
+4. **Empty State UX**: Updated messages to be helpful:
+   - Staff: "Orders will appear here when a supervisor assigns them to you"
+   - Supervisor: "Use the Queue buttons above to view and assign orders"
+
+---
+
+### PRs Delivered
+
+| PR | Title | Status |
+|----|-------|--------|
+| #287 | fix: filter staff workspace by logged-in user | ✅ Merged |
+| #288 | fix: filter supervisor workspace by logged-in user | ✅ Merged |
+
+---
+
+### Lessons Learned
+
+1. **Stale Closures in useEffect**: When a function inside useEffect depends on external state (like `user`), that state must be in the dependency array or the interval will capture a stale version.
+
+2. **Investigate Before Implementing**: Taking time to understand the data flow (what query is used, what parameters are passed) before proposing fixes leads to cleaner solutions.
+
+3. **Consistent Patterns**: The same bug in two similar components suggests copy-paste without full understanding. Fixing one informed the fix for the other.
+
+---
+
+## Previous Session (December 1, 2025)
+
 Complete implementation of automated order monitoring system with comprehensive bug fixes for dashboard performance, monitor displays, and webhook security. Delivered 5 production-ready PRs with zero regressions.
 
 ---
