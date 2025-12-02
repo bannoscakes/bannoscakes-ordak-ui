@@ -23,6 +23,9 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { getQueue, getStorageLocations } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
 
+// Auto-refresh interval for queue data (60 seconds - not too frequent to avoid visual distraction)
+const QUEUE_REFRESH_INTERVAL = 60_000;
+
 interface QueueItem {
   id: string;
   orderNumber: string;
@@ -53,6 +56,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [loading, setLoading] = useState(true);
   const hasInitiallyLoadedRef = useRef(false); // Use ref to avoid stale closure
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
@@ -68,6 +72,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [error, setError] = useState<unknown>(null);
 
   const { showErrorWithRetry } = useErrorNotifications();
+
+  // Store showErrorWithRetry in a ref to avoid it triggering useCallback recreation
+  // (useErrorNotifications returns new function objects on every render)
+  const showErrorWithRetryRef = useRef(showErrorWithRetry);
+  showErrorWithRetryRef.current = showErrorWithRetry;
 
   // Fetch storage locations for the current store
   useEffect(() => {
@@ -152,11 +161,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       });
 
       setQueueData(grouped);
+      setLastUpdated(new Date()); // Store actual fetch timestamp
       hasInitiallyLoadedRef.current = true; // Mark as loaded using ref (no re-render needed)
     } catch (error) {
       console.error('Failed to fetch queue:', error);
       setError(error);
-      showErrorWithRetry(error, fetchQueueData, {
+      showErrorWithRetryRef.current(error, fetchQueueData, {
         title: 'Failed to Load Queue',
         showRecoveryActions: true,
       });
@@ -164,11 +174,17 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [store, storageFilter, showErrorWithRetry]); // No stale closure - ref always has current value
+  }, [store, storageFilter]); // showErrorWithRetry accessed via ref to keep callback stable
 
   // Fetch real queue data from Supabase
   useEffect(() => {
     fetchQueueData();
+  }, [fetchQueueData]);
+
+  // Auto-refresh queue data every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchQueueData, QUEUE_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
   }, [fetchQueueData]);
 
   // Reset loading state when store changes (different data source = full loading skeleton)
@@ -295,7 +311,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
             <div className="flex items-center gap-2">
               <Clock className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-sm text-muted-foreground">
-                {isRefreshing ? 'Refreshing...' : `Last updated: ${new Date().toLocaleTimeString()}`}
+                {isRefreshing 
+                  ? 'Refreshing...' 
+                  : lastUpdated 
+                    ? `Last updated: ${lastUpdated.toLocaleTimeString()}` 
+                    : 'Loading...'}
               </span>
             </div>
           </div>
