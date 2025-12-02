@@ -136,27 +136,28 @@ export function StaffWorkspacePage({
     }
     
     try {
-      // Fetch orders from both stores (bypass cache for manual refresh)
+      // Guard: Ensure user is loaded
+      if (!user?.id) {
+        console.warn("Cannot load staff orders: user not loaded");
+        setOrders([]);
+        return;
+      }
+      
+      // Fetch orders assigned to current user from both stores
       const [bannosOrders, flourlaneOrders] = await Promise.all([
         bypassCache
-          ? getQueue({ store: "bannos", limit: 100 })
-          : getQueueCached({ store: "bannos", limit: 100 }),
+          ? getQueue({ store: "bannos", assignee_id: user.id, limit: 100 })
+          : getQueueCached({ store: "bannos", assignee_id: user.id, limit: 100 }),
         bypassCache
-          ? getQueue({ store: "flourlane", limit: 100 })
-          : getQueueCached({ store: "flourlane", limit: 100 })
+          ? getQueue({ store: "flourlane", assignee_id: user.id, limit: 100 })
+          : getQueueCached({ store: "flourlane", assignee_id: user.id, limit: 100 })
       ]);
       
-      // Combine all orders
+      // Combine orders from both stores
       const allOrders = [...bannosOrders, ...flourlaneOrders];
       
-      // Filter for assigned orders (orders with assignee_id not null)
-      const assignedOrders = allOrders.filter(o => o.assignee_id !== null);
-      
-      // If no assigned orders, show unassigned orders for staff to pick up
-      const ordersToShow = assignedOrders.length > 0 ? assignedOrders : allOrders.slice(0, 5);
-      
       // Map database orders to UI format
-      const mappedOrders = ordersToShow.map((order: any) => ({
+      const mappedOrders = allOrders.map((order: any) => ({
         id: order.id,
         orderNumber: String(order.human_id || order.shopify_order_number || order.id),
         shopifyOrderNumber: String(order.shopify_order_number || ''),
@@ -620,7 +621,10 @@ export function StaffWorkspacePage({
               {filteredOrders.length === 0 && (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">
-                    No assigned orders found
+                    No orders assigned to you yet
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Orders will appear here when a supervisor assigns them to you
                   </p>
                 </Card>
               )}
