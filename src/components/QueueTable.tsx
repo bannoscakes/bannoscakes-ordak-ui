@@ -27,6 +27,7 @@ interface QueueItem {
   id: string;
   orderNumber: string;
   shopifyOrderNumber: string;
+  shopifyOrderId?: number;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -123,6 +124,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           id: order.id,
           orderNumber: String(order.human_id || order.shopify_order_number || order.id),
           shopifyOrderNumber: String(order.shopify_order_number || ''),
+          shopifyOrderId: order.shopify_order_id || undefined,
           customerName: order.customer_name || 'Unknown',
           product: order.product_title || 'Unknown',
           size: order.size || 'M',
