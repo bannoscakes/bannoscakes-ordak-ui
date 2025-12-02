@@ -1,3 +1,50 @@
+## v0.11.7-beta — Staff & Supervisor Workspace Fixes (2025-12-02)
+
+### 🎯 Overview
+Critical bug fixes for Staff Workspace and Supervisor Workspace "My Orders" sections. Both were incorrectly showing all orders instead of filtering by the logged-in user's assigned orders.
+
+### 🐛 Critical Bugs Fixed
+
+**Staff Workspace Filter (PR #287)**
+- **Issue**: Staff Workspace showed 5 random unassigned orders instead of orders assigned to the logged-in staff member
+- **Root Cause**: `getQueue()` calls missing `assignee_id` parameter, plus incorrect fallback logic
+- **Fix**: 
+  - Added `assignee_id: user.id` to all `getQueue()` and `getQueueCached()` calls
+  - Removed client-side filtering and fallback logic that showed unassigned orders
+  - Added user guard check in `loadStaffOrders()` function
+  - Fixed stale closure bug in `useEffect` by adding `user?.id` to dependency array
+- **Files Modified**: `src/components/StaffWorkspacePage.tsx`
+
+**Supervisor Workspace Filter (PR #288)**
+- **Issue**: Supervisor "My Orders" section showed 200 orders (all orders from both stores) instead of orders assigned to the supervisor
+- **Root Cause**: Same bug as Staff Workspace - `getQueue()` calls missing `assignee_id` filter
+- **Fix**:
+  - Added `assignee_id: user.id` to `getQueue()` calls for both Bannos and Flourlane stores
+  - Added user guard check in `loadSupervisorOrders()` function
+  - Fixed `useEffect` dependency array to include `user?.id` (prevents stale closure)
+  - Updated empty state message with helpful guidance
+- **Files Modified**: `src/components/SupervisorWorkspacePage.tsx`
+
+### 🔧 Technical Details
+
+**Stale Closure Prevention**
+Both workspaces had a `useEffect` with empty dependency array `[]` that captured the initial `loadOrders` function before `user` was loaded. This caused the auto-refresh interval to repeatedly call a stale version where `user?.id` was undefined. Fixed by:
+1. Adding `if (!user?.id) return;` guard in useEffect
+2. Adding `user?.id` to dependency array to re-establish interval when user loads
+
+**Database-Level Filtering**
+Orders are now filtered at the database level via the `p_assignee_id` parameter in the `get_queue` RPC, rather than client-side filtering. This is more efficient and respects RLS policies.
+
+**Empty State Messages**
+- Staff: "No orders assigned to you yet. Orders will appear here when a supervisor assigns them to you"
+- Supervisor: "No orders assigned to you yet. Use the Queue buttons above to view and assign orders"
+
+### 📋 PRs in This Release
+- PR #287: `fix: filter staff workspace by logged-in user`
+- PR #288: `fix: filter supervisor workspace by logged-in user`
+
+---
+
 ## v0.11.6-beta — Order Monitoring System & Environment Configuration (2025-12-01)
 
 ### 🎯 Overview
