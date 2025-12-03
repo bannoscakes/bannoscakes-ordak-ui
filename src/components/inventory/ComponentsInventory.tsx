@@ -172,6 +172,12 @@ export function ComponentsInventory() {
   const handleSaveComponent = async () => {
     if (!editingComponent) return;
     
+    if (isSaving) {
+      return;
+    }
+    
+    setIsSaving(true);
+
     try {
       // Update component in database
       await upsertComponent({
@@ -206,6 +212,8 @@ export function ComponentsInventory() {
       } else {
         toast.error(error?.message || 'Failed to update component');
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -526,12 +534,19 @@ export function ComponentsInventory() {
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleSaveComponent} className="flex-1">
-                  Save Changes
+                <Button 
+                  type="button"
+                  onClick={handleSaveComponent} 
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button 
+                  type="button"
                   variant="outline" 
                   onClick={() => setIsEditDialogOpen(false)}
+                  disabled={isSaving}
                   className="flex-1"
                 >
                   Cancel
