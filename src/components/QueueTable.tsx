@@ -55,6 +55,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
   const [loading, setLoading] = useState(true);
   const hasInitiallyLoadedRef = useRef(false); // Use ref to avoid stale closure
+  const previousStoreRef = useRef(store); // Track store to detect changes
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -102,6 +103,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   // Fetch queue data - wrapped in useCallback to prevent stale closures
   const fetchQueueData = useCallback(async () => {
     try {
+      // Reset loading state when store changes (synchronous check avoids race condition)
+      if (previousStoreRef.current !== store) {
+        hasInitiallyLoadedRef.current = false;
+        previousStoreRef.current = store;
+      }
+      
       // Only show full loading skeleton on initial load
       if (!hasInitiallyLoadedRef.current) {
         setLoading(true);
@@ -186,11 +193,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     const interval = setInterval(fetchQueueData, QUEUE_REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchQueueData]);
-
-  // Reset loading state when store changes (different data source = full loading skeleton)
-  useEffect(() => {
-    hasInitiallyLoadedRef.current = false;
-  }, [store]);
 
   // Set initial filter if provided
   useEffect(() => {
