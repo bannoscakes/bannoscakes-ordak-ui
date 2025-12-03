@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION public.upsert_component(
   p_unit text DEFAULT 'each'::text, 
   p_current_stock numeric DEFAULT 0, 
   p_min_stock numeric DEFAULT 0, 
-  p_max_stack numeric DEFAULT NULL::numeric, 
+  p_max_stock numeric DEFAULT NULL::numeric, 
   p_cost_per_unit numeric DEFAULT NULL::numeric, 
   p_supplier text DEFAULT NULL::text, 
   p_supplier_sku text DEFAULT NULL::text, 
