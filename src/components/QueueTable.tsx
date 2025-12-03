@@ -516,12 +516,22 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                                 setIsOrderDetailOpen(true);
                               }}
                               onViewDetails={(item) => {
-                                const id = item.shopifyOrderNumber?.trim();
-                                if (!id) {
-                                  toast.error("Shopify order number not available");
+                                const storeSlug = store === 'bannos' ? 'bannos' : 'flour-lane';
+                                
+                                // Prefer shopifyOrderId (direct link)
+                                if (item.shopifyOrderId) {
+                                  window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${item.shopifyOrderId}`, '_blank');
                                   return;
                                 }
-                                window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+                                
+                                // Fallback: search by order number
+                                const orderNumber = item.shopifyOrderNumber?.trim();
+                                if (orderNumber) {
+                                  window.open(`https://admin.shopify.com/store/${storeSlug}/orders?query=${encodeURIComponent(orderNumber)}`, '_blank');
+                                  return;
+                                }
+                                
+                                toast.error("No Shopify order information available");
                               }}
                             />
                           </div>
