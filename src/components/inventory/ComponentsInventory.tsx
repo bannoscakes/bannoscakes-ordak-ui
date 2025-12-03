@@ -99,11 +99,13 @@ export function ComponentsInventory() {
       reorderPoint: 0,
       oosAction: "Component only"
     });
+    setIsSaving(false); // Reset saving state when opening dialog
     setIsAddDialogOpen(true);
   };
 
   const handleEditComponent = (component: Component) => {
     setEditingComponent({ ...component });
+    setIsSaving(false); // Reset saving state when opening dialog
     setIsEditDialogOpen(true);
   };
 
