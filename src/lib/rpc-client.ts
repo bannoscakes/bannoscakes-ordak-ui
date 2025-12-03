@@ -632,15 +632,24 @@ export async function updateComponentStock(params: {
   reason: string;
   order_id?: string;
 }) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('update_component_stock', {
-    p_component_id: params.component_id,
-    p_delta: params.delta,
-    p_reason: params.reason,
-    p_order_id: params.order_id || null,
-  });
-  if (error) throw error;
-  return data;
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('update_component_stock', {
+        p_component_id: params.component_id,
+        p_delta: params.delta,
+        p_reason: params.reason,
+        p_order_id: params.order_id || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    {
+      operation: 'updateComponentStock',
+      rpcName: 'update_component_stock',
+      params
+    }
+  );
 }
 
 export async function upsertComponent(params: {
@@ -657,25 +666,34 @@ export async function upsertComponent(params: {
   supplier?: string;
   supplier_sku?: string;
   is_active?: boolean;
-}) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('upsert_component', {
-    p_sku: params.sku,
-    p_name: params.name,
-    p_id: params.id || null,
-    p_description: params.description || null,
-    p_category: params.category || null,
-    p_unit: params.unit || 'each',
-    p_current_stock: params.current_stock || 0,
-    p_min_stock: params.min_stock || 0,
-    p_max_stock: params.max_stock || null,
-    p_cost_per_unit: params.cost_per_unit || null,
-    p_supplier: params.supplier || null,
-    p_supplier_sku: params.supplier_sku || null,
-    p_is_active: params.is_active !== false,
-  });
-  if (error) throw error;
-  return data as string; // Returns the component ID
+}): Promise<string> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('upsert_component', {
+        p_sku: params.sku,
+        p_name: params.name,
+        p_id: params.id || null,
+        p_description: params.description || null,
+        p_category: params.category || null,
+        p_unit: params.unit || 'each',
+        p_current_stock: params.current_stock || 0,
+        p_min_stock: params.min_stock || 0,
+        p_max_stock: params.max_stock || null,
+        p_cost_per_unit: params.cost_per_unit || null,
+        p_supplier: params.supplier || null,
+        p_supplier_sku: params.supplier_sku || null,
+        p_is_active: params.is_active !== false,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    {
+      operation: 'upsertComponent',
+      rpcName: 'upsert_component',
+      params
+    }
+  );
 }
 
 // =============================================

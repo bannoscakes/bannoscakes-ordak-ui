@@ -39,6 +39,7 @@ export function ComponentsInventory() {
   const [adjustingComponent, setAdjustingComponent] = useState<Component | null>(null);
   const [adjustmentDelta, setAdjustmentDelta] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [newComponent, setNewComponent] = useState<Partial<Component>>({
     sku: "",
     name: "",
@@ -112,6 +113,12 @@ export function ComponentsInventory() {
       return;
     }
 
+    if (isSaving) {
+      return;
+    }
+    
+    setIsSaving(true);
+
     try {
       const componentId = await upsertComponent({
         sku: newComponent.sku,
@@ -149,9 +156,17 @@ export function ComponentsInventory() {
         oosAction: "Component only"
       });
       toast.success("Component added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding component:', error);
-      toast.error('Failed to add component');
+      // Check for duplicate SKU (409 Conflict or unique constraint violation)
+      const errorMessage = error?.message || error?.code || '';
+      if (error?.code === '23505' || errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
+        toast.error(`SKU "${newComponent.sku}" already exists`);
+      } else {
+        toast.error('Failed to add component');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -668,12 +683,15 @@ export function ComponentsInventory() {
 
             <div className="flex gap-2 pt-4">
               <Button
+                type="button"
                 onClick={handleSaveNewComponent}
+                disabled={isSaving}
                 className="flex-1"
               >
-                Add Component
+                {isSaving ? "Adding..." : "Add Component"}
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setIsAddDialogOpen(false)}
                 className="flex-1"
