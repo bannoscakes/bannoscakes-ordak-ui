@@ -1,3 +1,82 @@
+## v0.11.9-beta — Inventory Component Add/Edit Fix (2025-12-04)
+
+### 🎯 Overview
+Fixed critical bug in Inventory Components page where the "Add Component" and "Edit Component" forms would hang indefinitely with "Adding..." or "Saving..." buttons stuck, preventing any component management.
+
+### 🐛 Critical Bugs Fixed
+
+**RPC Call Hanging Issue (PR #295)**
+- **Issue**: `upsertComponent` RPC call would intermittently hang, never resolving or sending a network request
+- **Root Cause**: `upsertComponent` and `updateComponentStock` functions in `rpc-client.ts` were not wrapped with `withErrorHandling`, missing JWT refresh and retry logic
+- **Fix**: Wrapped both functions with `withErrorHandling` wrapper to add:
+  - JWT token refresh on expiration
+  - Automatic retry logic
+  - Standardized error handling
+  - PostgreSQL error code mapping (added `ErrorCode.INV005` for duplicate SKU)
+
+**Foreign Key Constraint Violation (PR #296)**
+- **Issue**: `upsert_component` database function failed with `audit_log_performed_by_fkey` constraint violation
+- **Root Cause**: Function tried to insert `auth.uid()` into `audit_log` without checking if user exists in `staff_shared` table
+- **Fix**: Updated both `upsert_component` and `update_component_stock` to:
+  - Check if user exists in `staff_shared` before audit log insert
+  - Skip audit logging if user doesn't exist (graceful degradation)
+  - Still complete the component operation successfully
+
+**Button State Management Issues**
+- **Issue**: "Adding..." and "Saving..." buttons would get stuck in loading state
+- **Root Cause**: 
+  1. `isSaving` state not reset when opening Add/Edit dialogs
+  2. Edit form lacked duplicate submission guards
+- **Fix**: 
+  - Added `setIsSaving(false)` when opening Add/Edit dialogs
+  - Added `isSaving` guard and disabled states to Edit form (matching Add form)
+  - Added loading feedback ("Saving...") to Edit button
+  - Added `type="button"` to prevent unintended form submissions
+
+### 🔧 Technical Details
+
+**Error Handling Enhancement**
+```typescript
+// Added to error-handler.ts
+ErrorCode.INV005 = 'INV005' // Duplicate SKU or unique constraint violation
+
+// Added to withErrorHandling in rpc-client.ts
+case '23505': // PostgreSQL unique constraint violation
+  appError = createError(ErrorCode.INV005, 'Duplicate entry...', ...)
+```
+
+**Database Function Safety Pattern**
+```sql
+-- Check if user exists before audit logging
+IF v_user_id IS NOT NULL THEN
+  SELECT EXISTS(
+    SELECT 1 FROM public.staff_shared WHERE user_id = v_user_id
+  ) INTO v_user_exists;
+  
+  IF v_user_exists THEN
+    INSERT INTO public.audit_log (...) VALUES (...);
+  END IF;
+END IF;
+```
+
+### 📋 Files Modified
+- `src/lib/rpc-client.ts` - Wrapped inventory RPCs with error handling, added PG error mapping
+- `src/lib/error-handler.ts` - Added `ErrorCode.INV005` for duplicate SKU errors
+- `src/components/inventory/ComponentsInventory.tsx` - Fixed button state management and duplicate submission protection
+- `supabase/migrations/20251204082743_fix_inventory_audit_log.sql` - Safe audit logging pattern for both functions
+
+### 📋 PRs in This Release
+- PR #295: `fix: wrap inventory RPC calls with error handling to prevent hangs`
+- PR #296: `fix: prevent audit_log foreign key constraint violations in inventory functions`
+
+### 🔍 Lessons Learned
+- **Stale Dev Servers**: Multiple debugging iterations were caused by running old dev server instances; always kill all processes and restart fresh
+- **Browser Cache**: Hard refresh (Cmd+Shift+R) essential after code changes to load new JavaScript bundle
+- **Environment Sync**: Verify testing environment (local vs production) and ensure code/database are in sync
+- **Defensive Programming**: Always check foreign key constraints exist before inserting, use graceful degradation
+
+---
+
 ## v0.11.8-beta — Edit Order Drawer Simplification (2025-12-02)
 
 ### 🎯 Overview
