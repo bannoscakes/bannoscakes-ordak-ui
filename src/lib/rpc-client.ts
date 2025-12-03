@@ -146,6 +146,15 @@ async function withErrorHandling<T>(
       const supabaseError = error as any;
       
       switch (supabaseError.code) {
+        case '23505': // PostgreSQL unique constraint violation
+          appError = createError(
+            ErrorCode.INV005,
+            'Duplicate entry. This item already exists.',
+            { rpcName: context.rpcName, params: context.params, originalError: supabaseError },
+            { operation: context.operation, duration }
+          );
+          break;
+          
         case 'PGRST301': // Function not found
           appError = createError(
             ErrorCode.SYS002,

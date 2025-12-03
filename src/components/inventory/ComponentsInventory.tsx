@@ -158,12 +158,11 @@ export function ComponentsInventory() {
       toast.success("Component added successfully");
     } catch (error: any) {
       console.error('Error adding component:', error);
-      // Check for duplicate SKU (409 Conflict or unique constraint violation)
-      const errorMessage = error?.message || error?.code || '';
-      if (error?.code === '23505' || errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
+      // Check for duplicate SKU error (INV005 from withErrorHandling wrapper)
+      if (error?.code === 'INV005') {
         toast.error(`SKU "${newComponent.sku}" already exists`);
       } else {
-        toast.error('Failed to add component');
+        toast.error(error?.message || 'Failed to add component');
       }
     } finally {
       setIsSaving(false);
@@ -199,9 +198,14 @@ export function ComponentsInventory() {
       setIsEditDialogOpen(false);
       setEditingComponent(null);
       toast.success("Component updated successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating component:', error);
-      toast.error('Failed to update component');
+      // Check for duplicate SKU error (INV005 from withErrorHandling wrapper)
+      if (error?.code === 'INV005') {
+        toast.error(`SKU "${editingComponent.sku}" already exists`);
+      } else {
+        toast.error(error?.message || 'Failed to update component');
+      }
     }
   };
 

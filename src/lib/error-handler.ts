@@ -11,6 +11,7 @@ export enum ErrorCode {
   INV002 = 'INV002', // Component not found
   INV003 = 'INV003', // Invalid inventory operation
   INV004 = 'INV004', // Stock adjustment failed
+  INV005 = 'INV005', // Duplicate SKU or unique constraint violation
   
   // Authentication related errors
   AUTH001 = 'AUTH001', // Unauthorized access
@@ -93,6 +94,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ErrorCode.INV002]: 'Component not found. Please check the component SKU.',
   [ErrorCode.INV003]: 'Invalid inventory operation. Please try again.',
   [ErrorCode.INV004]: 'Stock adjustment failed. Please contact support.',
+  [ErrorCode.INV005]: 'Duplicate entry. This item already exists.',
   
   // Authentication errors
   [ErrorCode.AUTH001]: 'Unauthorized access. Please log in and try again.',
@@ -130,6 +132,7 @@ export const ERROR_RECOVERY_ACTIONS: Record<ErrorCode, string[]> = {
   [ErrorCode.INV002]: ['Verify component SKU', 'Check component list', 'Create new component'],
   [ErrorCode.INV003]: ['Retry operation', 'Check permissions', 'Contact support'],
   [ErrorCode.INV004]: ['Retry adjustment', 'Check stock levels', 'Contact support'],
+  [ErrorCode.INV005]: ['Use a different SKU', 'Check existing items', 'Update the existing item instead'],
   
   [ErrorCode.AUTH001]: ['Log in again', 'Check credentials', 'Contact administrator'],
   [ErrorCode.AUTH002]: ['Reset password', 'Check email address', 'Contact support'],
