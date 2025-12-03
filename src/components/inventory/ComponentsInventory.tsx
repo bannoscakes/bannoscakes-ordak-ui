@@ -39,6 +39,7 @@ export function ComponentsInventory() {
   const [adjustingComponent, setAdjustingComponent] = useState<Component | null>(null);
   const [adjustmentDelta, setAdjustmentDelta] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [newComponent, setNewComponent] = useState<Partial<Component>>({
     sku: "",
     name: "",
@@ -112,6 +113,12 @@ export function ComponentsInventory() {
       return;
     }
 
+    if (isSaving) {
+      return;
+    }
+    
+    setIsSaving(true);
+
     try {
       const componentId = await upsertComponent({
         sku: newComponent.sku,
@@ -149,15 +156,28 @@ export function ComponentsInventory() {
         oosAction: "Component only"
       });
       toast.success("Component added successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding component:', error);
-      toast.error('Failed to add component');
+      // Check for duplicate SKU error (INV005 from withErrorHandling wrapper)
+      if (error?.code === 'INV005') {
+        toast.error(`SKU "${newComponent.sku}" already exists`);
+      } else {
+        toast.error(error?.message || 'Failed to add component');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleSaveComponent = async () => {
     if (!editingComponent) return;
     
+    if (isSaving) {
+      return;
+    }
+    
+    setIsSaving(true);
+
     try {
       // Update component in database
       await upsertComponent({
@@ -184,9 +204,16 @@ export function ComponentsInventory() {
       setIsEditDialogOpen(false);
       setEditingComponent(null);
       toast.success("Component updated successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating component:', error);
-      toast.error('Failed to update component');
+      // Check for duplicate SKU error (INV005 from withErrorHandling wrapper)
+      if (error?.code === 'INV005') {
+        toast.error(`SKU "${editingComponent.sku}" already exists`);
+      } else {
+        toast.error(error?.message || 'Failed to update component');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -507,12 +534,19 @@ export function ComponentsInventory() {
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleSaveComponent} className="flex-1">
-                  Save Changes
+                <Button 
+                  type="button"
+                  onClick={handleSaveComponent} 
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button 
+                  type="button"
                   variant="outline" 
                   onClick={() => setIsEditDialogOpen(false)}
+                  disabled={isSaving}
                   className="flex-1"
                 >
                   Cancel
@@ -668,12 +702,15 @@ export function ComponentsInventory() {
 
             <div className="flex gap-2 pt-4">
               <Button
+                type="button"
                 onClick={handleSaveNewComponent}
+                disabled={isSaving}
                 className="flex-1"
               >
-                Add Component
+                {isSaving ? "Adding..." : "Add Component"}
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setIsAddDialogOpen(false)}
                 className="flex-1"
