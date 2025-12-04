@@ -148,6 +148,10 @@ export function ComponentsInventory() {
       };
 
       setComponents(prev => [...prev, newComponentData]);
+      
+      // Reset saving state BEFORE closing dialog to prevent race condition
+      setIsSaving(false);
+      
       setIsAddDialogOpen(false);
       setNewComponent({
         sku: "",
@@ -166,7 +170,7 @@ export function ComponentsInventory() {
       } else {
         toast.error(error?.message || 'Failed to add component');
       }
-    } finally {
+      // Reset saving state on error
       setIsSaving(false);
     }
   };
@@ -618,7 +622,13 @@ export function ComponentsInventory() {
       </Dialog>
 
       {/* Add Component Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        // Reset saving state when dialog is closed to prevent race conditions
+        if (!open) {
+          setIsSaving(false);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Component</DialogTitle>
