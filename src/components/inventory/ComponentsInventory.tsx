@@ -44,8 +44,8 @@ export function ComponentsInventory() {
     sku: "",
     name: "",
     type: "Accessory",
-    onHand: 0,
-    reorderPoint: 0,
+    onHand: undefined,
+    reorderPoint: undefined,
     oosAction: "Component only"
   });
 
@@ -95,8 +95,8 @@ export function ComponentsInventory() {
       sku: "",
       name: "",
       type: "Accessory",
-      onHand: 0,
-      reorderPoint: 0,
+      onHand: undefined,
+      reorderPoint: undefined,
       oosAction: "Component only"
     });
     setIsSaving(false); // Reset saving state when opening dialog
@@ -157,8 +157,8 @@ export function ComponentsInventory() {
         sku: "",
         name: "",
         type: "Accessory",
-        onHand: 0,
-        reorderPoint: 0,
+        onHand: undefined,
+        reorderPoint: undefined,
         oosAction: "Component only"
       });
       toast.success("Component added successfully");
@@ -685,8 +685,16 @@ export function ComponentsInventory() {
                 <Input
                   id="add-onhand"
                   type="number"
-                  value={newComponent.onHand || 0}
-                  onChange={(e) => setNewComponent(prev => ({ ...prev, onHand: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={newComponent.onHand ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const num = parseInt(val, 10);
+                    setNewComponent(prev => ({ 
+                      ...prev, 
+                      onHand: val === "" || isNaN(num) ? undefined : num
+                    }));
+                  }}
                 />
               </div>
               
@@ -695,8 +703,16 @@ export function ComponentsInventory() {
                 <Input
                   id="add-reorder"
                   type="number"
-                  value={newComponent.reorderPoint || 0}
-                  onChange={(e) => setNewComponent(prev => ({ ...prev, reorderPoint: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  value={newComponent.reorderPoint ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const num = parseInt(val, 10);
+                    setNewComponent(prev => ({ 
+                      ...prev, 
+                      reorderPoint: val === "" || isNaN(num) ? undefined : num
+                    }));
+                  }}
                 />
               </div>
             </div>
