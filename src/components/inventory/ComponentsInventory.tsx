@@ -725,6 +725,7 @@ export function ComponentsInventory() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddDialogOpen(false)}
+                disabled={isSaving}
                 className="flex-1"
               >
                 Cancel
