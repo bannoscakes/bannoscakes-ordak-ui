@@ -425,7 +425,13 @@ export function ComponentsInventory() {
       </Card>
 
       {/* Edit Component Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        // Reset saving state when dialog is closed to prevent race conditions
+        if (!open) {
+          setIsSaving(false);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Component</DialogTitle>
@@ -725,6 +731,7 @@ export function ComponentsInventory() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddDialogOpen(false)}
+                disabled={isSaving}
                 className="flex-1"
               >
                 Cancel
