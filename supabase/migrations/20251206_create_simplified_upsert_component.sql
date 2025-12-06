@@ -1,11 +1,11 @@
 -- ============================================================================
 -- Create simplified upsert_component function
--- This runs AFTER 20251205_fix_all_inventory_audit_log.sql which creates
--- the legacy upsert_component with many parameters. We drop that and replace
--- it with our simplified version that matches the new RPC client interface.
+-- This runs AFTER 20251205_fix_all_inventory_audit_log.sql (timestamp 20251206 > 20251205).
+-- We drop the legacy 13-parameter version created by 20251205 and replace it with
+-- our simplified 8-parameter version that matches the new RPC client interface.
 -- ============================================================================
 
--- Drop the legacy version created by 20251205_fix_all_inventory_audit_log.sql
+-- Drop the legacy 13-parameter version created by 20251205_fix_all_inventory_audit_log.sql
 DROP FUNCTION IF EXISTS public.upsert_component(text, text, uuid, text, text, text, numeric, numeric, numeric, numeric, text, text, boolean) CASCADE;
 
 -- Create simplified upsert_component that matches the new RPC client interface
