@@ -107,7 +107,7 @@ export function BOMsTab() {
     setEditingBOM({
       id: bom.id,
       product_title: bom.product_title,
-      store: bom.store,
+      store: bom.store || 'both',
       description: bom.description || '',
       is_active: bom.is_active,
       items: bom.items.map(item => ({
@@ -348,7 +348,7 @@ export function BOMsTab() {
                   <div className="space-y-2">
                     <Label htmlFor="store">Store</Label>
                     <Select
-                      value={editingBOM.store}
+                      value={editingBOM.store || 'both'}
                       onValueChange={(v: 'bannos' | 'flourlane' | 'both') => setEditingBOM({ ...editingBOM, store: v })}
                     >
                       <SelectTrigger>
@@ -402,7 +402,7 @@ export function BOMsTab() {
                       {/* Component Select */}
                       <div className="flex-1 min-w-0">
                         <Select
-                          value={item.component_id}
+                          value={item.component_id || 'unselected'}
                           onValueChange={(v) => handleUpdateItem(item.id, { component_id: v })}
                         >
                           <SelectTrigger className="w-full">
@@ -451,7 +451,7 @@ export function BOMsTab() {
                       {/* Stage */}
                       <div className="w-28">
                         <Select
-                          value={item.stage}
+                          value={item.stage || 'none'}
                           onValueChange={(v) => handleUpdateItem(item.id, { stage: v })}
                         >
                           <SelectTrigger>
