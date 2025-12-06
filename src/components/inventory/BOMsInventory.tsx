@@ -367,13 +367,13 @@ export function BOMsInventory() {
 
       {/* BOM Editor Dialog */}
       <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="shrink-0">
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
             <DialogTitle>BOM Editor</DialogTitle>
           </DialogHeader>
 
           {editingBOM && (
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="space-y-4">
               {/* Product Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -427,7 +427,7 @@ export function BOMsInventory() {
                   </Button>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
                   {editingBOM.items?.map((item) => {
                     return (
                     <Card key={item.id} className="p-4">
@@ -529,22 +529,19 @@ export function BOMsInventory() {
                 </div>
               </div>
 
-            </div>
-          )}
-          
-          {/* Save/Cancel - Always visible at bottom */}
-          {editingBOM && (
-            <div className="flex gap-2 pt-4 border-t mt-4 shrink-0">
-              <Button onClick={handleSaveBOM} className="flex-1">
-                Save BOM
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsBOMEditorOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
+              {/* Save/Cancel */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={handleSaveBOM} className="flex-1">
+                  Save BOM
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsBOMEditorOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
