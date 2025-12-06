@@ -745,6 +745,36 @@ export async function getBoms(store?: Store | null, activeOnly: boolean = true, 
   return (data || []) as BOM[];
 }
 
+/**
+ * Fetch BOM details including all items for a specific BOM
+ * Use this when opening a BOM for editing to get the full item list
+ */
+export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_bom_details', {
+    p_bom_id: bomId,
+  });
+  if (error) throw error;
+  
+  // Transform flat RPC result to BOMItem array
+  // RPC returns: bom_id, product_title, store, description, component_id, component_sku, 
+  //              component_name, quantity_required, unit, current_stock, is_optional, notes, stage_to_consume
+  return (data || [])
+    .filter((row: any) => row.component_id !== null) // Filter out BOMs with no items
+    .map((row: any) => ({
+      id: `${row.bom_id}-${row.component_id}`, // Composite ID for UI
+      bom_id: row.bom_id,
+      component_id: row.component_id,
+      component_name: row.component_name,
+      component_sku: row.component_sku,
+      quantity_per_unit: row.quantity_required, // Map to UI field name
+      stage: row.stage_to_consume as 'Filling' | 'Decorating' | 'Packing' | undefined,
+      is_optional: row.is_optional,
+      created_at: new Date().toISOString(), // Not returned by RPC
+      updated_at: new Date().toISOString(), // Not returned by RPC
+    }));
+}
+
 export async function upsertBom(params: {
   product_title: string;
   store: Store;
