@@ -367,13 +367,13 @@ export function BOMsInventory() {
 
       {/* BOM Editor Dialog */}
       <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>BOM Editor</DialogTitle>
           </DialogHeader>
 
           {editingBOM && (
-            <div className="space-y-4">
+            <div className="flex-1 flex flex-col overflow-hidden space-y-4">
               {/* Product Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -427,7 +427,7 @@ export function BOMsInventory() {
                   </Button>
                 </div>
 
-                <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-[100px] max-h-[40vh]">
                   {editingBOM.items?.map((item) => {
                     return (
                     <Card key={item.id} className="p-4">
@@ -530,7 +530,7 @@ export function BOMsInventory() {
               </div>
 
               {/* Save/Cancel */}
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex gap-2 pt-4 border-t flex-shrink-0">
                 <Button onClick={handleSaveBOM} className="flex-1">
                   Save BOM
                 </Button>
