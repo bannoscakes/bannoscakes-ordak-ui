@@ -711,11 +711,16 @@ export async function deleteComponent(id: string): Promise<boolean> {
 
 export interface BOMItem {
   id: string;
+  bom_id?: string;
   component_id: string;
   component_name: string;
   component_sku: string;
   quantity_required: number;
+  quantity_per_unit?: number;
+  is_optional?: boolean;
   stage?: 'Filling' | 'Decorating' | 'Packing' | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BOM {
@@ -723,6 +728,7 @@ export interface BOM {
   product_title: string;
   store: 'bannos' | 'flourlane' | 'both';
   description?: string;
+  shopify_product_id?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -750,12 +756,43 @@ export async function getBomByProduct(productTitle: string, store: string) {
   return data || [];
 }
 
+/**
+ * Fetch BOM details including all items for a specific BOM
+ * Use this when opening a BOM for editing to get the full item list
+ */
+export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_bom_details', {
+    p_bom_id: bomId,
+  });
+  if (error) throw error;
+
+  // Transform flat RPC result to BOMItem array
+  // RPC returns: bom_id, product_title, store, description, component_id, component_sku,
+  //              component_name, quantity_required, unit, current_stock, is_optional, notes, stage_to_consume
+  return (data || [])
+    .filter((row: any) => row.component_id !== null) // Filter out BOMs with no items
+    .map((row: any) => ({
+      id: `${row.bom_id}-${row.component_id}`, // Composite ID for UI
+      bom_id: row.bom_id,
+      component_id: row.component_id,
+      component_name: row.component_name,
+      component_sku: row.component_sku,
+      quantity_per_unit: row.quantity_required, // Map to UI field name
+      stage: row.stage_to_consume as 'Filling' | 'Decorating' | 'Packing' | undefined,
+      is_optional: row.is_optional,
+      created_at: new Date().toISOString(), // Not returned by RPC
+      updated_at: new Date().toISOString(), // Not returned by RPC
+    }));
+}
+
 export async function upsertBom(params: {
   id?: string;
   product_title: string;
   store: 'bannos' | 'flourlane' | 'both';
   description?: string;
   is_active?: boolean;
+  shopify_product_id?: string;
 }): Promise<string> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('upsert_bom', {
@@ -763,6 +800,107 @@ export async function upsertBom(params: {
     p_product_title: params.product_title,
     p_store: params.store,
     p_description: params.description || null,
+    p_is_active: params.is_active !== false,
+    p_shopify_product_id: params.shopify_product_id || null,
+  });
+  if (error) throw error;
+  return data as string; // Returns the BOM ID
+}
+
+export async function addBomComponent(params: {
+  bom_id: string;
+  component_id: string;
+  quantity_required: number;
+  unit?: string;
+  is_optional?: boolean;
+  notes?: string;
+  stage?: string;
+}): Promise<void> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { error } = await supabase.rpc('add_bom_component', {
+        p_bom_id: params.bom_id,
+        p_component_id: params.component_id,
+        p_quantity_required: params.quantity_required,
+        p_unit: params.unit || 'each',
+        p_is_optional: params.is_optional || false,
+        p_notes: params.notes || null,
+        p_stage: params.stage || null,
+      });
+      if (error) throw error;
+    },
+    {
+      operation: 'addBomComponent',
+      rpcName: 'add_bom_component',
+      params
+    }
+  );
+}
+
+export async function removeBomComponent(params: {
+  bom_id: string;
+  component_id: string;
+}): Promise<void> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { error } = await supabase.rpc('remove_bom_component', {
+        p_bom_id: params.bom_id,
+        p_component_id: params.component_id,
+      });
+      if (error) throw error;
+    },
+    {
+      operation: 'removeBomComponent',
+      rpcName: 'remove_bom_component',
+      params
+    }
+  );
+}
+
+// =============================================
+// ACCESSORY KEYWORDS MANAGEMENT
+// =============================================
+
+export interface AccessoryKeyword {
+  id: string;
+  keyword: string;
+  component_id: string;
+  component_name: string;
+  component_sku: string;
+  priority: number;
+  match_type: 'contains' | 'exact' | 'starts_with' | 'ends_with';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAccessoryKeywords(search?: string | null, activeOnly: boolean = true) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_accessory_keywords', {
+    p_search: search || null,
+    p_is_active: activeOnly,
+  });
+  if (error) throw error;
+  return (data || []) as AccessoryKeyword[];
+}
+
+export async function upsertAccessoryKeyword(params: {
+  keyword: string;
+  component_id: string;
+  id?: string;
+  priority?: number;
+  match_type?: 'contains' | 'exact' | 'starts_with' | 'ends_with';
+  is_active?: boolean;
+}) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('upsert_accessory_keyword', {
+    p_keyword: params.keyword,
+    p_component_id: params.component_id,
+    p_id: params.id || null,
+    p_priority: params.priority || 0,
+    p_match_type: params.match_type || 'contains',
     p_is_active: params.is_active !== false,
   });
   if (error) throw error;

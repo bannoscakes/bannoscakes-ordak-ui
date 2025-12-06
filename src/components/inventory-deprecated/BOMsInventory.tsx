@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
-import { getBomsCached, upsertBom, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
+import { getBomsCached, getBomDetails, upsertBom, addBomComponent, removeBomComponent, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
 
 export function BOMsInventory() {
   const [boms, setBOMs] = useState<BOM[]>([]);
@@ -20,6 +20,7 @@ export function BOMsInventory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("All");
   const [editingBOM, setEditingBOM] = useState<BOM | null>(null);
+  const [originalBOMItems, setOriginalBOMItems] = useState<BOMItem[]>([]); // Snapshot of items when BOM was opened
   const [isBOMEditorOpen, setIsBOMEditorOpen] = useState(false);
 
   // Fetch components from Supabase
@@ -59,12 +60,21 @@ export function BOMsInventory() {
   // Filtering is now handled by the RPC call, so we can use boms directly
   const filteredBOMs = boms;
 
-  const handleOpenBOM = (bom: BOM) => {
-    setEditingBOM({ ...bom });
-    setIsBOMEditorOpen(true);
+  const handleOpenBOM = async (bom: BOM) => {
+    try {
+      // Fetch BOM items from database (getBoms only returns header, not items)
+      const items = await getBomDetails(bom.id);
+      setOriginalBOMItems(items); // Store snapshot for change detection in handleSaveBOM
+      setEditingBOM({ ...bom, items });
+      setIsBOMEditorOpen(true);
+    } catch (error) {
+      console.error('Error fetching BOM details:', error);
+      toast.error('Failed to load BOM details');
+    }
   };
 
   const handleCreateNewBOM = () => {
+    setOriginalBOMItems([]); // New BOM has no original items
     const newBOM: BOM = {
       id: `bom-${Date.now()}`, // Temporary ID for new BOM
       product_title: "",
@@ -99,14 +109,77 @@ export function BOMsInventory() {
         return;
       }
       
-      // Save to database using RPC
+      // Validate all items have a component selected
+      const invalidItems = editingBOM.items.filter(item => !item.component_id);
+      if (invalidItems.length > 0) {
+        toast.error("Please select a component for all items");
+        return;
+      }
+      
+      const isNewBOM = editingBOM.id.startsWith('bom-');
+      
+      // Save BOM header to database
       const bomId = await upsertBom({
         product_title: editingBOM.product_title,
         store: editingBOM.store,
-        bom_id: editingBOM.id.startsWith('bom-') ? undefined : editingBOM.id, // Only pass ID if it's not a temporary one
+        bom_id: isNewBOM ? undefined : editingBOM.id,
         description: editingBOM.description,
         shopify_product_id: editingBOM.shopify_product_id
       });
+      
+      // Use the snapshot of items taken when BOM was opened for change detection
+      // (boms list only has headers, not items - items were fetched separately in handleOpenBOM)
+      const originalItems = originalBOMItems;
+      const currentItems = editingBOM.items;
+      
+      // Create maps for easy lookup
+      const originalItemsMap = new Map(originalItems.map(i => [i.component_id, i]));
+      const currentItemsMap = new Map(currentItems.map(i => [i.component_id, i]));
+      
+      // Find items to remove (in original but not in current)
+      const itemsToRemove = originalItems.filter(item => !currentItemsMap.has(item.component_id));
+      
+      // Find items to add (new items - not in original)
+      const itemsToAdd = currentItems.filter(item => !originalItemsMap.has(item.component_id));
+      
+      // Find items to update (in both, but quantity, optional flag, or stage changed)
+      const itemsToUpdate = currentItems.filter(item => {
+        const original = originalItemsMap.get(item.component_id);
+        if (!original) return false; // New item, handled by itemsToAdd
+        return original.quantity_per_unit !== item.quantity_per_unit || 
+               original.is_optional !== item.is_optional ||
+               original.stage !== item.stage;
+      });
+      
+      // Remove deleted items
+      for (const item of itemsToRemove) {
+        await removeBomComponent({
+          bom_id: bomId,
+          component_id: item.component_id
+        });
+      }
+      
+      // Add new items
+      for (const item of itemsToAdd) {
+        await addBomComponent({
+          bom_id: bomId,
+          component_id: item.component_id,
+          quantity_required: item.quantity_per_unit,
+          is_optional: item.is_optional,
+          stage: item.stage
+        });
+      }
+      
+      // Update existing items (add_bom_component supports upserts)
+      for (const item of itemsToUpdate) {
+        await addBomComponent({
+          bom_id: bomId,
+          component_id: item.component_id,
+          quantity_required: item.quantity_per_unit,
+          is_optional: item.is_optional,
+          stage: item.stage
+        });
+      }
       
       // Invalidate cache after mutation
       invalidateInventoryCache();
@@ -302,174 +375,181 @@ export function BOMsInventory() {
         )}
       </Card>
 
-      {/* BOM Editor Dialog */}
+      {/* BOM Editor Dialog - FIXED: proper height constraints and scrolling */}
       <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>BOM Editor</DialogTitle>
           </DialogHeader>
 
           {editingBOM && (
-            <div className="space-y-4">
-              {/* Product Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="product-title">Product Title</Label>
-                  <Input
-                    id="product-title"
-                    placeholder="e.g., Spiderman Theme Cake"
-                    value={editingBOM.product_title}
-                    onChange={(e) => setEditingBOM({
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+                {/* Product Info - Fixed height section */}
+                <div className="flex-shrink-0 grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="product-title">Product Title</Label>
+                    <Input
+                      id="product-title"
+                      placeholder="e.g., Spiderman Theme Cake"
+                      value={editingBOM.product_title}
+                      onChange={(e) => setEditingBOM({
+                        ...editingBOM,
+                        product_title: e.target.value
+                      })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description (optional)</Label>
+                    <Input
+                      id="description"
+                      placeholder="e.g., 6-inch Round, Large Loaf"
+                      value={editingBOM.description || ""}
+                      onChange={(e) => setEditingBOM({
+                        ...editingBOM,
+                        description: e.target.value || undefined
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 flex items-center space-x-2">
+                  <Switch 
+                    id="active"
+                    checked={editingBOM.is_active}
+                    onCheckedChange={(checked) => setEditingBOM({
                       ...editingBOM,
-                      product_title: e.target.value
+                      is_active: checked
                     })}
                   />
+                  <Label htmlFor="active">Active BOM</Label>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description (optional)</Label>
-                  <Input
-                    id="description"
-                    placeholder="e.g., 6-inch Round, Large Loaf"
-                    value={editingBOM.description || ""}
-                    onChange={(e) => setEditingBOM({
-                      ...editingBOM,
-                      description: e.target.value || undefined
-                    })}
-                  />
-                </div>
-              </div>
+                <Separator className="flex-shrink-0" />
 
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="active"
-                  checked={editingBOM.is_active}
-                  onCheckedChange={(checked) => setEditingBOM({
-                    ...editingBOM,
-                    is_active: checked
-                  })}
-                />
-                <Label htmlFor="active">Active BOM</Label>
-              </div>
+                {/* BOM Items - Scrollable section
+                    Parent uses min-h-0 to allow flex children to shrink below content size,
+                    and overflow-hidden to contain the scrollable area within the dialog. */}
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                  <div className="flex-shrink-0 flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-medium">BOM Items</h3>
+                    <Button onClick={handleAddBOMItem} size="sm">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Component
+                    </Button>
+                  </div>
 
-              <Separator />
-
-              {/* BOM Items */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">BOM Items</h3>
-                  <Button onClick={handleAddBOMItem} size="sm">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Component
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  {editingBOM.items?.map((item) => {
-                    return (
-                    <Card key={item.id} className="p-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                        <div className="sm:col-span-1">
-                          <Label className="text-xs text-muted-foreground">Component</Label>
-                          <Select
-                            value={item.component_id}
-                            onValueChange={(value) => {
-                              const component = components.find(c => c.id === value);
-                              handleUpdateBOMItem(item.id, {
-                                component_id: value,
-                                component_name: component?.name || "",
-                                component_sku: component?.sku || ""
-                              });
-                            }}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select component" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {components.length === 0 ? (
-                                <SelectItem value="no-components" disabled>
-                                  No components available
-                                </SelectItem>
-                              ) : (
-                                components.map(component => (
-                                  <SelectItem key={component.id} value={component.id}>
-                                    {component.name} ({component.sku})
+                  {/* Flexible/dynamic height scroll area:
+                      - flex-1: expands to fill available space, shrinks when dialog is constrained
+                      - overflow-y-auto: enables vertical scrolling when content exceeds container
+                      - min-h-[100px]: ensures a minimum visible height even with few items
+                      This approach adapts to viewport size rather than using a fixed max-height. */}
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-[100px]">
+                    {editingBOM.items?.map((item) => {
+                      return (
+                      <Card key={item.id} className="p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                          <div className="sm:col-span-1">
+                            <Label className="text-xs text-muted-foreground">Component</Label>
+                            <Select
+                              value={item.component_id}
+                              onValueChange={(value) => {
+                                const component = components.find(c => c.id === value);
+                                handleUpdateBOMItem(item.id, {
+                                  component_id: value,
+                                  component_name: component?.name || "",
+                                  component_sku: component?.sku || ""
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select component" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {components.length === 0 ? (
+                                  <SelectItem value="no-components" disabled>
+                                    No components available
                                   </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
+                                ) : (
+                                  components.map(component => (
+                                    <SelectItem key={component.id} value={component.id}>
+                                      {component.name} ({component.sku})
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Qty per</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={item.quantity_per_unit}
+                              onChange={(e) => handleUpdateBOMItem(item.id, {
+                                quantity_per_unit: parseFloat(e.target.value) || 0
+                              })}
+                              className="mt-1"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Stage (optional)</Label>
+                            <Select
+                              value={item.stage || ""}
+                              onValueChange={(value) => handleUpdateBOMItem(item.id, {
+                                stage: value as any || undefined
+                              })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Select stage" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="Filling">Filling</SelectItem>
+                                <SelectItem value="Decorating">Decorating</SelectItem>
+                                <SelectItem value="Packing">Packing</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveBOMItem(item.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Qty per</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={item.quantity_per_unit}
-                            onChange={(e) => handleUpdateBOMItem(item.id, {
-                              quantity_per_unit: parseFloat(e.target.value) || 0
-                            })}
-                            className="mt-1"
-                          />
-                        </div>
+                        {item.stage && (
+                          <div className="mt-2">
+                            <Badge className={`text-xs ${getStageColor(item.stage)}`}>
+                              {item.stage}
+                            </Badge>
+                          </div>
+                        )}
+                      </Card>
+                      );
+                    })}
 
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Stage (optional)</Label>
-                          <Select
-                            value={item.stage || ""}
-                            onValueChange={(value) => handleUpdateBOMItem(item.id, {
-                              stage: value as any || undefined
-                            })}
-                          >
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select stage" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              <SelectItem value="Filling">Filling</SelectItem>
-                              <SelectItem value="Decorating">Decorating</SelectItem>
-                              <SelectItem value="Packing">Packing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveBOMItem(item.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {(editingBOM.items?.length || 0) === 0 && (
+                      <div className="p-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                        No components added yet. Click "Add Component" to get started.
                       </div>
-
-                      {item.stage && (
-                        <div className="mt-2">
-                          <Badge className={`text-xs ${getStageColor(item.stage)}`}>
-                            {item.stage}
-                          </Badge>
-                        </div>
-                      )}
-                    </Card>
-                    );
-                  })}
-
-                  {(editingBOM.items?.length || 0) === 0 && (
-                    <div className="p-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                      No components added yet. Click "Add Component" to get started.
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <Separator />
-
-              {/* Save/Cancel */}
-              <div className="flex gap-2">
+              {/* Save/Cancel - ALWAYS VISIBLE at bottom */}
+              <div className="flex-shrink-0 pt-4 border-t flex gap-2 bg-background">
                 <Button onClick={handleSaveBOM} className="flex-1">
                   Save BOM
                 </Button>
