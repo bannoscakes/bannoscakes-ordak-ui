@@ -232,15 +232,27 @@ export interface Component {
   sku: string;
   name: string;
   description: string | null;
-  category: string | null;
+  category: string;
   unit: string;
   current_stock: number;
   min_stock: number;
-  max_stock: number | null;
-  cost_per_unit: number | null;
-  supplier: string | null;
-  supplier_sku: string | null;
   is_active: boolean;
+  is_low_stock: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Accessory {
+  id: string;
+  sku: string;
+  name: string;
+  category: 'topper' | 'balloon' | 'candle' | 'other';
+  product_match: string;
+  current_stock: number;
+  min_stock: number;
+  is_active: boolean;
+  is_low_stock: boolean;
+  is_out_of_stock: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -599,26 +611,22 @@ export async function getCurrentShift(staffId?: string) {
 }
 
 // =============================================
-// INVENTORY MANAGEMENT
+// INVENTORY MANAGEMENT - SIMPLIFIED
 // =============================================
 
 export async function getComponents(params: {
   category?: string;
-  is_active?: boolean;
-  low_stock_only?: boolean;
+  active_only?: boolean;
   search?: string;
-  limit?: number;
 } = {}) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_components', {
     p_category: params.category || null,
-    p_is_active: params.is_active ?? true,
-    p_low_stock_only: params.low_stock_only || false,
+    p_active_only: params.active_only ?? true,
     p_search: params.search || null,
-    p_limit: params.limit || 100,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as Component[];
 }
 
 export async function getLowStockComponents() {
@@ -628,70 +636,27 @@ export async function getLowStockComponents() {
   return data || [];
 }
 
-export async function getInventoryValue() {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_inventory_value');
-  if (error) throw error;
-  return data?.[0] || null;
-}
-
-export async function updateComponentStock(params: {
-  component_id: string;
-  delta: number;
-  reason: string;
-  order_id?: string;
-}) {
-  return withErrorHandling(
-    async () => {
-      const supabase = getSupabase();
-      const { data, error } = await supabase.rpc('update_component_stock', {
-        p_component_id: params.component_id,
-        p_delta: params.delta,
-        p_reason: params.reason,
-        p_order_id: params.order_id || null,
-      });
-      if (error) throw error;
-      return data;
-    },
-    {
-      operation: 'updateComponentStock',
-      rpcName: 'update_component_stock',
-      params
-    }
-  );
-}
-
 export async function upsertComponent(params: {
   id?: string;
   sku: string;
   name: string;
   description?: string;
   category?: string;
-  unit?: string;
-  current_stock?: number;
   min_stock?: number;
-  max_stock?: number;
-  cost_per_unit?: number;
-  supplier?: string;
-  supplier_sku?: string;
+  unit?: string;
   is_active?: boolean;
 }): Promise<string> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
       const { data, error } = await supabase.rpc('upsert_component', {
+        p_id: params.id || null,
         p_sku: params.sku,
         p_name: params.name,
-        p_id: params.id || null,
         p_description: params.description || null,
-        p_category: params.category || null,
-        p_unit: params.unit || 'each',
-        p_current_stock: params.current_stock || 0,
+        p_category: params.category || 'other',
         p_min_stock: params.min_stock || 0,
-        p_max_stock: params.max_stock || null,
-        p_cost_per_unit: params.cost_per_unit || null,
-        p_supplier: params.supplier || null,
-        p_supplier_sku: params.supplier_sku || null,
+        p_unit: params.unit || 'each',
         p_is_active: params.is_active !== false,
       });
       if (error) throw error;
@@ -705,27 +670,63 @@ export async function upsertComponent(params: {
   );
 }
 
+export async function adjustComponentStock(params: {
+  component_id: string;
+  change: number;
+  reason: string;
+  reference?: string;
+  created_by?: string;
+}) {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('adjust_component_stock', {
+        p_component_id: params.component_id,
+        p_change: params.change,
+        p_reason: params.reason,
+        p_reference: params.reference || null,
+        p_created_by: params.created_by || null,
+      });
+      if (error) throw error;
+      return data as { success: boolean; error?: string; component?: string; before?: number; after?: number; change?: number };
+    },
+    {
+      operation: 'adjustComponentStock',
+      rpcName: 'adjust_component_stock',
+      params
+    }
+  );
+}
+
+export async function deleteComponent(id: string): Promise<boolean> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('delete_component', { p_id: id });
+  if (error) throw error;
+  return data as boolean;
+}
+
 // =============================================
-// BOM MANAGEMENT
+// BOM MANAGEMENT - SIMPLIFIED
 // =============================================
 
 export interface BOMItem {
   id: string;
-  bom_id: string;
+  bom_id?: string;
   component_id: string;
   component_name: string;
   component_sku: string;
-  quantity_per_unit: number;
-  stage?: 'Filling' | 'Decorating' | 'Packing';
-  is_optional: boolean;
-  created_at: string;
-  updated_at: string;
+  quantity_required: number;
+  quantity_per_unit?: number;
+  is_optional?: boolean;
+  stage?: 'Filling' | 'Decorating' | 'Packing' | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BOM {
   id: string;
   product_title: string;
-  store: Store;
+  store: 'bannos' | 'flourlane' | 'both';
   description?: string;
   shopify_product_id?: string;
   is_active: boolean;
@@ -734,15 +735,25 @@ export interface BOM {
   items: BOMItem[];
 }
 
-export async function getBoms(store?: Store | null, activeOnly: boolean = true, search?: string | null) {
+export async function getBoms(store?: string | null, activeOnly: boolean = true, search?: string | null) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_boms', {
     p_store: store || null,
-    p_is_active: activeOnly,
+    p_active_only: activeOnly,
     p_search: search || null,
   });
   if (error) throw error;
   return (data || []) as BOM[];
+}
+
+export async function getBomByProduct(productTitle: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_bom_by_product', {
+    p_product_title: productTitle,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data || [];
 }
 
 /**
@@ -755,9 +766,9 @@ export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
     p_bom_id: bomId,
   });
   if (error) throw error;
-  
+
   // Transform flat RPC result to BOMItem array
-  // RPC returns: bom_id, product_title, store, description, component_id, component_sku, 
+  // RPC returns: bom_id, product_title, store, description, component_id, component_sku,
   //              component_name, quantity_required, unit, current_stock, is_optional, notes, stage_to_consume
   return (data || [])
     .filter((row: any) => row.component_id !== null) // Filter out BOMs with no items
@@ -776,18 +787,20 @@ export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
 }
 
 export async function upsertBom(params: {
+  id?: string;
   product_title: string;
-  store: Store;
-  bom_id?: string;
+  store: 'bannos' | 'flourlane' | 'both';
   description?: string;
+  is_active?: boolean;
   shopify_product_id?: string;
-}) {
+}): Promise<string> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('upsert_bom', {
+    p_id: params.id || null,
     p_product_title: params.product_title,
     p_store: params.store,
-    p_bom_id: params.bom_id || null,
     p_description: params.description || null,
+    p_is_active: params.is_active !== false,
     p_shopify_product_id: params.shopify_product_id || null,
   });
   if (error) throw error;
@@ -891,156 +904,208 @@ export async function upsertAccessoryKeyword(params: {
     p_is_active: params.is_active !== false,
   });
   if (error) throw error;
-  return data as string; // Returns the keyword ID
+  return data as string;
 }
 
-// =============================================
-// PRODUCT REQUIREMENTS MANAGEMENT
-// =============================================
-
-export interface ProductRequirement {
-  id: string;
-  shopify_product_id: string;
-  shopify_variant_id: string;
-  product_title: string;
+export async function saveBomItems(bomId: string, items: Array<{
   component_id: string;
-  component_name: string;
-  component_sku: string;
-  quantity_per_unit: number;
-  is_optional: boolean;
-  auto_deduct: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export async function getProductRequirements(shopifyProductId?: string | null, search?: string | null) {
+  quantity_required: number;
+  stage?: string | null;
+}>): Promise<number> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_product_requirements', {
-    p_shopify_product_id: shopifyProductId || null,
-    p_search: search || null,
+  const { data, error } = await supabase.rpc('save_bom_items', {
+    p_bom_id: bomId,
+    p_items: items,
   });
   if (error) throw error;
-  return (data || []) as ProductRequirement[];
+  return data as number;
 }
 
-export async function upsertProductRequirement(params: {
-  shopify_product_id: string;
-  shopify_variant_id: string;
+export async function deleteBom(id: string): Promise<boolean> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('delete_bom', { p_id: id });
+  if (error) throw error;
+  return data as boolean;
+}
+
+export async function deductForOrder(params: {
+  order_id: string;
   product_title: string;
-  component_id: string;
-  quantity_per_unit: number;
-  id?: string;
-  is_optional?: boolean;
-  auto_deduct?: boolean;
+  store: string;
+  quantity?: number;
+  created_by?: string;
 }) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('upsert_product_requirement', {
-    p_shopify_product_id: params.shopify_product_id,
-    p_shopify_variant_id: params.shopify_variant_id,
-    p_product_title: params.product_title,
-    p_component_id: params.component_id,
-    p_quantity_per_unit: params.quantity_per_unit,
-    p_id: params.id || null,
-    p_is_optional: params.is_optional || false,
-    p_auto_deduct: params.auto_deduct !== false,
-  });
-  if (error) throw error;
-  return data as string; // Returns the requirement ID
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('deduct_for_order', {
+        p_order_id: params.order_id,
+        p_product_title: params.product_title,
+        p_store: params.store,
+        p_quantity: params.quantity || 1,
+        p_created_by: params.created_by || null,
+      });
+      if (error) throw error;
+      return data as { success: boolean; error?: string; bom_id?: string; order_id?: string; quantity?: number; deductions?: any[] };
+    },
+    {
+      operation: 'deductForOrder',
+      rpcName: 'deduct_for_order',
+      params
+    }
+  );
 }
 
 // =============================================
-// STOCK TRANSACTIONS MANAGEMENT
+// ACCESSORIES MANAGEMENT - SIMPLIFIED
+// =============================================
+
+export async function getAccessories(params: {
+  category?: string;
+  active_only?: boolean;
+} = {}) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_accessories', {
+    p_category: params.category || null,
+    p_active_only: params.active_only ?? true,
+  });
+  if (error) throw error;
+  return (data || []) as Accessory[];
+}
+
+export async function getAccessoriesNeedingSync() {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_accessories_needing_sync');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertAccessory(params: {
+  id?: string;
+  sku: string;
+  name: string;
+  category: 'topper' | 'balloon' | 'candle' | 'other';
+  product_match: string;
+  min_stock?: number;
+  is_active?: boolean;
+}): Promise<string> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('upsert_accessory', {
+    p_id: params.id || null,
+    p_sku: params.sku,
+    p_name: params.name,
+    p_category: params.category,
+    p_product_match: params.product_match,
+    p_min_stock: params.min_stock || 5,
+    p_is_active: params.is_active !== false,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function adjustAccessoryStock(params: {
+  accessory_id: string;
+  change: number;
+  reason: string;
+  reference?: string;
+  created_by?: string;
+}) {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('adjust_accessory_stock', {
+        p_accessory_id: params.accessory_id,
+        p_change: params.change,
+        p_reason: params.reason,
+        p_reference: params.reference || null,
+        p_created_by: params.created_by || null,
+      });
+      if (error) throw error;
+      return data as { success: boolean; error?: string; accessory?: string; before?: number; after?: number; change?: number; needs_sync?: boolean };
+    },
+    {
+      operation: 'adjustAccessoryStock',
+      rpcName: 'adjust_accessory_stock',
+      params
+    }
+  );
+}
+
+// =============================================
+// STOCK TRANSACTIONS (AUDIT LOG) - SIMPLIFIED
 // =============================================
 
 export interface StockTransaction {
   id: string;
-  component_id: string;
-  component_name: string;
-  component_sku: string;
-  delta: number;
+  table_name: 'components' | 'accessories';
+  item_id: string;
+  item_name: string;
+  change_amount: number;
+  stock_before: number;
+  stock_after: number;
   reason: string;
-  order_id?: string;
-  performed_by?: string;
-  performer_name?: string;
+  reference?: string;
+  created_by?: string;
   created_at: string;
-  updated_at: string;
 }
 
-export async function getStockTransactions(componentId?: string | null, orderId?: string | null, transactionType?: string | null) {
+export async function getStockTransactions(params: {
+  table_name?: string;
+  item_id?: string;
+  limit?: number;
+} = {}) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_stock_transactions', {
-    p_component_id: componentId || null,
-    p_order_id: orderId || null,
-    p_transaction_type: transactionType || null,
+    p_table_name: params.table_name || null,
+    p_item_id: params.item_id || null,
+    p_limit: params.limit || 100,
   });
   if (error) throw error;
   return (data || []) as StockTransaction[];
 }
 
-export async function restockOrder(orderId: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('restock_order', {
-    p_order_id: orderId,
-  });
-  if (error) throw error;
-  return data;
-}
-
 // =============================================
-// CACHED INVENTORY FUNCTIONS
+// CACHED INVENTORY FUNCTIONS - SIMPLIFIED
 // =============================================
 
 /**
  * Cached version of getComponents with 60-second TTL
- * Use this for inventory browsing where stale data is acceptable
  */
 export const getComponentsCached = requestCache.cached(getComponents, {
-  ttl: 60000, // 60 seconds (inventory changes less frequently than orders)
+  ttl: 60000,
   keyPrefix: 'rpc.getComponents',
 });
 
 /**
  * Cached version of getBoms with 60-second TTL
- * Use this for BOM browsing where stale data is acceptable
  */
 export const getBomsCached = requestCache.cached(getBoms, {
-  ttl: 60000, // 60 seconds
+  ttl: 60000,
   keyPrefix: 'rpc.getBoms',
 });
 
 /**
- * Cached version of getAccessoryKeywords with 60-second TTL
- * Use this for keyword browsing where stale data is acceptable
+ * Cached version of getAccessories with 60-second TTL
  */
-export const getAccessoryKeywordsCached = requestCache.cached(getAccessoryKeywords, {
-  ttl: 60000, // 60 seconds
-  keyPrefix: 'rpc.getAccessoryKeywords',
-});
-
-/**
- * Cached version of getProductRequirements with 60-second TTL
- * Use this for requirements browsing where stale data is acceptable
- */
-export const getProductRequirementsCached = requestCache.cached(getProductRequirements, {
-  ttl: 60000, // 60 seconds
-  keyPrefix: 'rpc.getProductRequirements',
+export const getAccessoriesCached = requestCache.cached(getAccessories, {
+  ttl: 60000,
+  keyPrefix: 'rpc.getAccessories',
 });
 
 /**
  * Cached version of getStockTransactions with 60-second TTL
- * Use this for transaction browsing where stale data is acceptable
  */
 export const getStockTransactionsCached = requestCache.cached(getStockTransactions, {
-  ttl: 60000, // 60 seconds
+  ttl: 60000,
   keyPrefix: 'rpc.getStockTransactions',
 });
 
 /**
  * Invalidate inventory-related cache entries
- * Call this after mutations (create, update, delete components/BOMs/requirements)
+ * Call this after mutations (create, update, delete components/BOMs/accessories)
  */
 export function invalidateInventoryCache(): void {
-  requestCache.invalidate(/rpc\.(getComponents|getBoms|getAccessoryKeywords|getProductRequirements|getStockTransactions)/);
+  requestCache.invalidate(/rpc\.(getComponents|getBoms|getAccessories|getStockTransactions)/);
 }
 
 // =============================================
