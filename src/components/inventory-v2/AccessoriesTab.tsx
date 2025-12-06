@@ -218,9 +218,9 @@ export function AccessoriesTab() {
 
       // TODO: Implement actual Shopify API calls here
       // For now, just show what would be synced
-      toast.success(
-        `Would sync ${needsSync.length} out-of-stock accessories to Shopify:\n${needsSync.map((a: any) => `- ${a.name} (match: "${a.product_match}")`).join('\n')}`,
-        { duration: 5000 }
+      toast.warning(
+        `Shopify sync not yet implemented.\n\nWould sync ${needsSync.length} out-of-stock accessories:\n${needsSync.map((a: any) => `- ${a.name} (match: "${a.product_match}")`).join('\n')}`,
+        { duration: 7000 }
       );
 
       // In a real implementation, you would:
@@ -228,8 +228,10 @@ export function AccessoriesTab() {
       // 2. Call Shopify API to find products containing that keyword
       // 3. Set those products to out of stock
       // 4. Log the sync action
+      // 5. ONLY THEN: setNeedsSyncCount(0);
 
-      setNeedsSyncCount(0);
+      // DO NOT clear the count until actual sync is implemented
+      // setNeedsSyncCount(0); // REMOVED - causes misleading UX
     } catch (error) {
       console.error('Error syncing to Shopify:', error);
       toast.error("Failed to sync to Shopify");
