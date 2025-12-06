@@ -367,13 +367,13 @@ export function BOMsInventory() {
 
       {/* BOM Editor Dialog */}
       <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>BOM Editor</DialogTitle>
           </DialogHeader>
 
           {editingBOM && (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-y-auto">
               {/* Product Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -529,21 +529,22 @@ export function BOMsInventory() {
                 </div>
               </div>
 
-              <Separator />
-
-              {/* Save/Cancel */}
-              <div className="flex gap-2">
-                <Button onClick={handleSaveBOM} className="flex-1">
-                  Save BOM
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsBOMEditorOpen(false)}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
+            </div>
+          )}
+          
+          {/* Save/Cancel - Always visible at bottom */}
+          {editingBOM && (
+            <div className="flex gap-2 pt-4 border-t mt-4 shrink-0">
+              <Button onClick={handleSaveBOM} className="flex-1">
+                Save BOM
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsBOMEditorOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
             </div>
           )}
         </DialogContent>
