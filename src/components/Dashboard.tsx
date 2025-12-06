@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardContent } from "./DashboardContent";
 import { StaffPage } from "./StaffPage";
-import { InventoryPage } from "./InventoryPage";
+import { InventoryPage } from "./inventory-v2";
 import { BannosProductionPage } from "./BannosProductionPage";
 import { FlourlaneProductionPage } from "./FlourlaneProductionPage";
 import { BannosMonitorPage } from "./BannosMonitorPage";
