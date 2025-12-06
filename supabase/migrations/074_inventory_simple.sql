@@ -10,34 +10,60 @@
 --   - stock_transactions: Audit log for all stock changes
 
 -- ============================================================================
--- PHASE 1: DROP OLD FUNCTIONS
+-- PHASE 1: DROP OLD FUNCTIONS (handles overloaded versions)
 -- ============================================================================
 
--- Drop all old inventory functions to start fresh
-DROP FUNCTION IF EXISTS public.add_bom_component CASCADE;
-DROP FUNCTION IF EXISTS public.add_product_requirement CASCADE;
-DROP FUNCTION IF EXISTS public.deduct_inventory_for_order CASCADE;
-DROP FUNCTION IF EXISTS public.get_accessory_keywords CASCADE;
-DROP FUNCTION IF EXISTS public.get_bom_details CASCADE;
-DROP FUNCTION IF EXISTS public.get_boms CASCADE;
-DROP FUNCTION IF EXISTS public.get_component_transactions CASCADE;
-DROP FUNCTION IF EXISTS public.get_components CASCADE;
-DROP FUNCTION IF EXISTS public.get_low_stock_components CASCADE;
-DROP FUNCTION IF EXISTS public.get_product_requirements CASCADE;
-DROP FUNCTION IF EXISTS public.get_stock_transactions CASCADE;
-DROP FUNCTION IF EXISTS public.record_component_txn CASCADE;
-DROP FUNCTION IF EXISTS public.remove_bom_component CASCADE;
-DROP FUNCTION IF EXISTS public.restock_order CASCADE;
-DROP FUNCTION IF EXISTS public.tx_component_adjust CASCADE;
-DROP FUNCTION IF EXISTS public.tx_component_consume CASCADE;
-DROP FUNCTION IF EXISTS public.tx_component_receive CASCADE;
-DROP FUNCTION IF EXISTS public.tx_component_release CASCADE;
-DROP FUNCTION IF EXISTS public.tx_component_reserve CASCADE;
-DROP FUNCTION IF EXISTS public.update_component_stock CASCADE;
-DROP FUNCTION IF EXISTS public.upsert_accessory_keyword CASCADE;
-DROP FUNCTION IF EXISTS public.upsert_bom CASCADE;
-DROP FUNCTION IF EXISTS public.upsert_component CASCADE;
-DROP FUNCTION IF EXISTS public.upsert_product_requirement CASCADE;
+DO $$
+DECLARE
+  func_record RECORD;
+BEGIN
+  -- Drop all versions of inventory-related functions
+  FOR func_record IN
+    SELECT p.oid::regprocedure AS func_signature
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public'
+    AND p.proname IN (
+      'add_bom_component',
+      'add_product_requirement',
+      'deduct_inventory_for_order',
+      'get_accessory_keywords',
+      'get_bom_details',
+      'get_boms',
+      'get_component_transactions',
+      'get_components',
+      'get_low_stock_components',
+      'get_product_requirements',
+      'get_stock_transactions',
+      'record_component_txn',
+      'remove_bom_component',
+      'restock_order',
+      'tx_component_adjust',
+      'tx_component_consume',
+      'tx_component_receive',
+      'tx_component_release',
+      'tx_component_reserve',
+      'update_component_stock',
+      'upsert_accessory_keyword',
+      'upsert_bom',
+      'upsert_component',
+      'upsert_product_requirement',
+      'get_accessories',
+      'get_accessories_needing_sync',
+      'upsert_accessory',
+      'adjust_accessory_stock',
+      'adjust_component_stock',
+      'delete_component',
+      'delete_bom',
+      'get_bom_by_product',
+      'save_bom_items',
+      'deduct_for_order'
+    )
+  LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || func_record.func_signature || ' CASCADE';
+  END LOOP;
+END;
+$$;
 
 -- ============================================================================
 -- PHASE 2: DROP UNUSED TABLES
