@@ -367,13 +367,13 @@ export function BOMsInventory() {
 
       {/* BOM Editor Dialog */}
       <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>BOM Editor</DialogTitle>
           </DialogHeader>
 
           {editingBOM && (
-            <div className="space-y-4 flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
               {/* Product Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
