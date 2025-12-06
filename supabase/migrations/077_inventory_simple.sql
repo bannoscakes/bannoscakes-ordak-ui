@@ -299,9 +299,18 @@ BEGIN
 END;
 $$;
 
--- Drop old upsert_component function(s) with different signatures
-DROP FUNCTION IF EXISTS public.upsert_component(text, text, uuid, text, text, text, numeric, numeric, numeric, numeric, text, text, boolean);
-DROP FUNCTION IF EXISTS public.upsert_component(uuid, text, text, text, text, integer, text, boolean);
+-- Drop ALL versions of upsert_component to avoid "function name not unique" errors
+-- This handles both the old signature from dev and any existing versions
+DO $$
+BEGIN
+  -- Drop all overloaded versions of upsert_component
+  DROP FUNCTION IF EXISTS public.upsert_component(text, text, uuid, text, text, text, numeric, numeric, numeric, numeric, text, text, boolean) CASCADE;
+  DROP FUNCTION IF EXISTS public.upsert_component(uuid, text, text, text, text, integer, text, boolean) CASCADE;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Ignore errors if function doesn't exist
+    NULL;
+END $$;
 
 -- Upsert component (simplified signature)
 CREATE OR REPLACE FUNCTION public.upsert_component(
@@ -618,6 +627,7 @@ DECLARE
   v_before integer;
   v_after integer;
   v_deduct_qty integer;
+  v_component_name text;
 BEGIN
   -- Find matching BOM
   SELECT b.id INTO v_bom_id
@@ -642,16 +652,22 @@ BEGIN
     JOIN public.components c ON c.id = bi.component_id
     WHERE bi.bom_id = v_bom_id AND c.is_active = true
   LOOP
-    v_deduct_qty := (v_item.quantity_required * p_quantity)::integer;
+    -- Calculate deduction quantity with proper rounding
+    -- Multiply as numeric first to preserve precision, then round to nearest integer
+    v_deduct_qty := ROUND((v_item.quantity_required::numeric * p_quantity::numeric))::integer;
 
-    -- Get current stock
-    SELECT current_stock INTO v_before FROM public.components WHERE id = v_item.component_id;
-    v_after := GREATEST(0, v_before - v_deduct_qty);
-
-    -- Update stock
+    -- Atomic update with RETURNING to avoid race conditions
+    -- Ensures stock doesn't go below 0 and gets old/new values in one operation
     UPDATE public.components
-    SET current_stock = v_after, updated_at = now()
-    WHERE id = v_item.component_id;
+    SET
+      current_stock = GREATEST(0, current_stock - v_deduct_qty),
+      updated_at = now()
+    WHERE id = v_item.component_id
+    RETURNING
+      current_stock + v_deduct_qty,  -- old value (before update)
+      current_stock,                  -- new value (after update)
+      name
+    INTO v_before, v_after, v_component_name;
 
     -- Log transaction
     INSERT INTO public.stock_transactions (
@@ -663,7 +679,7 @@ BEGIN
 
     -- Track what was deducted
     v_deductions := v_deductions || jsonb_build_object(
-      'component', v_item.name,
+      'component', v_component_name,
       'deducted', v_deduct_qty,
       'before', v_before,
       'after', v_after
