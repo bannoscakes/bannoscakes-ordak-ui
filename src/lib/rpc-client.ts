@@ -764,6 +764,38 @@ export async function upsertBom(params: {
   return data as string; // Returns the BOM ID
 }
 
+export async function addBomComponent(params: {
+  bom_id: string;
+  component_id: string;
+  quantity_required: number;
+  unit?: string;
+  is_optional?: boolean;
+  notes?: string;
+}) {
+  const supabase = getSupabase();
+  const { error } = await supabase.rpc('add_bom_component', {
+    p_bom_id: params.bom_id,
+    p_component_id: params.component_id,
+    p_quantity_required: params.quantity_required,
+    p_unit: params.unit || 'each',
+    p_is_optional: params.is_optional || false,
+    p_notes: params.notes || null,
+  });
+  if (error) throw error;
+}
+
+export async function removeBomComponent(params: {
+  bom_id: string;
+  component_id: string;
+}) {
+  const supabase = getSupabase();
+  const { error } = await supabase.rpc('remove_bom_component', {
+    p_bom_id: params.bom_id,
+    p_component_id: params.component_id,
+  });
+  if (error) throw error;
+}
+
 // =============================================
 // ACCESSORY KEYWORDS MANAGEMENT
 // =============================================

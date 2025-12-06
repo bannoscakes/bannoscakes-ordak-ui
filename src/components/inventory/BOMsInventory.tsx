@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
-import { getBomsCached, upsertBom, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
+import { getBomsCached, upsertBom, addBomComponent, removeBomComponent, getComponentsCached, invalidateInventoryCache, type BOM, type BOMItem, type Component } from "../../lib/rpc-client";
 
 export function BOMsInventory() {
   const [boms, setBOMs] = useState<BOM[]>([]);
@@ -99,14 +99,54 @@ export function BOMsInventory() {
         return;
       }
       
-      // Save to database using RPC
+      // Validate all items have a component selected
+      const invalidItems = editingBOM.items.filter(item => !item.component_id);
+      if (invalidItems.length > 0) {
+        toast.error("Please select a component for all items");
+        return;
+      }
+      
+      const isNewBOM = editingBOM.id.startsWith('bom-');
+      
+      // Save BOM header to database
       const bomId = await upsertBom({
         product_title: editingBOM.product_title,
         store: editingBOM.store,
-        bom_id: editingBOM.id.startsWith('bom-') ? undefined : editingBOM.id, // Only pass ID if it's not a temporary one
+        bom_id: isNewBOM ? undefined : editingBOM.id,
         description: editingBOM.description,
         shopify_product_id: editingBOM.shopify_product_id
       });
+      
+      // Get original items (for existing BOMs)
+      const originalBOM = boms.find(b => b.id === editingBOM.id);
+      const originalItems = originalBOM?.items || [];
+      const currentItems = editingBOM.items;
+      
+      // Find items to remove (in original but not in current)
+      const currentComponentIds = new Set(currentItems.map(i => i.component_id));
+      const itemsToRemove = originalItems.filter(item => !currentComponentIds.has(item.component_id));
+      
+      // Find items to add (new items or items with different component)
+      const originalComponentIds = new Set(originalItems.map(i => i.component_id));
+      const itemsToAdd = currentItems.filter(item => !originalComponentIds.has(item.component_id));
+      
+      // Remove deleted items
+      for (const item of itemsToRemove) {
+        await removeBomComponent({
+          bom_id: bomId,
+          component_id: item.component_id
+        });
+      }
+      
+      // Add new items
+      for (const item of itemsToAdd) {
+        await addBomComponent({
+          bom_id: bomId,
+          component_id: item.component_id,
+          quantity_required: item.quantity_per_unit,
+          is_optional: item.is_optional
+        });
+      }
       
       // Invalidate cache after mutation
       invalidateInventoryCache();
