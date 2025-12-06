@@ -21,7 +21,7 @@ import {
 } from "../../lib/rpc-client";
 
 const STAGES = [
-  { value: '', label: 'No Stage' },
+  { value: 'none', label: 'No Stage' },
   { value: 'Filling', label: 'Filling' },
   { value: 'Decorating', label: 'Decorating' },
   { value: 'Packing', label: 'Packing' },
@@ -114,7 +114,7 @@ export function BOMsTab() {
         id: item.id,
         component_id: item.component_id,
         quantity_required: item.quantity_required,
-        stage: item.stage || ''
+        stage: item.stage || 'none'
       }))
     });
     setComponentSearch("");
@@ -131,7 +131,7 @@ export function BOMsTab() {
           id: `new-${Date.now()}`,
           component_id: '',
           quantity_required: 1,
-          stage: ''
+          stage: 'none'
         }
       ]
     });
@@ -181,11 +181,11 @@ export function BOMsTab() {
         is_active: editingBOM.is_active,
       });
 
-      // Save BOM items
+      // Save BOM items (convert 'none' to null for database)
       await saveBomItems(bomId, editingBOM.items.map(item => ({
         component_id: item.component_id,
         quantity_required: item.quantity_required,
-        stage: item.stage || null,
+        stage: item.stage === 'none' ? null : item.stage,
       })));
 
       invalidateInventoryCache();
