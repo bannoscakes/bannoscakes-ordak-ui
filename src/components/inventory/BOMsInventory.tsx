@@ -20,6 +20,7 @@ export function BOMsInventory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("All");
   const [editingBOM, setEditingBOM] = useState<BOM | null>(null);
+  const [originalBOMItems, setOriginalBOMItems] = useState<BOMItem[]>([]); // Snapshot of items when BOM was opened
   const [isBOMEditorOpen, setIsBOMEditorOpen] = useState(false);
 
   // Fetch components from Supabase
@@ -63,6 +64,7 @@ export function BOMsInventory() {
     try {
       // Fetch BOM items from database (getBoms only returns header, not items)
       const items = await getBomDetails(bom.id);
+      setOriginalBOMItems(items); // Store snapshot for change detection in handleSaveBOM
       setEditingBOM({ ...bom, items });
       setIsBOMEditorOpen(true);
     } catch (error) {
@@ -72,6 +74,7 @@ export function BOMsInventory() {
   };
 
   const handleCreateNewBOM = () => {
+    setOriginalBOMItems([]); // New BOM has no original items
     const newBOM: BOM = {
       id: `bom-${Date.now()}`, // Temporary ID for new BOM
       product_title: "",
@@ -124,9 +127,9 @@ export function BOMsInventory() {
         shopify_product_id: editingBOM.shopify_product_id
       });
       
-      // Get original items (for existing BOMs)
-      const originalBOM = boms.find(b => b.id === editingBOM.id);
-      const originalItems = originalBOM?.items || [];
+      // Use the snapshot of items taken when BOM was opened for change detection
+      // (boms list only has headers, not items - items were fetched separately in handleOpenBOM)
+      const originalItems = originalBOMItems;
       const currentItems = editingBOM.items;
       
       // Create maps for easy lookup
