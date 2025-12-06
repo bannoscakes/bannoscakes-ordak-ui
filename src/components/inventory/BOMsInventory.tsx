@@ -417,7 +417,9 @@ export function BOMsInventory() {
 
               <Separator className="flex-shrink-0" />
 
-              {/* BOM Items - Scrollable section */}
+              {/* BOM Items - Scrollable section
+                  Parent uses min-h-0 to allow flex children to shrink below content size,
+                  and overflow-hidden to contain the scrollable area within the dialog. */}
               <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 <div className="flex-shrink-0 flex items-center justify-between mb-3">
                   <h3 className="text-lg font-medium">BOM Items</h3>
@@ -427,7 +429,11 @@ export function BOMsInventory() {
                   </Button>
                 </div>
 
-                {/* THIS IS THE KEY FIX: Scrollable container with fixed max height */}
+                {/* Flexible/dynamic height scroll area:
+                    - flex-1: expands to fill available space, shrinks when dialog is constrained
+                    - overflow-y-auto: enables vertical scrolling when content exceeds container
+                    - min-h-[100px]: ensures a minimum visible height even with few items
+                    This approach adapts to viewport size rather than using a fixed max-height. */}
                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-[100px]">
                   {editingBOM.items?.map((item) => {
                     return (
