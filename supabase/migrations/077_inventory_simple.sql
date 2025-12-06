@@ -486,7 +486,7 @@ DECLARE
   v_id uuid;
 BEGIN
   IF p_id IS NOT NULL THEN
-    -- Update existing
+    -- Try to update existing BOM
     UPDATE public.boms SET
       product_title = COALESCE(p_product_title, product_title),
       store = COALESCE(p_store, store),
@@ -496,8 +496,15 @@ BEGIN
       updated_at = now()
     WHERE id = p_id
     RETURNING id INTO v_id;
+
+    -- If UPDATE matched no rows (BOM was deleted), raise error
+    IF v_id IS NULL THEN
+      RAISE EXCEPTION 'BOM with id % not found. It may have been deleted by another user.', p_id
+        USING HINT = 'Refresh the page to get the latest data',
+              ERRCODE = 'P0002';  -- no_data_found
+    END IF;
   ELSE
-    -- Insert new
+    -- Insert new BOM
     INSERT INTO public.boms (product_title, store, description, shopify_product_id, is_active)
     VALUES (p_product_title, p_store, p_description, p_shopify_product_id, p_is_active)
     RETURNING id INTO v_id;
@@ -740,7 +747,7 @@ DECLARE
   v_id uuid;
 BEGIN
   IF p_id IS NOT NULL THEN
-    -- Update existing
+    -- Try to update existing accessory
     UPDATE public.accessories SET
       sku = COALESCE(p_sku, sku),
       name = COALESCE(p_name, name),
@@ -751,8 +758,15 @@ BEGIN
       updated_at = now()
     WHERE id = p_id
     RETURNING id INTO v_id;
+
+    -- If UPDATE matched no rows (accessory was deleted), raise error
+    IF v_id IS NULL THEN
+      RAISE EXCEPTION 'Accessory with id % not found. It may have been deleted by another user.', p_id
+        USING HINT = 'Refresh the page to get the latest data',
+              ERRCODE = 'P0002';  -- no_data_found
+    END IF;
   ELSE
-    -- Insert new
+    -- Insert new accessory
     INSERT INTO public.accessories (sku, name, category, product_match, min_stock, is_active)
     VALUES (p_sku, p_name, p_category, p_product_match, p_min_stock, p_is_active)
     RETURNING id INTO v_id;

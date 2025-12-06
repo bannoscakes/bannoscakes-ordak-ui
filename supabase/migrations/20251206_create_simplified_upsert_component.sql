@@ -27,7 +27,7 @@ DECLARE
   v_id uuid;
 BEGIN
   IF p_id IS NOT NULL THEN
-    -- Update existing
+    -- Try to update existing component
     UPDATE public.components SET
       sku = COALESCE(p_sku, sku),
       name = COALESCE(p_name, name),
@@ -39,8 +39,15 @@ BEGIN
       updated_at = now()
     WHERE id = p_id
     RETURNING id INTO v_id;
+
+    -- If UPDATE matched no rows (component was deleted), raise error
+    IF v_id IS NULL THEN
+      RAISE EXCEPTION 'Component with id % not found. It may have been deleted by another user.', p_id
+        USING HINT = 'Refresh the page to get the latest data',
+              ERRCODE = 'P0002';  -- no_data_found
+    END IF;
   ELSE
-    -- Insert new
+    -- Insert new component
     INSERT INTO public.components (sku, name, description, category, min_stock, unit, is_active)
     VALUES (p_sku, p_name, p_description, p_category, p_min_stock, p_unit, p_is_active)
     RETURNING id INTO v_id;
