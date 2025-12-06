@@ -299,60 +299,9 @@ BEGIN
 END;
 $$;
 
--- Drop ALL versions of upsert_component to avoid "function name not unique" errors
--- This handles both the old signature from dev and any existing versions
-DO $$
-BEGIN
-  -- Drop all overloaded versions of upsert_component
-  DROP FUNCTION IF EXISTS public.upsert_component(text, text, uuid, text, text, text, numeric, numeric, numeric, numeric, text, text, boolean) CASCADE;
-  DROP FUNCTION IF EXISTS public.upsert_component(uuid, text, text, text, text, integer, text, boolean) CASCADE;
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Ignore errors if function doesn't exist
-    NULL;
-END $$;
-
--- Upsert component (simplified signature)
-CREATE OR REPLACE FUNCTION public.upsert_component(
-  p_id uuid DEFAULT NULL,
-  p_sku text DEFAULT NULL,
-  p_name text DEFAULT NULL,
-  p_description text DEFAULT NULL,
-  p_category text DEFAULT 'other',
-  p_min_stock integer DEFAULT 0,
-  p_unit text DEFAULT 'each',
-  p_is_active boolean DEFAULT true
-)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_id uuid;
-BEGIN
-  IF p_id IS NOT NULL THEN
-    -- Update existing
-    UPDATE public.components SET
-      sku = COALESCE(p_sku, sku),
-      name = COALESCE(p_name, name),
-      description = p_description,
-      category = COALESCE(p_category, category),
-      min_stock = COALESCE(p_min_stock, min_stock),
-      unit = COALESCE(p_unit, unit),
-      is_active = COALESCE(p_is_active, is_active),
-      updated_at = now()
-    WHERE id = p_id
-    RETURNING id INTO v_id;
-  ELSE
-    -- Insert new
-    INSERT INTO public.components (sku, name, description, category, min_stock, unit, is_active)
-    VALUES (p_sku, p_name, p_description, p_category, p_min_stock, p_unit, p_is_active)
-    RETURNING id INTO v_id;
-  END IF;
-
-  RETURN v_id;
-END;
-$$;
+-- NOTE: upsert_component is created by migration 20251205_fix_all_inventory_audit_log.sql
+-- which runs after this migration (alphabetically). We skip creating it here to avoid
+-- "function name not unique" errors. The dev migration version will be used instead.
 
 -- Adjust component stock with logging
 CREATE OR REPLACE FUNCTION public.adjust_component_stock(
