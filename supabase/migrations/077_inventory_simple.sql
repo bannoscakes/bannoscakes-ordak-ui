@@ -299,7 +299,11 @@ BEGIN
 END;
 $$;
 
--- Upsert component
+-- Drop old upsert_component function(s) with different signatures
+DROP FUNCTION IF EXISTS public.upsert_component(text, text, uuid, text, text, text, numeric, numeric, numeric, numeric, text, text, boolean);
+DROP FUNCTION IF EXISTS public.upsert_component(uuid, text, text, text, text, integer, text, boolean);
+
+-- Upsert component (simplified signature)
 CREATE OR REPLACE FUNCTION public.upsert_component(
   p_id uuid DEFAULT NULL,
   p_sku text DEFAULT NULL,
