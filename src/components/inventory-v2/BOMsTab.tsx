@@ -112,7 +112,7 @@ export function BOMsTab() {
       is_active: bom.is_active,
       items: bom.items.map(item => ({
         id: item.id,
-        component_id: item.component_id,
+        component_id: item.component_id || 'unselected',
         quantity_required: item.quantity_required,
         stage: item.stage || 'none'
       }))
@@ -129,7 +129,7 @@ export function BOMsTab() {
         ...editingBOM.items,
         {
           id: `new-${Date.now()}`,
-          component_id: '',
+          component_id: 'unselected',
           quantity_required: 1,
           stage: 'none'
         }
@@ -163,8 +163,8 @@ export function BOMsTab() {
       return;
     }
 
-    // Validate items have components selected
-    const invalidItems = editingBOM.items.filter(item => !item.component_id);
+    // Validate items have components selected (not 'unselected' placeholder)
+    const invalidItems = editingBOM.items.filter(item => !item.component_id || item.component_id === 'unselected');
     if (invalidItems.length > 0) {
       toast.error("Please select a component for all items");
       return;
@@ -418,6 +418,9 @@ export function BOMsTab() {
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </div>
+                            <SelectItem value="unselected" className="text-muted-foreground">
+                              Select a component...
+                            </SelectItem>
                             {filteredComponents.length === 0 ? (
                               <div className="p-2 text-center text-muted-foreground">
                                 No components found
