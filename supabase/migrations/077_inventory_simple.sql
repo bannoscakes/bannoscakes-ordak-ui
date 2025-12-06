@@ -475,7 +475,8 @@ CREATE OR REPLACE FUNCTION public.upsert_bom(
   p_product_title text DEFAULT NULL,
   p_store text DEFAULT 'both',
   p_description text DEFAULT NULL,
-  p_is_active boolean DEFAULT true
+  p_is_active boolean DEFAULT true,
+  p_shopify_product_id text DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -490,14 +491,15 @@ BEGIN
       product_title = COALESCE(p_product_title, product_title),
       store = COALESCE(p_store, store),
       description = p_description,
+      shopify_product_id = p_shopify_product_id,
       is_active = COALESCE(p_is_active, is_active),
       updated_at = now()
     WHERE id = p_id
     RETURNING id INTO v_id;
   ELSE
     -- Insert new
-    INSERT INTO public.boms (product_title, store, description, is_active)
-    VALUES (p_product_title, p_store, p_description, p_is_active)
+    INSERT INTO public.boms (product_title, store, description, shopify_product_id, is_active)
+    VALUES (p_product_title, p_store, p_description, p_shopify_product_id, p_is_active)
     RETURNING id INTO v_id;
   END IF;
 
@@ -606,16 +608,22 @@ BEGIN
     v_deduct_qty := ROUND((v_item.quantity_required::numeric * p_quantity::numeric))::integer;
 
     -- Atomic update with RETURNING to avoid race conditions
-    -- Ensures stock doesn't go below 0 and gets old/new values in one operation
+    -- Use a CTE to capture old value before update, then compute new clamped value
+    WITH old_stock AS (
+      SELECT current_stock, name
+      FROM public.components
+      WHERE id = v_item.component_id
+    )
     UPDATE public.components
     SET
       current_stock = GREATEST(0, current_stock - v_deduct_qty),
       updated_at = now()
-    WHERE id = v_item.component_id
+    FROM old_stock
+    WHERE components.id = v_item.component_id
     RETURNING
-      current_stock + v_deduct_qty,  -- old value (before update)
-      current_stock,                  -- new value (after update)
-      name
+      old_stock.current_stock,  -- old value (before update)
+      components.current_stock,  -- new value (after update, clamped to 0)
+      old_stock.name
     INTO v_before, v_after, v_component_name;
 
     -- Log transaction
