@@ -19,22 +19,36 @@ DECLARE
   v_component_name text;
   v_transaction_type text;
 BEGIN
-  SELECT current_stock, name INTO v_before, v_component_name
-  FROM public.components WHERE id = p_component_id;
+  -- Atomic UPDATE with RETURNING to avoid race conditions
+  -- The WHERE clause ensures non-negative stock (prevents going below 0)
+  UPDATE public.components
+  SET
+    current_stock = current_stock + p_change,
+    updated_at = now()
+  WHERE
+    id = p_component_id
+    AND (current_stock + p_change) >= 0  -- Ensure non-negative stock
+  RETURNING
+    current_stock - p_change,  -- old value (before update)
+    current_stock,             -- new value (after update)
+    name
+  INTO v_before, v_after, v_component_name;
 
+  -- Check if update succeeded
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Component not found');
+    -- Check if component exists
+    IF EXISTS (SELECT 1 FROM public.components WHERE id = p_component_id) THEN
+      -- Component exists but stock would go negative
+      RETURN jsonb_build_object('success', false, 'error', 'Insufficient stock');
+    ELSE
+      -- Component doesn't exist
+      RETURN jsonb_build_object('success', false, 'error', 'Component not found');
+    END IF;
   END IF;
 
-  v_after := v_before + p_change;
   v_transaction_type := CASE WHEN p_change > 0 THEN 'restock' ELSE 'adjustment' END;
 
-  IF v_after < 0 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Insufficient stock');
-  END IF;
-
-  UPDATE public.components SET current_stock = v_after, updated_at = now() WHERE id = p_component_id;
-
+  -- Log the transaction
   INSERT INTO public.stock_transactions (
     table_name, item_id, transaction_type, quantity_change, quantity_before, quantity_after, reason
   ) VALUES (
