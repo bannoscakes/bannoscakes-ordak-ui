@@ -260,12 +260,13 @@ BEGIN
   v_tx_hash := hashtext(p_store || ':' || p_order_id || ':deduct');
   PERFORM pg_advisory_xact_lock(v_tx_hash);
 
-  -- Check if already deducted
+  -- Check if already deducted FOR THIS STORE
   SELECT COUNT(*)
   INTO v_existing
   FROM public.stock_transactions
   WHERE reference_order_id = p_order_id
-    AND transaction_type = 'order_deduction';
+    AND transaction_type = 'order_deduction'
+    AND store = p_store;
 
   IF v_existing > 0 THEN
     PERFORM public.safe_audit_log(
@@ -461,12 +462,13 @@ BEGIN
   v_tx_hash := hashtext(p_store || ':' || p_order_id || ':restock');
   PERFORM pg_advisory_xact_lock(v_tx_hash);
 
-  -- Check if already restocked
+  -- Check if already restocked FOR THIS STORE
   SELECT COUNT(*)
   INTO v_existing
   FROM public.stock_transactions
   WHERE reference_order_id = p_order_id
-    AND transaction_type = 'order_restock';
+    AND transaction_type = 'order_restock'
+    AND store = p_store;
 
   IF v_existing > 0 THEN
     PERFORM public.safe_audit_log(
@@ -481,7 +483,7 @@ BEGIN
     RETURN jsonb_build_object('status', 'skipped', 'reason', 'already_restocked');
   END IF;
 
-  -- Find all deductions for this order and reverse them
+  -- Find all deductions for this order and reverse them (filter by store)
   FOR v_deduction IN
     SELECT 
       st.id AS transaction_id,
@@ -494,6 +496,7 @@ BEGIN
     JOIN public.components c ON c.id = st.component_id
     WHERE st.reference_order_id = p_order_id
       AND st.transaction_type = 'order_deduction'
+      AND st.store = p_store
   LOOP
     -- Add stock back
     UPDATE public.components
