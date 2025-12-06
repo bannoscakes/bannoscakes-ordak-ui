@@ -365,17 +365,17 @@ export function BOMsInventory() {
         )}
       </Card>
 
-      {/* BOM Editor Dialog */}
+      {/* BOM Editor Dialog - FIXED: proper height constraints and scrolling */}
       <Dialog open={isBOMEditorOpen} onOpenChange={setIsBOMEditorOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>BOM Editor</DialogTitle>
           </DialogHeader>
 
           {editingBOM && (
-            <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-              {/* Product Info */}
-              <div className="grid grid-cols-2 gap-4">
+            <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+              {/* Product Info - Fixed height section */}
+              <div className="flex-shrink-0 grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="product-title">Product Title</Label>
                   <Input
@@ -403,7 +403,7 @@ export function BOMsInventory() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex-shrink-0 flex items-center space-x-2">
                 <Switch 
                   id="active"
                   checked={editingBOM.is_active}
@@ -415,11 +415,13 @@ export function BOMsInventory() {
                 <Label htmlFor="active">Active BOM</Label>
               </div>
 
-              <Separator />
+              <Separator className="flex-shrink-0" />
 
-              {/* BOM Items */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+              {/* BOM Items - Scrollable section
+                  Parent uses min-h-0 to allow flex children to shrink below content size,
+                  and overflow-hidden to contain the scrollable area within the dialog. */}
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                <div className="flex-shrink-0 flex items-center justify-between mb-3">
                   <h3 className="text-lg font-medium">BOM Items</h3>
                   <Button onClick={handleAddBOMItem} size="sm">
                     <Plus className="mr-2 h-4 w-4" />
@@ -427,7 +429,12 @@ export function BOMsInventory() {
                   </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-[100px] max-h-[40vh]">
+                {/* Flexible/dynamic height scroll area:
+                    - flex-1: expands to fill available space, shrinks when dialog is constrained
+                    - overflow-y-auto: enables vertical scrolling when content exceeds container
+                    - min-h-[100px]: ensures a minimum visible height even with few items
+                    This approach adapts to viewport size rather than using a fixed max-height. */}
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 min-h-[100px]">
                   {editingBOM.items?.map((item) => {
                     return (
                     <Card key={item.id} className="p-4">
@@ -529,8 +536,8 @@ export function BOMsInventory() {
                 </div>
               </div>
 
-              {/* Save/Cancel */}
-              <div className="flex gap-2 pt-4 border-t flex-shrink-0">
+              {/* Save/Cancel - ALWAYS VISIBLE at bottom */}
+              <div className="flex-shrink-0 flex gap-2 pt-4 border-t">
                 <Button onClick={handleSaveBOM} className="flex-1">
                   Save BOM
                 </Button>
