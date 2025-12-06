@@ -118,15 +118,33 @@ ALTER TABLE public.stock_transactions
   ADD COLUMN IF NOT EXISTS table_name text NOT NULL DEFAULT 'components',
   ADD COLUMN IF NOT EXISTS stock_before integer,
   ADD COLUMN IF NOT EXISTS stock_after integer,
-  ADD COLUMN IF NOT EXISTS created_by text;
+  ADD COLUMN IF NOT EXISTS created_by text,
+  ADD COLUMN IF NOT EXISTS item_id uuid,
+  ADD COLUMN IF NOT EXISTS change_amount integer,
+  ADD COLUMN IF NOT EXISTS reference text;
 
--- Rename columns for clarity
-ALTER TABLE public.stock_transactions
-  RENAME COLUMN component_id TO item_id;
-ALTER TABLE public.stock_transactions
-  RENAME COLUMN qty_delta TO change_amount;
-ALTER TABLE public.stock_transactions
-  RENAME COLUMN ref TO reference;
+-- Copy data from old columns to new columns if they exist, then drop old columns
+DO $$
+BEGIN
+  -- component_id -> item_id
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'stock_transactions' AND column_name = 'component_id') THEN
+    UPDATE public.stock_transactions SET item_id = component_id WHERE item_id IS NULL;
+    ALTER TABLE public.stock_transactions DROP COLUMN component_id;
+  END IF;
+
+  -- qty_delta -> change_amount
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'stock_transactions' AND column_name = 'qty_delta') THEN
+    UPDATE public.stock_transactions SET change_amount = qty_delta::integer WHERE change_amount IS NULL;
+    ALTER TABLE public.stock_transactions DROP COLUMN qty_delta;
+  END IF;
+
+  -- ref -> reference
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'stock_transactions' AND column_name = 'ref') THEN
+    UPDATE public.stock_transactions SET reference = ref WHERE reference IS NULL;
+    ALTER TABLE public.stock_transactions DROP COLUMN ref;
+  END IF;
+END;
+$$;
 
 -- ============================================================================
 -- PHASE 4: CREATE NEW TABLES
