@@ -170,10 +170,8 @@ export function BOMsTab() {
       return;
     }
 
-    console.log('[BOM Save] Starting save...', { editingBOM });
     setIsSaving(true);
     try {
-      console.log('[BOM Save] Calling upsertBom...');
       // Save BOM header
       const bomId = await upsertBom({
         id: editingBOM.id,
@@ -182,16 +180,13 @@ export function BOMsTab() {
         description: editingBOM.description || undefined,
         is_active: editingBOM.is_active,
       });
-      console.log('[BOM Save] upsertBom returned:', bomId);
 
       // Save BOM items (convert 'none' to null for database)
-      console.log('[BOM Save] Calling saveBomItems...');
       await saveBomItems(bomId, editingBOM.items.map(item => ({
         component_id: item.component_id,
         quantity_required: item.quantity_required,
         stage: item.stage === 'none' ? null : item.stage,
       })));
-      console.log('[BOM Save] saveBomItems completed');
 
       invalidateInventoryCache();
 
