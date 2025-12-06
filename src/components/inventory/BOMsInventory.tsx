@@ -122,13 +122,24 @@ export function BOMsInventory() {
       const originalItems = originalBOM?.items || [];
       const currentItems = editingBOM.items;
       
-      // Find items to remove (in original but not in current)
-      const currentComponentIds = new Set(currentItems.map(i => i.component_id));
-      const itemsToRemove = originalItems.filter(item => !currentComponentIds.has(item.component_id));
+      // Create maps for easy lookup
+      const originalItemsMap = new Map(originalItems.map(i => [i.component_id, i]));
+      const currentItemsMap = new Map(currentItems.map(i => [i.component_id, i]));
       
-      // Find items to add (new items or items with different component)
-      const originalComponentIds = new Set(originalItems.map(i => i.component_id));
-      const itemsToAdd = currentItems.filter(item => !originalComponentIds.has(item.component_id));
+      // Find items to remove (in original but not in current)
+      const itemsToRemove = originalItems.filter(item => !currentItemsMap.has(item.component_id));
+      
+      // Find items to add (new items - not in original)
+      const itemsToAdd = currentItems.filter(item => !originalItemsMap.has(item.component_id));
+      
+      // Find items to update (in both, but quantity, optional flag, or stage changed)
+      const itemsToUpdate = currentItems.filter(item => {
+        const original = originalItemsMap.get(item.component_id);
+        if (!original) return false; // New item, handled by itemsToAdd
+        return original.quantity_per_unit !== item.quantity_per_unit || 
+               original.is_optional !== item.is_optional ||
+               original.stage !== item.stage;
+      });
       
       // Remove deleted items
       for (const item of itemsToRemove) {
@@ -144,7 +155,19 @@ export function BOMsInventory() {
           bom_id: bomId,
           component_id: item.component_id,
           quantity_required: item.quantity_per_unit,
-          is_optional: item.is_optional
+          is_optional: item.is_optional,
+          stage: item.stage
+        });
+      }
+      
+      // Update existing items (add_bom_component supports upserts)
+      for (const item of itemsToUpdate) {
+        await addBomComponent({
+          bom_id: bomId,
+          component_id: item.component_id,
+          quantity_required: item.quantity_per_unit,
+          is_optional: item.is_optional,
+          stage: item.stage
         });
       }
       

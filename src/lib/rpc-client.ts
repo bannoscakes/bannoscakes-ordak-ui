@@ -771,6 +771,7 @@ export async function addBomComponent(params: {
   unit?: string;
   is_optional?: boolean;
   notes?: string;
+  stage?: string;
 }) {
   const supabase = getSupabase();
   const { error } = await supabase.rpc('add_bom_component', {
@@ -780,6 +781,7 @@ export async function addBomComponent(params: {
     p_unit: params.unit || 'each',
     p_is_optional: params.is_optional || false,
     p_notes: params.notes || null,
+    p_stage: params.stage || null,
   });
   if (error) throw error;
 }
