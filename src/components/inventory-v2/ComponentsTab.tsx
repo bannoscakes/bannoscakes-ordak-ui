@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Label } from "../ui/label";
-import { Search, Plus, Minus, AlertTriangle, Package } from "lucide-react";
+import { Search, Plus, Minus, AlertTriangle, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getComponentsCached,
   getLowStockComponents,
   upsertComponent,
   adjustComponentStock,
+  deleteComponent,
   invalidateInventoryCache,
   type Component
 } from "../../lib/rpc-client";
@@ -193,6 +194,24 @@ export function ComponentsTab() {
       toast.error("Failed to adjust stock");
     } finally {
       setStockAdjust(prev => ({ ...prev, isOpen: false }));
+    }
+  };
+
+  const handleDelete = async (component: Component) => {
+    if (!confirm(`Delete "${component.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteComponent(component.id);
+      invalidateInventoryCache();
+
+      // Update local state
+      setComponents(prev => prev.filter(c => c.id !== component.id));
+      toast.success(`Deleted "${component.name}"`);
+    } catch (error) {
+      console.error('Error deleting component:', error);
+      toast.error("Failed to delete component");
     }
   };
 
@@ -413,9 +432,19 @@ export function ComponentsTab() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(component)}>
-                      Edit
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(component)}>
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(component)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
