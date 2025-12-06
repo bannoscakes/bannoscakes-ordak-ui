@@ -86,11 +86,33 @@ ALTER TABLE public.components
   ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS description text;
 
--- Update current_stock and min_stock to integer if they're numeric
+-- Update current_stock and min_stock to integer if they exist and are numeric
 -- (simpler, we don't need decimal stock counts)
-ALTER TABLE public.components
-  ALTER COLUMN current_stock TYPE integer USING current_stock::integer,
-  ALTER COLUMN min_stock TYPE integer USING min_stock::integer;
+DO $$
+BEGIN
+  -- Only alter current_stock if it exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'components'
+    AND column_name = 'current_stock'
+  ) THEN
+    ALTER TABLE public.components
+      ALTER COLUMN current_stock TYPE integer USING current_stock::integer;
+  END IF;
+
+  -- Only alter min_stock if it exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'components'
+    AND column_name = 'min_stock'
+  ) THEN
+    ALTER TABLE public.components
+      ALTER COLUMN min_stock TYPE integer USING min_stock::integer;
+  END IF;
+END;
+$$;
 
 -- BOMs: Add is_active column, update store constraint for 'both'
 ALTER TABLE public.boms
