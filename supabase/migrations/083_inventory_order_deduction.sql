@@ -264,6 +264,7 @@ EXECUTE FUNCTION public.deduct_inventory_on_order();
 
 -- This function atomically claims pending queue items to prevent race conditions
 -- between concurrent cron runs. Uses FOR UPDATE SKIP LOCKED for safety.
+-- Also recovers items stuck in 'processing' for more than 10 minutes (orphaned by crashes).
 CREATE OR REPLACE FUNCTION public.claim_inventory_sync_items(p_limit integer DEFAULT 10)
 RETURNS TABLE (
   id uuid,
@@ -279,6 +280,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  -- First, recover any items stuck in 'processing' for more than 10 minutes
+  -- These are likely orphaned by edge function crashes
+  UPDATE inventory_sync_queue
+  SET status = 'pending'
+  WHERE status = 'processing'
+    AND created_at < now() - interval '10 minutes';
+
+  -- Then claim pending items
   RETURN QUERY
   WITH claimed AS (
     SELECT q.id
