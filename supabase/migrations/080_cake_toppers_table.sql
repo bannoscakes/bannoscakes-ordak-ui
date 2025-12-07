@@ -199,23 +199,15 @@ BEGIN
 
   -- Log transaction
   INSERT INTO public.stock_transactions (
-    table_name,
-    item_id,
-    change_amount,
-    stock_before,
-    stock_after,
+    component_id,
+    qty_delta,
     reason,
-    reference,
-    created_by
+    ref
   ) VALUES (
-    'cake_toppers',
     p_topper_id,
     p_change,
-    v_old_stock,
-    v_new_stock,
     p_reason,
-    p_reference,
-    COALESCE(p_created_by, auth.uid()::text, 'system')
+    p_reference
   );
 
   RETURN jsonb_build_object(
@@ -231,26 +223,23 @@ $$;
 COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock atomically. Logs all changes to stock_transactions.';
 
 -- ============================================================================
--- UPDATE: get_stock_transactions to include cake_toppers
+-- RPC: get_cake_topper_stock_transactions
 -- ============================================================================
+-- Note: Using migration 045 schema (component_id, qty_delta, ref)
+-- Migration 077 renames these columns, but we use original names for compatibility
 
-CREATE OR REPLACE FUNCTION public.get_stock_transactions(
-  p_table_name text DEFAULT NULL,
-  p_item_id uuid DEFAULT NULL,
+CREATE OR REPLACE FUNCTION public.get_cake_topper_stock_transactions(
+  p_topper_id uuid DEFAULT NULL,
   p_limit integer DEFAULT 100
 )
 RETURNS TABLE (
   id uuid,
-  table_name text,
-  item_id uuid,
-  item_name text,
-  change_amount integer,
-  stock_before integer,
-  stock_after integer,
+  component_id uuid,
+  qty_delta numeric,
   reason text,
-  reference text,
-  created_by text,
-  created_at timestamptz
+  ref text,
+  created_at timestamptz,
+  topper_name text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -259,34 +248,22 @@ BEGIN
   RETURN QUERY
   SELECT
     st.id,
-    st.table_name,
-    st.item_id,
-    CASE
-      WHEN st.table_name = 'components' THEN c.name
-      WHEN st.table_name = 'accessories' THEN a.name
-      WHEN st.table_name = 'cake_toppers' THEN ct.name_1
-      ELSE 'Unknown'
-    END AS item_name,
-    st.change_amount::integer,
-    st.stock_before,
-    st.stock_after,
+    st.component_id,
+    st.qty_delta,
     st.reason,
-    st.reference,
-    st.created_by,
-    st.created_at
+    st.ref,
+    st.created_at,
+    ct.name_1 AS topper_name
   FROM public.stock_transactions st
-  LEFT JOIN public.components c ON st.table_name = 'components' AND c.id = st.item_id
-  LEFT JOIN public.accessories a ON st.table_name = 'accessories' AND a.id = st.item_id
-  LEFT JOIN public.cake_toppers ct ON st.table_name = 'cake_toppers' AND ct.id = st.item_id
+  LEFT JOIN public.cake_toppers ct ON ct.id = st.component_id
   WHERE
-    (p_table_name IS NULL OR st.table_name = p_table_name)
-    AND (p_item_id IS NULL OR st.item_id = p_item_id)
+    (p_topper_id IS NULL OR st.component_id = p_topper_id)
   ORDER BY st.created_at DESC
   LIMIT p_limit;
 END;
 $$;
 
-COMMENT ON FUNCTION public.get_stock_transactions IS 'Get stock transaction history with item names. Now includes cake_toppers table support.';
+COMMENT ON FUNCTION public.get_cake_topper_stock_transactions IS 'Get stock transaction history for cake toppers using migration 045 schema.';
 
 -- ============================================================================
 -- GRANTS
@@ -294,6 +271,7 @@ COMMENT ON FUNCTION public.get_stock_transactions IS 'Get stock transaction hist
 
 GRANT SELECT ON TABLE public.cake_toppers TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_cake_toppers(boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_cake_topper_stock_transactions(uuid, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.upsert_cake_topper(uuid, text, text, integer, text, text, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.adjust_cake_topper_stock(uuid, integer, text, text, text) TO authenticated;
 
