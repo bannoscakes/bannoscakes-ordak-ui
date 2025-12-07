@@ -334,27 +334,29 @@ export function CakeToppersTab() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        {/* Remove Stock Popover */}
                         <Popover
-                          open={stockAdjust.isOpen && stockAdjust.topperId === topper.id}
+                          open={stockAdjust.isOpen && stockAdjust.topperId === topper.id && stockAdjust.direction === 'subtract'}
                           onOpenChange={(open) => {
-                            if (!open) setStockAdjust(prev => ({ ...prev, isOpen: false }));
+                            if (open) openStockAdjust(topper, 'subtract');
+                            else setStockAdjust(prev => ({ ...prev, isOpen: false }));
                           }}
                         >
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openStockAdjust(topper, 'add')}
                               className="gap-1"
+                              disabled={topper.current_stock === 0}
                             >
-                              <Plus className="h-3 w-3" />
-                              Add
+                              <Minus className="h-3 w-3" />
+                              Remove
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-80">
                             <div className="space-y-3">
                               <div>
-                                <h4 className="font-medium">Adjust Stock</h4>
+                                <h4 className="font-medium">Remove Stock</h4>
                                 <p className="text-sm text-muted-foreground">{stockAdjust.topperName}</p>
                                 <p className="text-xs text-muted-foreground">Current: {stockAdjust.currentStock}</p>
                               </div>
@@ -364,7 +366,7 @@ export function CakeToppersTab() {
                                   type="number"
                                   min={1}
                                   value={stockAdjust.amount}
-                                  onChange={(e) => setStockAdjust(prev => ({ ...prev, amount: parseInt(e.target.value) || 1 }))}
+                                  onChange={(e) => setStockAdjust(prev => ({ ...prev, amount: Math.max(1, Math.abs(parseInt(e.target.value) || 1)) }))}
                                 />
                               </div>
                               <div className="space-y-2">
@@ -372,7 +374,7 @@ export function CakeToppersTab() {
                                 <Input
                                   value={stockAdjust.reason}
                                   onChange={(e) => setStockAdjust(prev => ({ ...prev, reason: e.target.value }))}
-                                  placeholder="e.g., restock, damage, theft"
+                                  placeholder="e.g., sold, damage, theft"
                                 />
                               </div>
                               <div className="flex gap-2">
@@ -381,7 +383,7 @@ export function CakeToppersTab() {
                                   size="sm"
                                   className="flex-1"
                                 >
-                                  {stockAdjust.direction === 'add' ? 'Add' : 'Remove'} Stock
+                                  Remove {stockAdjust.amount}
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -395,16 +397,67 @@ export function CakeToppersTab() {
                           </PopoverContent>
                         </Popover>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openStockAdjust(topper, 'subtract')}
-                          className="gap-1"
-                          disabled={topper.current_stock === 0}
+                        {/* Add Stock Popover */}
+                        <Popover
+                          open={stockAdjust.isOpen && stockAdjust.topperId === topper.id && stockAdjust.direction === 'add'}
+                          onOpenChange={(open) => {
+                            if (open) openStockAdjust(topper, 'add');
+                            else setStockAdjust(prev => ({ ...prev, isOpen: false }));
+                          }}
                         >
-                          <Minus className="h-3 w-3" />
-                          Remove
-                        </Button>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80">
+                            <div className="space-y-3">
+                              <div>
+                                <h4 className="font-medium">Add Stock</h4>
+                                <p className="text-sm text-muted-foreground">{stockAdjust.topperName}</p>
+                                <p className="text-xs text-muted-foreground">Current: {stockAdjust.currentStock}</p>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Amount</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={stockAdjust.amount}
+                                  onChange={(e) => setStockAdjust(prev => ({ ...prev, amount: Math.max(1, Math.abs(parseInt(e.target.value) || 1)) }))}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Reason</Label>
+                                <Input
+                                  value={stockAdjust.reason}
+                                  onChange={(e) => setStockAdjust(prev => ({ ...prev, reason: e.target.value }))}
+                                  placeholder="e.g., restock, return, correction"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={handleStockAdjust}
+                                  size="sm"
+                                  className="flex-1"
+                                >
+                                  Add {stockAdjust.amount}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setStockAdjust(prev => ({ ...prev, isOpen: false }))}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
 
                         <Button
                           variant="ghost"
