@@ -48,6 +48,17 @@ export function CakeToppersTab() {
     direction: 'add'
   });
 
+  // Filter helper function
+  const applySearchFilter = (data: CakeTopper[], query: string): CakeTopper[] => {
+    if (!query) return data;
+    return data.filter(t =>
+      t.name_1.toLowerCase().includes(query.toLowerCase()) ||
+      (t.name_2 && t.name_2.toLowerCase().includes(query.toLowerCase())) ||
+      (t.shopify_product_id_1 && t.shopify_product_id_1.includes(query)) ||
+      (t.shopify_product_id_2 && t.shopify_product_id_2.includes(query))
+    );
+  };
+
   // Fetch cake toppers
   useEffect(() => {
     async function fetchData() {
@@ -56,14 +67,7 @@ export function CakeToppersTab() {
         const data = await getCakeToppersCached({});
 
         // Filter by search locally
-        const filtered = searchQuery
-          ? data.filter(t =>
-              t.name_1.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              (t.name_2 && t.name_2.toLowerCase().includes(searchQuery.toLowerCase())) ||
-              (t.shopify_product_id_1 && t.shopify_product_id_1.includes(searchQuery)) ||
-              (t.shopify_product_id_2 && t.shopify_product_id_2.includes(searchQuery))
-            )
-          : data;
+        const filtered = applySearchFilter(data, searchQuery);
 
         setToppers(filtered);
       } catch (error) {
@@ -121,9 +125,10 @@ export function CakeToppersTab() {
 
       invalidateInventoryCache();
 
-      // Refresh data
+      // Refresh data and reapply search filter
       const data = await getCakeToppersCached({});
-      setToppers(data);
+      const filtered = applySearchFilter(data, searchQuery);
+      setToppers(filtered);
 
       setIsAddEditOpen(false);
       setEditingTopper(null);
@@ -156,6 +161,20 @@ export function CakeToppersTab() {
     const change = stockAdjust.direction === 'add'
       ? stockAdjust.amount
       : -stockAdjust.amount;
+
+    // Find current topper to validate
+    const currentTopper = toppers.find(t => t.id === stockAdjust.topperId);
+    if (!currentTopper) {
+      toast.error('Cake topper not found');
+      return;
+    }
+
+    // Validate that stock won't go negative
+    const resultingStock = currentTopper.current_stock + change;
+    if (resultingStock < 0) {
+      toast.error(`Cannot remove ${Math.abs(change)} units. Only ${currentTopper.current_stock} available.`);
+      return;
+    }
 
     try {
       const result = await adjustCakeTopperStock({
@@ -477,7 +496,7 @@ export function CakeToppersTab() {
                 placeholder="e.g., 12345678901234"
               />
               <p className="text-xs text-muted-foreground">
-                Shopify product ID for name_1. Used in PR2 to set product out of stock when topper stock = 0.
+                Used to mark the associated product out of stock when this topper's stock is zero.
               </p>
             </div>
 
@@ -490,7 +509,7 @@ export function CakeToppersTab() {
                 placeholder="e.g., 12345678901234"
               />
               <p className="text-xs text-muted-foreground">
-                Shopify product ID for name_2. Used in PR2 to set product out of stock when topper stock = 0.
+                Used to mark the associated product out of stock when this topper's stock is zero.
               </p>
             </div>
           </div>

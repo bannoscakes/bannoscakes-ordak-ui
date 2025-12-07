@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.cake_toppers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name_1 text NOT NULL,
   name_2 text DEFAULT NULL,
-  current_stock integer NOT NULL DEFAULT 0,
+  current_stock integer NOT NULL DEFAULT 0 CHECK (current_stock >= 0),
   min_stock integer NOT NULL DEFAULT 5,
   shopify_product_id_1 text DEFAULT NULL,
   shopify_product_id_2 text DEFAULT NULL,
@@ -197,24 +197,24 @@ BEGIN
     RAISE EXCEPTION 'Cake topper % not found', p_topper_id;
   END IF;
 
-  -- Insert audit log
-  INSERT INTO inventory_audit_log (
+  -- Log transaction
+  INSERT INTO public.stock_transactions (
+    table_name,
     item_id,
-    item_type,
-    change,
+    change_amount,
+    stock_before,
+    stock_after,
     reason,
     reference,
-    old_stock,
-    new_stock,
     created_by
   ) VALUES (
+    'cake_toppers',
     p_topper_id,
-    'cake_topper',
     p_change,
-    p_reason,
-    p_reference,
     v_old_stock,
     v_new_stock,
+    p_reason,
+    p_reference,
     COALESCE(p_created_by, auth.uid()::text, 'system')
   );
 
@@ -228,7 +228,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock atomically. Logs all changes to inventory_audit_log.';
+COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock atomically. Logs all changes to stock_transactions.';
 
 -- ============================================================================
 -- GRANTS
