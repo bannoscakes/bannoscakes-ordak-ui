@@ -7,13 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
-import { Search, Plus, X, FileText } from "lucide-react";
+import { Search, Plus, X, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getBomsCached,
   getComponentsCached,
   upsertBom,
   saveBomItems,
+  deleteBom,
   invalidateInventoryCache,
   type BOM,
   type BOMItem,
@@ -119,6 +120,25 @@ export function BOMsTab() {
     });
     setComponentSearch("");
     setIsEditorOpen(true);
+  };
+
+  const handleDelete = async (bom: BOM) => {
+    if (!confirm(`Delete BOM for "${bom.product_title}"? This will also delete all associated BOM items. This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteBom(bom.id);
+      invalidateInventoryCache();
+
+      // Update local state
+      setBOMs(prev => prev.filter(b => b.id !== bom.id));
+
+      toast.success("BOM deleted");
+    } catch (error) {
+      console.error('Error deleting BOM:', error);
+      toast.error(`Failed to delete BOM: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   const handleAddItem = () => {
@@ -306,9 +326,19 @@ export function BOMsTab() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(bom)}>
-                      Edit
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(bom)}>
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(bom)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

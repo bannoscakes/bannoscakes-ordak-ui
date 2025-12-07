@@ -1031,6 +1031,16 @@ export async function adjustAccessoryStock(params: {
   );
 }
 
+export async function deleteAccessory(id: string): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from('accessories')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // =============================================
 // CAKE TOPPERS MANAGEMENT
 // =============================================
@@ -1075,7 +1085,7 @@ export async function upsertCakeTopper(params: {
   shopify_product_id_1?: string | null;
   shopify_product_id_2?: string | null;
   is_active?: boolean;
-}) {
+}): Promise<string> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('upsert_cake_topper', {
     p_id: params.id || null,
@@ -1116,6 +1126,16 @@ export async function adjustCakeTopperStock(params: {
       params
     }
   );
+}
+
+export async function deleteCakeTopper(id: string): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from('cake_toppers')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
 }
 
 // =============================================
