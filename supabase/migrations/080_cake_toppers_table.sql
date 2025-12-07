@@ -202,14 +202,20 @@ BEGIN
     table_name,
     item_id,
     change_amount,
+    stock_before,
+    stock_after,
     reason,
-    reference
+    reference,
+    created_by
   ) VALUES (
     'cake_toppers',
     p_topper_id,
     p_change,
+    v_old_stock,
+    v_new_stock,
     p_reason,
-    p_reference
+    p_reference,
+    p_created_by
   );
 
   RETURN jsonb_build_object(
@@ -238,8 +244,11 @@ RETURNS TABLE (
   table_name text,
   item_id uuid,
   change_amount integer,
+  stock_before integer,
+  stock_after integer,
   reason text,
   reference text,
+  created_by text,
   created_at timestamptz,
   topper_name text
 )
@@ -253,8 +262,11 @@ BEGIN
     st.table_name,
     st.item_id,
     st.change_amount,
+    st.stock_before,
+    st.stock_after,
     st.reason,
     st.reference,
+    st.created_by,
     st.created_at,
     ct.name_1 AS topper_name
   FROM public.stock_transactions st
