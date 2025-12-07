@@ -44,6 +44,12 @@ WHERE status = 'pending';
 
 COMMENT ON TABLE public.inventory_sync_queue IS 'Queue for syncing inventory changes to Shopify. Processed by sync-inventory-to-shopify edge function.';
 
+-- Unique constraint to prevent duplicate pending jobs for the same item
+-- This is a DB-level safeguard in addition to the trigger logic
+CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_sync_queue_pending_unique
+ON public.inventory_sync_queue(item_type, item_id)
+WHERE status = 'pending';
+
 -- ============================================================================
 -- STEP 3: Create the inventory deduction trigger function
 -- ============================================================================
@@ -74,11 +80,14 @@ BEGIN
       v_accessory_qty := COALESCE((v_accessory->>'quantity')::integer, 1);
 
       -- Find matching accessory by keyword (ILIKE match)
+      -- Escape special LIKE characters in product_match to ensure literal matching
       SELECT id, name, current_stock, shopify_variant_id
       INTO v_matched_accessory
       FROM public.accessories
       WHERE is_active = true
-        AND v_accessory_title ILIKE '%' || product_match || '%'
+        AND v_accessory_title ILIKE '%' ||
+            replace(replace(replace(product_match, '\', '\\'), '%', '\%'), '_', '\_')
+            || '%' ESCAPE '\'
       LIMIT 1;
 
       IF v_matched_accessory.id IS NOT NULL THEN
@@ -116,8 +125,9 @@ BEGIN
           RAISE WARNING 'Failed to log accessory stock transaction: %', SQLERRM;
         END;
 
-        -- Queue Shopify sync if stock reached 0 and we have a variant ID
-        IF v_new_stock <= 0 AND v_matched_accessory.shopify_variant_id IS NOT NULL THEN
+        -- Queue Shopify sync ONLY if stock just crossed from positive to zero/negative
+        -- (not if it was already at or below 0 before this deduction)
+        IF v_matched_accessory.current_stock > 0 AND v_new_stock <= 0 AND v_matched_accessory.shopify_variant_id IS NOT NULL THEN
           BEGIN
             INSERT INTO public.inventory_sync_queue (
               item_type,
@@ -188,8 +198,9 @@ BEGIN
         RAISE WARNING 'Failed to log cake_topper stock transaction: %', SQLERRM;
       END;
 
-      -- Queue Shopify sync if stock reached 0 and we have product IDs
-      IF v_new_stock <= 0 THEN
+      -- Queue Shopify sync ONLY if stock just crossed from positive to zero/negative
+      -- (not if it was already at or below 0 before this deduction)
+      IF v_matched_topper.current_stock > 0 AND v_new_stock <= 0 THEN
         IF v_matched_topper.shopify_product_id_1 IS NOT NULL
            OR v_matched_topper.shopify_product_id_2 IS NOT NULL THEN
           BEGIN
@@ -248,11 +259,64 @@ FOR EACH ROW
 EXECUTE FUNCTION public.deduct_inventory_on_order();
 
 -- ============================================================================
--- STEP 5: Grants
+-- STEP 5: Atomic claim RPC for edge function
 -- ============================================================================
 
--- Queue table needs service role access (edge function will use service role)
-GRANT SELECT, INSERT, UPDATE ON public.inventory_sync_queue TO authenticated;
+-- This function atomically claims pending queue items to prevent race conditions
+-- between concurrent cron runs. Uses FOR UPDATE SKIP LOCKED for safety.
+CREATE OR REPLACE FUNCTION public.claim_inventory_sync_items(p_limit integer DEFAULT 10)
+RETURNS TABLE (
+  id uuid,
+  item_type text,
+  item_id uuid,
+  sync_action text,
+  shopify_ids jsonb,
+  status text,
+  created_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH claimed AS (
+    SELECT q.id
+    FROM inventory_sync_queue q
+    WHERE q.status = 'pending'
+    ORDER BY q.created_at ASC
+    LIMIT p_limit
+    FOR UPDATE SKIP LOCKED
+  )
+  UPDATE inventory_sync_queue q
+  SET status = 'processing'
+  FROM claimed c
+  WHERE q.id = c.id
+  RETURNING q.id, q.item_type, q.item_id, q.sync_action, q.shopify_ids, q.status, q.created_at;
+END;
+$$;
+
+COMMENT ON FUNCTION public.claim_inventory_sync_items IS 'Atomically claim pending inventory sync items for processing. Uses FOR UPDATE SKIP LOCKED to prevent race conditions.';
+
+-- Grant execute to service_role only (edge function uses service role)
+GRANT EXECUTE ON FUNCTION public.claim_inventory_sync_items(integer) TO service_role;
+
+-- ============================================================================
+-- STEP 6: RLS and Grants
+-- ============================================================================
+
+-- Enable RLS on queue table to prevent client manipulation
+ALTER TABLE public.inventory_sync_queue ENABLE ROW LEVEL SECURITY;
+
+-- No policies for authenticated users - they cannot directly access this table
+-- The trigger function runs as SECURITY DEFINER so it can insert
+-- The edge function uses service_role which bypasses RLS
+
+-- Service role gets full access (bypasses RLS anyway, but explicit is better)
 GRANT SELECT, INSERT, UPDATE ON public.inventory_sync_queue TO service_role;
+
+-- Authenticated users get NO direct access to the queue table
+-- (Trigger function is SECURITY DEFINER so it can still insert)
+REVOKE ALL ON public.inventory_sync_queue FROM authenticated;
 
 COMMIT;

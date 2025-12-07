@@ -12,10 +12,14 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 
 -- Remove existing job if it exists (for idempotency)
-SELECT cron.unschedule('sync-inventory-to-shopify')
-WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'sync-inventory-to-shopify'
-);
+-- Using DO block because cron.unschedule errors if job doesn't exist
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sync-inventory-to-shopify') THEN
+    PERFORM cron.unschedule('sync-inventory-to-shopify');
+  END IF;
+END;
+$$;
 
 -- Schedule the sync job every 5 minutes
 SELECT cron.schedule(

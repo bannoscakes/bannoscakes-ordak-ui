@@ -50,6 +50,39 @@ interface ProcessResult {
   shopify_response?: unknown;
 }
 
+// Helper to make Shopify GraphQL requests with proper error handling
+async function shopifyGraphQL(
+  storeDomain: string,
+  token: string,
+  query: string,
+  variables: Record<string, unknown> = {}
+): Promise<{ data: any; errors?: any[] }> {
+  const response = await fetch(
+    `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": token,
+      },
+      body: JSON.stringify({ query, variables }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Shopify API error ${response.status}: ${errorText}`);
+  }
+
+  const result = await response.json();
+
+  if (result.errors && result.errors.length > 0) {
+    throw new Error(`Shopify GraphQL errors: ${result.errors.map((e: any) => e.message).join(", ")}`);
+  }
+
+  return result;
+}
+
 // Get inventory item ID from variant ID
 async function getInventoryItemId(
   storeDomain: string,
@@ -66,22 +99,10 @@ async function getInventoryItemId(
     }
   `;
 
-  const response = await fetch(
-    `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { id: `gid://shopify/ProductVariant/${variantId}` },
-      }),
-    }
-  );
+  const result = await shopifyGraphQL(storeDomain, token, query, {
+    id: `gid://shopify/ProductVariant/${variantId}`,
+  });
 
-  const result = await response.json();
   return result?.data?.productVariant?.inventoryItem?.id || null;
 }
 
@@ -108,22 +129,10 @@ async function getProductInventoryItems(
     }
   `;
 
-  const response = await fetch(
-    `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { id: `gid://shopify/Product/${productId}` },
-      }),
-    }
-  );
+  const result = await shopifyGraphQL(storeDomain, token, query, {
+    id: `gid://shopify/Product/${productId}`,
+  });
 
-  const result = await response.json();
   const variants = result?.data?.product?.variants?.edges || [];
 
   return variants.map((edge: any) => ({
@@ -149,19 +158,7 @@ async function getLocationId(
     }
   `;
 
-  const response = await fetch(
-    `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify({ query }),
-    }
-  );
-
-  const result = await response.json();
+  const result = await shopifyGraphQL(storeDomain, token, query);
   return result?.data?.locations?.edges?.[0]?.node?.id || null;
 }
 
@@ -186,43 +183,36 @@ async function setInventoryToZero(
     }
   `;
 
-  const response = await fetch(
-    `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify({
-        query: mutation,
-        variables: {
-          input: {
-            reason: "correction",
-            setQuantities: [
-              {
-                inventoryItemId,
-                locationId,
-                quantity: 0,
-              },
-            ],
+  try {
+    const result = await shopifyGraphQL(storeDomain, token, mutation, {
+      input: {
+        reason: "correction",
+        setQuantities: [
+          {
+            inventoryItemId,
+            locationId,
+            quantity: 0,
           },
-        },
-      }),
+        ],
+      },
+    });
+
+    const userErrors = result?.data?.inventorySetOnHandQuantities?.userErrors || [];
+
+    if (userErrors.length > 0) {
+      return {
+        success: false,
+        error: userErrors.map((e: any) => e.message).join(", "),
+      };
     }
-  );
 
-  const result = await response.json();
-  const userErrors = result?.data?.inventorySetOnHandQuantities?.userErrors || [];
-
-  if (userErrors.length > 0) {
+    return { success: true };
+  } catch (err) {
     return {
       success: false,
-      error: userErrors.map((e: any) => e.message).join(", "),
+      error: `${err}`,
     };
   }
-
-  return { success: true };
 }
 
 // Process a single accessory (set one variant out of stock)
@@ -242,26 +232,34 @@ async function processAccessory(
     };
   }
 
-  // Get inventory item ID from variant
-  const inventoryItemId = await getInventoryItemId(storeDomain, token, variantId);
+  try {
+    // Get inventory item ID from variant
+    const inventoryItemId = await getInventoryItemId(storeDomain, token, variantId);
 
-  if (!inventoryItemId) {
+    if (!inventoryItemId) {
+      return {
+        queue_id: item.id,
+        success: false,
+        error: `Could not find inventory item for variant ${variantId}`,
+      };
+    }
+
+    // Set inventory to 0
+    const result = await setInventoryToZero(storeDomain, token, inventoryItemId, locationId);
+
+    return {
+      queue_id: item.id,
+      success: result.success,
+      error: result.error,
+      shopify_response: { inventoryItemId, variantId },
+    };
+  } catch (err) {
     return {
       queue_id: item.id,
       success: false,
-      error: `Could not find inventory item for variant ${variantId}`,
+      error: `Exception: ${err}`,
     };
   }
-
-  // Set inventory to 0
-  const result = await setInventoryToZero(storeDomain, token, inventoryItemId, locationId);
-
-  return {
-    queue_id: item.id,
-    success: result.success,
-    error: result.error,
-    shopify_response: { inventoryItemId, variantId },
-  };
 }
 
 // Process a cake topper (set ALL variants of product(s) out of stock)
@@ -288,28 +286,32 @@ async function processCakeTopper(
   const successes: string[] = [];
 
   for (const productId of productIds) {
-    // Get all variants for this product
-    const variants = await getProductInventoryItems(storeDomain, token, productId);
+    try {
+      // Get all variants for this product
+      const variants = await getProductInventoryItems(storeDomain, token, productId);
 
-    if (variants.length === 0) {
-      errors.push(`No variants found for product ${productId}`);
-      continue;
-    }
-
-    // Set each variant's inventory to 0
-    for (const variant of variants) {
-      const result = await setInventoryToZero(
-        storeDomain,
-        token,
-        variant.inventoryItemId,
-        locationId
-      );
-
-      if (result.success) {
-        successes.push(variant.inventoryItemId);
-      } else {
-        errors.push(`${variant.inventoryItemId}: ${result.error}`);
+      if (variants.length === 0) {
+        errors.push(`No variants found for product ${productId}`);
+        continue;
       }
+
+      // Set each variant's inventory to 0
+      for (const variant of variants) {
+        const result = await setInventoryToZero(
+          storeDomain,
+          token,
+          variant.inventoryItemId,
+          locationId
+        );
+
+        if (result.success) {
+          successes.push(variant.inventoryItemId);
+        } else {
+          errors.push(`${variant.inventoryItemId}: ${result.error}`);
+        }
+      }
+    } catch (err) {
+      errors.push(`Product ${productId}: ${err}`);
     }
   }
 
@@ -351,23 +353,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get pending items from queue (limit to 10 per run)
-    const { data: queueItems, error: fetchError } = await supabase
-      .from("inventory_sync_queue")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(10);
+    // Atomically claim pending items using RPC (prevents race conditions)
+    const { data: claimedItems, error: claimError } = await supabase
+      .rpc("claim_inventory_sync_items", { p_limit: 10 });
 
-    if (fetchError) {
-      console.error("[sync-inventory-to-shopify] Failed to fetch queue:", fetchError);
+    if (claimError) {
+      console.error("[sync-inventory-to-shopify] Failed to claim items:", claimError);
       return new Response(
-        JSON.stringify({ error: "Failed to fetch queue", details: fetchError.message }),
+        JSON.stringify({ error: "Failed to claim queue items", details: claimError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!queueItems || queueItems.length === 0) {
+    if (!claimedItems || claimedItems.length === 0) {
       console.log("[sync-inventory-to-shopify] No pending items in queue");
       return new Response(
         JSON.stringify({ message: "No pending items", processed: 0 }),
@@ -375,22 +373,40 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[sync-inventory-to-shopify] Processing ${queueItems.length} items`);
+    console.log(`[sync-inventory-to-shopify] Claimed ${claimedItems.length} items for processing`);
 
-    // For now, use Bannos store (inventory is unified across both stores)
-    // The same physical inventory serves both Bannos and Flourlane
-    const storeDomain = STORES.bannos.domain;
-    const token = bannosToken || flourlaneToken;
+    // Inventory is unified - use whichever store has a valid token
+    // IMPORTANT: Domain and token must match! Don't mix Bannos domain with Flourlane token
+    let storeDomain: string;
+    let token: string;
 
-    if (!token) {
+    if (bannosToken) {
+      storeDomain = STORES.bannos.domain;
+      token = bannosToken;
+      console.log("[sync-inventory-to-shopify] Using Bannos store");
+    } else if (flourlaneToken) {
+      storeDomain = STORES.flourlane.domain;
+      token = flourlaneToken;
+      console.log("[sync-inventory-to-shopify] Using Flourlane store");
+    } else {
+      // This shouldn't happen due to earlier check, but TypeScript wants it
       return new Response(
         JSON.stringify({ error: "No Shopify token available" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get location ID (cached per store, but we only call once per run)
-    const locationId = await getLocationId(storeDomain, token);
+    // Get location ID
+    let locationId: string | null;
+    try {
+      locationId = await getLocationId(storeDomain, token);
+    } catch (err) {
+      console.error("[sync-inventory-to-shopify] Failed to get location ID:", err);
+      return new Response(
+        JSON.stringify({ error: "Failed to get Shopify location ID", details: `${err}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!locationId) {
       console.error("[sync-inventory-to-shopify] Could not get location ID");
@@ -402,13 +418,7 @@ serve(async (req) => {
 
     const results: ProcessResult[] = [];
 
-    for (const item of queueItems as QueueItem[]) {
-      // Mark as processing
-      await supabase
-        .from("inventory_sync_queue")
-        .update({ status: "processing" })
-        .eq("id", item.id);
-
+    for (const item of claimedItems as QueueItem[]) {
       let result: ProcessResult;
 
       try {
