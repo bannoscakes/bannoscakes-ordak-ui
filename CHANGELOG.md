@@ -1,3 +1,56 @@
+## v0.12.0-beta — Inventory System & Cake Toppers (2025-12-08)
+
+### 🎯 Overview
+Major inventory system enhancements including Bill of Materials (BOM) management improvements, inventory consolidation to use the components table, and a new Cake Toppers inventory feature.
+
+### ✨ New Features
+
+**Cake Toppers Inventory (PR #310, #311, #312)**
+- Added new `cake_toppers` table for tracking cake topper inventory
+- Built dedicated Cake Toppers UI in the Inventory section
+- Added delete functionality for cake toppers
+- Fixed save hanging issue with proper async handling
+
+**Bill of Materials (BOM) Improvements (PR #303, #304, #305, #307, #308)**
+- Fixed BOM items not being saved when saving BOM
+- Fixed BOM items not fetching when opening the editor
+- Improved BOM dialog scroll layout with proper flex structure
+- Keep Save button visible while scrolling through components
+
+**Inventory Consolidation (PR #302)**
+- Consolidated inventory tracking to use the `components` table as single source of truth
+- Simplified data model for better maintainability
+
+### 🐛 Bug Fixes
+
+**Audit Log FK Violations (PR #301)**
+- Fixed foreign key constraint violations when logging inventory changes
+- Added graceful handling when user doesn't exist in `staff_shared` table
+
+**Duplicate Migration Cleanup (PR #312)**
+- Removed duplicate migration 081 that was causing deployment issues
+
+### 📋 PRs in This Release
+- PR #310: `feat: add cake toppers inventory table and UI (PR1)`
+- PR #311: `fix: resolve cake toppers save hanging and add delete functionality`
+- PR #312: `chore: remove duplicate migration 081`
+- PR #309: `Claude/inventory system review`
+- PR #308: `fix: fetch BOM items when opening editor`
+- PR #307: `fix: BOM dialog scroll layout with proper flex structure`
+- PR #305: `fix: BOM dialog scroll v2 - proper overflow handling`
+- PR #304: `fix: BOM dialog scroll - keep Save button visible`
+- PR #303: `fix: save BOM items when saving BOM`
+- PR #302: `fix: consolidate inventory to use components table`
+- PR #301: `fix: prevent inventory audit_log FK violations`
+
+### 📁 Key Files Added/Modified
+- `supabase/migrations/080_cake_toppers_table.sql` - New cake toppers table
+- `src/components/inventory/CakeToppersInventory.tsx` - Cake toppers UI
+- `src/components/inventory/BOMEditor.tsx` - BOM editing improvements
+- `src/lib/rpc-client.ts` - New cake topper RPC functions
+
+---
+
 ## v0.11.9-beta — Inventory Component Add/Edit Fix (2025-12-04)
 
 ### 🎯 Overview
