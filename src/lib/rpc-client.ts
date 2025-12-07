@@ -1031,6 +1031,17 @@ export async function adjustAccessoryStock(params: {
   );
 }
 
+export async function deleteAccessory(id: string): Promise<void> {
+  const supabase = getSupabase();
+  // Soft delete: set is_active = false instead of hard delete
+  const { error } = await supabase
+    .from('accessories')
+    .update({ is_active: false })
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // =============================================
 // CAKE TOPPERS MANAGEMENT
 // =============================================
@@ -1075,7 +1086,7 @@ export async function upsertCakeTopper(params: {
   shopify_product_id_1?: string | null;
   shopify_product_id_2?: string | null;
   is_active?: boolean;
-}) {
+}): Promise<string> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('upsert_cake_topper', {
     p_id: params.id || null,
@@ -1116,6 +1127,17 @@ export async function adjustCakeTopperStock(params: {
       params
     }
   );
+}
+
+export async function deleteCakeTopper(id: string): Promise<void> {
+  const supabase = getSupabase();
+  // Soft delete: set is_active = false instead of hard delete
+  const { error } = await supabase
+    .from('cake_toppers')
+    .update({ is_active: false })
+    .eq('id', id);
+
+  if (error) throw error;
 }
 
 // =============================================

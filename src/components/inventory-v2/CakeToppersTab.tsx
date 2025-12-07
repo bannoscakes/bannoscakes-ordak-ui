@@ -7,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Label } from "../ui/label";
-import { Search, Plus, Minus, AlertTriangle, Package, Cake } from "lucide-react";
+import { Search, Plus, Minus, AlertTriangle, Package, Cake, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getCakeToppersCached,
   upsertCakeTopper,
   adjustCakeTopperStock,
+  deleteCakeTopper,
   invalidateInventoryCache,
   type CakeTopper
 } from "../../lib/rpc-client";
@@ -97,6 +98,29 @@ export function CakeToppersTab() {
     setIsAddEditOpen(true);
   };
 
+  const handleDelete = async (topper: CakeTopper) => {
+    const displayName = topper.name_2
+      ? `"${topper.name_1}" / "${topper.name_2}"`
+      : `"${topper.name_1}"`;
+
+    if (!confirm(`Delete ${displayName}? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteCakeTopper(topper.id);
+      invalidateInventoryCache();
+
+      // Update local state
+      setToppers(prev => prev.filter(t => t.id !== topper.id));
+
+      toast.success("Cake topper deleted");
+    } catch (error) {
+      console.error('Error deleting cake topper:', error);
+      toast.error(`Failed to delete cake topper: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   const handleSave = async () => {
     if (!editingTopper) return;
 
@@ -117,11 +141,7 @@ export function CakeToppersTab() {
         is_active: editingTopper.is_active !== false,
       };
 
-      console.log('Saving cake topper with params:', params);
-
       const result = await upsertCakeTopper(params);
-
-      console.log('Upsert result:', result);
 
       invalidateInventoryCache();
 
@@ -465,6 +485,14 @@ export function CakeToppersTab() {
                           onClick={() => handleEdit(topper)}
                         >
                           Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(topper)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

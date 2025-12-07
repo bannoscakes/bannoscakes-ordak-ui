@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Label } from "../ui/label";
-import { Search, Plus, Minus, AlertTriangle, RefreshCw, Package, ExternalLink } from "lucide-react";
+import { Search, Plus, Minus, AlertTriangle, RefreshCw, Package, ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAccessoriesCached,
   getAccessoriesNeedingSync,
   upsertAccessory,
   adjustAccessoryStock,
+  deleteAccessory,
   invalidateInventoryCache,
   type Accessory
 } from "../../lib/rpc-client";
@@ -107,6 +108,25 @@ export function AccessoriesTab() {
   const handleEdit = (accessory: Accessory) => {
     setEditingAccessory({ ...accessory });
     setIsAddEditOpen(true);
+  };
+
+  const handleDelete = async (accessory: Accessory) => {
+    if (!confirm(`Delete "${accessory.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteAccessory(accessory.id);
+      invalidateInventoryCache();
+
+      // Update local state
+      setAccessories(prev => prev.filter(a => a.id !== accessory.id));
+
+      toast.success("Accessory deleted");
+    } catch (error) {
+      console.error('Error deleting accessory:', error);
+      toast.error(`Failed to delete accessory: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   const handleSave = async () => {
@@ -487,9 +507,19 @@ export function AccessoriesTab() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(accessory)}>
-                        Edit
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(accessory)}>
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(accessory)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
