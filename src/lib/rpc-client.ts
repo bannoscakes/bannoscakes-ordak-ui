@@ -1032,6 +1032,93 @@ export async function adjustAccessoryStock(params: {
 }
 
 // =============================================
+// CAKE TOPPERS MANAGEMENT
+// =============================================
+
+export interface CakeTopper {
+  id: string;
+  name_1: string;
+  name_2: string | null;
+  current_stock: number;
+  min_stock: number;
+  shopify_product_id_1: string | null;
+  shopify_product_id_2: string | null;
+  is_active: boolean;
+  is_low_stock: boolean;
+  is_out_of_stock: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getCakeToppers(params: {
+  activeOnly?: boolean;
+} = {}) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_cake_toppers', {
+    p_active_only: params.activeOnly ?? false,
+  });
+  if (error) throw error;
+
+  // Add computed fields
+  return (data || []).map((topper: any) => ({
+    ...topper,
+    is_low_stock: topper.current_stock < topper.min_stock && topper.current_stock > 0,
+    is_out_of_stock: topper.current_stock === 0,
+  })) as CakeTopper[];
+}
+
+export async function upsertCakeTopper(params: {
+  id?: string;
+  name_1: string;
+  name_2?: string | null;
+  min_stock?: number;
+  shopify_product_id_1?: string | null;
+  shopify_product_id_2?: string | null;
+  is_active?: boolean;
+}) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('upsert_cake_topper', {
+    p_id: params.id || null,
+    p_name_1: params.name_1,
+    p_name_2: params.name_2 || null,
+    p_min_stock: params.min_stock || 5,
+    p_shopify_product_id_1: params.shopify_product_id_1 || null,
+    p_shopify_product_id_2: params.shopify_product_id_2 || null,
+    p_is_active: params.is_active !== false,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function adjustCakeTopperStock(params: {
+  topper_id: string;
+  change: number;
+  reason: string;
+  reference?: string;
+  created_by?: string;
+}) {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('adjust_cake_topper_stock', {
+        p_topper_id: params.topper_id,
+        p_change: params.change,
+        p_reason: params.reason,
+        p_reference: params.reference || null,
+        p_created_by: params.created_by || null,
+      });
+      if (error) throw error;
+      return data as { success: boolean; old_stock: number; new_stock: number; name_1: string; name_2: string | null };
+    },
+    {
+      operation: 'adjustCakeTopperStock',
+      rpcName: 'adjust_cake_topper_stock',
+      params
+    }
+  );
+}
+
+// =============================================
 // STOCK TRANSACTIONS (AUDIT LOG) - SIMPLIFIED
 // =============================================
 
@@ -1093,6 +1180,14 @@ export const getAccessoriesCached = requestCache.cached(getAccessories, {
 });
 
 /**
+ * Cached version of getCakeToppers with 60-second TTL
+ */
+export const getCakeToppersCached = requestCache.cached(getCakeToppers, {
+  ttl: 60000,
+  keyPrefix: 'rpc.getCakeToppers',
+});
+
+/**
  * Cached version of getStockTransactions with 60-second TTL
  */
 export const getStockTransactionsCached = requestCache.cached(getStockTransactions, {
@@ -1102,10 +1197,10 @@ export const getStockTransactionsCached = requestCache.cached(getStockTransactio
 
 /**
  * Invalidate inventory-related cache entries
- * Call this after mutations (create, update, delete components/BOMs/accessories)
+ * Call this after mutations (create, update, delete components/BOMs/accessories/cake toppers)
  */
 export function invalidateInventoryCache(): void {
-  requestCache.invalidate(/rpc\.(getComponents|getBoms|getAccessories|getStockTransactions)/);
+  requestCache.invalidate(/rpc\.(getComponents|getBoms|getAccessories|getCakeToppers|getStockTransactions)/);
 }
 
 // =============================================

@@ -58,3 +58,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.upsert_component IS 'Simplified upsert_component matching new RPC client interface. Creates or updates components without legacy fields (current_stock, max_stock, cost_per_unit, supplier).';
+
+-- Grant permissions
+GRANT EXECUTE ON FUNCTION public.upsert_component TO authenticated;
