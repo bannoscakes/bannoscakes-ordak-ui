@@ -199,11 +199,13 @@ BEGIN
 
   -- Log transaction
   INSERT INTO public.stock_transactions (
-    component_id,
-    qty_delta,
+    table_name,
+    item_id,
+    change_amount,
     reason,
-    ref
+    reference
   ) VALUES (
+    'cake_toppers',
     p_topper_id,
     p_change,
     p_reason,
@@ -225,8 +227,7 @@ COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock
 -- ============================================================================
 -- RPC: get_cake_topper_stock_transactions
 -- ============================================================================
--- Note: Using migration 045 schema (component_id, qty_delta, ref)
--- Migration 077 renames these columns, but we use original names for compatibility
+-- Uses migration 077 schema (item_id, change_amount, reference, table_name)
 
 CREATE OR REPLACE FUNCTION public.get_cake_topper_stock_transactions(
   p_topper_id uuid DEFAULT NULL,
@@ -234,10 +235,11 @@ CREATE OR REPLACE FUNCTION public.get_cake_topper_stock_transactions(
 )
 RETURNS TABLE (
   id uuid,
-  component_id uuid,
-  qty_delta numeric,
+  table_name text,
+  item_id uuid,
+  change_amount integer,
   reason text,
-  ref text,
+  reference text,
   created_at timestamptz,
   topper_name text
 )
@@ -248,22 +250,24 @@ BEGIN
   RETURN QUERY
   SELECT
     st.id,
-    st.component_id,
-    st.qty_delta,
+    st.table_name,
+    st.item_id,
+    st.change_amount,
     st.reason,
-    st.ref,
+    st.reference,
     st.created_at,
     ct.name_1 AS topper_name
   FROM public.stock_transactions st
-  LEFT JOIN public.cake_toppers ct ON ct.id = st.component_id
+  LEFT JOIN public.cake_toppers ct ON ct.id = st.item_id
   WHERE
-    (p_topper_id IS NULL OR st.component_id = p_topper_id)
+    st.table_name = 'cake_toppers'
+    AND (p_topper_id IS NULL OR st.item_id = p_topper_id)
   ORDER BY st.created_at DESC
   LIMIT p_limit;
 END;
 $$;
 
-COMMENT ON FUNCTION public.get_cake_topper_stock_transactions IS 'Get stock transaction history for cake toppers using migration 045 schema.';
+COMMENT ON FUNCTION public.get_cake_topper_stock_transactions IS 'Get stock transaction history for cake toppers. Filters by table_name = cake_toppers.';
 
 -- ============================================================================
 -- GRANTS
