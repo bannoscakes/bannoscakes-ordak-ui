@@ -231,6 +231,64 @@ $$;
 COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock atomically. Logs all changes to stock_transactions.';
 
 -- ============================================================================
+-- UPDATE: get_stock_transactions to include cake_toppers
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.get_stock_transactions(
+  p_table_name text DEFAULT NULL,
+  p_item_id uuid DEFAULT NULL,
+  p_limit integer DEFAULT 100
+)
+RETURNS TABLE (
+  id uuid,
+  table_name text,
+  item_id uuid,
+  item_name text,
+  change_amount integer,
+  stock_before integer,
+  stock_after integer,
+  reason text,
+  reference text,
+  created_by text,
+  created_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    st.id,
+    st.table_name,
+    st.item_id,
+    CASE
+      WHEN st.table_name = 'components' THEN c.name
+      WHEN st.table_name = 'accessories' THEN a.name
+      WHEN st.table_name = 'cake_toppers' THEN ct.name_1
+      ELSE 'Unknown'
+    END AS item_name,
+    st.change_amount::integer,
+    st.stock_before,
+    st.stock_after,
+    st.reason,
+    st.reference,
+    st.created_by,
+    st.created_at
+  FROM public.stock_transactions st
+  LEFT JOIN public.components c ON st.table_name = 'components' AND c.id = st.item_id
+  LEFT JOIN public.accessories a ON st.table_name = 'accessories' AND a.id = st.item_id
+  LEFT JOIN public.cake_toppers ct ON st.table_name = 'cake_toppers' AND ct.id = st.item_id
+  WHERE
+    (p_table_name IS NULL OR st.table_name = p_table_name)
+    AND (p_item_id IS NULL OR st.item_id = p_item_id)
+  ORDER BY st.created_at DESC
+  LIMIT p_limit;
+END;
+$$;
+
+COMMENT ON FUNCTION public.get_stock_transactions IS 'Get stock transaction history with item names. Now includes cake_toppers table support.';
+
+-- ============================================================================
 -- GRANTS
 -- ============================================================================
 
