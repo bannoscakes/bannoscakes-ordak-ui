@@ -141,12 +141,7 @@ export function CakeToppersTab() {
         is_active: editingTopper.is_active !== false,
       };
 
-      console.log('Saving cake topper with params:', params);
-
       const result = await upsertCakeTopper(params);
-
-      console.log('Upsert result:', result);
-      console.log('Upsert result type:', typeof result, result);
 
       invalidateInventoryCache();
 

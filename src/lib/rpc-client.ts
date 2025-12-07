@@ -1033,9 +1033,10 @@ export async function adjustAccessoryStock(params: {
 
 export async function deleteAccessory(id: string): Promise<void> {
   const supabase = getSupabase();
+  // Soft delete: set is_active = false instead of hard delete
   const { error } = await supabase
     .from('accessories')
-    .delete()
+    .update({ is_active: false })
     .eq('id', id);
 
   if (error) throw error;
@@ -1130,9 +1131,10 @@ export async function adjustCakeTopperStock(params: {
 
 export async function deleteCakeTopper(id: string): Promise<void> {
   const supabase = getSupabase();
+  // Soft delete: set is_active = false instead of hard delete
   const { error } = await supabase
     .from('cake_toppers')
-    .delete()
+    .update({ is_active: false })
     .eq('id', id);
 
   if (error) throw error;

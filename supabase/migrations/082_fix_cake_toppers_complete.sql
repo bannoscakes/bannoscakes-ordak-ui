@@ -55,14 +55,14 @@ BEGIN
     RAISE EXCEPTION 'Cake topper % not found', p_topper_id;
   END IF;
 
-  -- Log transaction with CORRECT column names from migration 074
+  -- Log transaction with column names from migration 077
   INSERT INTO public.stock_transactions (
     table_name,
     item_id,
     transaction_type,
-    quantity_change,     -- CORRECT: from migration 074
-    quantity_before,     -- CORRECT: from migration 074
-    quantity_after,      -- CORRECT: from migration 074
+    change_amount,     -- From migration 077
+    stock_before,      -- From migration 077
+    stock_after,       -- From migration 077
     reason,
     reference,
     created_by
