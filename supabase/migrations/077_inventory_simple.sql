@@ -888,7 +888,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_components TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_low_stock_components TO authenticated;
-GRANT EXECUTE ON FUNCTION public.upsert_component TO authenticated;
+-- GRANT EXECUTE ON FUNCTION public.upsert_component TO authenticated; -- Moved to 20251206_create_simplified_upsert_component.sql
 GRANT EXECUTE ON FUNCTION public.adjust_component_stock TO authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_component TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_boms TO authenticated;
