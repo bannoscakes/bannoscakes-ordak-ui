@@ -1,44 +1,40 @@
 -- ============================================================================
 -- Migration: Fix start timestamps for all stages
 -- Problem: Start timestamps were planned but never implemented
---   - filling_start_ts exists but code to set it was commented out
+--   - filling_start_ts exists but code to set it was commented out in print_barcode()
 --   - covering_start_ts and decorating_start_ts columns don't exist
---   - packing_start_ts set at wrong time (when decorating ends)
+--   - start_covering() and start_decorating() RPCs don't exist
 -- Solution:
 --   1. Add missing columns (covering_start_ts, decorating_start_ts)
---   2. Update print_barcode to set filling_start_ts on first print
---   3. Update complete_filling to set covering_start_ts
---   4. Update complete_covering to set decorating_start_ts
+--   2. Update print_barcode to set filling_start_ts on first print (uncomment code)
+--   3. Create start_covering() RPC
+--   4. Create start_decorating() RPC
 -- ============================================================================
 
 -- ============================================================================
 -- STEP 1: Add missing start timestamp columns
 -- ============================================================================
 
--- Add covering_start_ts to orders_bannos
 ALTER TABLE public.orders_bannos
 ADD COLUMN IF NOT EXISTS covering_start_ts timestamptz NULL;
 
--- Add decorating_start_ts to orders_bannos
 ALTER TABLE public.orders_bannos
 ADD COLUMN IF NOT EXISTS decorating_start_ts timestamptz NULL;
 
--- Add covering_start_ts to orders_flourlane
 ALTER TABLE public.orders_flourlane
 ADD COLUMN IF NOT EXISTS covering_start_ts timestamptz NULL;
 
--- Add decorating_start_ts to orders_flourlane
 ALTER TABLE public.orders_flourlane
 ADD COLUMN IF NOT EXISTS decorating_start_ts timestamptz NULL;
 
--- Add comments
-COMMENT ON COLUMN public.orders_bannos.covering_start_ts IS 'Timestamp when Covering stage started (set by complete_filling)';
-COMMENT ON COLUMN public.orders_bannos.decorating_start_ts IS 'Timestamp when Decorating stage started (set by complete_covering)';
-COMMENT ON COLUMN public.orders_flourlane.covering_start_ts IS 'Timestamp when Covering stage started (set by complete_filling)';
-COMMENT ON COLUMN public.orders_flourlane.decorating_start_ts IS 'Timestamp when Decorating stage started (set by complete_covering)';
+COMMENT ON COLUMN public.orders_bannos.covering_start_ts IS 'Timestamp when Covering stage started (set by start_covering scan)';
+COMMENT ON COLUMN public.orders_bannos.decorating_start_ts IS 'Timestamp when Decorating stage started (set by start_decorating scan)';
+COMMENT ON COLUMN public.orders_flourlane.covering_start_ts IS 'Timestamp when Covering stage started (set by start_covering scan)';
+COMMENT ON COLUMN public.orders_flourlane.decorating_start_ts IS 'Timestamp when Decorating stage started (set by start_decorating scan)';
 
 -- ============================================================================
 -- STEP 2: Update print_barcode to set filling_start_ts on first print
+-- (Uncomment the TODO code from migration 054)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.print_barcode(
@@ -57,7 +53,6 @@ DECLARE
   v_payload jsonb;
   v_user_id uuid;
 BEGIN
-  -- Validate store
   IF p_store NOT IN ('bannos', 'flourlane') THEN
     RAISE EXCEPTION 'Invalid store: %', p_store;
   END IF;
@@ -67,7 +62,6 @@ BEGIN
     RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
   END IF;
 
-  -- Get order details
   v_table_name := 'orders_' || p_store;
   EXECUTE format(
     'SELECT * FROM %I WHERE id = $1',
@@ -78,8 +72,7 @@ BEGIN
     RAISE EXCEPTION 'Order not found: %', p_order_id;
   END IF;
 
-  -- Check if this is first print in Filling stage
-  -- Set filling_start_ts if not already set
+  -- Set filling_start_ts on first print in Filling stage (was commented out TODO)
   IF v_order.stage = 'Filling' THEN
     v_is_first_filling_print := (v_order.filling_start_ts IS NULL);
 
@@ -133,19 +126,17 @@ BEGIN
 END;
 $function$;
 
--- Grant execute permission
 GRANT EXECUTE ON FUNCTION public.print_barcode(text, text) TO authenticated;
 
 COMMENT ON FUNCTION public.print_barcode IS 'Generate printable ticket payload and log print event. First print in Filling stage sets filling_start_ts.';
 
 -- ============================================================================
--- STEP 3: Update complete_filling to set covering_start_ts
+-- STEP 3: Create start_covering() RPC
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION public.complete_filling(
+CREATE OR REPLACE FUNCTION public.start_covering(
   p_order_id text,
-  p_store text,
-  p_notes text DEFAULT NULL
+  p_store text
 )
 RETURNS boolean
 LANGUAGE plpgsql
@@ -154,8 +145,8 @@ AS $function$
 DECLARE
   v_table_name text;
   v_current_stage stage_type;
+  v_covering_start_ts timestamptz;
   v_user_id uuid;
-  v_rows_affected integer;
 BEGIN
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
@@ -164,83 +155,8 @@ BEGIN
     RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
   END IF;
 
-  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
-  INTO v_current_stage
-  USING p_order_id;
-
-  IF v_current_stage IS NULL THEN
-    RAISE EXCEPTION 'Order not found: %', p_order_id;
-  END IF;
-
-  IF v_current_stage != 'Filling' THEN
-    RAISE EXCEPTION 'Order must be in Filling stage to complete filling';
-  END IF;
-
-  -- Update order stage + set filling_complete_ts + set covering_start_ts
-  EXECUTE format(
-    'UPDATE public.%I SET stage = ''Covering'', filling_complete_ts = now(), covering_start_ts = now(), updated_at = now() WHERE id = $1',
-    v_table_name
-  )
-  USING p_order_id;
-
-  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
-  IF v_rows_affected != 1 THEN
-    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
-  END IF;
-
-  -- Log to stage_events
-  INSERT INTO public.stage_events (store, order_id, stage, event_type, staff_id, at_ts, meta)
-  VALUES (
-    p_store,
-    p_order_id,
-    'Filling',
-    'complete',
-    v_user_id,
-    now(),
-    jsonb_build_object('notes', p_notes)
-  );
-
-  -- Log to audit_log
-  INSERT INTO public.audit_log (action, performed_by, source, meta)
-  VALUES (
-    'complete_filling',
-    v_user_id,
-    'rpc',
-    jsonb_build_object('order_id', p_order_id, 'store', p_store, 'stage', 'Filling', 'notes', p_notes)
-  );
-
-  RETURN true;
-END;
-$function$;
-
--- ============================================================================
--- STEP 4: Update complete_covering to set decorating_start_ts
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION public.complete_covering(
-  p_order_id text,
-  p_store text,
-  p_notes text DEFAULT NULL
-)
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $function$
-DECLARE
-  v_table_name text;
-  v_current_stage stage_type;
-  v_user_id uuid;
-  v_rows_affected integer;
-BEGIN
-  v_table_name := 'orders_' || p_store;
-  v_user_id := auth.uid();
-
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
-  END IF;
-
-  EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
-  INTO v_current_stage
+  EXECUTE format('SELECT stage, covering_start_ts FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage, v_covering_start_ts
   USING p_order_id;
 
   IF v_current_stage IS NULL THEN
@@ -248,19 +164,16 @@ BEGIN
   END IF;
 
   IF v_current_stage != 'Covering' THEN
-    RAISE EXCEPTION 'Order must be in Covering stage to complete covering';
+    RAISE EXCEPTION 'Order must be in Covering stage to start covering. Current stage: %', v_current_stage;
   END IF;
 
-  -- Update order stage + set covering_complete_ts + set decorating_start_ts
-  EXECUTE format(
-    'UPDATE public.%I SET stage = ''Decorating'', covering_complete_ts = now(), decorating_start_ts = now(), updated_at = now() WHERE id = $1',
-    v_table_name
-  )
-  USING p_order_id;
-
-  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
-  IF v_rows_affected != 1 THEN
-    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
+  -- Only set if not already set (idempotent)
+  IF v_covering_start_ts IS NULL THEN
+    EXECUTE format(
+      'UPDATE public.%I SET covering_start_ts = now(), updated_at = now() WHERE id = $1',
+      v_table_name
+    )
+    USING p_order_id;
   END IF;
 
   -- Log to stage_events
@@ -269,41 +182,108 @@ BEGIN
     p_store,
     p_order_id,
     'Covering',
-    'complete',
+    'start',
     v_user_id,
     now(),
-    jsonb_build_object('notes', p_notes)
+    jsonb_build_object('already_started', v_covering_start_ts IS NOT NULL)
   );
 
   -- Log to audit_log
   INSERT INTO public.audit_log (action, performed_by, source, meta)
   VALUES (
-    'complete_covering',
+    'start_covering',
     v_user_id,
     'rpc',
-    jsonb_build_object('order_id', p_order_id, 'store', p_store, 'stage', 'Covering', 'notes', p_notes)
+    jsonb_build_object('order_id', p_order_id, 'store', p_store)
   );
 
   RETURN true;
 END;
 $function$;
 
+GRANT EXECUTE ON FUNCTION public.start_covering(text, text) TO authenticated;
+
+COMMENT ON FUNCTION public.start_covering IS 'Set covering_start_ts when covering staff scans barcode. Idempotent.';
+
 -- ============================================================================
--- Summary of timestamp flow after this migration:
---
--- FILLING:
---   - filling_start_ts: Set by print_barcode() on FIRST print in Filling stage
---   - filling_complete_ts: Set by complete_filling()
---
--- COVERING:
---   - covering_start_ts: Set by complete_filling() (when Filling ends)
---   - covering_complete_ts: Set by complete_covering()
---
--- DECORATING:
---   - decorating_start_ts: Set by complete_covering() (when Covering ends)
---   - decorating_complete_ts: Set by complete_decorating()
---
--- PACKING:
---   - packing_start_ts: Set by complete_decorating() (when Decorating ends)
---   - packing_complete_ts: Set by complete_packing()
+-- STEP 4: Create start_decorating() RPC
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.start_decorating(
+  p_order_id text,
+  p_store text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+DECLARE
+  v_table_name text;
+  v_current_stage stage_type;
+  v_decorating_start_ts timestamptz;
+  v_user_id uuid;
+BEGIN
+  v_table_name := 'orders_' || p_store;
+  v_user_id := auth.uid();
+
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
+  END IF;
+
+  EXECUTE format('SELECT stage, decorating_start_ts FROM public.%I WHERE id = $1', v_table_name)
+  INTO v_current_stage, v_decorating_start_ts
+  USING p_order_id;
+
+  IF v_current_stage IS NULL THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+
+  IF v_current_stage != 'Decorating' THEN
+    RAISE EXCEPTION 'Order must be in Decorating stage to start decorating. Current stage: %', v_current_stage;
+  END IF;
+
+  -- Only set if not already set (idempotent)
+  IF v_decorating_start_ts IS NULL THEN
+    EXECUTE format(
+      'UPDATE public.%I SET decorating_start_ts = now(), updated_at = now() WHERE id = $1',
+      v_table_name
+    )
+    USING p_order_id;
+  END IF;
+
+  -- Log to stage_events
+  INSERT INTO public.stage_events (store, order_id, stage, event_type, staff_id, at_ts, meta)
+  VALUES (
+    p_store,
+    p_order_id,
+    'Decorating',
+    'start',
+    v_user_id,
+    now(),
+    jsonb_build_object('already_started', v_decorating_start_ts IS NOT NULL)
+  );
+
+  -- Log to audit_log
+  INSERT INTO public.audit_log (action, performed_by, source, meta)
+  VALUES (
+    'start_decorating',
+    v_user_id,
+    'rpc',
+    jsonb_build_object('order_id', p_order_id, 'store', p_store)
+  );
+
+  RETURN true;
+END;
+$function$;
+
+GRANT EXECUTE ON FUNCTION public.start_decorating(text, text) TO authenticated;
+
+COMMENT ON FUNCTION public.start_decorating IS 'Set decorating_start_ts when decorating staff scans barcode. Idempotent.';
+
+-- ============================================================================
+-- Summary:
+-- PRINTER: print_barcode() → filling_start_ts
+-- SCANNER: start_covering() → covering_start_ts
+-- SCANNER: start_decorating() → decorating_start_ts
+-- (packing_start_ts already handled by existing complete_decorating)
 -- ============================================================================

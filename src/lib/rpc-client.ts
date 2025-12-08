@@ -521,6 +521,26 @@ export async function completeDecorating(orderId: string, store: string, notes?:
   return data;
 }
 
+export async function startCovering(orderId: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_covering', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function startDecorating(orderId: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_decorating', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function startPacking(orderId: string, performedBy?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('start_packing', {
