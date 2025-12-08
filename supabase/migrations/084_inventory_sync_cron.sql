@@ -7,9 +7,8 @@
 -- This matches the existing pattern used by order-monitor and process-webhooks cron jobs.
 -- If you need to use this in dev/staging, manually update the URL in the cron.job table.
 
--- Extensions should already exist from previous migrations, but ensure they're available
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+-- Extensions pg_cron and pg_net should already exist from previous migrations
+-- Do NOT try to create them here as it causes privilege errors on Supabase
 
 -- Remove existing job if it exists (for idempotency)
 -- Using DO block because cron.unschedule errors if job doesn't exist

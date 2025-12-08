@@ -1066,7 +1066,7 @@ export async function getCakeToppers(params: {
 } = {}) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_cake_toppers', {
-    p_active_only: params.activeOnly ?? false,
+    p_active_only: params.activeOnly ?? true,  // Default to showing active only
   });
   if (error) throw error;
 
