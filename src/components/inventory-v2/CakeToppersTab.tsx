@@ -141,7 +141,7 @@ export function CakeToppersTab() {
         is_active: editingTopper.is_active !== false,
       };
 
-      const result = await upsertCakeTopper(params);
+      await upsertCakeTopper(params);
 
       invalidateInventoryCache();
 
