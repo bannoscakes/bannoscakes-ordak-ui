@@ -11,7 +11,7 @@
 -- Do NOT try to create them here as it causes privilege errors on Supabase
 -- This migration is wrapped in a check so it doesn't fail in CI/test environments without pg_cron
 
-DO $$
+DO $outer$
 BEGIN
   -- Only run if pg_cron extension exists (production Supabase)
   IF EXISTS (
@@ -47,4 +47,4 @@ BEGIN
     RAISE NOTICE 'pg_cron extension not available - skipping cron job creation (this is expected in CI/test environments)';
   END IF;
 END;
-$$;
+$outer$;
