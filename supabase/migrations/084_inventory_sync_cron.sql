@@ -7,9 +7,9 @@
 -- This matches the existing pattern used by order-monitor and process-webhooks cron jobs.
 -- If you need to use this in dev/staging, manually update the URL in the cron.job table.
 
--- Extensions pg_cron and pg_net should already exist from previous migrations
--- Do NOT try to create them here as it causes privilege errors on Supabase
--- This migration is wrapped in a check so it doesn't fail in CI/test environments without pg_cron
+-- IMPORTANT: pg_cron must be enabled in Supabase Dashboard (Database > Extensions) before deploying.
+-- Do NOT add "CREATE EXTENSION pg_cron" here - only supabase_admin can create extensions.
+-- This migration checks if pg_cron exists and skips gracefully if not (expected in CI/preview environments).
 
 DO $outer$
 BEGIN
