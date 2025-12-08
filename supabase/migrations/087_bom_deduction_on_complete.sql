@@ -1,7 +1,8 @@
 -- ============================================================================
--- Migration: Wire up BOM deduction when order stage changes to Complete/Done
+-- Migration: Wire up BOM deduction when order stage changes to Complete
 -- Purpose: Call deduct_inventory_for_order to deduct components from BOMs
--- Trigger: AFTER UPDATE when stage changes to 'Complete' or 'Done'
+-- Trigger: AFTER UPDATE when stage changes to 'Complete'
+-- Note: stage_type enum is (Filling, Covering, Decorating, Packing, Complete)
 -- Note: This is SEPARATE from the INSERT triggers (083) that deduct accessories/cake_toppers
 -- ============================================================================
 
@@ -70,12 +71,13 @@ DROP TRIGGER IF EXISTS trg_deduct_bom_on_complete_bannos ON public.orders_bannos
 DROP TRIGGER IF EXISTS trg_deduct_bom_on_complete_flourlane ON public.orders_flourlane;
 
 -- Create trigger for Bannos orders
--- Fires when stage changes TO 'Complete' or 'Done' (from any other stage)
+-- Fires when stage changes TO 'Complete' (from any other stage)
+-- Note: stage_type enum only has: Filling, Covering, Decorating, Packing, Complete
 CREATE TRIGGER trg_deduct_bom_on_complete_bannos
 AFTER UPDATE ON public.orders_bannos
 FOR EACH ROW
 WHEN (
-  (NEW.stage IN ('Complete', 'Done') AND OLD.stage IS DISTINCT FROM NEW.stage)
+  NEW.stage = 'Complete' AND OLD.stage IS DISTINCT FROM NEW.stage
 )
 EXECUTE FUNCTION public.deduct_bom_on_order_complete();
 
@@ -84,7 +86,7 @@ CREATE TRIGGER trg_deduct_bom_on_complete_flourlane
 AFTER UPDATE ON public.orders_flourlane
 FOR EACH ROW
 WHEN (
-  (NEW.stage IN ('Complete', 'Done') AND OLD.stage IS DISTINCT FROM NEW.stage)
+  NEW.stage = 'Complete' AND OLD.stage IS DISTINCT FROM NEW.stage
 )
 EXECUTE FUNCTION public.deduct_bom_on_order_complete();
 
@@ -95,7 +97,7 @@ EXECUTE FUNCTION public.deduct_bom_on_order_complete();
 --   trg_deduct_inventory_bannos    → deduct_inventory_on_order() → accessories/cake_toppers
 --   trg_deduct_inventory_flourlane → deduct_inventory_on_order() → accessories/cake_toppers
 --
--- ON UPDATE to Complete/Done (this migration):
+-- ON UPDATE to Complete (this migration):
 --   trg_deduct_bom_on_complete_bannos    → deduct_bom_on_order_complete() → BOM components
 --   trg_deduct_bom_on_complete_flourlane → deduct_bom_on_order_complete() → BOM components
 -- ============================================================================
