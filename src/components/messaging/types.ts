@@ -1,5 +1,3 @@
-import type { Message as BaseMessage } from '../../types/messages';
-
 export interface Message {
   id: string;
   text: string;

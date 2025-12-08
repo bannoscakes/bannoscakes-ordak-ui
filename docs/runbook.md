@@ -68,7 +68,7 @@ Watch Sentry/Slack for 15–30 min.
 Post update in Slack (resolved + follow-ups).
 
 3) P1 – Edge/Webhook Failure
-Typical causes: bad SHOPIFY_WEBHOOK_SECRET, wrong store token, route disabled.
+Typical causes: missing metafield, wrong store token, route disabled, database errors.
 
 Freeze amplification
 
@@ -76,7 +76,7 @@ Disable the webhook route temporarily (Shopify will retry later).
 
 Verify
 
-Check provider logs for POST /webhook/orders/create error codes.
+Check Supabase Edge Function logs for error codes.
 
 In Shopify Admin → Webhooks → Recent deliveries (see error messages).
 
@@ -86,7 +86,9 @@ Verify secrets:
 
 SHOPIFY_BANNOS_TOKEN, SHOPIFY_FLOURLANE_TOKEN
 
-SHOPIFY_WEBHOOK_SECRET
+SUPABASE_SERVICE_ROLE_KEY
+
+Verify Shopify Flow is creating `ordak.kitchen_json` metafield.
 
 Redeploy the Edge function after updating secrets.
 

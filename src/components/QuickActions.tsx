@@ -6,10 +6,8 @@ import {
   Camera, 
   Scan, 
   Printer, 
-  Download, 
   Users, 
   Clock,
-  X,
   CheckCircle2,
   AlertCircle,
   FileSpreadsheet,
@@ -24,10 +22,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Checkbox } from "./ui/checkbox";
-import { Textarea } from "./ui/textarea";
-import { Switch } from "./ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,6 +34,7 @@ import {
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
 import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
+import { findOrder } from "../lib/rpc-client";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -98,7 +94,15 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchResult, setSearchResult] = useState<{ store: string; orderNumber: string } | null>(null);
+  const [searchResult, setSearchResult] = useState<{ 
+    store: string; 
+    orderNumber: string; 
+    storage: string | null;
+    stage: string;
+    productTitle: string;
+    customerName: string;
+    assigneeName: string | null;
+  } | null>(null);
   const [selectedUrgentOrders, setSelectedUrgentOrders] = useState<Set<string>>(new Set());
   const [selectedPhotoReviews, setSelectedPhotoReviews] = useState<Set<string>>(new Set());
   const [showReworkDialog, setShowReworkDialog] = useState(false);
@@ -164,22 +168,31 @@ export function QuickActions({ store }: QuickActionsProps) {
     if (!searchValue.trim()) return;
     
     setSearchLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Mock search logic
-    const bannosOrders = ["BAN-001", "BAN-002", "BAN-003", "BAN-004", "BAN-005"];
-    const flourlaneOrders = ["FLR-001", "FLR-002", "FLR-003", "FLR-004", "FLR-005"];
-    
-    if (bannosOrders.some(order => order.toLowerCase().includes(searchValue.toLowerCase()))) {
-      setSearchResult({ store: "Bannos", orderNumber: searchValue.toUpperCase() });
-    } else if (flourlaneOrders.some(order => order.toLowerCase().includes(searchValue.toLowerCase()))) {
-      setSearchResult({ store: "Flourlane", orderNumber: searchValue.toUpperCase() });
-    } else {
+    try {
+      // Universal search across ALL stages (production + complete)
+      const results = await findOrder(searchValue.trim());
+      
+      if (results && results.length > 0) {
+        const order = results[0];
+        setSearchResult({
+          store: order.store === 'bannos' ? 'Bannos' : 'Flourlane',
+          orderNumber: order.order_number?.toString() || order.id.slice(0, 8),
+          storage: order.storage,
+          stage: order.stage,
+          productTitle: order.product_title,
+          customerName: order.customer_name,
+          assigneeName: order.assignee_name,
+        });
+      } else {
+        setSearchResult(null);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
       setSearchResult(null);
+    } finally {
+      setSearchLoading(false);
     }
-    
-    setSearchLoading(false);
   };
 
   const handlePrint = () => {
@@ -329,15 +342,53 @@ export function QuickActions({ store }: QuickActionsProps) {
 
             {searchResult && (
               <div className="space-y-3">
+                {/* Order Found */}
                 <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Found in {searchResult.store}</span>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">Order #{searchResult.orderNumber}</div>
+                    <div className="text-xs text-gray-600">{searchResult.productTitle}</div>
+                    <div className="text-xs text-gray-600">{searchResult.customerName}</div>
+                  </div>
                 </div>
+
+                {/* Current Stage & Status */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs text-slate-600 font-medium">Current Stage</div>
+                    <Badge variant="outline">{searchResult.stage}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-slate-600 font-medium">Store</div>
+                    <span className="text-xs font-medium">{searchResult.store}</span>
+                  </div>
+                  {searchResult.assigneeName && (
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="text-xs text-slate-600 font-medium">Assigned to</div>
+                      <span className="text-xs font-medium">{searchResult.assigneeName}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Storage Location - PROMINENT (if set or Complete) */}
+                {(searchResult.storage || searchResult.stage === 'Complete') && (
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                    <div className="text-xs text-blue-700 font-medium mb-1">Storage Location</div>
+                    <div className="text-lg font-bold text-blue-900">
+                      {searchResult.storage || "Not Set"}
+                    </div>
+                    {searchResult.stage === 'Complete' && !searchResult.storage && (
+                      <div className="text-xs text-orange-600 mt-1">⚠️ Complete but storage not set</div>
+                    )}
+                  </div>
+                )}
+
                 <Button 
                   className="w-full" 
-                  onClick={() => toast(`Opening ${searchResult.store} Queue`)}
+                  variant="outline"
+                  onClick={() => toast(`Order is in ${searchResult.stage} stage`)}
                 >
-                  Open in {searchResult.store} Queue
+                  View Order Details
                 </Button>
               </div>
             )}

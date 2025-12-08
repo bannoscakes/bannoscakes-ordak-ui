@@ -12,7 +12,7 @@ interface FlourlaneProductionPageProps {
   onRefresh?: () => Promise<void>;
 }
 
-export function FlourlaneProductionPage({ initialFilter, stats, onRefresh }: FlourlaneProductionPageProps) {
+export function FlourlaneProductionPage({ initialFilter }: FlourlaneProductionPageProps) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">

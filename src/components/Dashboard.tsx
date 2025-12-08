@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { DashboardContent } from "./DashboardContent";
 import { StaffPage } from "./StaffPage";
-import { InventoryPage } from "./InventoryPage";
+import { InventoryPage } from "./inventory-v2";
 import { BannosProductionPage } from "./BannosProductionPage";
 import { FlourlaneProductionPage } from "./FlourlaneProductionPage";
 import { BannosMonitorPage } from "./BannosMonitorPage";
@@ -19,19 +19,10 @@ import { BarcodeTest } from "./BarcodeTest";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 
-// Import real RPCs for dashboard stats
-import { getQueue } from "../lib/rpc-client";
-import type { Stage, StoreKey, StatsByStore } from "@/types/stage";
-import { makeEmptyCounts } from "@/types/stage";
-
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<StatsByStore>({
-    bannos: makeEmptyCounts(),
-    flourlane: makeEmptyCounts(),
-  });
   
   // Parse URL parameters once and cache them
   const { viewFilter, staffFilter } = useMemo(() => {
@@ -43,87 +34,67 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     };
   }, [urlParams]);
   
-  // Load dashboard stats from real data
-  async function loadDashboardStats() {
-    try {
-      // Fetch orders from both stores
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 1000 }),
-        getQueue({ store: "flourlane", limit: 1000 })
-      ]);
-      
-      const orders = [...bannosOrders, ...flourlaneOrders];
-      
-      // Count orders by store and stage
-      const stats: StatsByStore = {
-        bannos: makeEmptyCounts(),
-        flourlane: makeEmptyCounts(),
-      };
-      
-      orders.forEach((order: any) => {
-        const store = (order.store || (order.id.startsWith('bannos') ? 'bannos' : 'flourlane')) as StoreKey;
-        if (store in stats) {
-          stats[store].total++;
-          
-          // Count by stage
-          const stageLower = order.stage?.toLowerCase() || 'filling';
-          if (isStage(stageLower)) {
-            stats[store][stageLower] = (stats[store][stageLower] ?? 0) + 1;
-          }
-          
-          // Count unassigned
-          if (order.assignee_id === null && order.stage !== 'Complete') {
-            stats[store].unassigned++;
-          }
+  // Parse URL parameters and update view reactively
+  useEffect(() => {
+    const handleUrlChange = () => {
+      try {
+        const currentUrlParams = new URLSearchParams(window.location.search);
+        const page = currentUrlParams.get('page');
+        const view = currentUrlParams.get('view');
+        const path = window.location.pathname;
+        
+        setUrlParams(currentUrlParams);
+        
+        // Handle settings routes
+        if (path === '/bannos/settings') {
+          setActiveView('bannos-settings');
+        } else if (path === '/flourlane/settings') {
+          setActiveView('flourlane-settings');
+        } else if (path === '/staff') {
+          setActiveView('staff');
+        } else if (path === '/admin/time') {
+          setActiveView('time-payroll');
+        } else if (page) {
+          // Use 'page' parameter for page selection when present
+          // Note: 'view' parameter is used as a filter within that page (e.g., ?page=bannos-production&view=unassigned)
+          setActiveView(page);
+        } else if (view) {
+          // Sidebar navigation uses 'view' parameter for page selection (e.g., ?view=inventory, ?view=dashboard)
+          setActiveView(view);
+        } else {
+          setActiveView('dashboard');
         }
-      });
-      
-      setDashboardStats(stats);
-    } catch (error) {
-      console.error('Failed to load dashboard stats:', error);
-    }
-  }
-
-  // Type guard for stage keys
-  const isStage = (s: string): s is Stage =>
-    ["total","filling","covering","decorating","packing","complete","unassigned"].includes(s as Stage);
-  
-  // Load stats on mount and when view changes
-  useEffect(() => {
-    loadDashboardStats();
-    
-    // Refresh stats every 30 seconds
-    const interval = setInterval(loadDashboardStats, 30000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Check URL parameters to determine initial view
-  useEffect(() => {
-    try {
-      const currentUrlParams = new URLSearchParams(window.location.search);
-      const page = currentUrlParams.get('page');
-      const path = window.location.pathname;
-      
-      setUrlParams(currentUrlParams);
-      
-      // Handle settings routes
-      if (path === '/bannos/settings') {
-        setActiveView('bannos-settings');
-      } else if (path === '/flourlane/settings') {
-        setActiveView('flourlane-settings');
-      } else if (path === '/staff') {
-        setActiveView('staff');
-      } else if (path === '/admin/time') {
-        setActiveView('time-payroll');
-      } else if (page) {
-        setActiveView(page);
-      } else {
+      } catch (error) {
+        console.error('Error parsing dashboard URL:', error);
         setActiveView('dashboard');
       }
-    } catch (error) {
-      console.error('Error parsing dashboard URL:', error);
-      setActiveView('dashboard');
-    }
+    };
+    
+    // Parse URL on mount
+    handleUrlChange();
+    
+    // Listen for browser back/forward navigation
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Hook into programmatic navigation (pushState/replaceState)
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(...args) {
+      originalPushState.apply(window.history, args);
+      handleUrlChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(window.history, args);
+      handleUrlChange();
+    };
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
   }, []);
 
   const renderContent = () => {
@@ -134,8 +105,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             <ErrorBoundary>
               <BannosProductionPage 
                 initialFilter={viewFilter}
-                stats={dashboardStats.bannos}
-                onRefresh={loadDashboardStats}
               />
             </ErrorBoundary>
           );
@@ -144,21 +113,19 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             <ErrorBoundary>
               <FlourlaneProductionPage 
                 initialFilter={viewFilter}
-                stats={dashboardStats.flourlane}
-                onRefresh={loadDashboardStats}
               />
             </ErrorBoundary>
           );
         case "bannos-monitor":
           return (
             <ErrorBoundary>
-              <BannosMonitorPage stats={dashboardStats.bannos} />
+              <BannosMonitorPage />
             </ErrorBoundary>
           );
         case "flourlane-monitor":
           return (
             <ErrorBoundary>
-              <FlourlaneMonitorPage stats={dashboardStats.flourlane} />
+              <FlourlaneMonitorPage />
             </ErrorBoundary>
           );
         case "bannos-analytics":
@@ -249,7 +216,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         default:
           return (
             <ErrorBoundary>
-              <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+              <DashboardContent />
             </ErrorBoundary>
           );
       }
@@ -257,7 +224,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       console.error('Error rendering dashboard content:', error);
       return (
         <ErrorBoundary>
-          <DashboardContent stats={dashboardStats} onRefresh={loadDashboardStats} />
+          <DashboardContent />
         </ErrorBoundary>
       );
     }
@@ -275,7 +242,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <ErrorBoundary>
-          <Header onRefresh={loadDashboardStats} onSignOut={onSignOut} />
+          <Header onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
           {renderContent()}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Bot, Printer, QrCode } from "lucide-react";
+import { Bot, Printer, QrCode } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
@@ -10,12 +10,20 @@ import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { getOrder } from "../lib/rpc-client";
 
+interface AccessoryItem {
+  title: string;
+  quantity: number;
+  price: string;
+  variant_title?: string | null;
+}
+
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -26,6 +34,11 @@ interface QueueItem {
   storage?: string;
   store?: 'bannos' | 'flourlane';
   stage?: string;
+  // Database fields for order details
+  cakeWriting?: string;
+  notes?: string;
+  productImage?: string | null;
+  accessories?: AccessoryItem[] | null;
 }
 
 interface OrderDetailDrawerProps {
@@ -35,51 +48,25 @@ interface OrderDetailDrawerProps {
   store: "bannos" | "flourlane";
 }
 
-// Sample extended order data
-const getExtendedOrderData = (order: QueueItem | null, store: "bannos" | "flourlane") => {
+// Extended order data - uses real values from database, no mock overrides
+const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flourlane") => {
   if (!order) return null;
   
-  const storeName = store === "bannos" ? "Bannos" : "Flourlane";
-  
-  // Generate realistic size values based on product type and original size
-  const getRealisticSize = (originalSize: string, product: string) => {
-    if (product.toLowerCase().includes("cupcake")) {
-      return originalSize === 'S' ? 'Mini' : originalSize === 'M' ? 'Standard' : 'Jumbo';
-    } else if (product.toLowerCase().includes("wedding")) {
-      return originalSize === 'S' ? '6-inch Round' : originalSize === 'M' ? '8-inch Round' : '10-inch Round';
-    } else if (product.toLowerCase().includes("birthday") || product.toLowerCase().includes("cake")) {
-      return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium Tall' : '8-inch Round';
-    } else if (store === "flourlane") {
-      // Bread/bakery items
-      return originalSize === 'S' ? 'Small Loaf' : originalSize === 'M' ? 'Standard' : 'Large Batch';
-    }
-    // Default fallback
-    return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium' : 'Large';
-  };
-  
-  // Sample data that would come from a full order object
+  // Use real values from the order, with safe fallbacks
   return {
     ...order,
-    size: getRealisticSize(order.size, order.product), // Override with realistic size
-    writingOnCake: order.id.includes("BAN-C03") || order.id.includes("FLR-C03") 
-      ? "Happy Birthday Sarah! Love, Mom & Dad" 
-      : order.id.includes("015") || order.id.includes("C01")
-      ? "Congratulations on your Wedding!"
-      : "",
-    accessories: order.product.toLowerCase().includes("wedding") 
-      ? ["Cake Stand", "Decorative Flowers", "Cake Topper"]
-      : order.product.toLowerCase().includes("cupcake")
-      ? ["Cupcake Liners", "Decorative Picks"]
-      : [],
+    // Use real size from database (no mock override)
+    size: order.size || 'Unknown',
+    // Use real cake writing from database
+    writingOnCake: order.cakeWriting || '',
+    // Pass raw accessories for flexible rendering (not pre-formatted strings)
+    accessories: order.accessories || [],
+    // Use real due date
     deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
-    notes: order.priority === "High" 
-      ? "Customer requested early morning pickup. Handle with extra care - VIP client."
-      : order.method === "Delivery"
-      ? "Standard delivery. Contact customer 30 mins before arrival."
-      : "Customer will pickup. Ensure order is ready at specified time.",
-    productImage: store === "bannos" 
-      ? "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop"
-      : "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop",
+    // Use real notes from database (null means no notes)
+    notes: order.notes || '',
+    // Use real product image from database
+    productImage: order.productImage || null,
     imageCaption: order.product
   };
 };
@@ -124,19 +111,26 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
         const mappedOrder: QueueItem = {
           id: foundOrder.id,
           orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
           customerName: foundOrder.customer_name || "Unknown Customer",
           product: foundOrder.product_title || "Unknown Product",
-          size: foundOrder.size || "M",
+          size: foundOrder.size || "Unknown",
           quantity: foundOrder.item_qty || 1,
           deliveryTime: foundOrder.due_date || new Date().toISOString(),
           priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
           status: mapStageToStatus(foundOrder.stage),
-          flavor: foundOrder.flavour || "Unknown",
+          flavor: foundOrder.flavour || "",
           dueTime: foundOrder.due_date || new Date().toISOString(),
-          method: foundOrder.delivery_method === "delivery" ? "Delivery" : "Pickup",
+          // Fix case-insensitive check for delivery_method
+          method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
           storage: foundOrder.storage || "Default",
           store: foundOrder.store || store,
-          stage: foundOrder.stage || "Filling"
+          stage: foundOrder.stage || "Filling",
+          // Add real data from database
+          cakeWriting: foundOrder.cake_writing || '',
+          notes: foundOrder.notes || '',
+          productImage: foundOrder.product_image || null,
+          accessories: foundOrder.accessories || null
         };
         
         setRealOrder(mappedOrder);
@@ -166,13 +160,19 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
   };
 
   const extendedOrder = getExtendedOrderData(realOrder || order, store);
+  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
+  const isPackingStage = currentStage === "packing";
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   if (!extendedOrder) return null;
 
   const handleViewDetails = () => {
-    // This would link to Shopify order
-    window.open(`https://admin.shopify.com/orders/${extendedOrder.orderNumber}`, '_blank');
+    const id = extendedOrder?.shopifyOrderNumber?.trim();
+    if (!id) {
+      toast.error("Shopify order number not available");
+      return;
+    }
+    window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {
@@ -193,7 +193,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[480px] p-0">
+      <SheetContent className="!w-[540px] max-w-full sm:!max-w-[540px] p-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <SheetHeader className="p-6 pb-0">
@@ -216,16 +216,38 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
           {/* Subheader */}
           {!loading && (
-            <div className="px-6 pt-4 pb-6 space-y-1">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Customer:</span> {extendedOrder.customerName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Store:</span> {storeName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium">Order #:</span> {extendedOrder.orderNumber}
-              </p>
+            <div className="px-6 pt-4 pb-6 space-y-4">
+              <div className="grid gap-1 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Customer:</span> {extendedOrder.customerName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Store:</span> {storeName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
+                  <div className="mt-2">
+                    <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
+                      {extendedOrder.priority}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
+                  <p className="mt-2 text-foreground">
+                    {extendedOrder.deliveryDate}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Method</p>
+                  <p className="mt-2 text-foreground">{extendedOrder.method}</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -234,35 +256,57 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           {/* Body - Scrollable */}
           {!loading && (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Product */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.product}
-              </p>
-            </div>
-
-            {/* Size */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Size
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.size}
-              </p>
-            </div>
-
-            {/* Flavour */}
-            {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+            {/* Product Image + Product */}
+            <div className="space-y-4">
+              {extendedOrder.productImage && (
+                <div>
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted/30 border">
+                    <ImageWithFallback
+                      src={extendedOrder.productImage}
+                      alt={extendedOrder.product}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {extendedOrder.imageCaption && (
+                    <p className="mt-2 text-xs text-muted-foreground">{extendedOrder.imageCaption}</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Flavour
+                  Product
                 </label>
-                <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.product}
+                </p>
               </div>
-            )}
+            </div>
+
+            {/* Size + Flavour + Quantity (cake details together) */}
+            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Size
+                </label>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.size}
+                </p>
+              </div>
+              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-2">
+                    Flavour
+                  </label>
+                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Quantity
+                </label>
+                <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
+              </div>
+            </div>
 
             {/* Writing on Cake */}
             {extendedOrder.writingOnCake && (
@@ -276,57 +320,27 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </div>
             )}
 
-            {/* Accessories */}
+            {/* Accessories - list format with per-item quantities */}
             {extendedOrder.accessories && extendedOrder.accessories.length > 0 && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Accessories
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {extendedOrder.accessories.map((accessory, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {accessory}
-                    </Badge>
+                <div className="p-3 bg-muted/30 rounded-lg border space-y-2">
+                  {extendedOrder.accessories.map((acc, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">
+                        {acc.title}
+                        {acc.variant_title && (
+                          <span className="text-muted-foreground ml-1">#{acc.variant_title}</span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground font-medium">× {acc.quantity}</span>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {/* Quantity */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Quantity
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
-            </div>
-
-            {/* Priority */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Priority
-              </label>
-              <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                {extendedOrder.priority}
-              </Badge>
-            </div>
-
-            {/* Due Date */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Due Date
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.deliveryDate}
-              </p>
-            </div>
-
-            {/* Method */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Method
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.method}</p>
-            </div>
 
             {/* Storage */}
             {extendedOrder.storage && (
@@ -350,29 +364,8 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </div>
             </div>
 
-            {/* Product Image */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product Image
-              </label>
-              <div className="flex items-start gap-3">
-                <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted/30 border">
-                  <ImageWithFallback
-                    src={extendedOrder.productImage}
-                    alt={extendedOrder.product}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {extendedOrder.imageCaption && (
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">{extendedOrder.imageCaption}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Quality Control Section - Only for Packing stage */}
-            {order?.stage === "packing" && (
+            {isPackingStage && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
@@ -425,7 +418,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
 
           {/* Footer */}
           <div className="p-6">
-            {order?.stage === "packing" ? (
+            {isPackingStage ? (
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Button

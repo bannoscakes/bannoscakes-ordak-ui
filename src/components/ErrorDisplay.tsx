@@ -1,11 +1,11 @@
 import React from 'react';
-import { AlertTriangle, RefreshCw, X, Info } from 'lucide-react';
+import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { AppError, getErrorMessage, getErrorCode, getRecoveryActions, ErrorCode } from '@/lib/error-handler';
 
 interface ErrorDisplayProps {

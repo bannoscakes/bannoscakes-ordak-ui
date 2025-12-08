@@ -1,9 +1,8 @@
 // DueDateTest.tsx
 // Test component for due date calculations
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Calendar, Clock } from 'lucide-react';
 import { 
@@ -14,10 +13,9 @@ import {
   type DueDateSettings 
 } from '../lib/due-date-utils';
 import { getDueDateSettings } from '../lib/rpc-client';
-import { useStore } from '../lib/config';
 
 export function DueDateTest() {
-  const store = useStore();
+  const store = 'bannos' as const;
   const [settings, setSettings] = useState<DueDateSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [testDate, setTestDate] = useState(new Date());
@@ -54,7 +52,6 @@ export function DueDateTest() {
   const calculateNextDates = () => {
     if (!settings) return;
     
-    const calculated = calculateDueDate(settings, testDate);
     const next7 = getNextAvailableDates(settings, 7, testDate);
     
     setNextDates(next7);

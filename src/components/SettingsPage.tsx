@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -7,7 +7,6 @@ import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { toast } from "sonner";
@@ -21,7 +20,9 @@ import {
   getPrintingSettings, 
   setPrintingSettings, 
   getMonitorDensity, 
-  setMonitorDensity 
+  setMonitorDensity,
+  testAdminToken,
+  syncShopifyOrders
 } from "../lib/rpc-client";
 
 interface SettingsPageProps {
@@ -33,6 +34,7 @@ interface StoreSettings {
   shopifyToken: string;
   lastConnected?: string;
   lastSync?: string;
+  inventoryTrackingEnabled: boolean;
   printing: {
     ticketSize: string;
     copies: number;
@@ -56,6 +58,7 @@ const getDefaultSettings = (store: "bannos" | "flourlane"): StoreSettings => ({
   shopifyToken: "",
   lastConnected: "2024-12-19 14:30:00",
   lastSync: "2024-12-19 15:45:00",
+  inventoryTrackingEnabled: false,
   printing: {
     ticketSize: "80mm",
     copies: 1,
@@ -84,6 +87,21 @@ const getDefaultSettings = (store: "bannos" | "flourlane"): StoreSettings => ({
 
 const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+const ensureArray = <T,>(value: unknown, fallback: T[]): T[] => {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? (parsed as T[]) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+};
+
 export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   const [settings, setSettings] = useState<StoreSettings>(getDefaultSettings(store));
@@ -96,6 +114,21 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Track current store to prevent race conditions with in-flight requests
+  const currentStoreRef = useRef(store);
+
+  // Reset status and UI states when switching stores (prevents cross-contamination)
+  useEffect(() => {
+    currentStoreRef.current = store;  // Update ref to current store
+    setConnectionStatus('idle');
+    setSyncStatus('idle');
+    setIsConnecting(false);
+    setIsSyncing(false);
+    setSyncProgress({ imported: 0, skipped: 0, errors: 0 });
+    setHasUnsavedChanges(false);  // Clear "unsaved changes" footer
+    setNewBlackoutDate('');  // Clear partially-entered blackout date
+  }, [store]);
 
   // Fetch settings from database
   useEffect(() => {
@@ -118,6 +151,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         const dueDateBlackouts = allSettings?.find((s: any) => s.key === 'dueDates.blackoutDates')?.value;
         const autoRefresh = allSettings?.find((s: any) => s.key === 'monitor.autoRefresh')?.value;
         const shopifyToken = allSettings?.find((s: any) => s.key === 'shopifyToken')?.value;
+        const inventoryTracking = allSettings?.find((s: any) => s.key === 'inventory_tracking_enabled')?.value;
 
         console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
         console.log('Storage locations details:', { 
@@ -133,26 +167,38 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         });
 
         // Update settings with real data
+        // Use store-specific defaults to prevent cross-store contamination
+        const storeDefaults = getDefaultSettings(store);
+        
         setSettings(prev => {
+          const parsedInventoryTracking = (() => {
+            if (typeof inventoryTracking === 'boolean') return inventoryTracking;
+            if (typeof inventoryTracking === 'string') {
+              return inventoryTracking.toLowerCase() === 'true';
+            }
+            return storeDefaults.inventoryTrackingEnabled;
+          })();
+
           const newSettings = {
             ...prev,
-            shopifyToken: shopifyToken || prev.shopifyToken,
-            flavours: Array.isArray(flavours) ? flavours : prev.flavours,
-            storage: Array.isArray(storage) ? storage : prev.storage,
+            shopifyToken: shopifyToken || '',  // Don't fallback to prev - causes cross-store contamination
+            flavours: Array.isArray(flavours) ? flavours : storeDefaults.flavours,
+            storage: Array.isArray(storage) ? storage : storeDefaults.storage,
+            inventoryTrackingEnabled: parsedInventoryTracking,
             printing: {
-              ...prev.printing,
+              ...storeDefaults.printing,
               ...(typeof printing === 'object' && printing ? printing : {})
             },
             dueDates: {
-              ...prev.dueDates,
-              defaultDue: dueDateDefault || prev.dueDates.defaultDue,
-              allowedDays: dueDateDays ? JSON.parse(dueDateDays) : prev.dueDates.allowedDays,
-              blackoutDates: dueDateBlackouts ? JSON.parse(dueDateBlackouts) : prev.dueDates.blackoutDates
+              ...storeDefaults.dueDates,
+              defaultDue: dueDateDefault || storeDefaults.dueDates.defaultDue,
+              allowedDays: ensureArray(dueDateDays, storeDefaults.dueDates.allowedDays),
+              blackoutDates: ensureArray(dueDateBlackouts, storeDefaults.dueDates.blackoutDates)
             },
             monitor: {
-              ...prev.monitor,
-              density: typeof monitor === 'string' ? monitor : prev.monitor.density,
-              autoRefresh: autoRefresh ? parseInt(autoRefresh) : prev.monitor.autoRefresh
+              ...storeDefaults.monitor,
+              density: typeof monitor === 'string' ? monitor : storeDefaults.monitor.density,
+              autoRefresh: autoRefresh ? parseInt(autoRefresh) : storeDefaults.monitor.autoRefresh
             }
           };
           
@@ -187,58 +233,102 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     setHasUnsavedChanges(true);
   };
 
+  const handleInventoryToggle = (enabled: boolean) => {
+    handleSettingsChange('inventoryTrackingEnabled', enabled);
+  };
+
   const handleTestConnection = async () => {
     if (!settings.shopifyToken.trim()) {
-      toast.error("Please enter a Storefront Access Token");
+      toast.error("Please enter a Shopify Admin API token");
       return;
     }
 
+    const requestStore = store;  // Capture store at request time
     setIsConnecting(true);
     setConnectionStatus('idle');
     
-    // Simulate API call
-    setTimeout(() => {
-      const success = settings.shopifyToken.length > 10; // Mock validation
-      setConnectionStatus(success ? 'success' : 'error');
-      setIsConnecting(false);
+    try {
+      const result = await testAdminToken(store, settings.shopifyToken);
       
-      if (success) {
-        toast.success("Connected successfully");
+      // Check if user switched stores while request was in-flight
+      if (currentStoreRef.current !== requestStore) {
+        console.log('Store changed during token test - ignoring result');
+        return;
+      }
+      
+      if (result.valid) {
+        setConnectionStatus('success');
+        toast.success("Admin API token validated successfully");
         setSettings(prev => ({ ...prev, lastConnected: new Date().toLocaleString() }));
       } else {
-        toast.error("Connection failed. Check token and permissions.");
+        setConnectionStatus('error');
+        toast.error(result.error || "Token validation failed");
       }
-    }, 2000);
-  };
-
-  const handleConnectAndSync = async () => {
-    await handleTestConnection();
-    if (connectionStatus === 'success') {
-      handleSyncOrders();
+    } catch (error) {
+      console.error('Token validation error:', error);
+      // Only update status if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setConnectionStatus('error');
+        toast.error("Token validation failed. Check token and permissions.");
+      }
+    } finally {
+      // Only clear loading state if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setIsConnecting(false);
+      }
     }
   };
 
   const handleSyncOrders = async () => {
+    const requestStore = store;  // Capture store at request time
     setIsSyncing(true);
     setSyncStatus('idle');
     setSyncProgress({ imported: 0, skipped: 0, errors: 0 });
     
-    // Simulate sync progress
-    const interval = setInterval(() => {
-      setSyncProgress(prev => ({
-        imported: Math.min(prev.imported + Math.floor(Math.random() * 3) + 1, 45),
-        skipped: Math.min(prev.skipped + Math.floor(Math.random() * 2), 8),
-        errors: Math.min(prev.errors + (Math.random() < 0.1 ? 1 : 0), 2)
-      }));
-    }, 200);
-
-    setTimeout(() => {
-      clearInterval(interval);
-      setIsSyncing(false);
-      setSyncStatus('success');
-      setSettings(prev => ({ ...prev, lastSync: new Date().toLocaleString() }));
-      toast.success("Sync completed successfully");
-    }, 3000);
+    try {
+      const result = await syncShopifyOrders(store);
+      
+      // Check if user switched stores while request was in-flight
+      if (currentStoreRef.current !== requestStore) {
+        console.log('Store changed during sync - ignoring result');
+        return;
+      }
+      
+      if (result.success) {
+        setSyncStatus('success');
+        setSettings(prev => ({ ...prev, lastSync: new Date().toLocaleString() }));
+        
+        if (result.recommendation) {
+          toast.success(result.recommendation, { duration: 5000 });
+        } else {
+          toast.success(result.stub ? "Sync queued (Edge Function pending)" : "Sync completed");
+        }
+        
+        // Set progress from result if available
+        if (result.imported !== undefined) {
+          setSyncProgress({
+            imported: result.imported || 0,
+            skipped: result.skipped || 0,
+            errors: result.errors || 0
+          });
+        }
+      } else {
+        setSyncStatus('error');
+        toast.error("Sync failed");
+      }
+    } catch (error) {
+      console.error('Sync orders error:', error);
+      // Only update status if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setSyncStatus('error');
+        toast.error("Sync failed");
+      }
+    } finally {
+      // Only clear loading state if still on same store
+      if (currentStoreRef.current === requestStore) {
+        setIsSyncing(false);
+      }
+    }
   };
 
   const handleTestPrint = () => {
@@ -291,6 +381,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         setStorageLocations(store, settings.storage),
         setPrintingSettings(store, settings.printing),
         setMonitorDensity(store, settings.monitor.density),
+        setSetting(store, 'inventory_tracking_enabled', settings.inventoryTrackingEnabled),
         // Save due date settings
         setSetting(store, 'dueDates.defaultDue', settings.dueDates.defaultDue),
         setSetting(store, 'dueDates.allowedDays', JSON.stringify(settings.dueDates.allowedDays)),
@@ -344,29 +435,56 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
           </div>
         )}
         
+        {/* Inventory Tracking */}
+        <Card className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-2">
+              <h3 className="font-medium text-foreground">Inventory Tracking</h3>
+              <p className="text-sm text-muted-foreground">
+                Requires BOM data and inventory quantities before enabling. Feature flag controls `deduct_inventory_for_order` and `restock_order`.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                When disabled, all inventory RPCs safely no-op and log a skip event.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant={settings.inventoryTrackingEnabled ? "default" : "outline"}>
+                {settings.inventoryTrackingEnabled ? "Active" : "Inactive"}
+              </Badge>
+              <Switch
+                checked={settings.inventoryTrackingEnabled}
+                onCheckedChange={handleInventoryToggle}
+              />
+            </div>
+          </div>
+          <div className="mt-4 rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700">
+            Warning: Enable only after BOMs and inventory counts are loaded. The system is dormant by default.
+          </div>
+        </Card>
+
         {/* Shopify Integration Section */}
         <div className="space-y-4">
           <h2 className="text-lg font-medium text-foreground">Shopify Integration</h2>
           
-          {/* Storefront Access Token */}
+          {/* Admin API Token */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-medium text-foreground">Storefront Access Token</h3>
+                <h3 className="font-medium text-foreground">Admin API Token</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Used to fetch product info/images. From: Shopify Admin → Apps → Private apps → Storefront API.
+                  Used to sync orders from Shopify. Same token as used by webhooks. From: Shopify Admin → Apps → Private app → Admin API.
                 </p>
               </div>
               {settings.lastConnected && (
                 <div className="text-xs text-muted-foreground">
-                  Last connected: {settings.lastConnected}
+                  Last validated: {settings.lastConnected}
                 </div>
               )}
             </div>
 
             {connectionStatus === 'success' && (
               <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">Connected. Catalog sync started.</p>
+                <p className="text-sm text-green-700">Admin API token validated successfully.</p>
               </div>
             )}
 
@@ -374,7 +492,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm text-red-700">Connection failed. Check token and permissions.</p>
+                  <p className="text-sm text-red-700">Token validation failed. Check token and permissions.</p>
                 </div>
               </div>
             )}
@@ -383,7 +501,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
               <div className="relative">
                 <Input
                   type={showToken ? "text" : "password"}
-                  placeholder="Enter your Storefront Access Token"
+                  placeholder="Enter your Shopify Admin API token"
                   value={settings.shopifyToken}
                   onChange={(e) => handleSettingsChange('shopifyToken', e.target.value)}
                   disabled={isConnecting}
@@ -398,19 +516,12 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
                 </Button>
               </div>
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end">
                 <Button
-                  variant="outline"
                   onClick={handleTestConnection}
                   disabled={isConnecting || !settings.shopifyToken.trim()}
                 >
-                  {isConnecting ? "Testing..." : "Test Connection"}
-                </Button>
-                <Button
-                  onClick={handleConnectAndSync}
-                  disabled={isConnecting || !settings.shopifyToken.trim()}
-                >
-                  Connect & Sync Complete Catalog
+                  {isConnecting ? "Testing..." : "Test Admin API Token"}
                 </Button>
               </div>
             </div>

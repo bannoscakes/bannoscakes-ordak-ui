@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
       port: DEV_PORT,
       strictPort: true,      // never hop to 3001/3002
       host: 'localhost',
-      open: false,
+      open: true,
       hmr: { clientPort: DEV_PORT },
     },
     preview: {

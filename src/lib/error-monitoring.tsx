@@ -31,7 +31,7 @@ export const initErrorMonitoring = initSentry;
 export const SentryErrorBoundary = Sentry.withErrorBoundary(
   ({ children }: { children: React.ReactNode }) => <>{children}</>,
   {
-    fallback: ({ error, resetError }) => (
+    fallback: ({ resetError }) => (
       <div className="p-6 text-center">
         <h2 className="text-lg font-semibold text-destructive mb-2">
           Something went wrong
@@ -47,7 +47,7 @@ export const SentryErrorBoundary = Sentry.withErrorBoundary(
         </button>
       </div>
     ),
-    beforeCapture: (scope, error, errorInfo) => {
+    beforeCapture: (scope, _error, errorInfo) => {
       scope.setTag("errorBoundary", true);
       scope.setContext("errorInfo", errorInfo as any);
     },

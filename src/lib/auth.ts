@@ -191,7 +191,7 @@ class AuthService {
   // Public methods
   async signIn(email: string, password: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await this.supabase.auth.signInWithPassword({
+      const { error } = await this.supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -223,11 +223,6 @@ class AuthService {
       console.log('Supabase signOut successful');
       console.log('Supabase session after signout:', await this.supabase.auth.getSession());
       
-      // Force update auth state
-      console.log('Updating auth state to null...');
-      this.updateAuthState({ user: null, session: null, loading: false });
-      console.log('Auth state after update:', this.authState);
-      
       // Clear any persisted auth storage regardless of current config, since
       // a previous session may have been stored before persistence was
       // disabled.
@@ -236,16 +231,15 @@ class AuthService {
         clearSupabaseAuthStorage();
       }
       
+      // Update auth state - React will handle re-rendering
+      console.log('Updating auth state to null...');
+      this.updateAuthState({ user: null, session: null, loading: false });
+      console.log('✅ Sign out complete - state cleared');
       console.log('=== SIGNOUT DEBUG END ===');
-      
-      // Reload page to ensure clean state
-      console.log('Reloading page in 500ms...');
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
       
     } catch (error) {
       console.error('Sign out error:', error);
+      this.updateAuthState({ user: null, session: null, loading: false });
     }
   }
 

@@ -9,7 +9,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
-import { getStaffList, type StaffMember as RpcStaffMember } from "../lib/rpc-client";
+import { adjustStaffTime, getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
 import { 
   Calendar,
   Search, 
@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 
 interface TimeEntry {
+  shiftId: string;
   date: string;
   shiftStart: string;
   shiftEnd: string;
@@ -62,38 +63,78 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
 
-  // Fetch real staff data
+  // Helper: Format date to YYYY-MM-DD without timezone conversion
+  function formatDateForDB(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Helper: Get date range from filter
+  function getDateRange() {
+    const today = new Date();
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setDate(thisWeekStart.getDate() - 1);
+    
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+    switch (dateRange) {
+      case 'this-week':
+        return { from: formatDateForDB(thisWeekStart), to: formatDateForDB(today) };
+      case 'last-week':
+        return { from: formatDateForDB(lastWeekStart), to: formatDateForDB(lastWeekEnd) };
+      case 'this-month':
+        return { from: formatDateForDB(thisMonthStart), to: formatDateForDB(today) };
+      case 'last-month':
+        return { from: formatDateForDB(lastMonthStart), to: formatDateForDB(lastMonthEnd) };
+      default:
+        return { from: formatDateForDB(thisWeekStart), to: formatDateForDB(today) };
+    }
+  }
+
+  // Fetch real staff time data
   useEffect(() => {
     async function fetchStaffData() {
       try {
         setLoading(true);
-        const staffList = await getStaffList();
+        const { from, to } = getDateRange();
         
-        // Convert real staff to time records (with mock time data for now)
-        const staffTimeRecords: StaffTimeRecord[] = staffList.map((staff) => ({
-          id: staff.user_id,
-          name: staff.full_name || 'Unknown Staff',
-          avatar: (staff.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase(),
-          daysWorked: 0, // TODO: Get real time tracking data
-          totalShiftHours: 0,
-          totalBreakMinutes: 0,
-          totalNetHours: 0,
-          hourlyRate: 20.00, // TODO: Get from staff_shared if we add this column
-          totalPay: 0,
-          timeEntries: [] // TODO: Get real time entries
+        // Fetch real time tracking data from RPC
+        const staffTimes = await getStaffTimes(from, to);
+        
+        // Convert to UI format
+        const staffTimeRecords: StaffTimeRecord[] = staffTimes.map((staff: any) => ({
+          id: staff.staff_id,
+          name: staff.staff_name || 'Unknown Staff',
+          avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          daysWorked: staff.days_worked || 0,
+          totalShiftHours: parseFloat(staff.total_shift_hours) || 0,
+          totalBreakMinutes: parseFloat(staff.total_break_minutes) || 0,
+          totalNetHours: parseFloat(staff.net_hours) || 0,
+          hourlyRate: parseFloat(staff.hourly_rate) || 0,
+          totalPay: parseFloat(staff.total_pay) || 0,
+          timeEntries: [] // Loaded separately when "View Details" clicked
         }));
         
         setTimeData(staffTimeRecords);
       } catch (error) {
         console.error('Error fetching staff data:', error);
-        toast.error('Failed to load staff data');
+        toast.error('Failed to load staff time data');
       } finally {
         setLoading(false);
       }
     }
     
     fetchStaffData();
-  }, []);
+  }, [dateRange]);
 
   // Filter by initial staff if provided
   useEffect(() => {
@@ -118,47 +159,114 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     toast.success("Pay period approved and locked");
   };
 
-  const handleViewDetails = (staff: StaffTimeRecord) => {
-    setSelectedStaff(staff);
-    setIsDetailsModalOpen(true);
+  const handleViewDetails = async (staff: StaffTimeRecord) => {
+    try {
+      const { from, to } = getDateRange();
+      
+      // Fetch daily breakdown for this staff member
+      const detailData = await getStaffTimesDetail(staff.id, from, to);
+      
+      // Convert to UI format
+      const timeEntries: TimeEntry[] = detailData.map((day: any) => {
+        // Extract time from ISO timestamp
+        const startTime = day.shift_start ? new Date(day.shift_start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        
+        return {
+          shiftId: day.shift_id,
+          date: day.shift_date,
+          shiftStart: startTime,
+          shiftEnd: endTime,
+          breakMinutes: parseFloat(day.break_minutes) || 0,
+          netHours: parseFloat(day.net_hours) || 0,
+          adjustmentNote: day.notes || undefined
+        };
+      });
+      
+      // Update selected staff with time entries
+      setSelectedStaff({ ...staff, timeEntries });
+      setIsDetailsModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching time details:', error);
+      toast.error('Failed to load time details');
+    }
   };
 
   const handleEditEntry = (entry: TimeEntry) => {
     setEditingEntry({ ...entry });
   };
 
-  const handleSaveEntry = () => {
-    if (selectedStaff && editingEntry) {
-      const updatedEntries = selectedStaff.timeEntries.map(entry =>
-        entry.date === editingEntry.date ? editingEntry : entry
+  const handleSaveEntry = async () => {
+    if (!selectedStaff || !editingEntry) return;
+    
+    try {
+      // Convert time strings back to ISO timestamps with proper timezone handling
+      const dateStr = editingEntry.date;
+      let newStart: string | undefined;
+      let newEnd: string | undefined;
+      
+      if (editingEntry.shiftStart) {
+        const startDate = new Date(`${dateStr}T${editingEntry.shiftStart}:00`);
+        newStart = startDate.toISOString();
+      }
+      
+      if (editingEntry.shiftEnd) {
+        const endDate = new Date(`${dateStr}T${editingEntry.shiftEnd}:00`);
+        newEnd = endDate.toISOString();
+      }
+      
+      // Call RPC to persist changes
+      await adjustStaffTime(
+        editingEntry.shiftId,
+        newStart,
+        newEnd,
+        editingEntry.adjustmentNote
       );
       
-      const updatedStaff = { ...selectedStaff, timeEntries: updatedEntries };
+      // Refresh data from database to get updated totals
+      const { from, to } = getDateRange();
+      const staffTimes = await getStaffTimes(from, to);
+      const updatedData = staffTimes.map((staff: any) => ({
+        id: staff.staff_id,
+        name: staff.staff_name || 'Unknown Staff',
+        avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        daysWorked: staff.days_worked || 0,
+        totalShiftHours: parseFloat(staff.total_shift_hours) || 0,
+        totalBreakMinutes: parseFloat(staff.total_break_minutes) || 0,
+        totalNetHours: parseFloat(staff.net_hours) || 0,
+        hourlyRate: parseFloat(staff.hourly_rate) || 0,
+        totalPay: parseFloat(staff.total_pay) || 0,
+        timeEntries: []
+      }));
+      setTimeData(updatedData);
       
-      // Recalculate totals
-      const totalShiftHours = updatedEntries.reduce((sum, entry) => {
-        const start = new Date(`2024-01-01 ${entry.shiftStart}`);
-        const end = new Date(`2024-01-01 ${entry.shiftEnd}`);
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        return sum + hours;
-      }, 0);
+      // Also refresh the details for the currently selected staff
+      const detailData = await getStaffTimesDetail(selectedStaff.id, from, to);
+      const timeEntries: TimeEntry[] = detailData.map((day: any) => {
+        const startTime = day.shift_start ? new Date(day.shift_start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+        return {
+          shiftId: day.shift_id,
+          date: day.shift_date,
+          shiftStart: startTime,
+          shiftEnd: endTime,
+          breakMinutes: parseFloat(day.break_minutes) || 0,
+          netHours: parseFloat(day.net_hours) || 0,
+          adjustmentNote: day.notes || undefined
+        };
+      });
       
-      const totalBreakMinutes = updatedEntries.reduce((sum, entry) => sum + entry.breakMinutes, 0);
-      const totalNetHours = updatedEntries.reduce((sum, entry) => sum + entry.netHours, 0);
-      const totalPay = totalNetHours * updatedStaff.hourlyRate;
-
-      updatedStaff.totalShiftHours = totalShiftHours;
-      updatedStaff.totalBreakMinutes = totalBreakMinutes;
-      updatedStaff.totalNetHours = totalNetHours;
-      updatedStaff.totalPay = totalPay;
-
-      setSelectedStaff(updatedStaff);
-      setTimeData(prev => prev.map(record => 
-        record.id === updatedStaff.id ? updatedStaff : record
-      ));
+      // Update selectedStaff with fresh data including updated totals
+      const freshStaffData = updatedData.find((s: any) => s.id === selectedStaff.id);
+      if (freshStaffData) {
+        setSelectedStaff({ ...freshStaffData, timeEntries });
+      }
       
       setEditingEntry(null);
       toast.success("Time entry updated successfully");
+    } catch (error) {
+      console.error('Error saving time entry:', error);
+      toast.error('Failed to save time entry');
     }
   };
 
@@ -358,8 +466,8 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedStaff.timeEntries.map((entry, index) => (
-                    <TableRow key={entry.date}>
+                  {selectedStaff.timeEntries.map((entry) => (
+                    <TableRow key={entry.shiftId}>
                       <TableCell>{formatDate(entry.date)}</TableCell>
                       <TableCell>{formatTime(entry.shiftStart)}</TableCell>
                       <TableCell>{formatTime(entry.shiftEnd)}</TableCell>
@@ -443,22 +551,26 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
               </div>
 
               <div>
-                <Label>Break Minutes</Label>
+                <Label>Break Minutes (calculated)</Label>
                 <Input
                   type="number"
                   value={editingEntry.breakMinutes}
-                  onChange={(e) => setEditingEntry({...editingEntry, breakMinutes: parseInt(e.target.value) || 0})}
+                  disabled
+                  className="bg-gray-100"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Auto-calculated from break records</p>
               </div>
 
               <div>
-                <Label>Net Hours</Label>
+                <Label>Net Hours (calculated)</Label>
                 <Input
                   type="number"
                   step="0.25"
                   value={editingEntry.netHours}
-                  onChange={(e) => setEditingEntry({...editingEntry, netHours: parseFloat(e.target.value) || 0})}
+                  disabled
+                  className="bg-gray-100"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Auto-calculated from shift and breaks</p>
               </div>
 
               <div className="col-span-2">

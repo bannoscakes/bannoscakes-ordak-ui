@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { Printer, QrCode, ExternalLink, Bot, X, Package, RotateCcw } from "lucide-react";
+import { Printer, QrCode, ExternalLink, Bot, Package, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
@@ -15,6 +15,7 @@ import { BarcodeGenerator } from "./BarcodeGenerator";
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -189,7 +190,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   };
 
   const handleViewInShopify = () => {
-    window.open(`https://admin.shopify.com/orders/${extendedOrder.orderNumber}`, '_blank');
+    const id = extendedOrder?.shopifyOrderNumber?.trim();
+    if (!id) {
+      toast.error("Shopify order number not available");
+      return;
+    }
+    window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {

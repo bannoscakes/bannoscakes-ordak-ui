@@ -6,17 +6,16 @@ import { ProductionStatus } from "./ProductionStatus";
 import { RecentOrders } from "./RecentOrders";
 import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
-import { EquipmentStatus } from "./EquipmentStatus";
-import type { StatsByStore } from "@/types/stage";
+// import { EquipmentStatus } from "./EquipmentStatus"; // Hidden - not in use
+import { usePrefetchStore } from "../hooks/useDashboardQueries";
 
 interface DashboardContentProps {
-  stats?: StatsByStore;
-  onRefresh?: () => Promise<void>;
   onNavigateToSignup?: () => void;
 }
 
-export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: DashboardContentProps) {
+export function DashboardContent({ onNavigateToSignup }: DashboardContentProps) {
   const [activeStore, setActiveStore] = useState("bannos");
+  const prefetchStore = usePrefetchStore();
 
   return (
     <div className="p-6 space-y-6">
@@ -39,10 +38,18 @@ export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: Dashb
 
       <Tabs value={activeStore} onValueChange={setActiveStore} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="bannos" className="font-medium">
+          <TabsTrigger 
+            value="bannos" 
+            className="font-medium"
+            onMouseEnter={() => activeStore !== 'bannos' && prefetchStore('bannos')}
+          >
             Bannos Store
           </TabsTrigger>
-          <TabsTrigger value="flourlane" className="font-medium">
+          <TabsTrigger 
+            value="flourlane" 
+            className="font-medium"
+            onMouseEnter={() => activeStore !== 'flourlane' && prefetchStore('flourlane')}
+          >
             Flourlane Store
           </TabsTrigger>
         </TabsList>
@@ -58,7 +65,8 @@ export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: Dashb
             <div className="col-span-12 lg:col-span-4 space-y-6">
               <QuickActions store="bannos" />
               <ProductionTimeline store="bannos" />
-              <EquipmentStatus store="bannos" />
+              {/* EquipmentStatus hidden - not in use */}
+              {/* <EquipmentStatus store="bannos" /> */}
             </div>
           </div>
         </TabsContent>
@@ -74,7 +82,8 @@ export function DashboardContent({ stats, onRefresh, onNavigateToSignup }: Dashb
             <div className="col-span-12 lg:col-span-4 space-y-6">
               <QuickActions store="flourlane" />
               <ProductionTimeline store="flourlane" />
-              <EquipmentStatus store="flourlane" />
+              {/* EquipmentStatus hidden - not in use */}
+              {/* <EquipmentStatus store="flourlane" /> */}
             </div>
           </div>
         </TabsContent>

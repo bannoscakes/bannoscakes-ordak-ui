@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 import { Button } from './ui/button';
 import { AlertCircle, Camera, CameraOff } from 'lucide-react';
@@ -10,7 +10,7 @@ interface CameraScannerProps {
   className?: string;
 }
 
-export function CameraScanner({ onScan, onError, isActive, className = '' }: CameraScannerProps) {
+export function CameraScanner({ onScan, isActive, className = '' }: CameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [isScanning, setIsScanning] = useState(false);

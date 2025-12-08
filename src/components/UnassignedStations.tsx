@@ -1,8 +1,8 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getUnassignedCounts } from "../lib/rpc-client";
+import { useMemo } from "react";
+import { useUnassignedCounts } from "../hooks/useDashboardQueries";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
@@ -45,72 +45,43 @@ const getColorClasses = (color: string) => {
 };
 
 export function UnassignedStations({ store }: UnassignedStationsProps) {
-  const [stations, setStations] = useState<Station[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalUnassigned, setTotalUnassigned] = useState(0);
+  const { data, isLoading } = useUnassignedCounts(store);
 
-  useEffect(() => {
-    async function loadUnassignedCounts() {
-      setLoading(true);
-      try {
-        const data = await getUnassignedCounts(store);
-        
-        // Transform the RPC data to our expected format
-        const counts = {
-          filling: data.find((d: { stage: string; count: number }) => d.stage === 'Filling')?.count || 0,
-          covering: data.find((d: { stage: string; count: number }) => d.stage === 'Covering')?.count || 0,
-          decorating: data.find((d: { stage: string; count: number }) => d.stage === 'Decorating')?.count || 0,
-          packing: data.find((d: { stage: string; count: number }) => d.stage === 'Packing')?.count || 0
-        };
-        
-        const stationData: Station[] = [
-          {
-            name: "Filling Unassigned",
-            count: counts.filling,
-            color: "blue"
-          },
-          {
-            name: "Covering Unassigned", 
-            count: counts.covering,
-            color: "purple"
-          },
-          {
-            name: "Decoration Unassigned",
-            count: counts.decorating,
-            color: "pink"
-          },
-          {
-            name: "Packing Unassigned",
-            count: counts.packing,
-            color: "orange"
-          }
-        ];
-        
-        setStations(stationData);
-        setTotalUnassigned(stationData.reduce((total, station) => total + station.count, 0));
-      } catch (error) {
-        console.error("Failed to load unassigned counts:", error);
-        // Set default empty stations on error
-        setStations([
-          { name: "Filling Unassigned", count: 0, color: "blue" },
-          { name: "Covering Unassigned", count: 0, color: "purple" },
-          { name: "Decoration Unassigned", count: 0, color: "pink" },
-          { name: "Packing Unassigned", count: 0, color: "orange" }
-        ]);
-        setTotalUnassigned(0);
-      } finally {
-        setLoading(false);
-      }
+  // Transform the RPC data to station format
+  const { stations, totalUnassigned } = useMemo(() => {
+    const defaultStations: Station[] = [
+      { name: "Filling Unassigned", count: 0, color: "blue" },
+      { name: "Covering Unassigned", count: 0, color: "purple" },
+      { name: "Decoration Unassigned", count: 0, color: "pink" },
+      { name: "Packing Unassigned", count: 0, color: "orange" }
+    ];
+
+    if (!data) {
+      return { stations: defaultStations, totalUnassigned: 0 };
     }
-    
-    loadUnassignedCounts();
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(loadUnassignedCounts, 30000);
-    return () => clearInterval(interval);
-  }, [store]);
 
-  if (loading) {
+    const counts = {
+      filling: data.find((d: { stage: string; count: number }) => d.stage === 'Filling')?.count || 0,
+      covering: data.find((d: { stage: string; count: number }) => d.stage === 'Covering')?.count || 0,
+      decorating: data.find((d: { stage: string; count: number }) => d.stage === 'Decorating')?.count || 0,
+      packing: data.find((d: { stage: string; count: number }) => d.stage === 'Packing')?.count || 0
+    };
+
+    const stationData: Station[] = [
+      { name: "Filling Unassigned", count: counts.filling, color: "blue" },
+      { name: "Covering Unassigned", count: counts.covering, color: "purple" },
+      { name: "Decoration Unassigned", count: counts.decorating, color: "pink" },
+      { name: "Packing Unassigned", count: counts.packing, color: "orange" }
+    ];
+
+    return {
+      stations: stationData,
+      totalUnassigned: stationData.reduce((total, station) => total + station.count, 0)
+    };
+  }, [data]);
+
+  // Only show skeleton on initial load, not on refetch
+  if (isLoading) {
     return (
       <Card className="p-4">
         <div className="animate-pulse">

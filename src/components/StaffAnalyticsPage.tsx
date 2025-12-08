@@ -1,27 +1,21 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { 
-  TrendingUp, 
-  TrendingDown, 
   Users, 
   Clock, 
   Target,
   Calendar,
-  Award,
-  AlertCircle,
   Star,
   CheckCircle,
   UserCheck,
   Activity
 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, RadialBarChart, RadialBar } from "recharts";
-import { getStaffList } from "../lib/rpc-client";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance } from "../lib/rpc-client";
 import { toast } from "sonner";
-import AnalyticsKPI from "@/components/analytics/AnalyticsKPI";
 import ChartContainer from "@/components/analytics/ChartContainer";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
 import KpiValue from "@/components/analytics/KpiValue";
@@ -46,13 +40,7 @@ const staffProductivity = [
   { month: "Aug", productivity: 97.1, hours: 1650, overtime: 90 }
 ];
 
-const departmentPerformance = [
-  { department: "Bannos Production", members: 8, efficiency: 94.5, satisfaction: 87, color: "#3b82f6" },
-  { department: "Flourlane Production", members: 6, efficiency: 96.2, satisfaction: 91, color: "#ec4899" },
-  { department: "Quality Control", members: 3, efficiency: 98.1, satisfaction: 94, color: "#10b981" },
-  { department: "Packaging", members: 4, efficiency: 92.7, satisfaction: 85, color: "#f59e0b" },
-  { department: "Maintenance", members: 2, efficiency: 89.3, satisfaction: 82, color: "#8b5cf6" }
-];
+// departmentPerformance removed - now using real data from getDepartmentPerformance RPC
 
 // TODO: Replace with real staff from database and actual performance metrics
 const topPerformers = [
@@ -133,58 +121,32 @@ const shiftDistribution = [
   { name: "Weekend", value: 10, employees: 6, color: "#8b5cf6" }
 ];
 
-const kpiMetrics = [
-  {
-    title: "Total Staff",
-    value: "23",
-    change: "+2",
-    trend: "up",
-    icon: Users,
-    color: "text-blue-600",
-    bg: "bg-blue-50"
-  },
-  {
-    title: "Avg Productivity",
-    value: "97.1%",
-    change: "+2.2%", 
-    trend: "up",
-    icon: Target,
-    color: "text-green-600",
-    bg: "bg-green-50"
-  },
-  {
-    title: "Attendance Rate",
-    value: "96.8%",
-    change: "+1.1%",
-    trend: "up",
-    icon: CheckCircle,
-    color: "text-purple-600",
-    bg: "bg-purple-50"
-  },
-  {
-    title: "Training Complete",
-    value: "74%",
-    change: "+12%",
-    trend: "up", 
-    icon: Award,
-    color: "text-orange-600",
-    bg: "bg-orange-50"
-  }
-];
+// Mock metrics removed - now using real data from RPCs
 
 export function StaffAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [totalStaff, setTotalStaff] = useState(0);
-  const [activeStaff, setActiveStaff] = useState(0);
+  const [avgProductivity, setAvgProductivity] = useState<number | null>(null);
+  const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
+  const [departmentPerformanceData, setDepartmentPerformanceData] = useState<any[]>([]);
   const isEnabled = useAnalyticsEnabled();
   
-  // Fetch real staff data
+  // Fetch real staff analytics data
   useEffect(() => {
     async function fetchStaffStats() {
       try {
-        const staffList = await getStaffList(null, true); // Get all active staff
+        // Fetch all metrics in parallel
+        const [staffList, productivityData, attendanceData, deptData] = await Promise.all([
+          getStaffList(null, true), // Get all active staff
+          getStaffAvgProductivity(30), // Last 30 days
+          getStaffAttendanceRate(30), // Last 30 days
+          getDepartmentPerformance(30) // Last 30 days
+        ]);
+        
         setTotalStaff(staffList.length);
-        setActiveStaff(staffList.filter(s => s.is_active).length);
+        setAvgProductivity(productivityData?.avg_productivity || null);
+        setAttendanceRate(attendanceData?.attendance_rate || null);
+        setDepartmentPerformanceData(deptData || []);
       } catch (error) {
         console.error('Error fetching staff stats:', error);
         toast.error('Failed to load staff analytics');
@@ -195,24 +157,42 @@ export function StaffAnalyticsPage() {
     fetchStaffStats();
   }, []);
   
-  // Update KPI metrics with real data where available
+  // Build KPI metrics with real data
   const kpiMetricsWithRealData = [
     {
       title: "Total Staff",
       value: loading ? "..." : totalStaff.toString(),
-      change: "+2",
-      trend: "up",
+      change: "",
+      trend: "neutral" as const,
       icon: Users,
       color: "text-blue-600",
       bg: "bg-blue-50"
     },
-    ...kpiMetrics.slice(1) // Keep other mock metrics for now
+    {
+      title: "Avg Productivity",
+      value: loading ? "..." : (avgProductivity !== null ? `${avgProductivity.toFixed(1)}%` : "N/A"),
+      change: "",
+      trend: "neutral" as const,
+      icon: Target,
+      color: "text-green-600",
+      bg: "bg-green-50"
+    },
+    {
+      title: "Attendance Rate",
+      value: loading ? "..." : (attendanceRate !== null ? `${attendanceRate.toFixed(1)}%` : "N/A"),
+      change: "",
+      trend: "neutral" as const,
+      icon: CheckCircle,
+      color: "text-purple-600",
+      bg: "bg-purple-50"
+    }
+    // Training Complete removed - not useful per user request
   ];
 
   // Gate all mock datasets behind feature flag
   const staffProductivityData = isEnabled ? staffProductivity : [];
   const attendanceDataUse = isEnabled ? attendanceData : [];
-  const departmentPerformanceData = isEnabled ? departmentPerformance : [];
+  // departmentPerformanceData now comes from RPC (real data)
   const skillsDistributionData = isEnabled ? skillsDistribution : [];
   const trainingProgressData = isEnabled ? trainingProgress : [];
   const shiftDistributionUse = isEnabled ? shiftDistribution : [];
@@ -394,55 +374,61 @@ export function StaffAnalyticsPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-6">
-                {departmentPerformance.map((dept, index) => (
-                  <div key={index} className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: dept.color }}></div>
-                        <div>
-                          <h4 className="font-medium text-foreground">{dept.department}</h4>
-                          <p className="text-sm text-muted-foreground">{dept.members} team members</p>
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading department data...</div>
+                ) : departmentPerformanceData.length > 0 ? (
+                  departmentPerformanceData.map((dept, index) => (
+                    <div key={index} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: dept.color }}></div>
+                          <div>
+                            <h4 className="font-medium text-foreground">{dept.department}</h4>
+                            <p className="text-sm text-muted-foreground">{dept.members} team members</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-6 text-center">
+                          <div>
+                            <p className="font-semibold text-foreground">{dept.efficiency.toFixed(1)}%</p>
+                            <p className="text-xs text-muted-foreground">Efficiency</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">N/A</p>
+                            <p className="text-xs text-muted-foreground">Satisfaction</p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-6 text-center">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="font-semibold text-foreground">{dept.efficiency}%</p>
-                          <p className="text-xs text-muted-foreground">Efficiency</p>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>Efficiency</span>
+                            <span>{dept.efficiency.toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="h-2 rounded-full transition-all duration-500"
+                              style={{ width: `${dept.efficiency}%`, backgroundColor: dept.color }}
+                            />
+                          </div>
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground">{dept.satisfaction}%</p>
-                          <p className="text-xs text-muted-foreground">Satisfaction</p>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>Satisfaction</span>
+                            <span>N/A</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="h-2 rounded-full transition-all duration-500 bg-muted"
+                              style={{ width: '0%' }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Efficiency</span>
-                          <span>{dept.efficiency}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className="h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${dept.efficiency}%`, backgroundColor: dept.color }}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Satisfaction</span>
-                          <span>{dept.satisfaction}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className="h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${dept.satisfaction}%`, backgroundColor: dept.color }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">No department data available</div>
+                )}
               </div>
             </CardContent>
           </Card>

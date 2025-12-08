@@ -5,88 +5,6 @@ import { Avatar } from "./ui/avatar";
 import { useEffect, useState } from "react";
 import { getStaffList, type StaffMember } from "../lib/rpc-client";
 
-// Fallback staff data for both stores
-const fallbackStaffData = [
-  {
-    id: "STF-001",
-    name: "Sarah Chen",
-    role: "Production Manager",
-    status: "On Shift",
-    location: "Bannos - Filling Station",
-    shiftStart: "6:00 AM",
-    shiftEnd: "2:00 PM",
-    phone: "+1 (555) 0123",
-    avatar: "SC",
-    experience: "5 years",
-    skills: ["Production Planning", "Quality Control", "Team Leadership"]
-  },
-  {
-    id: "STF-002", 
-    name: "Marcus Rodriguez",
-    role: "Head Baker",
-    status: "On Shift",
-    location: "Flourlane - Baking Station",
-    shiftStart: "4:00 AM",
-    shiftEnd: "12:00 PM",
-    phone: "+1 (555) 0124",
-    avatar: "MR",
-    experience: "8 years",
-    skills: ["Artisan Baking", "Recipe Development", "Equipment Operation"]
-  },
-  {
-    id: "STF-003",
-    name: "Emma Thompson",
-    role: "Decorator",
-    status: "On Break",
-    location: "Bannos - Decoration Station", 
-    shiftStart: "8:00 AM",
-    shiftEnd: "4:00 PM",
-    phone: "+1 (555) 0125",
-    avatar: "ET",
-    experience: "3 years",
-    skills: ["Cake Decoration", "Artistic Design", "Custom Orders"]
-  },
-  {
-    id: "STF-004",
-    name: "David Kim",
-    role: "Quality Inspector",
-    status: "On Shift",
-    location: "Both Stores - Mobile",
-    shiftStart: "9:00 AM", 
-    shiftEnd: "5:00 PM",
-    phone: "+1 (555) 0126",
-    avatar: "DK",
-    experience: "4 years",
-    skills: ["Quality Assurance", "Safety Compliance", "Process Optimization"]
-  },
-  {
-    id: "STF-005",
-    name: "Lisa Park",
-    role: "Packaging Supervisor",
-    status: "Off Shift",
-    location: "Both Stores - Packaging",
-    shiftStart: "1:00 PM",
-    shiftEnd: "9:00 PM", 
-    phone: "+1 (555) 0127",
-    avatar: "LP",
-    experience: "6 years",
-    skills: ["Packaging Operations", "Inventory Management", "Logistics"]
-  },
-  {
-    id: "STF-006",
-    name: "James Wilson", 
-    role: "Maintenance Tech",
-    status: "On Call",
-    location: "Both Stores - Equipment",
-    shiftStart: "On Call",
-    shiftEnd: "On Call",
-    phone: "+1 (555) 0128", 
-    avatar: "JW",
-    experience: "7 years",
-    skills: ["Equipment Repair", "Preventive Maintenance", "Troubleshooting"]
-  }
-];
-
 const getStatusColor = (status: string) => {
   switch (status) {
     case "On Shift":
@@ -142,7 +60,6 @@ export function StaffOverview() {
   // TODO: Replace with actual shift status when shift tracking is implemented
   // For now, use account status as a placeholder
   const activeStaffCount = staffData.filter(staff => staff.is_active).length;
-  const inactiveStaffCount = staffData.filter(staff => !staff.is_active).length;
   
   // Placeholder values until shift tracking is implemented
   const onShiftCount = Math.floor(activeStaffCount * 0.7); // Estimate 70% of active staff are on shift
@@ -175,7 +92,7 @@ export function StaffOverview() {
       </div>
 
       <div className="space-y-4">
-        {staffData.map((staff, index) => (
+        {staffData.map((staff) => (
           <div key={staff.user_id} className="border border-border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-3">

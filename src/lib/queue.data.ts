@@ -10,7 +10,7 @@ export type QueueMinimalRow = {
   title: string;
   stage: Stage;
   priority: Priority;
-  due_date: string;
+  due_date: string | null;
   assignee_id: string | null;
   storage_location: string | null;
   store: Store;
@@ -32,9 +32,6 @@ export type CompleteMinimalRow = {
   packing_complete_ts: string | null;
   created_at: string;
 };
-
-// Use RPC functions for all data fetching
-const MODE = 'rpc';
 
 export async function fetchQueue(store: Store | null, limit = 100, offset = 0): Promise<QueueMinimalRow[]> {
   const supabase = getSupabase();

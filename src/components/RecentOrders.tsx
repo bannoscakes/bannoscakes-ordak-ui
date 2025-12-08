@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
-import { getQueue } from "../lib/rpc-client";
+import { useRecentOrders } from "../hooks/useDashboardQueries";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
@@ -13,6 +13,7 @@ interface RecentOrdersProps {
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -26,10 +27,41 @@ interface QueueItem {
   storage?: string;
 }
 
+interface DisplayOrder {
+  id: string;
+  customer: string;
+  product: string;
+  quantity: number;
+  status: string;
+  priority: string;
+  dueDate: string;
+  progress: number;
+  shopify_order_id?: number;
+  shopify_order_number?: number;
+}
+
+// Map internal store name to Shopify store slug
+const SHOPIFY_STORE_SLUGS: Record<string, string> = {
+  bannos: 'bannos',
+  flourlane: 'flour-lane',
+};
+
+// Convert stage to progress percentage
+const getProgressFromStage = (stage: string | undefined): number => {
+  switch (stage) {
+    case 'Complete': return 100;
+    case 'Packing': return 75;
+    case 'Decorating': return 50;
+    case 'Covering': return 25;
+    default: return 0;
+  }
+};
+
 // Convert dashboard order format to QueueItem format
-const convertToQueueItem = (order: any): QueueItem => ({
+const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   id: order.id,
   orderNumber: order.id,
+  shopifyOrderNumber: order.shopify_order_number ? String(order.shopify_order_number) : '',
   customerName: order.customer,
   product: order.product,
   size: 'M' as const, // Default size
@@ -42,113 +74,6 @@ const convertToQueueItem = (order: any): QueueItem => ({
   method: "Pickup" as const, // Default method
   storage: order.status === "Completed" ? "Store Fridge" : undefined
 });
-
-const storeOrders = {
-  bannos: [
-    {
-      id: "BAN-001",
-      customer: "Sweet Delights Co.",
-      product: "Chocolate Cupcakes",
-      quantity: 150,
-      status: "In Production",
-      priority: "High",
-      dueDate: "Sep 3, 2025",
-      progress: 45
-    },
-    {
-      id: "BAN-002", 
-      customer: "City Bakery",
-      product: "Vanilla Cake",
-      quantity: 75,
-      status: "Pending",
-      priority: "Medium",
-      dueDate: "Sep 5, 2025",
-      progress: 0
-    },
-    {
-      id: "BAN-003",
-      customer: "Wedding Bells",
-      product: "Custom Wedding Cake",
-      quantity: 1,
-      status: "Quality Check",
-      priority: "High",
-      dueDate: "Sep 2, 2025",
-      progress: 85
-    },
-    {
-      id: "BAN-004",
-      customer: "Local Café",
-      product: "Assorted Muffins",
-      quantity: 200,
-      status: "Completed",
-      priority: "Low",
-      dueDate: "Sep 1, 2025",
-      progress: 100
-    },
-    {
-      id: "BAN-005",
-      customer: "Party Palace",
-      product: "Birthday Cupcakes",
-      quantity: 120,
-      status: "Scheduled",
-      priority: "Medium",
-      dueDate: "Sep 4, 2025",
-      progress: 0
-    }
-  ],
-  flourlane: [
-    {
-      id: "FLR-001",
-      customer: "Gourmet Treats Inc.",
-      product: "Artisan Bread Loaves",
-      quantity: 80,
-      status: "In Production",
-      priority: "High",
-      dueDate: "Sep 3, 2025",
-      progress: 65
-    },
-    {
-      id: "FLR-002", 
-      customer: "Corner Deli",
-      product: "Sourdough Rolls",
-      quantity: 200,
-      status: "Quality Check",
-      priority: "Medium",
-      dueDate: "Sep 2, 2025",
-      progress: 90
-    },
-    {
-      id: "FLR-003",
-      customer: "Farm Fresh Market",
-      product: "Whole Wheat Bread",
-      quantity: 150,
-      status: "Completed",
-      priority: "Low",
-      dueDate: "Sep 1, 2025",
-      progress: 100
-    },
-    {
-      id: "FLR-004",
-      customer: "Bistro Central",
-      product: "French Baguettes",
-      quantity: 60,
-      status: "Scheduled",
-      priority: "High",
-      dueDate: "Sep 4, 2025",
-      progress: 0
-    },
-    {
-      id: "FLR-005",
-      customer: "Health Food Store",
-      product: "Gluten-Free Muffins",
-      quantity: 100,
-      status: "Pending",
-      priority: "Medium",
-      dueDate: "Sep 6, 2025",
-      progress: 0
-    }
-  ]
-};
 
 const getStatusColor = (status: string) => {
   const colors = {
@@ -171,57 +96,65 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function RecentOrders({ store }: RecentOrdersProps) {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useRecentOrders(store);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
 
-  useEffect(() => {
-    fetchRecentOrders();
-  }, [store]);
+  // Transform raw data to display format
+  const orders = useMemo<DisplayOrder[]>(() => {
+    if (!data) return [];
+    
+    return data.map((order: any): DisplayOrder => ({
+      id: order.id,
+      customer: order.customer_name || 'Unknown',
+      product: order.product_title || 'Unknown',
+      quantity: order.item_qty || 1,
+      status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
+      priority: order.priority || 'Medium',
+      dueDate: order.due_date || 'N/A',
+      progress: getProgressFromStage(order.stage),
+      shopify_order_id: order.shopify_order_id,
+      shopify_order_number: order.shopify_order_number
+    }));
+  }, [data]);
 
-  const fetchRecentOrders = async () => {
-    try {
-      setLoading(true);
-      // Get recent orders (limit to last 5)
-      const data = await getQueue({
-        store,
-        limit: 5,
-        sort_by: 'due_date',
-        sort_order: 'ASC'
-      });
-      
-      // Map to expected format
-      const mapped = data.map((order: any) => ({
-        id: order.id,
-        customer: order.customer_name || 'Unknown',
-        product: order.product_title || 'Unknown',
-        quantity: order.item_qty || 1,
-        status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
-        priority: order.priority || 'Medium',
-        dueDate: order.due_date || 'N/A',
-        progress: order.stage === 'Complete' ? 100 : order.stage === 'Packing' ? 75 : order.stage === 'Decorating' ? 50 : order.stage === 'Covering' ? 25 : 0
-      }));
-      
-      setOrders(mapped);
-    } catch (error) {
-      console.error('Failed to fetch recent orders:', error);
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenOrder = (order: any) => {
+  const handleOpenOrder = (order: DisplayOrder) => {
     const queueItem = convertToQueueItem(order);
     setSelectedOrder(queueItem);
     setDrawerOpen(true);
   };
 
-  const handleViewDetails = (order: any) => {
-    // This would link to Shopify order
-    window.open(`https://admin.shopify.com/orders/${order.id}`, '_blank');
+  const handleViewDetails = (order: DisplayOrder) => {
+    // Open Shopify admin for this order
+    if (order.shopify_order_id) {
+      const storeSlug = SHOPIFY_STORE_SLUGS[store];
+      if (storeSlug) {
+        window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${order.shopify_order_id}`, '_blank');
+      }
+    }
   };
+
+  // Only show skeleton on initial load, not on refetch
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <div className="animate-pulse">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="h-4 bg-muted rounded w-48 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-64"></div>
+            </div>
+            <div className="h-8 bg-muted rounded w-20"></div>
+          </div>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">
@@ -253,7 +186,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
             </tr>
           </thead>
           <tbody>
-            {orders.map((order, index) => (
+            {orders.map((order) => (
               <tr key={order.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                 <td className="py-4 font-medium text-foreground">{order.id}</td>
                 <td className="py-4 text-foreground">{order.customer}</td>

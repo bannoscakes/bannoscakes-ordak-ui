@@ -1,7 +1,4 @@
-import React from 'react';
 import { createPortal } from 'react-dom';
-import QueueDebug from '../features/queue/QueueDebug';
-import EnvBadge from './EnvBadge';
 
 export default function DebugOverlay() {
   const el = (
@@ -12,8 +9,7 @@ export default function DebugOverlay() {
       padding: 12, boxShadow: '0 8px 24px rgba(0,0,0,.35)'
     }}>
       <div style={{fontWeight: 700, marginBottom: 8}}>DEV · Queue Debug</div>
-      <QueueDebug />
-      <div style={{marginTop: 8}}><EnvBadge /></div>
+      <div>Queue debugging disabled</div>
     </div>
   );
   return createPortal(el, document.body);

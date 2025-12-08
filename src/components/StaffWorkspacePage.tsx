@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -28,11 +28,12 @@ import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 // Import real RPCs
-import { getQueue } from "../lib/rpc-client";
+import { getQueue, getQueueCached } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
   customerName: string;
   product: string;
   size: "S" | "M" | "L";
@@ -109,6 +110,7 @@ export function StaffWorkspacePage({
 
   const [orders, setOrders] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const hasInitiallyLoaded = useRef(false); // Track initial load
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] =
     useState<ShiftStatus>("not-started");
@@ -126,29 +128,39 @@ export function StaffWorkspacePage({
 
   // Mock unread message count
 
-  // Load orders from mock
-  async function loadStaffOrders() {
-    setLoading(true);
+  // Load orders from real RPC
+  async function loadStaffOrders(bypassCache = false) {
+    // Only show loading skeleton on initial load, not during auto-refresh
+    if (!hasInitiallyLoaded.current) {
+      setLoading(true);
+    }
+    
     try {
-      // Fetch orders from both stores
+      // Guard: Ensure user is loaded
+      if (!user?.id) {
+        console.warn("Cannot load staff orders: user not loaded");
+        setOrders([]);
+        return;
+      }
+      
+      // Fetch orders assigned to current user from both stores
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", limit: 100 }),
-        getQueue({ store: "flourlane", limit: 100 })
+        bypassCache
+          ? getQueue({ store: "bannos", assignee_id: user.id, limit: 100 })
+          : getQueueCached({ store: "bannos", assignee_id: user.id, limit: 100 }),
+        bypassCache
+          ? getQueue({ store: "flourlane", assignee_id: user.id, limit: 100 })
+          : getQueueCached({ store: "flourlane", assignee_id: user.id, limit: 100 })
       ]);
       
-      // Combine all orders
+      // Combine orders from both stores
       const allOrders = [...bannosOrders, ...flourlaneOrders];
       
-      // Filter for assigned orders (orders with assignee_id not null)
-      const assignedOrders = allOrders.filter(o => o.assignee_id !== null);
-      
-      // If no assigned orders, show unassigned orders for staff to pick up
-      const ordersToShow = assignedOrders.length > 0 ? assignedOrders : allOrders.slice(0, 5);
-      
       // Map database orders to UI format
-      const mappedOrders = ordersToShow.map((order: any) => ({
+      const mappedOrders = allOrders.map((order: any) => ({
         id: order.id,
-        orderNumber: order.human_id || order.shopify_order_number || order.id,
+        orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+        shopifyOrderNumber: String(order.shopify_order_number || ''),
         customerName: order.customer_name || "Unknown Customer",
         product: order.product_title || "Unknown Product",
         size: order.size || "M",
@@ -170,6 +182,7 @@ export function StaffWorkspacePage({
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
+      hasInitiallyLoaded.current = true; // Mark initial load complete
     }
   }
 
@@ -184,10 +197,36 @@ export function StaffWorkspacePage({
     }
   };
 
-  // Load orders on mount
+  // Load orders on mount and set up auto-refresh
   useEffect(() => {
+    // Only set up polling when user is loaded
+    if (!user?.id) {
+      return;
+    }
+    
     loadStaffOrders();
-  }, []);
+    
+    // Auto-refresh every 30 seconds (uses cache for performance)
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadStaffOrders();
+      }
+    }, 30000);
+    
+    // Refresh when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadStaffOrders();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user?.id]); // Re-establish interval when user becomes available
 
   // Update elapsed time
   useEffect(() => {
@@ -216,15 +255,16 @@ export function StaffWorkspacePage({
 
   const filteredOrders = orders.filter(
     (order) =>
+      !searchValue ||
       order.orderNumber
-        .toLowerCase()
-        .includes(searchValue.toLowerCase()) ||
+        ?.toLowerCase()
+        ?.includes(searchValue.toLowerCase()) ||
       order.customerName
-        .toLowerCase()
-        .includes(searchValue.toLowerCase()) ||
+        ?.toLowerCase()
+        ?.includes(searchValue.toLowerCase()) ||
       order.product
-        .toLowerCase()
-        .includes(searchValue.toLowerCase()),
+        ?.toLowerCase()
+        ?.includes(searchValue.toLowerCase()),
   );
 
   const handleStartShift = () => {
@@ -275,12 +315,12 @@ export function StaffWorkspacePage({
     setScannerOpen(false);
     setSelectedOrder(null);
     
-    // Reload orders to get updated state
-    await loadStaffOrders();
+    // Reload orders with fresh data (bypass cache to avoid stale data)
+    await loadStaffOrders(true);
   };
 
   const handleRefresh = () => {
-    loadStaffOrders();
+    loadStaffOrders(true); // Bypass cache for manual refresh
   };
 
   const getStoreColor = (store: string) => {
@@ -497,12 +537,17 @@ export function StaffWorkspacePage({
                           }
                           onEditOrder={undefined}
                           onAssignToStaff={undefined}
-                          onViewDetails={() =>
+                          onViewDetails={() => {
+                            const id = order.shopifyOrderNumber?.trim();
+                            if (!id) {
+                              toast.error("Shopify order number not available");
+                              return;
+                            }
                             window.open(
-                              `https://admin.shopify.com/orders/${order.orderNumber}`,
+                              `https://admin.shopify.com/orders/${encodeURIComponent(id)}`,
                               "_blank",
-                            )
-                          }
+                            );
+                          }}
                           isCompleteTab={false}
                         />
                       </div>
@@ -581,7 +626,10 @@ export function StaffWorkspacePage({
               {filteredOrders.length === 0 && (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">
-                    No assigned orders found
+                    No orders assigned to you yet
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Orders will appear here when a supervisor assigns them to you
                   </p>
                 </Card>
               )}

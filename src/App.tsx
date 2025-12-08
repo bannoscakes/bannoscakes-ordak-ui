@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/query-client";
 
 // ✅ real auth system (from the audit)
 import { AuthProvider } from "./contexts/AuthContext";
@@ -23,6 +25,70 @@ function Spinner() {
   return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 }
 
+// Fade transition wrapper to prevent flickering during auth state changes
+function FadeTransition({ children, transitionKey }: { children: React.ReactNode; transitionKey: string }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [displayChildren, setDisplayChildren] = useState(children);
+  const previousKey = useRef(transitionKey);
+  const timeoutRef = useRef<number | null>(null);
+  const rafRef1 = useRef<number | null>(null);
+  const rafRef2 = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Cleanup function to cancel all pending animations
+    const cancelAllAnimations = () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (rafRef1.current !== null) {
+        cancelAnimationFrame(rafRef1.current);
+        rafRef1.current = null;
+      }
+      if (rafRef2.current !== null) {
+        cancelAnimationFrame(rafRef2.current);
+        rafRef2.current = null;
+      }
+    };
+
+    if (previousKey.current !== transitionKey) {
+      // Key changed - fade out, then update children, then fade in
+      setIsVisible(false);
+
+      timeoutRef.current = window.setTimeout(() => {
+        setDisplayChildren(children);
+        previousKey.current = transitionKey;
+        // Small delay to ensure DOM update completes before fading in
+        rafRef1.current = requestAnimationFrame(() => {
+          rafRef2.current = requestAnimationFrame(() => {
+            setIsVisible(true);
+          });
+        });
+      }, 150); // Match the transition duration
+    } else {
+      // Initial render or same key - just fade in
+      setDisplayChildren(children);
+      rafRef1.current = requestAnimationFrame(() => {
+        setIsVisible(true);
+      });
+    }
+
+    // Cancel all animations on cleanup
+    return cancelAllAnimations;
+  }, [transitionKey]); // Only depend on transitionKey - children will be captured from current render
+
+  return (
+    <div
+      style={{
+        transition: 'opacity 150ms ease-in-out',
+        opacity: isVisible ? 1 : 0,
+      }}
+    >
+      {displayChildren}
+    </div>
+  );
+}
+
 // Reconnecting indicator for auth recovery
 function ReconnectingIndicator() {
   return (
@@ -40,28 +106,32 @@ function ReconnectingIndicator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <RootApp />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RootApp />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
 function RootApp() {
   const { user, loading } = useAuth();
   const [showReconnecting, setShowReconnecting] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // ✅ CRITICAL: Hooks must be called unconditionally at the top level
   // If loading takes too long (> 3s), show reconnecting indicator
   useEffect(() => {
     if (!loading) {
       setShowReconnecting(false);
+      setHasInitialized(true);
       return;
     }
 
     const timer = setTimeout(() => {
       setShowReconnecting(true);
     }, 3000);
-    
+
     return () => clearTimeout(timer);
   }, [loading]);
 
@@ -69,17 +139,30 @@ function RootApp() {
   if (typeof window !== "undefined" && window.location.pathname === "/logout") {
     return <Logout />;
   }
-  
-  // Show loading while auth is initializing
-  if (loading) {
+
+  // Show loading while auth is initializing (only on initial load, not during transitions)
+  if (loading && !hasInitialized) {
     return showReconnecting ? <ReconnectingIndicator /> : <Spinner />;
   }
-  
+
+  // Use transition key based on auth state to enable smooth fades
+  const transitionKey = user ? `authenticated-${user.id}` : 'unauthenticated';
+
   // Show login form if not authenticated
-  if (!user) return <LoginForm onSuccess={() => {}} />;
+  if (!user) {
+    return (
+      <FadeTransition transitionKey={transitionKey}>
+        <LoginForm onSuccess={() => {}} />
+      </FadeTransition>
+    );
+  }
 
   // User is authenticated - route by role
-  return <RoleBasedRouter />;
+  return (
+    <FadeTransition transitionKey={transitionKey}>
+      <RoleBasedRouter />
+    </FadeTransition>
+  );
 }
 
 /**
@@ -90,7 +173,6 @@ function RoleBasedRouter() {
   // ✅ All hooks declared unconditionally at the top
   const { user, signOut } = useAuth();
   const [currentUrl, setCurrentUrl] = useState(window.location.href);
-  const [didRoute, setDidRoute] = useState(false);
 
   // Listen for URL changes (including browser back/forward)
   useEffect(() => {
@@ -101,16 +183,24 @@ function RoleBasedRouter() {
     // Listen for popstate events (browser back/forward)
     window.addEventListener('popstate', handleUrlChange);
     
-    // Also listen for programmatic navigation
+    // Also listen for programmatic navigation (both pushState and replaceState)
     const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
     window.history.pushState = function(...args) {
       originalPushState.apply(window.history, args);
+      handleUrlChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(window.history, args);
       handleUrlChange();
     };
 
     return () => {
       window.removeEventListener('popstate', handleUrlChange);
       window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
     };
   }, []);
 
@@ -134,7 +224,7 @@ function RoleBasedRouter() {
   };
 
   // Single URL architecture - all users stay on "/"
-  const redirectToRoleLanding = (role: 'Staff' | 'Supervisor' | 'Admin') => {
+  const redirectToRoleLanding = () => {
     // Always redirect to root path "/" - role-based routing is internal
     safePushState('/');
   };
@@ -142,7 +232,6 @@ function RoleBasedRouter() {
   // ✅ Single effect that handles all routing logic - ROLE-BASED, not URL-based
   useEffect(() => {
     if (!user) {
-      setDidRoute(true);
       return;
     }
 
@@ -150,12 +239,10 @@ function RoleBasedRouter() {
     const workspace = getCurrentWorkspace();
     if (!workspace.isRootPath) {
       // Redirect to root path if not already there
-      redirectToRoleLanding((user as AuthUser).role);
+      redirectToRoleLanding();
     }
 
     console.log(`User ${(user as AuthUser).fullName} (${(user as AuthUser).role}) accessing single URL architecture`);
-
-    setDidRoute(true);
   }, [user, currentUrl]); // Re-evaluate on user or URL changes
 
   // ✅ Early returns AFTER all hooks have been declared

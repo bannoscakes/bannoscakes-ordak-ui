@@ -13,3 +13,20 @@ dist/
 .env.*
 !.env.example
 *.code-workspace
+
+# Work-in-progress documentation (keep out of PRs)
+/CRITICAL_*.md
+/DEBUG_*.md
+/INVESTIGATION_*.md
+/PROCESSOR_*.md
+/PR_DESCRIPTION_*.md
+/ROOT_CAUSE_*.md
+/SOLUTION_*.md
+/STATUS_*.md
+/SUMMARY_*.md
+/WEBHOOK_*.md
+/WORK_*.md
+/FINAL_*.md
+/NEW_PROCESSOR.txt
+/OLD_LOVABLE_WEBHOOK_CODE.txt
+supabase/.temp/

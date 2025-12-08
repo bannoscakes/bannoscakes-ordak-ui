@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -12,20 +12,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Clock, Users, Search, X } from "lucide-react";
+import { Clock, Search, X } from "lucide-react";
+import { toast } from "sonner";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 // import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getUnassignedCounts } from "../lib/rpc-client";
+import { getQueue, getStorageLocations } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
-import type { Stage } from "../types/db";
+
+// Auto-refresh interval for queue data (60 seconds - not too frequent to avoid visual distraction)
+const QUEUE_REFRESH_INTERVAL = 60_000;
 
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber: string;
+  shopifyOrderId?: number;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -49,6 +54,10 @@ interface QueueTableProps {
 export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
   const [loading, setLoading] = useState(true);
+  const hasInitiallyLoadedRef = useRef(false); // Use ref to avoid stale closure
+  const previousStoreRef = useRef(store); // Track store to detect changes
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
@@ -59,41 +68,79 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [isOrderDetailOpen, setIsOrderDetailOpen] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [storageFilter, setStorageFilter] = useState<string | null>(null);
+  const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [error, setError] = useState<unknown>(null);
 
-  const { showError, showErrorWithRetry } = useErrorNotifications();
+  const { showErrorWithRetry } = useErrorNotifications();
 
-  // Fetch real queue data from Supabase
+  // Store showErrorWithRetry in a ref to avoid it triggering useCallback recreation
+  // (useErrorNotifications returns new function objects on every render)
+  const showErrorWithRetryRef = useRef(showErrorWithRetry);
+  showErrorWithRetryRef.current = showErrorWithRetry;
+
+  // Fetch storage locations for the current store
   useEffect(() => {
-    fetchQueueData();
+    async function fetchStorageLocations() {
+      try {
+        const locations = await getStorageLocations(store);
+        setStorageLocations(locations);
+      } catch (error) {
+        console.error('Failed to fetch storage locations:', error);
+        // Fallback to default locations if fetch fails
+        setStorageLocations([
+          "Store Fridge",
+          "Store Freezer", 
+          "Kitchen Coolroom",
+          "Kitchen Freezer",
+          "Basement Coolroom"
+        ]);
+      }
+    }
+    fetchStorageLocations();
   }, [store]);
 
-  const fetchQueueData = async () => {
+  // Fetch queue data - wrapped in useCallback to prevent stale closures
+  const fetchQueueData = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      // Reset loading state when store changes (synchronous check avoids race condition)
+      if (previousStoreRef.current !== store) {
+        hasInitiallyLoadedRef.current = false;
+        previousStoreRef.current = store;
+      }
       
+      // Only show full loading skeleton on initial load
+      if (!hasInitiallyLoadedRef.current) {
+        setLoading(true);
+      } else {
+        // Show subtle refresh indicator for subsequent loads
+        setIsRefreshing(true);
+      }
+      setError(null);
+
       // Fetch queue data using the new RPC
       const orders = await getQueue({
         store,
+        storage: storageFilter,
         limit: 200,
       });
-      
+
       // Group orders by stage
       const grouped: { [key: string]: QueueItem[] } = {
         unassigned: [],
         filling: [],
         covering: [],
         decorating: [],
-        packaging: [],
-        quality: [],
-        ready: [],
+        packing: [],
+        complete: [],
       };
-      
+
       orders.forEach((order: any) => {
         const item: QueueItem = {
           id: order.id,
-          orderNumber: order.human_id || order.id,
+          orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+          shopifyOrderNumber: String(order.shopify_order_number || ''),
+          shopifyOrderId: order.shopify_order_id || undefined,
           customerName: order.customer_name || 'Unknown',
           product: order.product_title || 'Unknown',
           size: order.size || 'M',
@@ -106,32 +153,46 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           method: order.delivery_method === 'delivery' ? 'Delivery' : 'Pickup',
           storage: order.storage || '',
         };
-        
+
         // Group by stage
         const stageKey = order.stage?.toLowerCase() || 'unassigned';
         if (!order.assignee_id && stageKey === 'filling') {
           grouped.unassigned.push(item);
         } else if (stageKey === 'packing') {
-          grouped.packaging.push(item);
+          grouped.packing.push(item);
         } else if (stageKey === 'complete') {
-          grouped.ready.push(item);
+          grouped.complete.push(item);
         } else if (grouped[stageKey]) {
           grouped[stageKey].push(item);
         }
       });
-      
+
       setQueueData(grouped);
+      setLastUpdated(new Date()); // Store actual fetch timestamp
+      hasInitiallyLoadedRef.current = true; // Mark as loaded using ref (no re-render needed)
     } catch (error) {
       console.error('Failed to fetch queue:', error);
       setError(error);
-      showErrorWithRetry(error, fetchQueueData, {
+      showErrorWithRetryRef.current(error, fetchQueueData, {
         title: 'Failed to Load Queue',
         showRecoveryActions: true,
       });
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [store, storageFilter]); // showErrorWithRetry accessed via ref to keep callback stable
+
+  // Fetch real queue data from Supabase
+  useEffect(() => {
+    fetchQueueData();
+  }, [fetchQueueData]);
+
+  // Auto-refresh queue data every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchQueueData, QUEUE_REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchQueueData]);
 
   // Set initial filter if provided
   useEffect(() => {
@@ -145,26 +206,26 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     { value: "filling", label: "Filling", count: 0 },
     { value: "covering", label: "Covering", count: 0 },
     { value: "decorating", label: "Decorating", count: 0 },
-    { value: "packaging", label: "Packaging", count: 0 },
-    { value: "quality", label: "Quality Check", count: 0 },
-    { value: "ready", label: "Ready", count: 0 }
+    { value: "packing", label: "Packing", count: 0 },
+    { value: "complete", label: "Complete", count: 0 }
   ];
 
   const currentItems = queueData[selectedStage] || [];
 
   const filteredItems = useMemo(() => {
     return currentItems.filter(item => {
-      const matchesSearch = 
-        item.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.product.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !searchQuery || 
+        item.orderNumber?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+        item.customerName?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+        item.product?.toLowerCase()?.includes(searchQuery.toLowerCase());
       
       const matchesPriority = !priorityFilter || item.priority === priorityFilter;
       const matchesStatus = !statusFilter || item.status === statusFilter;
+      const matchesStorage = !storageFilter || item.storage === storageFilter;
       
-      return matchesSearch && matchesPriority && matchesStatus;
+      return matchesSearch && matchesPriority && matchesStatus && matchesStorage;
     });
-  }, [currentItems, searchQuery, priorityFilter, statusFilter]);
+  }, [currentItems, searchQuery, priorityFilter, statusFilter, storageFilter]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -250,9 +311,13 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           <div className="flex items-center justify-between mb-4">
             <h2>Production Queue - {store.charAt(0).toUpperCase() + store.slice(1)}</h2>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
+              <Clock className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-sm text-muted-foreground">
-                Last updated: {new Date().toLocaleTimeString()}
+                {isRefreshing 
+                  ? 'Refreshing...' 
+                  : lastUpdated 
+                    ? `Last updated: ${lastUpdated.toLocaleTimeString()}` 
+                    : 'Loading...'}
               </span>
             </div>
           </div>
@@ -294,13 +359,26 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               </SelectContent>
             </Select>
 
-            {(priorityFilter || statusFilter || searchQuery) && (
+            <Select value={storageFilter || "all"} onValueChange={(value) => setStorageFilter(value === "all" ? null : value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Storage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {storageLocations.map(location => (
+                  <SelectItem key={location} value={location}>{location}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {(priorityFilter || statusFilter || storageFilter || searchQuery) && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setPriorityFilter(null);
                   setStatusFilter(null);
+                  setStorageFilter(null);
                   setSearchQuery("");
                 }}
                 className="h-10"
@@ -336,7 +414,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         {/* Production Stages */}
         <Tabs value={selectedStage} onValueChange={setSelectedStage} className="w-full">
           <div className="px-6 pt-4">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-6">
               {productionStages.map((stage) => (
                 <TabsTrigger key={stage.value} value={stage.value} className="relative">
                   {stage.label}
@@ -440,7 +518,22 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                                 setIsOrderDetailOpen(true);
                               }}
                               onViewDetails={(item) => {
-                                window.open(`https://admin.shopify.com/orders/${item.orderNumber}`, '_blank');
+                                const storeSlug = store === 'bannos' ? 'bannos' : 'flour-lane';
+                                
+                                // Prefer shopifyOrderId (direct link)
+                                if (item.shopifyOrderId) {
+                                  window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${item.shopifyOrderId}`, '_blank');
+                                  return;
+                                }
+                                
+                                // Fallback: search by order number
+                                const orderNumber = item.shopifyOrderNumber?.trim();
+                                if (orderNumber) {
+                                  window.open(`https://admin.shopify.com/store/${storeSlug}/orders?query=${encodeURIComponent(orderNumber)}`, '_blank');
+                                  return;
+                                }
+                                
+                                toast.error("No Shopify order information available");
                               }}
                             />
                           </div>
@@ -474,7 +567,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           setIsEditingOrder(false);
           setSelectedOrder(null);
         }}
-        onSaved={(updatedOrder) => {
+        onSaved={(_updatedOrder) => {
           // TODO: Implement order update functionality
           setIsEditingOrder(false);
           setSelectedOrder(null);
@@ -497,7 +590,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
             const newData = { ...prev };
             Object.keys(newData).forEach(stage => {
               newData[stage] = newData[stage].map(item => 
-                item.id === updatedOrder.id ? updatedOrder : item
+                item.id === updatedOrder.id ? { ...updatedOrder, shopifyOrderNumber: item.shopifyOrderNumber } : item
               );
             });
             return newData;

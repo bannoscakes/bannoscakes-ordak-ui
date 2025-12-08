@@ -10,10 +10,10 @@ interface ProtectedRouteProps {
   userType?: 'staff' | 'supervisor';
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requiredRole, 
-  requiredStore, 
+export function ProtectedRoute({
+  children,
+  requiredRole,
+  requiredStore,
   fallback,
   userType = 'staff'
 }: ProtectedRouteProps) {
@@ -21,23 +21,18 @@ export function ProtectedRoute({
 
   console.log('ProtectedRoute - loading:', loading, 'user:', user, 'requiredRole:', requiredRole);
 
-  if (loading) {
-    console.log('ProtectedRoute - showing loading state');
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="w-12 h-12 bg-muted rounded-lg mb-4 mx-auto"></div>
-          <div className="h-4 bg-muted rounded w-32"></div>
-        </div>
-      </div>
-    );
-  }
+  // Skip loading check - App.tsx handles initial auth load
+  // Only show loading during first initialization, not during transitions
+  // This prevents flashing loading states when switching between auth states
 
   if (!user) {
     console.log('ProtectedRoute - no user, showing login form');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <LoginForm onSuccess={() => window.location.reload()} userType={userType} />
+        <LoginForm onSuccess={() => {
+          // Auth state will update and trigger re-render - no reload needed
+          console.log('✅ Login successful - auth state will update');
+        }} userType={userType} />
       </div>
     );
   }
