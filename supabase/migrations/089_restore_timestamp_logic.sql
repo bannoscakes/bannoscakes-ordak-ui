@@ -469,6 +469,7 @@ AS $$
 DECLARE
   v_table_name text;
   v_user_id uuid;
+  v_order_exists boolean;
   v_already_set boolean;
 BEGIN
   -- Validate store
@@ -482,6 +483,16 @@ BEGIN
   END IF;
 
   v_table_name := 'orders_' || p_store;
+
+  -- Check if order exists
+  EXECUTE format(
+    'SELECT EXISTS(SELECT 1 FROM %I WHERE id = $1)',
+    v_table_name
+  ) USING p_order_id INTO v_order_exists;
+
+  IF NOT v_order_exists THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
 
   -- Check if already set (idempotent)
   EXECUTE format(
@@ -535,6 +546,7 @@ AS $$
 DECLARE
   v_table_name text;
   v_user_id uuid;
+  v_order_exists boolean;
   v_already_set boolean;
 BEGIN
   -- Validate store
@@ -548,6 +560,16 @@ BEGIN
   END IF;
 
   v_table_name := 'orders_' || p_store;
+
+  -- Check if order exists
+  EXECUTE format(
+    'SELECT EXISTS(SELECT 1 FROM %I WHERE id = $1)',
+    v_table_name
+  ) USING p_order_id INTO v_order_exists;
+
+  IF NOT v_order_exists THEN
+    RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
 
   -- Check if already set (idempotent)
   EXECUTE format(
