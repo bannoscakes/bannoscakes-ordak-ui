@@ -499,12 +499,32 @@ export async function completeFilling(orderId: string, store: string, notes?: st
   return data;
 }
 
+export async function startCovering(orderId: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_covering', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function completeCovering(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_covering', {
     p_order_id: orderId,
     p_store: store,
     p_notes: notes || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function startDecorating(orderId: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_decorating', {
+    p_order_id: orderId,
+    p_store: store,
   });
   if (error) throw error;
   return data;

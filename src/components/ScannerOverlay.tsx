@@ -6,7 +6,7 @@ import { Card } from "./ui/card";
 import { X, Camera, AlertCircle, CheckCircle, Scan } from "lucide-react";
 import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
-import { completeFilling, completeCovering, completeDecorating, completePacking } from "../lib/rpc-client";
+import { completeFilling, completeCovering, completeDecorating, completePacking, startCovering, startDecorating } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -24,6 +24,9 @@ interface QueueItem {
   storage?: string;
   store: 'bannos' | 'flourlane';
   stage: string;
+  // Timestamps for stage tracking
+  covering_start_ts?: string | null;
+  decorating_start_ts?: string | null;
 }
 
 interface ScannerOverlayProps {
@@ -80,43 +83,65 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   const handleConfirm = async () => {
     if (!order) return;
-    
+
     setIsProcessing(true);
-    
+
     try {
-      // Call appropriate stage completion RPC based on current stage
+      // Call appropriate stage RPC based on current stage
+      // Covering and Decorating use first-scan-starts / second-scan-completes pattern
       const store = order.store || 'bannos'; // Default to bannos if store not found
+      let actionMessage = '';
+
       switch (order.stage) {
         case 'Filling':
           await completeFilling(order.id, store);
+          actionMessage = `${order.stage} stage completed`;
           break;
         case 'Covering':
-          await completeCovering(order.id, store);
+          if (!order.covering_start_ts) {
+            // First scan - START the stage
+            await startCovering(order.id, store);
+            actionMessage = `${order.stage} stage started`;
+          } else {
+            // Second scan - COMPLETE the stage
+            await completeCovering(order.id, store);
+            actionMessage = `${order.stage} stage completed`;
+          }
           break;
         case 'Decorating':
-          await completeDecorating(order.id, store);
+          if (!order.decorating_start_ts) {
+            // First scan - START the stage
+            await startDecorating(order.id, store);
+            actionMessage = `${order.stage} stage started`;
+          } else {
+            // Second scan - COMPLETE the stage
+            await completeDecorating(order.id, store);
+            actionMessage = `${order.stage} stage completed`;
+          }
           break;
         case 'Packing':
+          // Packing only needs one scan to complete (no start scan required)
           await completePacking(order.id, store);
+          actionMessage = `${order.stage} stage completed`;
           break;
         default:
           throw new Error(`Unknown stage: ${order.stage}`);
       }
-      
+
       setScanState('success');
       setIsProcessing(false);
-      
+
       setTimeout(() => {
-        toast.success(`${order.stage} stage completed for ${order.orderNumber}`);
+        toast.success(`${actionMessage} for ${order.orderNumber}`);
         onOrderCompleted(order.id);
         handleClose();
       }, 1500);
-      
+
     } catch (error) {
-      console.error('Error completing stage:', error);
+      console.error('Error processing stage:', error);
       setIsProcessing(false);
       setScanState('error');
-      setErrorMessage(`Failed to complete ${order.stage} stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorMessage(`Failed to process ${order.stage} stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
