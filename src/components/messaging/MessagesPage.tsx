@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Search, Send, Plus, ArrowLeft } from "lucide-react";
+import { Search, Plus, ArrowLeft, MessageSquare } from "lucide-react";
 
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
@@ -399,13 +399,13 @@ export function MessagesPage() {
         {selectedConversation && selectedConv ? (
           <ChatWindow conversation={selectedConv} messages={messages} onSendMessage={handleSendMessage} />
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Send className="h-8 w-8" />
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center max-w-sm px-6">
+              <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-6">
+                <MessageSquare className="h-10 w-10 text-blue-500" />
               </div>
-              <h3>Select a conversation</h3>
-              <p>Choose a conversation from the sidebar to start messaging</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">Select a conversation</h3>
+              <p className="text-sm text-muted-foreground">Choose a conversation from the sidebar or start a new one to begin messaging</p>
             </div>
           </div>
         )}

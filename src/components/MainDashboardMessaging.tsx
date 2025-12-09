@@ -9,6 +9,8 @@ import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 // import { ScrollArea } from "./ui/scroll-area"; // Removed - using native scroll
 import { Search, Plus, MessageSquare, X } from "lucide-react";
+import { cn } from "./ui/utils";
+import { getAvatarColor } from "../lib/message-utils";
 
 import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
@@ -419,11 +421,11 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
                   <div
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation.id)}
-                    className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-accent/80 hover:shadow-sm transition-all"
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage src={conversation.avatar} />
-                      <AvatarFallback>
+                      <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name))}>
                         {conversation.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -446,10 +448,12 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
                 ))}
 
                 {filteredConversations.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No conversations yet</p>
-                    <p className="text-xs">Click + to start a new conversation</p>
+                  <div className="flex flex-col items-center justify-center text-center py-8 px-4">
+                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                      <MessageSquare className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">No conversations yet</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Click + to start a new conversation</p>
                   </div>
                 )}
               </div>
@@ -460,7 +464,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         // Expanded view - full messaging interface
         <div className="flex h-full w-full overflow-hidden rounded-2xl border flex-1 min-h-0">
           {/* Conversations Sidebar */}
-          <aside className="flex-none w-72 min-w-[18rem] border-r bg-white flex flex-col">
+          <aside className="flex-none w-72 min-w-[18rem] border-r bg-card flex flex-col">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">Conversations</h4>
@@ -486,13 +490,17 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
                   <div
                     key={conversation.id}
                     onClick={() => setSelectedConversation(conversation.id)}
-                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors ${
-                      selectedConversation === conversation.id ? 'bg-accent' : ''
-                    }`}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
+                      "hover:bg-accent/80 hover:shadow-sm",
+                      selectedConversation === conversation.id ? "bg-accent shadow-sm" : "bg-transparent"
+                    )}
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage src={conversation.avatar} />
-                      <AvatarFallback>{conversation.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name))}>
+                        {conversation.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
@@ -516,15 +524,17 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
           </aside>
 
           {/* Chat Area */}
-          <section className="flex-1 min-w-0 bg-white flex flex-col">
+          <section className="flex-1 min-w-0 bg-background flex flex-col">
             {selectedConversation && selectedConv ? (
               <ChatWindow conversation={selectedConv} messages={messages} onSendMessage={handleSendMessage} />
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <div className="text-center">
-                  <MessageSquare className="h-8 w-8 mx-auto mb-4 opacity-50" />
-                  <h3>Select a conversation</h3>
-                  <p className="text-sm">Choose a conversation to start messaging</p>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center max-w-xs px-6">
+                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-blue-500" />
+                  </div>
+                  <h3 className="font-medium text-foreground mb-1">Select a conversation</h3>
+                  <p className="text-sm text-muted-foreground">Choose a conversation to start messaging</p>
                 </div>
               </div>
             )}

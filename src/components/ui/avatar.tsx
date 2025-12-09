@@ -43,8 +43,11 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     data-slot="avatar-fallback"
+    delayMs={0}
     className={cn(
-      "bg-muted flex size-full items-center justify-center rounded-full",
+      "flex size-full items-center justify-center rounded-full",
+      // bg-muted is the default, but can be overridden by className
+      !className?.includes("bg-") && "bg-muted",
       className,
     )}
     {...props}
