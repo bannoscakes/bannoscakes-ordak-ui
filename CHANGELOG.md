@@ -5,42 +5,50 @@ Major overhaul of the order flow system, restoring critical timestamp logic that
 
 ### ✨ New Features
 
-**Scanner Start/Complete Pattern (PR #320)**
+#### Scanner Start/Complete Pattern (PR #320)
+
 - Covering and Decorating stages now use first-scan-starts / second-scan-completes pattern
 - Added `startCovering()` and `startDecorating()` RPC wrappers to frontend
 - Updated `ScannerOverlay.tsx` to check timestamps before deciding which RPC to call
 - Staff can now track when they START working on a stage, not just when they COMPLETE it
 
-**New Database Functions (PR #319)**
+#### New Database Functions (PR #319)
+
 - `start_covering(p_order_id, p_store)` - Sets `covering_start_ts` on first scan
 - `start_decorating(p_order_id, p_store)` - Sets `decorating_start_ts` on first scan
 - Both functions log to `stage_events` with `event_type='start'`
 
-**Order Flow Documentation**
+#### Order Flow Documentation
+
 - Created comprehensive `docs/ORDER_FLOW_CHECKLIST.md`
 - Documents all stages, timestamps, RPCs, and scanner behavior
 - Verified all 7 sections of the order flow system
 
 ### 🐛 Critical Bugs Fixed
 
-**Timestamp Logic Restoration (PR #319 - Migration 089)**
+#### Timestamp Logic Restoration (PR #319 - Migration 089)
+
 - **Issue**: Migration 053 accidentally removed timestamp logic from `complete_*` functions when adding `stage_events` logging
 - **Impact**: Timestamps like `filling_complete_ts`, `covering_complete_ts`, etc. were never being set
 - **Fix**: Restored timestamp setting in all `complete_*` UPDATE statements
 
-**Missing Start Timestamps (PR #319 - Migration 089)**
+#### Missing Start Timestamps (PR #319 - Migration 089)
+
 - **Issue**: `covering_start_ts` and `decorating_start_ts` columns didn't exist
 - **Fix**: Added both columns to `orders_bannos` and `orders_flourlane` tables
 
-**Print Barcode Not Setting Start Time (PR #319 - Migration 089)**
+#### Print Barcode Not Setting Start Time (PR #319 - Migration 089)
+
 - **Issue**: `print_barcode()` function had `filling_start_ts` logic commented out
 - **Fix**: Restored the logic so first barcode print in Filling stage sets `filling_start_ts`
 
-**Stage Events Constraint (PR #319 - Migration 089)**
+#### Stage Events Constraint (PR #319 - Migration 089)
+
 - **Issue**: `stage_events.event_type` CHECK constraint didn't allow `'start'` value
 - **Fix**: Updated constraint to include `'start'` event type
 
-**Queue Missing Timestamps (PR #320 - Migration 090)**
+#### Queue Missing Timestamps (PR #320 - Migration 090)
+
 - **Issue**: `get_queue` RPC didn't return `covering_start_ts` or `decorating_start_ts`
 - **Fix**: Updated RPC to include these fields so scanner UI can make decisions
 
@@ -50,20 +58,24 @@ Major overhaul of the order flow system, restoring critical timestamp logic that
 
 ### 📁 Key Files Added/Modified
 
-**Migrations**
+#### Migrations
+
 - `supabase/migrations/089_restore_timestamp_logic.sql` - Restore all timestamp logic
 - `supabase/migrations/090_add_start_timestamps_to_queue.sql` - Add timestamps to get_queue
 
-**Frontend**
+#### Frontend
+
 - `src/lib/rpc-client.ts` - Added `startCovering()` and `startDecorating()`
 - `src/components/ScannerOverlay.tsx` - First-scan-starts / second-scan-completes logic
 
-**Documentation**
+#### Documentation
+
 - `docs/ORDER_FLOW_CHECKLIST.md` - Complete order flow verification checklist
 
 ### 🔧 Technical Details
 
-**Scanner Behavior After This Release**
+#### Scanner Behavior After This Release
+
 | Stage | First Scan | Second Scan |
 |-------|------------|-------------|
 | Filling | N/A (print_barcode sets start) | `completeFilling()` |
@@ -71,7 +83,8 @@ Major overhaul of the order flow system, restoring critical timestamp logic that
 | Decorating | `startDecorating()` → sets `decorating_start_ts` | `completeDecorating()` |
 | Packing | N/A | `completePacking()` (single scan only) |
 
-**All RPCs are SECURITY DEFINER with:**
+#### All RPCs are SECURITY DEFINER with
+
 - Auth check (`auth.uid()` required)
 - Order existence check
 - Stage validation (idempotent - can't complete wrong stage)
