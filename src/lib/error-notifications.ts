@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { AppError, getErrorMessage, getErrorCode, getRecoveryActions, ErrorCode } from './error-handler';
 
@@ -176,16 +177,17 @@ export const updateLoadingNotification = (
 
 /**
  * Hook for error notifications with retry functionality
+ * Note: All functions are stable references (memoized) to prevent useEffect loops
  */
 export const useErrorNotifications = () => {
-  const showError = (
+  const showError = useCallback((
     error: unknown,
     options: ErrorNotificationOptions = {}
   ) => {
     showErrorNotification(error, options);
-  };
+  }, []);
 
-  const showErrorWithRetry = (
+  const showErrorWithRetry = useCallback((
     error: unknown,
     retryFn: () => Promise<void>,
     options: Omit<ErrorNotificationOptions, 'onRetry'> = {}
@@ -206,28 +208,28 @@ export const useErrorNotifications = () => {
       onRetry: handleRetry,
       showRecoveryActions: true,
     });
-  };
+  }, []);
 
-  const showSuccess = (title: string, description?: string) => {
+  const showSuccess = useCallback((title: string, description?: string) => {
     showSuccessNotification(title, description);
-  };
+  }, []);
 
-  const showInfo = (title: string, description?: string) => {
+  const showInfo = useCallback((title: string, description?: string) => {
     showInfoNotification(title, description);
-  };
+  }, []);
 
-  const showLoading = (title: string, description?: string) => {
+  const showLoading = useCallback((title: string, description?: string) => {
     return showLoadingNotification(title, description);
-  };
+  }, []);
 
-  const updateLoading = (
+  const updateLoading = useCallback((
     toastId: string | number,
     title: string,
     description?: string,
     type: 'success' | 'error' | 'info' = 'success'
   ) => {
     updateLoadingNotification(toastId, title, description, type);
-  };
+  }, []);
 
   return {
     showError,
