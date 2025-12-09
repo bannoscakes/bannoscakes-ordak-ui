@@ -18,6 +18,16 @@ export interface MessageGroup {
 }
 
 /**
+ * Get local date key (YYYY-MM-DD) from a Date object
+ */
+function getLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Group messages by date for display with date separators
  */
 export function groupMessagesByDate(messages: UIMessage[]): MessageGroup[] {
@@ -26,17 +36,21 @@ export function groupMessagesByDate(messages: UIMessage[]): MessageGroup[] {
   const groups: Map<string, UIMessage[]> = new Map();
 
   for (const msg of messages) {
-    // Handle invalid timestamps gracefully
+    // Handle invalid timestamps gracefully - use local date for grouping
     const date = new Date(msg.timestamp);
-    const dateKey = isNaN(date.getTime()) ? 'unknown' : date.toISOString().split('T')[0];
+    const dateKey = isNaN(date.getTime()) ? 'unknown' : getLocalDateKey(date);
     if (!groups.has(dateKey)) {
       groups.set(dateKey, []);
     }
     groups.get(dateKey)!.push(msg);
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  // Use local dates for today/yesterday comparison
+  const now = new Date();
+  const today = getLocalDateKey(now);
+  const yesterdayDate = new Date(now);
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = getLocalDateKey(yesterdayDate);
 
   return Array.from(groups.entries())
     .sort(([a], [b]) => a.localeCompare(b))

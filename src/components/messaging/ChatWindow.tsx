@@ -51,8 +51,8 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={conversation.avatar} />
-            <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name))}>
-              {conversation.name.charAt(0).toUpperCase()}
+            <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name || "Unknown"))}>
+              {conversation.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
             </AvatarFallback>
           </Avatar>
           <div>
