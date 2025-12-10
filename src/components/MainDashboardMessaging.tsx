@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 // import { ScrollArea } from "./ui/scroll-area"; // Removed - using native scroll
 import { Search, Plus, MessageSquare, X } from "lucide-react";
 import { cn } from "./ui/utils";
-import { getAvatarColor } from "../lib/message-utils";
+import { getAvatarColorHex } from "../lib/message-utils";
 
 import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
@@ -424,9 +424,9 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
                     className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-accent/80 hover:shadow-sm transition-all"
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={conversation.avatar} />
-                      <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name))}>
-                        {conversation.name.charAt(0).toUpperCase()}
+                      {conversation.avatar && <AvatarImage src={conversation.avatar} />}
+                      <AvatarFallback className="text-white font-medium" style={{ backgroundColor: getAvatarColorHex(conversation.name || "Unknown") }}>
+                        {conversation.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
 
@@ -497,9 +497,9 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
                     )}
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={conversation.avatar} />
-                      <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name))}>
-                        {conversation.name.charAt(0).toUpperCase()}
+                      {conversation.avatar && <AvatarImage src={conversation.avatar} />}
+                      <AvatarFallback className="text-white font-medium" style={{ backgroundColor: getAvatarColorHex(conversation.name || "Unknown") }}>
+                        {conversation.name?.trim()?.charAt(0)?.toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
 

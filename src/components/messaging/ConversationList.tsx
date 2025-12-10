@@ -4,7 +4,7 @@ import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Pin, MessageSquare } from "lucide-react";
 import { cn } from "../ui/utils";
-import { getAvatarColor } from "../../lib/message-utils";
+import { getAvatarColorHex } from "../../lib/message-utils";
 import type { UIConversation as Conversation } from "../../lib/messaging-adapters";
 
 interface ConversationListProps {
@@ -100,8 +100,8 @@ export function ConversationList({
               )}
             >
               <Avatar className="h-12 w-12">
-                <AvatarImage src={conversation.avatar} />
-                <AvatarFallback className={cn("text-white font-medium", getAvatarColor(conversation.name))}>
+                {conversation.avatar && <AvatarImage src={conversation.avatar} />}
+                <AvatarFallback className="text-white font-medium" style={{ backgroundColor: getAvatarColorHex(conversation.name || "Unknown") }}>
                   {firstLetter}
                 </AvatarFallback>
               </Avatar>

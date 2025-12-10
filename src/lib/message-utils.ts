@@ -80,6 +80,28 @@ function formatDateLabel(dateKey: string, today: string, yesterday: string): str
 // Avatar Colors
 // ============================================
 
+// Hex colors for inline styles (more reliable than Tailwind classes)
+const AVATAR_COLORS_HEX = [
+  '#3b82f6', // blue-500
+  '#22c55e', // green-500
+  '#a855f7', // purple-500
+  '#ec4899', // pink-500
+  '#f97316', // orange-500
+  '#14b8a6', // teal-500
+  '#6366f1', // indigo-500
+  '#f43f5e', // rose-500
+] as const;
+
+/**
+ * Generate consistent avatar background color (hex) from name
+ */
+export function getAvatarColorHex(name: string): string {
+  if (!name) return AVATAR_COLORS_HEX[0];
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_COLORS_HEX[hash % AVATAR_COLORS_HEX.length];
+}
+
+// Keep Tailwind classes for backwards compatibility
 const AVATAR_COLORS = [
   'bg-blue-500',
   'bg-green-500',
@@ -92,7 +114,8 @@ const AVATAR_COLORS = [
 ] as const;
 
 /**
- * Generate consistent avatar background color from name
+ * Generate consistent avatar background color (Tailwind class) from name
+ * @deprecated Use getAvatarColorHex for more reliable styling
  */
 export function getAvatarColor(name: string): string {
   if (!name) return AVATAR_COLORS[0];

@@ -39,17 +39,16 @@ AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
   React.ComponentProps<typeof AvatarPrimitive.Fallback>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <AvatarPrimitive.Fallback
     ref={ref}
     data-slot="avatar-fallback"
     delayMs={0}
     className={cn(
-      "flex size-full items-center justify-center rounded-full",
-      // bg-muted is the default, but can be overridden by className
-      !className?.includes("bg-") && "bg-muted",
+      "flex size-full items-center justify-center rounded-full bg-muted",
       className,
     )}
+    style={style}
     {...props}
   />
 ));
