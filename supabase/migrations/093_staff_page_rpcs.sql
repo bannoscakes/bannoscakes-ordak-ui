@@ -61,6 +61,8 @@ BEGIN
 END;
 $$;
 
+GRANT EXECUTE ON FUNCTION public.get_staff_list(text, boolean) TO authenticated;
+
 -- ============================================================================
 -- 2. New RPC: get_all_active_shifts - Returns all staff with active shifts
 -- ============================================================================
