@@ -122,11 +122,10 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
                         {/* Bubble */}
                         <div
                           className={cn(
-                            "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md",
-                            // iMessage-style rounded corners
+                            "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md rounded-3xl",
                             isOwn
-                              ? "rounded-2xl rounded-br-md bg-blue-500 text-white"
-                              : "rounded-2xl rounded-bl-md bg-muted dark:bg-muted/80"
+                              ? "bg-blue-500 text-white"
+                              : "bg-muted dark:bg-muted/80"
                           )}
                         >
                           <p className="whitespace-pre-wrap">{m.text}</p>
