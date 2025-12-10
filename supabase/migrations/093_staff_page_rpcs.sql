@@ -33,7 +33,14 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_caller_role text;
 BEGIN
+  -- Check if caller is Admin (only Admins can see hourly_rate)
+  SELECT ss.role INTO v_caller_role
+  FROM public.staff_shared ss
+  WHERE ss.user_id = auth.uid();
+
   RETURN QUERY
   SELECT
     s.user_id,
@@ -45,7 +52,7 @@ BEGIN
     s.phone,
     s.created_at,
     s.updated_at,
-    s.hourly_rate,
+    CASE WHEN v_caller_role = 'Admin' THEN s.hourly_rate ELSE NULL END as hourly_rate,
     s.approved
   FROM public.staff_shared s
   WHERE (p_role IS NULL OR s.role = p_role)
