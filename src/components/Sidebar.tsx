@@ -112,7 +112,11 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
                 onClick={() => {
                   if (isClickable) {
                     // Single URL architecture - all navigation stays on "/" with query params
-                    if (item.id === "staff") {
+                    // Convention: "page" for production queues, "view" for other pages
+                    if (item.id === "bannos-production" || item.id === "flourlane-production") {
+                      // Production queues use "page" parameter (canonical for queue navigation)
+                      safePushState(`/?page=${item.id}`);
+                    } else if (item.id === "staff") {
                       safePushState('/?view=staff');
                     } else if (item.id === "staff-workspace") {
                       safePushState('/?view=staff-workspace');

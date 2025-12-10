@@ -259,6 +259,10 @@ function RoleBasedRouter() {
 
   if (user.role === 'Supervisor') {
     // Check if supervisor is navigating to a production queue
+    // URL Convention: "page" is the canonical parameter for production queues
+    // - navigateToQueue() sets ?page=bannos-production or ?page=flourlane-production
+    // - Sidebar also uses ?page= for production queues (standardized)
+    // - "view" is used for other pages (staff, inventory, etc.)
     const urlParams = new URLSearchParams(window.location.search);
     const page = urlParams.get('page');
     const isViewingQueue = page === 'bannos-production' || page === 'flourlane-production';
