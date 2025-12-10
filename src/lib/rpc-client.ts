@@ -220,11 +220,21 @@ export interface StaffMember {
   user_id: string;
   full_name: string;
   role: 'Admin' | 'Supervisor' | 'Staff';
+  store: 'bannos' | 'flourlane' | 'both';
   phone: string | null;
   email: string | null;
   is_active: boolean;
   created_at: string;
-  last_login: string | null;
+  updated_at: string;
+  hourly_rate: number | null;
+  approved: boolean;
+}
+
+export interface ActiveShift {
+  staff_id: string;
+  shift_id: string;
+  store: string;
+  start_ts: string;
 }
 
 export interface Component {
@@ -265,6 +275,37 @@ export async function getStaffList(role?: string | null, isActive: boolean = tru
   });
   if (error) throw error;
   return (data || []) as StaffMember[];
+}
+
+export async function getAllActiveShifts(): Promise<ActiveShift[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_all_active_shifts');
+  if (error) throw error;
+  return (data || []) as ActiveShift[];
+}
+
+export interface UpdateStaffMemberParams {
+  userId: string;
+  fullName?: string;
+  role?: 'Admin' | 'Supervisor' | 'Staff';
+  hourlyRate?: number;
+  isActive?: boolean;
+  approved?: boolean;
+  phone?: string;
+}
+
+export async function updateStaffMember(params: UpdateStaffMemberParams): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase.rpc('update_staff_member', {
+    p_user_id: params.userId,
+    p_full_name: params.fullName ?? null,
+    p_role: params.role ?? null,
+    p_hourly_rate: params.hourlyRate ?? null,
+    p_is_active: params.isActive ?? null,
+    p_approved: params.approved ?? null,
+    p_phone: params.phone ?? null,
+  });
+  if (error) throw error;
 }
 
 // =============================================
