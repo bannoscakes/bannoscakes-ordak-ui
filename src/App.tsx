@@ -258,7 +258,21 @@ function RoleBasedRouter() {
   }
 
   if (user.role === 'Supervisor') {
-    return <SupervisorWorkspacePage 
+    // Check if supervisor is navigating to a production queue
+    const urlParams = new URLSearchParams(window.location.search);
+    const page = urlParams.get('page');
+    const isViewingQueue = page === 'bannos-production' || page === 'flourlane-production';
+
+    if (isViewingQueue) {
+      // Show Dashboard with queue view for supervisors
+      return (
+        <ErrorBoundary>
+          <Dashboard onSignOut={signOut} />
+        </ErrorBoundary>
+      );
+    }
+
+    return <SupervisorWorkspacePage
       onSignOut={signOut}
       onNavigateToBannosQueue={() => navigateToQueue('bannos')}
       onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
