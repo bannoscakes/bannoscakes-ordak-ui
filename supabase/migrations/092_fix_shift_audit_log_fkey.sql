@@ -2,8 +2,22 @@
 -- Purpose: Remove audit_log inserts that cause performed_by FK violation
 -- Same fix as 064_fix_sync_audit_log_fkey.sql but for shift functions
 -- The shifts table already provides audit trail via timestamps
+--
+-- Also adds a unique constraint to prevent race conditions where two
+-- concurrent requests could both pass the EXISTS check and create
+-- duplicate active shifts for the same staff member.
 
 BEGIN;
+
+-- ============================================================================
+-- Add unique constraint to prevent duplicate active shifts (race condition fix)
+-- ============================================================================
+-- This uses a partial unique index: only one row per staff_id can have end_ts IS NULL
+-- This enforces the business rule at the database level, not just application level
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shifts_one_active_per_staff
+  ON public.shifts (staff_id)
+  WHERE end_ts IS NULL;
 
 -- ============================================================================
 -- Fix start_shift RPC - Remove audit_log insert
