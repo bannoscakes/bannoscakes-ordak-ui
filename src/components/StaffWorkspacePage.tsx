@@ -68,16 +68,6 @@ interface StaffWorkspacePageProps {
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
 
-interface CurrentShift {
-  shift_id: string;
-  staff_id: string;
-  store: string;
-  start_ts: string;
-  end_ts: string | null;
-  active_break_id: string | null;
-  break_start_ts: string | null;
-}
-
 
 // Convert legacy size to realistic display
 const getRealisticSize = (
@@ -137,7 +127,6 @@ export function StaffWorkspacePage({
   const [breakStartTime, setBreakStartTime] =
     useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("");
-  const [currentShift, setCurrentShift] = useState<CurrentShift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] =
     useState<QueueItem | null>(null);
@@ -223,7 +212,6 @@ export function StaffWorkspacePage({
 
     try {
       const shift = await getCurrentShift();
-      setCurrentShift(shift);
 
       if (shift) {
         // Has active shift
@@ -355,7 +343,6 @@ export function StaffWorkspacePage({
       setShiftStartTime(null);
       setBreakStartTime(null);
       setElapsedTime("");
-      setCurrentShift(null);
       toast.success("Shift ended");
     } catch (error: any) {
       console.error("Error ending shift:", error);

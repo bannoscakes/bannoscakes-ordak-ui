@@ -54,16 +54,6 @@ interface SupervisorWorkspacePageProps {
 
 type ShiftStatus = 'not-started' | 'on-shift' | 'on-break';
 
-interface CurrentShift {
-  shift_id: string;
-  staff_id: string;
-  store: string;
-  start_ts: string;
-  end_ts: string | null;
-  active_break_id: string | null;
-  break_start_ts: string | null;
-}
-
 // Mock assigned orders for supervisor
 const getSupervisorAssignedOrders = (): QueueItem[] => [
   {
@@ -129,7 +119,6 @@ export function SupervisorWorkspacePage({
   const [shiftStartTime, setShiftStartTime] = useState<Date | null>(null);
   const [breakStartTime, setBreakStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("");
-  const [currentShift, setCurrentShift] = useState<CurrentShift | null>(null);
   const [shiftLoading, setShiftLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
@@ -170,7 +159,6 @@ export function SupervisorWorkspacePage({
 
     try {
       const shift = await getCurrentShift();
-      setCurrentShift(shift);
 
       if (shift) {
         // Has active shift
@@ -298,7 +286,6 @@ export function SupervisorWorkspacePage({
       setShiftStartTime(null);
       setBreakStartTime(null);
       setElapsedTime("");
-      setCurrentShift(null);
       toast.success("Supervisor shift ended");
     } catch (error: any) {
       console.error("Error ending shift:", error);
