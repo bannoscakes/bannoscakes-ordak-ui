@@ -18,10 +18,23 @@ import { SupervisorWorkspacePage } from "./SupervisorWorkspacePage";
 import { BarcodeTest } from "./BarcodeTest";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { useAuth } from "@/hooks/useAuth";
+import { safePushState } from "@/lib/safeNavigate";
 
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
+  const { user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
+
+  // Check if user is a supervisor (used to show back button on queue pages)
+  const isSupervisor = user?.role === 'Supervisor';
+
+  // Handler for supervisor to return to workspace
+  // Note: safePushState('/') clears the ?page= param, which triggers App.tsx
+  // to re-route supervisors back to SupervisorWorkspacePage (role-based routing)
+  const handleBackToWorkspace = () => {
+    safePushState('/');
+  };
   const [urlParams, setUrlParams] = useState<URLSearchParams | null>(null);
   
   // Parse URL parameters once and cache them
@@ -103,16 +116,18 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         case "bannos-production":
           return (
             <ErrorBoundary>
-              <BannosProductionPage 
+              <BannosProductionPage
                 initialFilter={viewFilter}
+                onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
               />
             </ErrorBoundary>
           );
         case "flourlane-production":
           return (
             <ErrorBoundary>
-              <FlourlaneProductionPage 
+              <FlourlaneProductionPage
                 initialFilter={viewFilter}
+                onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
               />
             </ErrorBoundary>
           );
