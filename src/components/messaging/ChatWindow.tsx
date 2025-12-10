@@ -122,7 +122,7 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
                         {/* Bubble */}
                         <div
                           className={cn(
-                            "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md rounded-3xl",
+                            "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md rounded-full",
                             isOwn
                               ? "bg-blue-500 text-white"
                               : "bg-muted dark:bg-muted/80"
