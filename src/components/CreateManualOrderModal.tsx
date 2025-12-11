@@ -73,7 +73,6 @@ export function CreateManualOrderModal({
   const validateForm = (): string | null => {
     if (!formData.customerName.trim()) return "Customer name is required";
     if (!formData.orderNumber.trim()) return "Order number is required";
-    if (!formData.store.trim()) return "Store is required";
     if (!formData.deliveryDate) return "Delivery date is required";
     if (!formData.productTitle.trim()) return "Product title is required";
     if (!formData.cakeSize.trim()) return "Cake size is required";
@@ -85,15 +84,10 @@ export function CreateManualOrderModal({
       return "Order number must be in format B12345 (Bannos) or F12345 (Flourlane)";
     }
 
-    // Validate store matches order number prefix
-    const storeInput = formData.store.trim().toLowerCase();
-    if (storeInput !== "bannos" && storeInput !== "flourlane") {
-      return "Store must be 'bannos' or 'flourlane'";
-    }
-
-    const expectedPrefix = storeInput === "bannos" ? "B" : "F";
+    // Validate order number prefix matches store (store is read-only from parent)
+    const expectedPrefix = formData.store === "bannos" ? "B" : "F";
     if (!orderNum.startsWith(expectedPrefix)) {
-      return `Order number should start with '${expectedPrefix}' for ${storeInput}`;
+      return `Order number should start with '${expectedPrefix}' for ${formData.store}`;
     }
 
     return null;
@@ -194,9 +188,9 @@ export function CreateManualOrderModal({
               </Label>
               <Input
                 id="store"
-                value={formData.store}
-                onChange={(e) => updateField("store", e.target.value.toLowerCase())}
-                placeholder="bannos or flourlane"
+                value={formData.store === "bannos" ? "Bannos" : "Flourlane"}
+                readOnly
+                className="bg-muted cursor-not-allowed"
               />
             </div>
             <div className="space-y-2">
