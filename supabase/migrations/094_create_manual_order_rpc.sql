@@ -144,6 +144,7 @@ BEGIN
       'flavour', p_flavour,
       'due_date', p_due_date,
       'writing_on_cake', p_writing_on_cake,
+      'image_url', p_image_url,
       'notes', p_notes
     ),
     v_user_id,

@@ -119,7 +119,7 @@ export function CreateManualOrderModal({
         product_title: formData.productTitle.trim(),
         size: formData.cakeSize.trim(),
         flavour: formData.flavor.trim(),
-        due_date: formData.deliveryDate!.toISOString().split("T")[0],
+        due_date: format(formData.deliveryDate!, "yyyy-MM-dd"),
         writing_on_cake: formData.writingOnCake.trim() || null,
         image_url: formData.imageUrl.trim() || null,
         notes: formData.orderNotes.trim() || null,
