@@ -78,10 +78,11 @@ export function CreateManualOrderModal({
     if (!formData.cakeSize.trim()) return "Cake size is required";
     if (!formData.flavor.trim()) return "Flavor is required";
 
-    // Validate order number format (B or F followed by digits)
-    const orderNum = formData.orderNumber.trim().toUpperCase();
-    if (!/^[BF]\d+$/.test(orderNum)) {
-      return "Order number must be in format B12345 (Bannos) or F12345 (Flourlane)";
+    // Validate order number format (B or F followed by exactly 5 digits)
+    // Strip leading # if present
+    const orderNum = formData.orderNumber.trim().toUpperCase().replace(/^#/, '');
+    if (!/^[BF]\d{5}$/.test(orderNum)) {
+      return "Order number must be exactly 5 digits (e.g., B12345 or F12345)";
     }
 
     // Validate order number prefix matches store (store is read-only from parent)
@@ -104,7 +105,7 @@ export function CreateManualOrderModal({
       setLoading(true);
 
       const storeValue = formData.store.trim().toLowerCase() as Store;
-      const orderNumber = formData.orderNumber.trim().toUpperCase();
+      const orderNumber = formData.orderNumber.trim().toUpperCase().replace(/^#/, '');
 
       await createManualOrder({
         store: storeValue,
