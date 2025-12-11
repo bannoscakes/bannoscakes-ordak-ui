@@ -1924,3 +1924,49 @@ export async function removeParticipant(conversationId: string, userId: string):
   );
 }
 
+// =============================================
+// MANUAL ORDER CREATION
+// =============================================
+
+export interface CreateManualOrderParams {
+  store: Store;
+  order_number: string;
+  customer_name: string;
+  product_title: string;
+  size: string;
+  flavour: string;
+  due_date: string; // ISO date string (YYYY-MM-DD)
+  writing_on_cake?: string | null;
+  image_url?: string | null;
+  notes?: string | null;
+}
+
+export async function createManualOrder(params: CreateManualOrderParams): Promise<string> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('create_manual_order', {
+        p_store: params.store,
+        p_order_number: params.order_number,
+        p_customer_name: params.customer_name,
+        p_product_title: params.product_title,
+        p_size: params.size,
+        p_flavour: params.flavour,
+        p_due_date: params.due_date,
+        p_writing_on_cake: params.writing_on_cake || null,
+        p_image_url: params.image_url || null,
+        p_notes: params.notes || null,
+      });
+      if (error) throw error;
+      // Invalidate queue cache after creating a new order
+      invalidateQueueCache();
+      return data as string;
+    },
+    {
+      operation: 'createManualOrder',
+      rpcName: 'create_manual_order',
+      params
+    }
+  );
+}
+
