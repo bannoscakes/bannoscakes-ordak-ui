@@ -34,6 +34,7 @@ import {
 } from "./ui/alert-dialog";
 import { toast } from "sonner";
 import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
+import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
 
 interface QuickActionsProps {
@@ -108,6 +109,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [showReworkDialog, setShowReworkDialog] = useState(false);
   const [showMessaging, setShowMessaging] = useState(false);
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   
 
   const actions = [
@@ -210,7 +212,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   };
 
   const handleNewOrder = () => {
-    toast(`Creating new ${store === "bannos" ? "Bannos" : "Flourlane"} order...`);
+    setShowCreateOrderModal(true);
   };
 
   const handleStoreReport = () => {
@@ -311,6 +313,13 @@ export function QuickActions({ store }: QuickActionsProps) {
           }
         }}
         initialConversationId={initialConversationId}
+      />
+
+      {/* Create Manual Order Modal */}
+      <CreateManualOrderModal
+        isOpen={showCreateOrderModal}
+        onClose={() => setShowCreateOrderModal(false)}
+        store={store}
       />
 
       {/* Find Order Modal */}

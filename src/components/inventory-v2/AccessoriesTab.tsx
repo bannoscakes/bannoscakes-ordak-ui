@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Label } from "../ui/label";
-import { Search, Plus, Minus, AlertTriangle, RefreshCw, Package, ExternalLink, Trash2 } from "lucide-react";
+import { Search, Plus, Minus, AlertTriangle, RefreshCw, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAccessoriesCached,
