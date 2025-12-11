@@ -28,6 +28,7 @@ DECLARE
   v_priority smallint;
   v_delta_days integer;
   v_user_id uuid;
+  v_exists boolean;
 BEGIN
   -- Check if user has permission (Supervisor or Admin)
   IF NOT (public.check_user_role('Supervisor') OR public.check_user_role('Admin')) THEN
@@ -59,6 +60,14 @@ BEGIN
   -- Generate order ID (use order number as ID for manual orders)
   -- Format: store-ordernumber (e.g., bannos-B20655)
   v_order_id := p_store || '-' || p_order_number;
+
+  -- Check if order with this ID already exists
+  EXECUTE format('SELECT EXISTS(SELECT 1 FROM public.%I WHERE id = $1)', v_table_name)
+  USING v_order_id INTO v_exists;
+
+  IF v_exists THEN
+    RAISE EXCEPTION 'Order with ID "%" already exists. Please use a different order number.', v_order_id;
+  END IF;
 
   -- Calculate priority based on due_date
   -- HIGH (1): today/overdue/tomorrow (deltaDays <= 1)

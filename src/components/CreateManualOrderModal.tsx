@@ -130,7 +130,8 @@ export function CreateManualOrderModal({
       onCreated?.();
     } catch (err) {
       console.error("Error creating manual order:", err);
-      toast.error("Failed to create manual order");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create manual order";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
