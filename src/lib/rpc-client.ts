@@ -2112,3 +2112,36 @@ export async function getDeliveryBreakdown(
   }));
 }
 
+// =============================================
+// STAFF STAGE PERFORMANCE
+// =============================================
+
+export interface StaffStagePerformance {
+  staff_id: string;
+  staff_name: string;
+  filling_count: number;
+  covering_count: number;
+  decorating_count: number;
+  packing_count: number;
+  total_count: number;
+}
+
+export async function getStaffStagePerformance(
+  days: number = 30
+): Promise<StaffStagePerformance[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_stage_performance', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    staff_id: String(d.staff_id || ''),
+    staff_name: String(d.staff_name || 'Unknown'),
+    filling_count: toNum(d.filling_count),
+    covering_count: toNum(d.covering_count),
+    decorating_count: toNum(d.decorating_count),
+    packing_count: toNum(d.packing_count),
+    total_count: toNum(d.total_count),
+  }));
+}
+
