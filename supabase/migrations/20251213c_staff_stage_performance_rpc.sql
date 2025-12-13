@@ -26,9 +26,20 @@ SET search_path = public
 AS $function$
 DECLARE
   v_start_ts timestamptz;
+  v_role text;
+  v_days integer;
 BEGIN
+  -- Permission check: only Supervisor or Admin can view all staff analytics
+  v_role := public.app_role();
+  IF v_role NOT IN ('Supervisor', 'Admin') THEN
+    RAISE EXCEPTION 'Access denied: requires Supervisor or Admin role';
+  END IF;
+
+  -- Clamp p_days to valid range (1-365)
+  v_days := GREATEST(1, LEAST(COALESCE(p_days, 30), 365));
+
   -- Calculate start timestamp for date range
-  v_start_ts := now() - (p_days || ' days')::interval;
+  v_start_ts := now() - (v_days || ' days')::interval;
 
   RETURN QUERY
   SELECT
