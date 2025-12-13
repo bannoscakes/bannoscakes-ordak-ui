@@ -14,7 +14,7 @@ import {
   Activity
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance } from "../lib/rpc-client";
+import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance, getStaffStagePerformance, type StaffStagePerformance } from "../lib/rpc-client";
 import { toast } from "sonner";
 import ChartContainer from "@/components/analytics/ChartContainer";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
@@ -98,21 +98,7 @@ const attendanceData = [
   { week: "Week 4", present: 22, absent: 1, late: 0 }
 ];
 
-const skillsDistribution = [
-  { skill: "Baking Fundamentals", proficient: 18, learning: 4, expert: 1, color: "#3b82f6" },
-  { skill: "Cake Decoration", proficient: 12, learning: 8, expert: 3, color: "#ec4899" },
-  { skill: "Bread Making", proficient: 14, learning: 6, expert: 3, color: "#10b981" },
-  { skill: "Quality Control", proficient: 8, learning: 12, expert: 3, color: "#f59e0b" },
-  { skill: "Equipment Operation", proficient: 16, learning: 6, expert: 1, color: "#8b5cf6" }
-];
-
-const trainingProgress = [
-  { name: "Food Safety Certification", completed: 20, total: 23, progress: 87 },
-  { name: "Advanced Decorating", completed: 8, total: 15, progress: 53 },
-  { name: "Equipment Maintenance", completed: 12, total: 18, progress: 67 },
-  { name: "Customer Service", completed: 19, total: 23, progress: 83 },
-  { name: "Leadership Development", completed: 5, total: 8, progress: 63 }
-];
+// Skills & Training mock data removed - replaced with Staff Performance using real data
 
 const shiftDistribution = [
   { name: "Morning (6AM-2PM)", value: 40, employees: 12, color: "#3b82f6" },
@@ -129,6 +115,7 @@ export function StaffAnalyticsPage() {
   const [avgProductivity, setAvgProductivity] = useState<number | null>(null);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const [departmentPerformanceData, setDepartmentPerformanceData] = useState<any[]>([]);
+  const [staffStageData, setStaffStageData] = useState<StaffStagePerformance[]>([]);
   const isEnabled = useAnalyticsEnabled();
   
   // Fetch real staff analytics data
@@ -136,17 +123,19 @@ export function StaffAnalyticsPage() {
     async function fetchStaffStats() {
       try {
         // Fetch all metrics in parallel
-        const [staffList, productivityData, attendanceData, deptData] = await Promise.all([
+        const [staffList, productivityData, attendanceData, deptData, stageData] = await Promise.all([
           getStaffList(null, true), // Get all active staff
           getStaffAvgProductivity(30), // Last 30 days
           getStaffAttendanceRate(30), // Last 30 days
-          getDepartmentPerformance(30) // Last 30 days
+          getDepartmentPerformance(30), // Last 30 days
+          getStaffStagePerformance(30) // Last 30 days
         ]);
-        
+
         setTotalStaff(staffList.length);
         setAvgProductivity(productivityData?.avg_productivity || null);
         setAttendanceRate(attendanceData?.attendance_rate || null);
         setDepartmentPerformanceData(deptData || []);
+        setStaffStageData(stageData || []);
       } catch (error) {
         console.error('Error fetching staff stats:', error);
         toast.error('Failed to load staff analytics');
@@ -193,11 +182,18 @@ export function StaffAnalyticsPage() {
   const staffProductivityData = isEnabled ? staffProductivity : [];
   const attendanceDataUse = isEnabled ? attendanceData : [];
   // departmentPerformanceData now comes from RPC (real data)
-  const skillsDistributionData = isEnabled ? skillsDistribution : [];
-  const trainingProgressData = isEnabled ? trainingProgress : [];
+  // staffStageData now comes from RPC (real data)
   const shiftDistributionUse = isEnabled ? shiftDistribution : [];
   const topPerformersData = isEnabled ? topPerformers : [];
   const metrics = kpiMetricsWithRealData;
+
+  // Compute top performers per stage from real data
+  const stageTopPerformers = {
+    filling: staffStageData.reduce((max, s) => s.filling_count > (max?.filling_count || 0) ? s : max, null as StaffStagePerformance | null),
+    covering: staffStageData.reduce((max, s) => s.covering_count > (max?.covering_count || 0) ? s : max, null as StaffStagePerformance | null),
+    decorating: staffStageData.reduce((max, s) => s.decorating_count > (max?.decorating_count || 0) ? s : max, null as StaffStagePerformance | null),
+    packing: staffStageData.reduce((max, s) => s.packing_count > (max?.packing_count || 0) ? s : max, null as StaffStagePerformance | null),
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -262,7 +258,7 @@ export function StaffAnalyticsPage() {
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="departments">Departments</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="skills">Skills & Training</TabsTrigger>
+          <TabsTrigger value="staff-stages">Staff Performance</TabsTrigger>
           <TabsTrigger value="scheduling">Scheduling</TabsTrigger>
         </TabsList>
 
@@ -504,82 +500,121 @@ export function StaffAnalyticsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="skills" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Skills Distribution */}
-            <Card className="p-6">
-              <CardHeader className="p-0 pb-6">
-                <CardTitle>Skills Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-4">
-                  {skillsDistributionData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
-                  ) : skillsDistributionData.map((skill, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-foreground">{skill.skill}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {skill.expert + skill.proficient + skill.learning} staff
-                        </span>
+        <TabsContent value="staff-stages" className="space-y-6">
+          {/* Top Performers by Stage */}
+          <Card className="p-6">
+            <CardHeader className="p-0 pb-6">
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-purple-600" />
+                Top Performers by Stage (Last 30 Days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : staffStageData.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No stage completion data available</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { stage: 'Filling', data: stageTopPerformers.filling, color: 'bg-blue-100 text-blue-600', count: stageTopPerformers.filling?.filling_count },
+                    { stage: 'Covering', data: stageTopPerformers.covering, color: 'bg-green-100 text-green-600', count: stageTopPerformers.covering?.covering_count },
+                    { stage: 'Decorating', data: stageTopPerformers.decorating, color: 'bg-pink-100 text-pink-600', count: stageTopPerformers.decorating?.decorating_count },
+                    { stage: 'Packing', data: stageTopPerformers.packing, color: 'bg-orange-100 text-orange-600', count: stageTopPerformers.packing?.packing_count },
+                  ].map(({ stage, data, color, count }) => (
+                    <div key={stage} className="p-4 border border-border rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`p-2 rounded-lg ${color}`}>
+                          <Star className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium text-foreground">{stage}</span>
                       </div>
-                      <div className="flex w-full h-3 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="bg-green-500 transition-all duration-500"
-                          style={{ width: `${(skill.expert / (skill.expert + skill.proficient + skill.learning)) * 100}%` }}
-                        />
-                        <div 
-                          className="bg-blue-500 transition-all duration-500"
-                          style={{ width: `${(skill.proficient / (skill.expert + skill.proficient + skill.learning)) * 100}%` }}
-                        />
-                        <div 
-                          className="bg-orange-500 transition-all duration-500"
-                          style={{ width: `${(skill.learning / (skill.expert + skill.proficient + skill.learning)) * 100}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Expert: {skill.expert}</span>
-                        <span>Proficient: {skill.proficient}</span>
-                        <span>Learning: {skill.learning}</span>
-                      </div>
+                      {data ? (
+                        <div>
+                          <p className="text-lg font-semibold text-foreground">{data.staff_name}</p>
+                          <p className="text-2xl font-bold text-purple-600">{count}</p>
+                          <p className="text-sm text-muted-foreground">orders completed</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No data</p>
+                      )}
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Training Progress */}
-            <Card className="p-6">
-              <CardHeader className="p-0 pb-6">
-                <CardTitle>Training Progress</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-6">
-                  {trainingProgressData.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No data to display</div>
-                  ) : trainingProgressData.map((training, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-foreground">{training.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {training.completed}/{training.total}
-                        </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${training.progress}%` }}
-                        />
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-foreground">{training.progress}%</span>
-                      </div>
-                    </div>
-                  ))}
+          {/* Staff Stage Performance Table */}
+          <Card className="p-6">
+            <CardHeader className="p-0 pb-6">
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-purple-600" />
+                Orders Completed by Stage (Last 30 Days)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : staffStageData.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">No stage completion data available</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Staff Member</th>
+                        <th className="text-center py-3 px-4 font-medium text-muted-foreground">Filling</th>
+                        <th className="text-center py-3 px-4 font-medium text-muted-foreground">Covering</th>
+                        <th className="text-center py-3 px-4 font-medium text-muted-foreground">Decorating</th>
+                        <th className="text-center py-3 px-4 font-medium text-muted-foreground">Packing</th>
+                        <th className="text-center py-3 px-4 font-medium text-muted-foreground">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {staffStageData.map((staff, idx) => (
+                        <tr key={staff.staff_id || idx} className="border-b border-border hover:bg-muted/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
+                                  {staff.staff_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-foreground">{staff.staff_name}</span>
+                            </div>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <span className={staff.filling_count > 0 ? 'font-semibold text-blue-600' : 'text-muted-foreground'}>
+                              {staff.filling_count}
+                            </span>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <span className={staff.covering_count > 0 ? 'font-semibold text-green-600' : 'text-muted-foreground'}>
+                              {staff.covering_count}
+                            </span>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <span className={staff.decorating_count > 0 ? 'font-semibold text-pink-600' : 'text-muted-foreground'}>
+                              {staff.decorating_count}
+                            </span>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <span className={staff.packing_count > 0 ? 'font-semibold text-orange-600' : 'text-muted-foreground'}>
+                              {staff.packing_count}
+                            </span>
+                          </td>
+                          <td className="text-center py-3 px-4">
+                            <span className="font-bold text-purple-600">{staff.total_count}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="scheduling" className="space-y-6">
