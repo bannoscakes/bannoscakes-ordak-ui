@@ -62,7 +62,7 @@ $function$;
 
 GRANT EXECUTE ON FUNCTION public.get_staff_stage_performance(integer) TO authenticated;
 
-COMMENT ON FUNCTION public.get_staff_stage_performance IS
+COMMENT ON FUNCTION public.get_staff_stage_performance(integer) IS
   'Returns staff performance metrics grouped by stage (Filling, Covering, Decorating, Packing) for the last N days';
 
 COMMIT;
