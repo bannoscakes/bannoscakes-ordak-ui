@@ -1970,3 +1970,145 @@ export async function createManualOrder(params: CreateManualOrderParams): Promis
   );
 }
 
+// =============================================
+// STORE ANALYTICS
+// =============================================
+
+export interface StoreAnalytics {
+  total_revenue: number;
+  total_orders: number;
+  avg_order_value: number;
+  pending_today: number;
+}
+
+export interface RevenueByDay {
+  day: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface TopProduct {
+  product_title: string;
+  order_count: number;
+  total_revenue: number;
+}
+
+export interface WeeklyForecast {
+  day_of_week: number;
+  day_date: string;
+  total_orders: number;
+  completed_orders: number;
+  pending_orders: number;
+}
+
+export interface DeliveryBreakdown {
+  delivery_method: string;
+  order_count: number;
+  percentage: number;
+}
+
+// Helper to coerce numeric strings to numbers (Supabase may return bigint/numeric as strings)
+function toNum(val: unknown): number {
+  if (val === null || val === undefined) return 0;
+  const n = Number(val);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+export async function getStoreAnalytics(
+  store: Store,
+  startDate?: string,
+  endDate?: string
+): Promise<StoreAnalytics | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_store_analytics', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+  if (error) throw error;
+  const row = data?.[0];
+  if (!row) return null;
+  return {
+    total_revenue: toNum(row.total_revenue),
+    total_orders: toNum(row.total_orders),
+    avg_order_value: toNum(row.avg_order_value),
+    pending_today: toNum(row.pending_today),
+  };
+}
+
+export async function getRevenueByDay(
+  store: Store,
+  startDate?: string,
+  endDate?: string
+): Promise<RevenueByDay[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_revenue_by_day', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    day: String(d.day),
+    revenue: toNum(d.revenue),
+    orders: toNum(d.orders),
+  }));
+}
+
+export async function getTopProducts(
+  store: Store,
+  startDate?: string,
+  endDate?: string,
+  limit: number = 5
+): Promise<TopProduct[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_top_products', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    product_title: String(d.product_title || 'Unknown'),
+    order_count: toNum(d.order_count),
+    total_revenue: toNum(d.total_revenue),
+  }));
+}
+
+export async function getWeeklyForecast(
+  store: Store,
+  weekStart?: string
+): Promise<WeeklyForecast[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_weekly_forecast', {
+    p_store: store,
+    p_week_start: weekStart || null,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    day_of_week: toNum(d.day_of_week),
+    day_date: String(d.day_date),
+    total_orders: toNum(d.total_orders),
+    completed_orders: toNum(d.completed_orders),
+    pending_orders: toNum(d.pending_orders),
+  }));
+}
+
+export async function getDeliveryBreakdown(
+  store: Store,
+  weekStart?: string
+): Promise<DeliveryBreakdown[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_delivery_breakdown', {
+    p_store: store,
+    p_week_start: weekStart || null,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    delivery_method: String(d.delivery_method || 'Unknown'),
+    order_count: toNum(d.order_count),
+    percentage: toNum(d.percentage),
+  }));
+}
+
