@@ -1,12 +1,12 @@
 # Claude Code Instructions
 
 ## CRITICAL DATABASE RULES
-1. NEVER use MCP to apply migrations or run CREATE/ALTER/DROP statements without permission
+1. NEVER use MCP to apply migrations or run CREATE/ALTER/DROP statements without explicit permission
 2. NEVER use supabase db push without explicit permission
 3. Create migration files ONLY in supabase/migrations/
-4. Tell me when migration is ready - I will deploy after review
+4. Tell me when migration is ready - I will review and deploy
 5. SELECT queries via MCP are OK for debugging
-6. Deploy with supabase db push ONLY when I give permission
+6. Deploy ONLY when I explicitly say "deploy" or "supabase db push"
 
 ---
 
