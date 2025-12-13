@@ -1,83 +1,88 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { 
-  DollarSign, 
-  Package, 
+import {
+  DollarSign,
+  Package,
   Target,
   Calendar,
   Cake,
-  Award,
-  AlertCircle
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Truck,
+  ShoppingBag
 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
 import ChartContainer from "@/components/analytics/ChartContainer";
 import KpiValue from "@/components/analytics/KpiValue";
-import { toNumberOrNull } from "@/lib/metrics";
-import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
-import { getQueueStats, getStoreProductionEfficiency } from "../lib/rpc-client";
-import { useState, useEffect } from "react";
+import {
+  getStoreAnalytics,
+  getRevenueByDay,
+  getTopProducts,
+  getWeeklyForecast,
+  getDeliveryBreakdown,
+  type StoreAnalytics,
+  type RevenueByDay,
+  type TopProduct,
+  type WeeklyForecast,
+  type DeliveryBreakdown
+} from "../lib/rpc-client";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { format, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
 
-// Mock data for Bannos Analytics
-const revenueData = [
-  { month: "Jan", revenue: 45000, orders: 320, avgOrder: 140.6 },
-  { month: "Feb", revenue: 48000, orders: 340, avgOrder: 141.2 },
-  { month: "Mar", revenue: 52000, orders: 365, avgOrder: 142.5 },
-  { month: "Apr", revenue: 49000, orders: 345, avgOrder: 142.0 },
-  { month: "May", revenue: 55000, orders: 385, avgOrder: 142.9 },
-  { month: "Jun", revenue: 58000, orders: 405, avgOrder: 143.2 },
-  { month: "Jul", revenue: 62000, orders: 435, avgOrder: 142.5 },
-  { month: "Aug", revenue: 66000, orders: 465, avgOrder: 141.9 }
-];
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
 
-const productPerformance = [
-  { name: "Wedding Cakes", value: 35, revenue: 24500, color: "#3b82f6" },
-  { name: "Birthday Cakes", value: 28, revenue: 18200, color: "#60a5fa" },
-  { name: "Cupcakes", value: 20, revenue: 12600, color: "#93c5fd" },
-  { name: "Cheesecakes", value: 10, revenue: 8400, color: "#bfdbfe" },
-  { name: "Custom Desserts", value: 7, revenue: 6300, color: "#dbeafe" }
-];
-
-const qualityMetrics = [
-  { month: "Jan", score: 94.2, defects: 12, rework: 8 },
-  { month: "Feb", score: 95.1, defects: 10, rework: 6 },
-  { month: "Mar", score: 96.8, defects: 8, rework: 4 },
-  { month: "Apr", score: 95.5, defects: 11, rework: 7 },
-  { month: "May", score: 97.2, defects: 6, rework: 3 },
-  { month: "Jun", score: 96.9, defects: 7, rework: 4 },
-  { month: "Jul", score: 98.1, defects: 4, rework: 2 },
-  { month: "Aug", score: 97.8, defects: 5, rework: 3 }
-];
-
-// productionEfficiency removed - now using real data from getStoreProductionEfficiency RPC
-
-// KPI metrics - Total Orders now uses real data, others still need data sources
-const getKpiMetrics = (totalOrders: number | null) => [
-  { title: "Monthly Revenue", value: undefined, change: "", trend: "up" as const, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-  { title: "Total Orders", value: totalOrders || undefined, change: "", trend: "up" as const, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
-  { title: "Average Order Value", value: undefined, change: "", trend: "down" as const, icon: Target, color: "text-orange-600", bg: "bg-orange-50" },
-  { title: "Quality Score", value: undefined, change: "", trend: "up" as const, icon: Award, color: "text-purple-600", bg: "bg-purple-50" }
-];
+type DateRange = '7d' | '30d' | '90d';
 
 export function BannosAnalyticsPage() {
-  const isEnabled = useAnalyticsEnabled();
   const [loading, setLoading] = useState(true);
-  const [totalOrders, setTotalOrders] = useState<number | null>(null);
-  const [productionEfficiencyData, setProductionEfficiencyData] = useState<any[]>([]);
-  
-  // Fetch real analytics data
+  const [dateRange, setDateRange] = useState<DateRange>('30d');
+  const [analytics, setAnalytics] = useState<StoreAnalytics | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueByDay[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [weeklyForecast, setWeeklyForecast] = useState<WeeklyForecast[]>([]);
+  const [deliveryBreakdown, setDeliveryBreakdown] = useState<DeliveryBreakdown[]>([]);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const { startDate, endDate } = useMemo(() => {
+    const end = new Date();
+    const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
+    const start = subDays(end, days);
+    return {
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(end, 'yyyy-MM-dd')
+    };
+  }, [dateRange]);
+
+  const weekStart = useMemo(() => {
+    const now = new Date();
+    const monday = startOfWeek(now, { weekStartsOn: 1 });
+    const adjusted = weekOffset > 0 ? addWeeks(monday, weekOffset) : weekOffset < 0 ? subWeeks(monday, Math.abs(weekOffset)) : monday;
+    return format(adjusted, 'yyyy-MM-dd');
+  }, [weekOffset]);
+
+  const weekLabel = useMemo(() => {
+    const start = new Date(weekStart);
+    const end = addWeeks(start, 1);
+    return `${format(start, 'MMM d')} - ${format(subDays(end, 1), 'MMM d, yyyy')}`;
+  }, [weekStart]);
+
   useEffect(() => {
     async function fetchAnalyticsData() {
+      setLoading(true);
       try {
-        const [stats, efficiency] = await Promise.all([
-          getQueueStats('bannos'),
-          getStoreProductionEfficiency('bannos', 30)
+        const [analyticsData, revenue, products] = await Promise.all([
+          getStoreAnalytics('bannos', startDate, endDate),
+          getRevenueByDay('bannos', startDate, endDate),
+          getTopProducts('bannos', startDate, endDate, 5)
         ]);
-        
-        setTotalOrders(stats?.total_orders || null);
-        setProductionEfficiencyData(efficiency || []);
+
+        setAnalytics(analyticsData);
+        setRevenueData(revenue);
+        setTopProducts(products);
       } catch (error) {
         console.error('Error fetching Bannos analytics:', error);
         toast.error('Failed to load analytics data');
@@ -86,12 +91,51 @@ export function BannosAnalyticsPage() {
       }
     }
     fetchAnalyticsData();
-  }, []);
-  
-  const revenueDataUse = isEnabled ? revenueData : [];
-  const productPerformanceUse = isEnabled ? productPerformance : [];
-  const qualityMetricsUse = isEnabled ? qualityMetrics : [];
-  const productionEfficiencyUse = productionEfficiencyData;
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    async function fetchWeeklyData() {
+      try {
+        const [forecast, delivery] = await Promise.all([
+          getWeeklyForecast('bannos', weekStart),
+          getDeliveryBreakdown('bannos', weekStart)
+        ]);
+        setWeeklyForecast(forecast);
+        setDeliveryBreakdown(delivery);
+      } catch (error) {
+        console.error('Error fetching weekly data:', error);
+      }
+    }
+    fetchWeeklyData();
+  }, [weekStart]);
+
+  const chartRevenueData = useMemo(() => {
+    return revenueData.map(d => ({
+      date: format(new Date(d.day), 'MMM d'),
+      revenue: Number(d.revenue),
+      orders: Number(d.orders)
+    }));
+  }, [revenueData]);
+
+  const chartForecastData = useMemo(() => {
+    return weeklyForecast.map((d, idx) => ({
+      day: DAY_NAMES[idx],
+      date: format(new Date(d.day_date), 'MMM d'),
+      total: Number(d.total_orders),
+      completed: Number(d.completed_orders),
+      pending: Number(d.pending_orders)
+    }));
+  }, [weeklyForecast]);
+
+  const pieDeliveryData = useMemo(() => {
+    return deliveryBreakdown.map((d, idx) => ({
+      name: d.delivery_method,
+      value: Number(d.order_count),
+      percentage: Number(d.percentage),
+      color: COLORS[idx % COLORS.length]
+    }));
+  }, [deliveryBreakdown]);
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -102,60 +146,79 @@ export function BannosAnalyticsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-medium text-foreground">Bannos Analytics</h1>
-            <p className="text-muted-foreground">Comprehensive performance insights for cake & dessert operations</p>
+            <p className="text-muted-foreground">Performance insights for cake & dessert operations</p>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm">
-            <Calendar className="h-4 w-4 mr-2" />
-            Last 30 Days
-          </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-            Export Report
-          </Button>
+        <div className="flex gap-2">
+          {(['7d', '30d', '90d'] as DateRange[]).map((range) => (
+            <Button
+              key={range}
+              variant={dateRange === range ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateRange(range)}
+              className={dateRange === range ? "bg-blue-600 hover:bg-blue-700" : ""}
+            >
+              {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+            </Button>
+          ))}
         </div>
       </div>
 
       {/* KPI tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {getKpiMetrics(totalOrders).map((metric) => {
-          const raw = metric?.value as any;
-          const num = toNumberOrNull(raw);
-          const isEnabled = useAnalyticsEnabled();
-          const isEmpty = num == null;
-
-          const unit =
-            /Productivity|Attendance|Quality|Training/i.test(metric.title) ? "percent" :
-            /Revenue|\$|Amount/i.test(metric.title) ? "currency" :
-            /Total|Staff|Orders|Hours|Count/i.test(metric.title) ? "count" :
-            "raw";
-
-          return (
-            <Card key={metric.title}>
-              <div className="flex items-center justify-between p-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">{metric.title}</p>
-                  <p className="text-3xl font-semibold text-foreground">
-                    <KpiValue value={num} unit={unit as any} />
-                  </p>
-                  {isEmpty && !isEnabled && (
-                    <p className="text-xs text-muted-foreground">No data yet</p>
-                  )}
-                </div>
-                <metric.icon className={`h-6 w-6 ${metric.color}`} />
-              </div>
-            </Card>
-          );
-        })}
+        <Card>
+          <div className="flex items-center justify-between p-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Total Revenue</p>
+              <p className="text-3xl font-semibold text-foreground">
+                {loading ? '...' : <KpiValue value={analytics?.total_revenue} unit="currency" />}
+              </p>
+            </div>
+            <DollarSign className="h-6 w-6 text-green-600" />
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center justify-between p-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Total Orders</p>
+              <p className="text-3xl font-semibold text-foreground">
+                {loading ? '...' : <KpiValue value={analytics?.total_orders} unit="count" />}
+              </p>
+            </div>
+            <Package className="h-6 w-6 text-blue-600" />
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center justify-between p-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Avg Order Value</p>
+              <p className="text-3xl font-semibold text-foreground">
+                {loading ? '...' : <KpiValue value={analytics?.avg_order_value} unit="currency" />}
+              </p>
+            </div>
+            <Target className="h-6 w-6 text-orange-600" />
+          </div>
+        </Card>
+        <Card>
+          <div className="flex items-center justify-between p-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Pending Today</p>
+              <p className="text-3xl font-semibold text-foreground">
+                {loading ? '...' : <KpiValue value={analytics?.pending_today} unit="count" />}
+              </p>
+            </div>
+            <Clock className="h-6 w-6 text-purple-600" />
+          </div>
+        </Card>
       </div>
 
       {/* Analytics Tabs */}
       <Tabs defaultValue="revenue" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="revenue">Revenue & Orders</TabsTrigger>
-          <TabsTrigger value="products">Product Performance</TabsTrigger>
-          <TabsTrigger value="quality">Quality Metrics</TabsTrigger>
-          <TabsTrigger value="efficiency">Production Efficiency</TabsTrigger>
+          <TabsTrigger value="products">Top Products</TabsTrigger>
+          <TabsTrigger value="forecast">Weekly Forecast</TabsTrigger>
+          <TabsTrigger value="delivery">Delivery/Pickup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">
@@ -169,13 +232,13 @@ export function BannosAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={revenueDataUse.length > 0}>
+                <ChartContainer hasData={chartRevenueData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={revenueDataUse}>
+                    <AreaChart data={chartRevenueData}>
                       <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
+                      <XAxis dataKey="date" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                      <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
                       <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -192,11 +255,11 @@ export function BannosAnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={revenueDataUse.length > 0}>
+                <ChartContainer hasData={chartRevenueData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueDataUse}>
+                    <BarChart data={chartRevenueData}>
                       <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
+                      <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip />
                       <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -209,25 +272,123 @@ export function BannosAnalyticsPage() {
         </TabsContent>
 
         <TabsContent value="products" className="space-y-6">
+          <Card className="p-6">
+            <CardHeader className="p-0 pb-6">
+              <CardTitle className="flex items-center gap-2">
+                <Cake className="h-5 w-5 text-blue-600" />
+                Top 5 Products by Order Count
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ChartContainer hasData={topProducts.length > 0}>
+                <div className="space-y-4">
+                  {topProducts.map((product, idx) => {
+                    const maxCount = topProducts[0]?.order_count || 1;
+                    const percentage = (Number(product.order_count) / Number(maxCount)) * 100;
+                    return (
+                      <div key={idx} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-foreground truncate max-w-[60%]">{product.product_title}</span>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-muted-foreground">{product.order_count} orders</span>
+                            <span className="font-medium text-foreground">${Number(product.total_revenue).toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%`, backgroundColor: COLORS[idx % COLORS.length] }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="forecast" className="space-y-6">
+          <Card className="p-6">
+            <CardHeader className="p-0 pb-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  Weekly Forecast
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setWeekOffset(w => w - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[180px] text-center">{weekLabel}</span>
+                  <Button variant="outline" size="icon" onClick={() => setWeekOffset(w => w + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  {weekOffset !== 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>Today</Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ChartContainer hasData={chartForecastData.length > 0}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartForecastData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-background border rounded-lg shadow-lg p-3">
+                              <p className="font-medium">{label} ({data.date})</p>
+                              <p className="text-sm text-green-600">Completed: {data.completed}</p>
+                              <p className="text-sm text-orange-600">Pending: {data.pending}</p>
+                              <p className="text-sm font-medium">Total: {data.total}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="Completed" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="pending" stackId="a" fill="#f97316" name="Pending" radius={[4, 4, 0, 0]} />
+                    <Legend />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="delivery" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Product Distribution */}
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
-                <CardTitle>Product Category Distribution</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5 text-blue-600" />
+                    Delivery vs Pickup
+                  </CardTitle>
+                  <span className="text-sm text-muted-foreground">{weekLabel}</span>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={productPerformanceUse.length > 0}>
+                <ChartContainer hasData={pieDeliveryData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={productPerformanceUse}
+                        data={pieDeliveryData}
                         cx="50%"
                         cy="50%"
                         outerRadius={100}
                         dataKey="value"
-                        label={({name, value}) => `${name}: ${value}%`}
+                        label={({ name, percentage }) => `${name}: ${percentage}%`}
                       >
-                        {productPerformanceUse.map((entry, index) => (
+                        {pieDeliveryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -238,129 +399,35 @@ export function BannosAnalyticsPage() {
               </CardContent>
             </Card>
 
-            {/* Product Revenue */}
-            <Card className="p-6">
-              <CardHeader className="p-0 pb-6">
-                <CardTitle>Revenue by Product</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ChartContainer hasData={productPerformanceUse.length > 0}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={productPerformanceUse} layout="horizontal">
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={120} />
-                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-                      <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="quality" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Quality Score Trend */}
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-blue-600" />
-                  Quality Score Trend
+                  <ShoppingBag className="h-5 w-5 text-blue-600" />
+                  Breakdown Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ChartContainer hasData={qualityMetricsUse.length > 0}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={qualityMetricsUse}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[90, 100]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} dot={{fill: '#3b82f6', strokeWidth: 2, r: 4}} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            {/* Defects & Rework */}
-            <Card className="p-6">
-              <CardHeader className="p-0 pb-6">
-                <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-blue-600" />
-                  Defects & Rework
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={qualityMetrics}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="defects" fill="#ef4444" name="Defects" radius={[2, 2, 0, 0]} />
-                    <Bar dataKey="rework" fill="#f97316" name="Rework" radius={[2, 2, 0, 0]} />
-                    <Legend />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  {deliveryBreakdown.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No orders this week</p>
+                  ) : (
+                    deliveryBreakdown.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                          <span className="font-medium">{item.delivery_method}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-muted-foreground">{item.order_count} orders</span>
+                          <span className="font-semibold">{item.percentage}%</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="efficiency" className="space-y-6">
-          <Card className="p-6">
-            <CardHeader className="p-0 pb-6">
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-blue-600" />
-                Production Station Efficiency
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-6">
-                {loading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading efficiency data...</div>
-                ) : productionEfficiencyUse.length > 0 ? (
-                  productionEfficiencyUse.map((station, index) => (
-                  <div key={index} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-foreground">{station.station}</h4>
-                        <p className="text-sm text-muted-foreground">Target: {station.target.toFixed(0)}% | Output: {station.output} units</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-foreground">{station.efficiency.toFixed(1)}%</p>
-                        <Badge 
-                          className={station.efficiency >= station.target ? 
-                            "bg-green-100 text-green-700" : 
-                            "bg-orange-100 text-orange-700"
-                          }
-                        >
-                          {station.efficiency >= station.target ? "Above Target" : "Below Target"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-3">
-                      <div 
-                        className="bg-blue-600 h-3 rounded-full transition-all duration-500 relative"
-                        style={{ width: `${(station.efficiency / 100) * 100}%` }}
-                      >
-                        <div 
-                          className="absolute top-0 h-3 w-1 bg-red-500"
-                          style={{ left: `${station.target}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">No efficiency data available</div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -1970,3 +1970,113 @@ export async function createManualOrder(params: CreateManualOrderParams): Promis
   );
 }
 
+// =============================================
+// STORE ANALYTICS
+// =============================================
+
+export interface StoreAnalytics {
+  total_revenue: number;
+  total_orders: number;
+  avg_order_value: number;
+  pending_today: number;
+}
+
+export interface RevenueByDay {
+  day: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface TopProduct {
+  product_title: string;
+  order_count: number;
+  total_revenue: number;
+}
+
+export interface WeeklyForecast {
+  day_of_week: number;
+  day_date: string;
+  total_orders: number;
+  completed_orders: number;
+  pending_orders: number;
+}
+
+export interface DeliveryBreakdown {
+  delivery_method: string;
+  order_count: number;
+  percentage: number;
+}
+
+export async function getStoreAnalytics(
+  store: Store,
+  startDate?: string,
+  endDate?: string
+): Promise<StoreAnalytics | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_store_analytics', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function getRevenueByDay(
+  store: Store,
+  startDate?: string,
+  endDate?: string
+): Promise<RevenueByDay[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_revenue_by_day', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+  if (error) throw error;
+  return (data || []) as RevenueByDay[];
+}
+
+export async function getTopProducts(
+  store: Store,
+  startDate?: string,
+  endDate?: string,
+  limit: number = 5
+): Promise<TopProduct[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_top_products', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return (data || []) as TopProduct[];
+}
+
+export async function getWeeklyForecast(
+  store: Store,
+  weekStart?: string
+): Promise<WeeklyForecast[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_weekly_forecast', {
+    p_store: store,
+    p_week_start: weekStart || null,
+  });
+  if (error) throw error;
+  return (data || []) as WeeklyForecast[];
+}
+
+export async function getDeliveryBreakdown(
+  store: Store,
+  weekStart?: string
+): Promise<DeliveryBreakdown[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_delivery_breakdown', {
+    p_store: store,
+    p_week_start: weekStart || null,
+  });
+  if (error) throw error;
+  return (data || []) as DeliveryBreakdown[];
+}
+
