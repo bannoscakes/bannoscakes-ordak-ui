@@ -2007,6 +2007,13 @@ export interface DeliveryBreakdown {
   percentage: number;
 }
 
+// Helper to coerce numeric strings to numbers (Supabase may return bigint/numeric as strings)
+function toNum(val: unknown): number {
+  if (val === null || val === undefined) return 0;
+  const n = Number(val);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 export async function getStoreAnalytics(
   store: Store,
   startDate?: string,
@@ -2019,7 +2026,14 @@ export async function getStoreAnalytics(
     p_end_date: endDate || null,
   });
   if (error) throw error;
-  return data?.[0] || null;
+  const row = data?.[0];
+  if (!row) return null;
+  return {
+    total_revenue: toNum(row.total_revenue),
+    total_orders: toNum(row.total_orders),
+    avg_order_value: toNum(row.avg_order_value),
+    pending_today: toNum(row.pending_today),
+  };
 }
 
 export async function getRevenueByDay(
@@ -2034,7 +2048,11 @@ export async function getRevenueByDay(
     p_end_date: endDate || null,
   });
   if (error) throw error;
-  return (data || []) as RevenueByDay[];
+  return (data || []).map((d: Record<string, unknown>) => ({
+    day: String(d.day),
+    revenue: toNum(d.revenue),
+    orders: toNum(d.orders),
+  }));
 }
 
 export async function getTopProducts(
@@ -2051,7 +2069,11 @@ export async function getTopProducts(
     p_limit: limit,
   });
   if (error) throw error;
-  return (data || []) as TopProduct[];
+  return (data || []).map((d: Record<string, unknown>) => ({
+    product_title: String(d.product_title || 'Unknown'),
+    order_count: toNum(d.order_count),
+    total_revenue: toNum(d.total_revenue),
+  }));
 }
 
 export async function getWeeklyForecast(
@@ -2064,7 +2086,13 @@ export async function getWeeklyForecast(
     p_week_start: weekStart || null,
   });
   if (error) throw error;
-  return (data || []) as WeeklyForecast[];
+  return (data || []).map((d: Record<string, unknown>) => ({
+    day_of_week: toNum(d.day_of_week),
+    day_date: String(d.day_date),
+    total_orders: toNum(d.total_orders),
+    completed_orders: toNum(d.completed_orders),
+    pending_orders: toNum(d.pending_orders),
+  }));
 }
 
 export async function getDeliveryBreakdown(
@@ -2077,6 +2105,10 @@ export async function getDeliveryBreakdown(
     p_week_start: weekStart || null,
   });
   if (error) throw error;
-  return (data || []) as DeliveryBreakdown[];
+  return (data || []).map((d: Record<string, unknown>) => ({
+    delivery_method: String(d.delivery_method || 'Unknown'),
+    order_count: toNum(d.order_count),
+    percentage: toNum(d.percentage),
+  }));
 }
 

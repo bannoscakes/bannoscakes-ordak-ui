@@ -30,7 +30,7 @@ import {
 } from "../lib/rpc-client";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { format, subDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
+import { format, subDays, startOfWeek, addWeeks, subWeeks, parseISO } from "date-fns";
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const COLORS = ['#ec4899', '#f472b6', '#f9a8d4', '#fbb6ce', '#fce7f3'];
@@ -50,7 +50,7 @@ export function FlourlaneAnalyticsPage() {
   const { startDate, endDate } = useMemo(() => {
     const end = new Date();
     const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
-    const start = subDays(end, days);
+    const start = subDays(end, days - 1); // inclusive range
     return {
       startDate: format(start, 'yyyy-MM-dd'),
       endDate: format(end, 'yyyy-MM-dd')
@@ -65,9 +65,9 @@ export function FlourlaneAnalyticsPage() {
   }, [weekOffset]);
 
   const weekLabel = useMemo(() => {
-    const start = new Date(weekStart);
-    const end = addWeeks(start, 1);
-    return `${format(start, 'MMM d')} - ${format(subDays(end, 1), 'MMM d, yyyy')}`;
+    const start = parseISO(weekStart);
+    const end = subDays(addWeeks(start, 1), 1); // Sun = Mon + 6 days
+    return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
   }, [weekStart]);
 
   useEffect(() => {
@@ -111,16 +111,16 @@ export function FlourlaneAnalyticsPage() {
 
   const chartRevenueData = useMemo(() => {
     return revenueData.map(d => ({
-      date: format(new Date(d.day), 'MMM d'),
+      date: format(parseISO(d.day), 'MMM d'),
       revenue: Number(d.revenue),
       orders: Number(d.orders)
     }));
   }, [revenueData]);
 
   const chartForecastData = useMemo(() => {
-    return weeklyForecast.map((d, idx) => ({
-      day: DAY_NAMES[idx],
-      date: format(new Date(d.day_date), 'MMM d'),
+    return weeklyForecast.map(d => ({
+      day: DAY_NAMES[d.day_of_week - 1], // day_of_week is 1-indexed (1=Mon)
+      date: format(parseISO(d.day_date), 'MMM d'),
       total: Number(d.total_orders),
       completed: Number(d.completed_orders),
       pending: Number(d.pending_orders)
