@@ -317,10 +317,12 @@ BEGIN
 
   -- Atomic update with CTE to correctly capture pre-update stock value
   -- (RETURNING only sees post-update values, so we need CTE for stock_before)
+  -- FOR UPDATE locks the row to prevent concurrent modifications
   WITH old_stock AS (
     SELECT current_stock, name
     FROM public.accessories
     WHERE id = p_accessory_id
+    FOR UPDATE
   )
   UPDATE public.accessories
   SET
