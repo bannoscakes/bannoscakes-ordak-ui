@@ -315,16 +315,23 @@ BEGIN
   -- Determine transaction type based on change direction
   v_transaction_type := CASE WHEN p_change > 0 THEN 'restock' ELSE 'adjustment' END;
 
-  -- Atomic update (locks row) and capture before/after
-  UPDATE public.accessories a
+  -- Atomic update with CTE to correctly capture pre-update stock value
+  -- (RETURNING only sees post-update values, so we need CTE for stock_before)
+  WITH old_stock AS (
+    SELECT current_stock, name
+    FROM public.accessories
+    WHERE id = p_accessory_id
+  )
+  UPDATE public.accessories
   SET
-    current_stock = GREATEST(0, a.current_stock + p_change),
+    current_stock = GREATEST(0, current_stock + p_change),
     updated_at = now()
-  WHERE a.id = p_accessory_id
+  FROM old_stock
+  WHERE accessories.id = p_accessory_id
   RETURNING
-    a.name,
-    (a.current_stock - p_change) AS stock_before,
-    a.current_stock AS stock_after
+    old_stock.name,
+    old_stock.current_stock AS stock_before,
+    accessories.current_stock AS stock_after
   INTO v_accessory_name, v_before, v_after;
 
   IF NOT FOUND THEN
