@@ -289,6 +289,8 @@ COMMENT ON FUNCTION public.deduct_inventory_on_order() IS
 -- FIX 2: adjust_accessory_stock
 -- Adds transaction_type based on change direction (restock/adjustment)
 -- Adds SET search_path for security
+-- Uses atomic UPDATE with RETURNING to prevent lost-update race condition
+-- Logs effective change amount (matches stock_after - stock_before)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.adjust_accessory_stock(
@@ -308,31 +310,35 @@ DECLARE
   v_after integer;
   v_accessory_name text;
   v_transaction_type text;
+  v_effective_change integer;
 BEGIN
-  -- Get current stock
-  SELECT current_stock, name INTO v_before, v_accessory_name
-  FROM public.accessories
-  WHERE id = p_accessory_id;
+  -- Determine transaction type based on change direction
+  v_transaction_type := CASE WHEN p_change > 0 THEN 'restock' ELSE 'adjustment' END;
+
+  -- Atomic update (locks row) and capture before/after
+  UPDATE public.accessories a
+  SET
+    current_stock = GREATEST(0, a.current_stock + p_change),
+    updated_at = now()
+  WHERE a.id = p_accessory_id
+  RETURNING
+    a.name,
+    (a.current_stock - p_change) AS stock_before,
+    a.current_stock AS stock_after
+  INTO v_accessory_name, v_before, v_after;
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('success', false, 'error', 'Accessory not found');
   END IF;
 
-  v_after := GREATEST(0, v_before + p_change);
+  -- Compute effective change (accounts for clamping to 0)
+  v_effective_change := v_after - v_before;
 
-  -- Determine transaction type based on change direction
-  v_transaction_type := CASE WHEN p_change > 0 THEN 'restock' ELSE 'adjustment' END;
-
-  -- Update stock
-  UPDATE public.accessories
-  SET current_stock = v_after, updated_at = now()
-  WHERE id = p_accessory_id;
-
-  -- Log transaction (FIX: added transaction_type)
+  -- Log transaction (FIX: added transaction_type, logs effective change)
   INSERT INTO public.stock_transactions (
     table_name, item_id, transaction_type, change_amount, stock_before, stock_after, reason, reference, created_by
   ) VALUES (
-    'accessories', p_accessory_id, v_transaction_type, p_change, v_before, v_after, p_reason, p_reference, p_created_by
+    'accessories', p_accessory_id, v_transaction_type, v_effective_change, v_before, v_after, p_reason, p_reference, p_created_by
   );
 
   RETURN jsonb_build_object(
@@ -340,7 +346,7 @@ BEGIN
     'accessory', v_accessory_name,
     'before', v_before,
     'after', v_after,
-    'change', p_change,
+    'change', v_effective_change,
     'needs_sync', (v_after = 0)
   );
 END;
