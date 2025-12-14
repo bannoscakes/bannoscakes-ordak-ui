@@ -28,6 +28,14 @@
 
 ---
 
+## Migration Naming Convention
+- Always use full timestamp format: `YYYYMMDDHHMMSS_description.sql`
+- Example: `20251214193000_fix_something.sql`
+- Never use just date like `20251214_description.sql`
+- Reason: Prevents Supabase version ordering issues when multiple migrations are created on the same day
+
+---
+
 ## Development Workflow
 1. Create feature branch from `dev`
 2. One focused task per branch
