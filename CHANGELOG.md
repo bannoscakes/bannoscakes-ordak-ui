@@ -1,3 +1,102 @@
+## v0.14.0-beta — Analytics Dashboard & Inventory Matching Improvements (2025-12-14)
+
+### 🎯 Overview
+Major analytics dashboard overhaul with real database data, new staff performance metrics by stage, and critical fixes for accessory/inventory matching to support both online and POS order formats.
+
+### ✨ New Features
+
+#### Real-Time Analytics Dashboard (PR #338)
+- **Revenue & Orders**: Daily revenue and order count charts with date range selector (7d/30d/90d)
+- **Top Products**: Top 5 products by order count with revenue breakdown
+- **Weekly Forecast**: Stacked bar chart showing completed vs pending orders by day of week
+- **Delivery/Pickup Breakdown**: Pie chart showing distribution of delivery methods
+- New RPCs: `get_store_analytics`, `get_revenue_by_day`, `get_top_products`, `get_weekly_forecast`, `get_delivery_breakdown`
+
+#### Staff Stage Performance Analytics (PR #339)
+- Replaced mock "Skills & Training" tab with real "Staff Performance" data
+- Shows orders completed per staff member broken down by stage (Filling, Covering, Decorating, Packing)
+- "Top Performers by Stage" cards highlighting best performer for each stage
+- New RPC: `get_staff_stage_performance`
+
+### 🐛 Bug Fixes
+
+#### POS Accessory Variant Separator (PR #342)
+- **Issue**: POS orders use "+" separator (e.g., "Blue + Metallic") but inventory deduction only handled "/" separator
+- **Fix**: Now handles both "/" (online) and "+" (POS) separators when parsing variant_title
+- Improved NULL handling with NULLIF throughout
+
+#### Exclude NULL from Top Products (PR #343)
+- **Issue**: POS accessory-only orders have NULL product_title and appeared as "Unknown" in analytics
+- **Fix**: Added `WHERE o.product_title IS NOT NULL` filter to `get_top_products` RPC
+
+#### Accessory Variant Matching (PR #337)
+- **Issue**: Accessories like "Pink Glitter Number Candles 6" weren't matching orders with variant_title "Pink Glitter / 6"
+- **Fix**: Combine product title + variant suffix for matching (e.g., "Pink Glitter Number Candles" + "6")
+
+#### app_role() Auth Fix (PR #340)
+- **Issue**: `app_role()` failed when called from SECURITY DEFINER functions with restricted search_path
+- **Fix**: Use fully qualified references (`public.auth_email()`, `public.staff_shared`)
+
+#### Ambiguous Column Reference (PR #336)
+- **Issue**: `claim_inventory_sync_items` RPC failed with "column reference 'status' is ambiguous"
+- **Fix**: Use explicit column aliasing in RETURNING clause with CTE wrapper
+
+### 🔒 Security Hardening
+
+#### search_path Security (PR #334, #340)
+- Updated all public functions to use `SET search_path = pg_temp, public`
+- Prevents search_path injection attacks in SECURITY DEFINER functions
+- Fully qualified references in auth functions
+
+### 📋 PRs in This Release
+- PR #334: `fix: set search_path for public functions (security hardening)`
+- PR #336: `fix: resolve ambiguous column reference in claim_inventory_sync_items`
+- PR #337: `fix: include variant_title in accessory matching`
+- PR #338: `feat: wire analytics dashboards to real database data`
+- PR #339: `feat: add staff stage performance analytics`
+- PR #340: `fix: use fully qualified refs in app_role()`
+- PR #341: `docs: update CLAUDE.md database rules`
+- PR #342: `fix: handle POS accessory variant separator in inventory deduction`
+- PR #343: `fix: exclude NULL product_title from top_products analytics`
+
+### 📁 Key Files Added/Modified
+
+#### Migrations
+- `20251212_fix_claim_inventory_sync_ambiguous_column.sql`
+- `20251213_fix_accessory_variant_matching.sql`
+- `20251213b_analytics_rpcs.sql`
+- `20251213c_staff_stage_performance_rpc.sql`
+- `20251213140000_fix_app_role_qualified_refs.sql`
+- `20251214_fix_pos_accessory_separator.sql`
+- `20251214100000_exclude_null_from_top_products.sql`
+
+#### Frontend
+- `src/components/BannosAnalyticsPage.tsx` - Real data integration
+- `src/components/FlourlaneAnalyticsPage.tsx` - Real data integration
+- `src/components/StaffAnalyticsPage.tsx` - New Staff Performance tab
+- `src/lib/rpc-client.ts` - New analytics RPC functions
+
+### 🔧 Technical Details
+
+#### New Analytics RPCs
+| RPC | Purpose |
+|-----|---------|
+| `get_store_analytics` | Revenue, orders, avg value, pending today |
+| `get_revenue_by_day` | Daily revenue/order chart data |
+| `get_top_products` | Top N products by order count |
+| `get_weekly_forecast` | Orders by day of week with status |
+| `get_delivery_breakdown` | Pickup vs Delivery distribution |
+| `get_staff_stage_performance` | Staff completions by stage |
+
+#### Inventory Matching Logic
+```
+Online orders:  "Pink Glitter / 6" → extract "6" after "/"
+POS orders:     "Blue + Metallic" → extract "Metallic" after "+"
+Combined title: "Product Title" + " " + "Variant Value"
+```
+
+---
+
 ## v0.13.0-beta — Order Flow & Timestamp System Overhaul (2025-12-09)
 
 ### 🎯 Overview
