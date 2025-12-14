@@ -29,6 +29,10 @@ Major analytics dashboard overhaul with real database data, new staff performanc
 - **Issue**: POS accessory-only orders have NULL product_title and appeared as "Unknown" in analytics
 - **Fix**: Added `WHERE o.product_title IS NOT NULL` filter to `get_top_products` RPC
 
+#### Stock Transactions Missing transaction_type (PR #345)
+- **Issue**: `record_stock_adjustment` and inventory deduction INSERTs were missing required `transaction_type` column
+- **Fix**: Added explicit `transaction_type` values ('adjustment', 'order_deduction') to all stock_transactions INSERTs
+
 #### Accessory Variant Matching (PR #337)
 - **Issue**: Accessories like "Pink Glitter Number Candles 6" weren't matching orders with variant_title "Pink Glitter / 6"
 - **Fix**: Combine product title + variant suffix for matching (e.g., "Pink Glitter Number Candles" + "6")
@@ -58,6 +62,7 @@ Major analytics dashboard overhaul with real database data, new staff performanc
 - PR #341: `docs: update CLAUDE.md database rules`
 - PR #342: `fix: handle POS accessory variant separator in inventory deduction`
 - PR #343: `fix: exclude NULL product_title from top_products analytics`
+- PR #345: `fix: add missing transaction_type to stock_transactions INSERTs`
 
 ### 📁 Key Files Added/Modified
 
@@ -69,6 +74,7 @@ Major analytics dashboard overhaul with real database data, new staff performanc
 - `20251213140000_fix_app_role_qualified_refs.sql`
 - `20251214_fix_pos_accessory_separator.sql`
 - `20251214100000_exclude_null_from_top_products.sql`
+- `20251214110000_fix_stock_transaction_type.sql`
 
 #### Frontend
 - `src/components/BannosAnalyticsPage.tsx` - Real data integration
