@@ -421,10 +421,12 @@ BEGIN
 
     -- Atomic update with RETURNING to avoid race conditions
     -- Use a CTE to capture old value before update, then compute new clamped value
+    -- FOR UPDATE locks the row to prevent concurrent modifications
     WITH old_stock AS (
       SELECT current_stock, name
       FROM public.components
       WHERE id = v_item.component_id
+      FOR UPDATE
     )
     UPDATE public.components
     SET
