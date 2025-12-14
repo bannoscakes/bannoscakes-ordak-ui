@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.get_top_products(p_store text, p_start_date da
  RETURNS TABLE(product_title text, order_count bigint, total_revenue numeric)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_start date;
@@ -21,7 +21,7 @@ BEGIN
   IF p_store = 'bannos' THEN
     RETURN QUERY
     SELECT
-      COALESCE(o.product_title, 'Unknown')::text as product_title,
+      o.product_title::text as product_title,
       COUNT(*)::bigint as order_count,
       COALESCE(SUM(o.total_amount), 0)::numeric as total_revenue
     FROM orders_bannos o
@@ -34,7 +34,7 @@ BEGIN
   ELSE
     RETURN QUERY
     SELECT
-      COALESCE(o.product_title, 'Unknown')::text as product_title,
+      o.product_title::text as product_title,
       COUNT(*)::bigint as order_count,
       COALESCE(SUM(o.total_amount), 0)::numeric as total_revenue
     FROM orders_flourlane o
