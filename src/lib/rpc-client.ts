@@ -45,6 +45,24 @@ export interface ConversationParticipant {
 }
 
 // =============================================
+// PRINT BARCODE TYPES
+// =============================================
+
+export interface PrintBarcodeResponse {
+  order_number: string;
+  order_id: string;
+  product_title: string;
+  size: string | null;
+  due_date: string;
+  customer_name: string;
+  stage: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  barcode_content: string;  // Format: #B25649 (Bannos) / #F25649 (Flourlane)
+  printed_at: string;
+  printed_by: string;
+}
+
+// =============================================
 // ERROR HANDLING WRAPPER
 // =============================================
 
@@ -524,14 +542,14 @@ export async function handlePrintBarcode(barcode: string, orderId: string, perfo
  * Print barcode for an order - logs to stage_events and sets filling_start_ts on first print
  * Returns order details including barcode_content in format #B25649 (Bannos) / #F25649 (Flourlane)
  */
-export async function printBarcode(store: string, orderId: string) {
+export async function printBarcode(store: string, orderId: string): Promise<PrintBarcodeResponse> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('print_barcode', {
     p_store: store,
     p_order_id: orderId
   });
   if (error) throw error;
-  return data;
+  return data as PrintBarcodeResponse;
 }
 
 export async function getOrderForScan(scan: string) {

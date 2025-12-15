@@ -5,6 +5,8 @@
 -- Changes:
 -- 1. search_path from "public" to "pg_temp, public" for security
 -- 2. barcode_content format to match Shopify Kitchen Barcode metafield: #B25649 / #F25649
+-- 3. Explicit SELECT of required columns (avoids SELECT *)
+-- 4. Validate shopify_order_number is not NULL
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.print_barcode(
@@ -33,15 +35,20 @@ BEGIN
     RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
   END IF;
 
-  -- Get order details
+  -- Get order details (explicit columns to surface schema changes)
   v_table_name := 'orders_' || p_store;
   EXECUTE format(
-    'SELECT * FROM %I WHERE id = $1',
+    'SELECT id, shopify_order_number, product_title, size, due_date, customer_name, stage, priority, filling_start_ts FROM %I WHERE id = $1',
     v_table_name
   ) USING p_order_id INTO v_order;
 
-  IF NOT FOUND THEN
+  IF v_order IS NULL THEN
     RAISE EXCEPTION 'Order not found: %', p_order_id;
+  END IF;
+
+  -- Validate shopify_order_number is present (required for barcode)
+  IF v_order.shopify_order_number IS NULL THEN
+    RAISE EXCEPTION 'Cannot print barcode: shopify_order_number is NULL for order %', p_order_id;
   END IF;
 
   -- Check if this is first print in Filling stage and set filling_start_ts
