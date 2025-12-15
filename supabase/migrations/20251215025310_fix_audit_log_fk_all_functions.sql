@@ -48,10 +48,12 @@ BEGIN
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
-  -- Check user existence once
-  IF v_user_id IS NOT NULL THEN
-    SELECT EXISTS(SELECT 1 FROM public.users WHERE id = v_user_id) INTO v_user_exists;
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
   END IF;
+
+  -- Check user existence once
+  SELECT EXISTS(SELECT 1 FROM public.users WHERE id = v_user_id) INTO v_user_exists;
 
   -- Get current stage for logging
   EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
