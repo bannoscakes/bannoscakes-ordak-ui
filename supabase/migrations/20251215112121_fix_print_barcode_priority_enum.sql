@@ -11,6 +11,7 @@
 -- 1. priority: CASE v_order.priority WHEN 1 THEN 'HIGH' WHEN 0 THEN 'MEDIUM' ELSE 'LOW' END
 -- 2. stage: v_order.stage::text
 -- 3. staff_id: lookup in staff_shared, use NULL if not found (prevents FK violation)
+-- 4. meta.auth_uid: always log auth.uid() for audit trail (even if not in staff_shared)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.print_barcode(
@@ -90,7 +91,10 @@ BEGIN
     'print',
     now(),
     v_staff_id,  -- Will be NULL if user not in staff_shared
-    jsonb_build_object('first_filling_print', v_is_first_filling_print)
+    jsonb_build_object(
+      'first_filling_print', v_is_first_filling_print,
+      'auth_uid', v_user_id
+    )
   );
 
   -- Build printable payload
