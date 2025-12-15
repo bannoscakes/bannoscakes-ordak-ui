@@ -19,7 +19,7 @@ interface QueueItem {
   shopifyOrderNumber: string;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string;
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -30,6 +30,9 @@ interface QueueItem {
   storage?: string;
   store: 'bannos' | 'flourlane';
   stage: string;
+  notes?: string;
+  productImage?: string;
+  writingOnCake?: string;
 }
 
 interface StaffOrderDetailDrawerProps {
@@ -39,42 +42,8 @@ interface StaffOrderDetailDrawerProps {
   onScanBarcode: () => void;
 }
 
-// Sample extended order data for staff view
-const getExtendedOrderData = (order: QueueItem | null) => {
-  if (!order) return null;
-  
-  return {
-    ...order,
-    writingOnCake: order.id.includes("003") || order.id.includes("C03") 
-      ? "Happy Birthday Sarah! Love, Mom & Dad" 
-      : order.id.includes("015") || order.id.includes("C01")
-      ? "Congratulations on your Wedding!"
-      : "",
-    deliveryDate: "2024-12-03",
-    notes: order.priority === "High" 
-      ? "Customer requested early morning pickup. Handle with extra care - VIP client."
-      : order.method === "Delivery"
-      ? "Standard delivery. Contact customer 30 mins before arrival."
-      : "Customer will pickup. Ensure order is ready at specified time.",
-    productImage: order.store === "bannos" 
-      ? "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop"
-      : "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop",
-  };
-};
-
-// Convert legacy size to realistic display
-const getRealisticSize = (originalSize: string, product: string, store: string) => {
-  if (product.toLowerCase().includes("cupcake")) {
-    return originalSize === 'S' ? 'Mini' : originalSize === 'M' ? 'Standard' : 'Jumbo';
-  } else if (product.toLowerCase().includes("wedding")) {
-    return originalSize === 'S' ? '6-inch Round' : originalSize === 'M' ? '8-inch Round' : '10-inch Round';
-  } else if (product.toLowerCase().includes("birthday") || product.toLowerCase().includes("cake")) {
-    return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium Tall' : '8-inch Round';
-  } else if (store === "flourlane") {
-    return originalSize === 'S' ? 'Small Loaf' : originalSize === 'M' ? 'Standard' : 'Large Batch';
-  }
-  return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium' : 'Large';
-};
+// Default placeholder image when no product image is available
+const DEFAULT_PRODUCT_IMAGE = "/placeholder-cake.png";
 
 const getPriorityColor = (priority: string) => {
   const colors = {
@@ -102,26 +71,25 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   const [selectedStorage, setSelectedStorage] = useState("");
   const [availableStorageLocations, setAvailableStorageLocations] = useState<string[]>([]);
   const [storageLoading, setStorageLoading] = useState(false);
-  
-  const extendedOrder = getExtendedOrderData(order);
-  const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
+
+  const storeName = order?.store === "bannos" ? "Bannos" : "Flourlane";
 
   // Load storage locations when component mounts or order changes
   useEffect(() => {
-    if (isOpen && extendedOrder?.store) {
+    if (isOpen && order?.store) {
       loadStorageLocations();
       // Set current storage location
-      setSelectedStorage(extendedOrder.storage || "");
+      setSelectedStorage(order.storage || "");
     }
-  }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
+  }, [isOpen, order?.store, order?.storage]);
 
   // Early return after all hooks
-  if (!extendedOrder) return null;
+  if (!order) return null;
 
   const loadStorageLocations = async () => {
     try {
       setStorageLoading(true);
-      const locations = await getStorageLocations(extendedOrder.store);
+      const locations = await getStorageLocations(order.store);
       setAvailableStorageLocations(locations);
     } catch (error) {
       console.error('Error loading storage locations:', error);
@@ -140,10 +108,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   };
 
   const handleStorageChange = async (newStorage: string) => {
-    if (!extendedOrder || newStorage === selectedStorage) return;
+    if (!order || newStorage === selectedStorage) return;
 
     try {
-      await setStorage(extendedOrder.id, extendedOrder.store, newStorage);
+      await setStorage(order.id, order.store, newStorage);
       setSelectedStorage(newStorage);
       toast.success(`Storage location updated to ${newStorage}`);
     } catch (error) {
@@ -160,7 +128,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
     try {
       const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
-      await qcReturnToDecorating(extendedOrder.id, extendedOrder.store, notes);
+      await qcReturnToDecorating(order.id, order.store, notes);
       toast.success(`Order returned to Decorating stage: ${qcIssue}`);
       onClose();
     } catch (error) {
@@ -177,10 +145,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
     try {
       // Call print_barcode workflow: logs to stage_events, sets filling_start_ts, triggers browser print
       await printBarcodeWorkflow(
-        extendedOrder.store as 'bannos' | 'flourlane',
-        extendedOrder.id
+        order.store as 'bannos' | 'flourlane',
+        order.id
       );
-      toast.success(`Barcode printed for ${extendedOrder.orderNumber}`);
+      toast.success(`Barcode printed for ${order.orderNumber}`);
     } catch (error) {
       console.error('Error printing barcode:', error);
       toast.error("Failed to print barcode");
@@ -193,7 +161,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   };
 
   const handleViewInShopify = () => {
-    const id = extendedOrder?.shopifyOrderNumber?.trim();
+    const id = order?.shopifyOrderNumber?.trim();
     if (!id) {
       toast.error("Shopify order number not available");
       return;
@@ -224,10 +192,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           <div className="flex items-center justify-center py-4">
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
-                orderId={extendedOrder.orderNumber}
-                productTitle={extendedOrder.product}
-                dueDate={extendedOrder.dueTime}
-                store={extendedOrder.store}
+                orderId={order.orderNumber}
+                productTitle={order.product}
+                dueDate={order.dueTime}
+                store={order.store}
                 onPrint={handleBarcodePrint}
                 onDownload={handleBarcodeDownload}
               />
@@ -247,9 +215,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
             <div className="flex items-center justify-between">
               <div>
                 <SheetTitle className="text-lg font-medium text-foreground">
-                  {extendedOrder.orderNumber}
+                  {order.orderNumber}
                 </SheetTitle>
-                <p className="text-sm text-muted-foreground">{extendedOrder.customerName}</p>
+                <p className="text-sm text-muted-foreground">{order.customerName}</p>
               </div>
               <Button variant="outline" size="sm" onClick={handlePrintBarcode}>
                 <Printer className="mr-2 h-4 w-4" />
@@ -257,7 +225,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Order details for {extendedOrder.orderNumber}
+              Order details for {order.orderNumber}
             </SheetDescription>
           </SheetHeader>
 
@@ -272,8 +240,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               </label>
               <div className="w-full h-48 rounded-lg overflow-hidden bg-muted/30 border">
                 <ImageWithFallback
-                  src={extendedOrder.productImage}
-                  alt={extendedOrder.product}
+                  src={order.productImage || DEFAULT_PRODUCT_IMAGE}
+                  alt={order.product}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -286,7 +254,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Store
                 </label>
-                <Badge className={`text-xs ${getStoreColor(extendedOrder.store)}`}>
+                <Badge className={`text-xs ${getStoreColor(order.store)}`}>
                   {storeName}
                 </Badge>
               </div>
@@ -296,8 +264,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Priority
                 </label>
-                <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                  {extendedOrder.priority}
+                <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
+                  {order.priority}
                 </Badge>
               </div>
             </div>
@@ -308,7 +276,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Product
               </label>
               <p className="text-sm text-foreground">
-                {extendedOrder.product}
+                {order.product}
               </p>
             </div>
 
@@ -318,17 +286,17 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Size
               </label>
               <p className="text-sm text-foreground">
-                {getRealisticSize(extendedOrder.size, extendedOrder.product, extendedOrder.store)}
+                {order.size}
               </p>
             </div>
 
             {/* Flavour */}
-            {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+            {order.flavor && order.flavor !== "Other" && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Flavour
                 </label>
-                <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                <p className="text-sm text-foreground">{order.flavor}</p>
               </div>
             )}
 
@@ -337,7 +305,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               <label className="text-sm font-medium text-foreground block mb-2">
                 Quantity
               </label>
-              <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
+              <p className="text-sm text-foreground">{order.quantity}</p>
             </div>
 
             {/* Due Date */}
@@ -346,7 +314,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Due Date
               </label>
               <p className="text-sm text-foreground">
-                {extendedOrder.deliveryDate}
+                {order.dueTime}
               </p>
             </div>
 
@@ -355,29 +323,29 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               <label className="text-sm font-medium text-foreground block mb-2">
                 Method
               </label>
-              <p className="text-sm text-foreground">{extendedOrder.method}</p>
+              <p className="text-sm text-foreground">{order.method}</p>
             </div>
 
             {/* Storage */}
-            {extendedOrder.storage && (
+            {order.storage && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Storage
                 </label>
                 <Badge className={`text-xs ${getStorageColor()}`}>
-                  {extendedOrder.storage}
+                  {order.storage}
                 </Badge>
               </div>
             )}
 
             {/* Writing on Cake */}
-            {extendedOrder.writingOnCake && (
+            {order.writingOnCake && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Writing on Cake
                 </label>
                 <div className="p-3 bg-muted/30 rounded-lg border">
-                  <p className="text-sm text-foreground">{extendedOrder.writingOnCake}</p>
+                  <p className="text-sm text-foreground">{order.writingOnCake}</p>
                 </div>
               </div>
             )}
@@ -388,12 +356,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Notes
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border min-h-[80px]">
-                <p className="text-sm text-foreground">{extendedOrder.notes}</p>
+                <p className="text-sm text-foreground">{order.notes || "No notes"}</p>
               </div>
             </div>
 
             {/* Quality Control Section - Only for Packing stage */}
-            {extendedOrder.stage === "packing" && (
+            {order.stage === "packing" && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
@@ -497,7 +465,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
           {/* Footer */}
           <div className="p-6">
-            {extendedOrder.stage === "packing" ? (
+            {order.stage === "packing" ? (
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Button
