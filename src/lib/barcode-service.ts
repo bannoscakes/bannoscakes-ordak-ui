@@ -1,18 +1,11 @@
 import JsBarcode from 'jsbarcode';
-import { getSupabase } from './supabase';
+import { printBarcode as printBarcodeRPC, PrintBarcodeResponse } from './rpc-client';
 
 export interface BarcodeData {
   orderId: string;
   productTitle: string;
   dueDate: string;
   store: 'bannos' | 'flourlane';
-}
-
-export interface PrintBarcodeParams {
-  orderId: string;
-  barcode: string;
-  performedBy: string;
-  context?: Record<string, any>;
 }
 
 /**
@@ -180,53 +173,31 @@ export function downloadBarcode(data: BarcodeData): void {
 }
 
 /**
- * Call the handle_print_barcode RPC
- */
-export async function handlePrintBarcode(params: PrintBarcodeParams): Promise<boolean> {
-  try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase.rpc('handle_print_barcode', {
-      p_barcode: params.barcode,
-      p_order_id: params.orderId,
-      p_performed_by: params.performedBy,
-      p_context: params.context || {}
-    });
-    
-    if (error) {
-      console.error('Error calling handle_print_barcode:', error);
-      throw error;
-    }
-    
-    return data === true;
-  } catch (error) {
-    console.error('Failed to handle print barcode:', error);
-    throw error;
-  }
-}
-
-/**
- * Complete barcode printing workflow
+ * Complete barcode printing workflow:
+ * 1. Calls print_barcode RPC (logs to stage_events, sets filling_start_ts)
+ * 2. Uses returned data to trigger browser print dialog
+ *
+ * @param store - 'bannos' or 'flourlane'
+ * @param orderId - The order ID
+ * @returns PrintBarcodeResponse with order details and barcode_content
  */
 export async function printBarcodeWorkflow(
-  data: BarcodeData,
-  performedBy: string
-): Promise<void> {
+  store: 'bannos' | 'flourlane',
+  orderId: string
+): Promise<PrintBarcodeResponse> {
   try {
-    // 1. Call the RPC to record the print action
-    await handlePrintBarcode({
-      orderId: data.orderId,
-      barcode: data.orderId, // Using orderId as barcode
-      performedBy,
-      context: {
-        product_title: data.productTitle,
-        due_date: data.dueDate,
-        store: data.store
-      }
+    // 1. Call the RPC to record the print action and get order details
+    const response = await printBarcodeRPC(store, orderId);
+
+    // 2. Generate and print the barcode using returned data
+    printBarcode({
+      orderId: response.barcode_content, // Use barcode_content (#B25649 format) for the barcode
+      productTitle: response.product_title,
+      dueDate: response.due_date,
+      store
     });
-    
-    // 2. Generate and print the barcode
-    printBarcode(data);
-    
+
+    return response;
   } catch (error) {
     console.error('Barcode printing workflow failed:', error);
     throw error;

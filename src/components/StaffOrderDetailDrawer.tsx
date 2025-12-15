@@ -9,7 +9,8 @@ import { Printer, QrCode, ExternalLink, Bot, Package, RotateCcw } from "lucide-r
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-import { handlePrintBarcode as printBarcodeRPC, setStorage, getStorageLocations, qcReturnToDecorating } from "../lib/rpc-client";
+import { setStorage, getStorageLocations, qcReturnToDecorating } from "../lib/rpc-client";
+import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 
 interface QueueItem {
@@ -174,10 +175,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   const handleBarcodePrint = async () => {
     try {
-      // Generate a simple barcode string for the order
-      const barcode = `ORD-${extendedOrder.orderNumber}`;
-      await printBarcodeRPC(barcode, extendedOrder.id);
-      toast.success(`Barcode sent to printer for ${extendedOrder.orderNumber}`);
+      // Call print_barcode workflow: logs to stage_events, sets filling_start_ts, triggers browser print
+      await printBarcodeWorkflow(
+        extendedOrder.store as 'bannos' | 'flourlane',
+        extendedOrder.id
+      );
+      toast.success(`Barcode printed for ${extendedOrder.orderNumber}`);
     } catch (error) {
       console.error('Error printing barcode:', error);
       toast.error("Failed to print barcode");
