@@ -477,12 +477,15 @@ $function$;
 
 -- ============================================================================
 -- Function 7/7: upload_order_photo
+-- Must DROP first because we're changing parameter defaults
 -- ============================================================================
+DROP FUNCTION IF EXISTS public.upload_order_photo(text, text, text, text, text, text, text);
+
 CREATE OR REPLACE FUNCTION public.upload_order_photo(
   p_order_id text,
   p_store text,
   p_url text,
-  p_stage text,
+  p_stage text DEFAULT 'Packing',
   p_qc_status text DEFAULT 'ok',
   p_qc_issue text DEFAULT NULL,
   p_qc_comments text DEFAULT NULL
