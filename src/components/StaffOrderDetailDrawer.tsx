@@ -1,17 +1,24 @@
 import { useState, useEffect } from "react";
+import { Bot, Printer, QrCode, ExternalLink, Package, RotateCcw } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { Printer, QrCode, ExternalLink, Bot, Package, RotateCcw } from "lucide-react";
-import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
+import { toast } from "sonner";
 import { setStorage, getStorageLocations, qcReturnToDecorating, getOrder } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
+
+interface AccessoryItem {
+  title: string;
+  quantity: number;
+  price: string;
+  variant_title?: string | null;
+}
 
 interface QueueItem {
   id: string;
@@ -34,6 +41,7 @@ interface QueueItem {
   cakeWriting?: string;
   notes?: string;
   productImage?: string | null;
+  accessories?: AccessoryItem[] | null;
 }
 
 interface StaffOrderDetailDrawerProps {
@@ -54,12 +62,15 @@ const getExtendedOrderData = (order: QueueItem | null) => {
     size: order.size || 'Unknown',
     // Use real cake writing from database
     writingOnCake: order.cakeWriting || '',
+    // Pass raw accessories for flexible rendering (not pre-formatted strings)
+    accessories: order.accessories || [],
     // Use real due date
     deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
     // Use real notes from database (null means no notes)
     notes: order.notes || '',
     // Use real product image from database
     productImage: order.productImage || null,
+    imageCaption: order.product
   };
 };
 
@@ -74,12 +85,6 @@ const getPriorityColor = (priority: string) => {
 
 const getStorageColor = () => {
   return "bg-purple-100 text-purple-700 border-purple-200";
-};
-
-const getStoreColor = (store: string) => {
-  return store === 'bannos' 
-    ? 'bg-blue-100 text-blue-700 border-blue-200' 
-    : 'bg-pink-100 text-pink-700 border-pink-200';
 };
 
 export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }: StaffOrderDetailDrawerProps) {
@@ -130,7 +135,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           // Add real data from database
           cakeWriting: foundOrder.cake_writing || '',
           notes: foundOrder.notes || '',
-          productImage: foundOrder.product_image || null
+          productImage: foundOrder.product_image || null,
+          accessories: foundOrder.accessories || null
         };
 
         setRealOrder(mappedOrder);
@@ -159,6 +165,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   };
 
   const extendedOrder = getExtendedOrderData(realOrder || order);
+  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
+  const isPackingStage = currentStage === "packing";
   const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
 
   // Load storage locations when component mounts or order changes
@@ -184,7 +192,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
       // Fallback to default locations
       setAvailableStorageLocations([
         "Store Fridge",
-        "Store Freezer", 
+        "Store Freezer",
         "Kitchen Coolroom",
         "Kitchen Freezer",
         "Basement Coolroom"
@@ -275,7 +283,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           <DialogHeader>
             <DialogTitle>Print Barcode</DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex items-center justify-center py-4">
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
@@ -295,28 +303,23 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[480px] p-0">
+      <SheetContent className="!w-[540px] max-w-full sm:!max-w-[540px] p-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <SheetHeader className="p-6 pb-0">
             <div className="flex items-center justify-between">
-              <div>
-                <SheetTitle className="text-lg font-medium text-foreground">
-                  {extendedOrder.orderNumber}
-                </SheetTitle>
-                <p className="text-sm text-muted-foreground">{extendedOrder.customerName}</p>
-              </div>
+              <SheetTitle className="text-lg font-medium text-foreground">
+                Order Details
+              </SheetTitle>
               <Button variant="outline" size="sm" onClick={handlePrintBarcode}>
                 <Printer className="mr-2 h-4 w-4" />
                 Print Barcode
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Order details for {extendedOrder.orderNumber}
+              Detailed view of order {extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
-
-          <Separator className="my-4" />
 
           {/* Loading State */}
           {loading && (
@@ -325,114 +328,99 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
             </div>
           )}
 
-          {/* Body - Scrollable */}
-          {!loading && <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Product Image - only show if image exists */}
-            {extendedOrder.productImage && (
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-2">
-                  Product Image
-                </label>
-                <div className="w-full h-48 rounded-lg overflow-hidden bg-muted/30 border">
-                  <ImageWithFallback
-                    src={extendedOrder.productImage}
-                    alt={extendedOrder.product}
-                    className="w-full h-full object-cover"
-                  />
+          {/* Subheader */}
+          {!loading && (
+            <div className="px-6 pt-4 pb-6 space-y-4">
+              <div className="grid gap-1 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Customer:</span> {extendedOrder.customerName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Store:</span> {storeName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
+                  <div className="mt-2">
+                    <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
+                      {extendedOrder.priority}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
+                  <p className="mt-2 text-foreground">
+                    {extendedOrder.deliveryDate}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Method</p>
+                  <p className="mt-2 text-foreground">{extendedOrder.method}</p>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Store */}
+          <Separator />
+
+          {/* Body - Scrollable */}
+          {!loading && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Product Image + Product */}
+            <div className="space-y-4">
+              {extendedOrder.productImage && (
+                <div>
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted/30 border">
+                    <ImageWithFallback
+                      src={extendedOrder.productImage}
+                      alt={extendedOrder.product}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {extendedOrder.imageCaption && (
+                    <p className="mt-2 text-xs text-muted-foreground">{extendedOrder.imageCaption}</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Store
+                  Product
                 </label>
-                <Badge className={`text-xs ${getStoreColor(extendedOrder.store)}`}>
-                  {storeName}
-                </Badge>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.product}
+                </p>
               </div>
+            </div>
 
-              {/* Priority */}
+            {/* Size + Flavour + Quantity (cake details together) */}
+            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Priority
+                  Size
                 </label>
-                <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                  {extendedOrder.priority}
-                </Badge>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.size}
+                </p>
               </div>
-            </div>
-
-            {/* Product Title */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.product}
-              </p>
-            </div>
-
-            {/* Size */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Size
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.size}
-              </p>
-            </div>
-
-            {/* Flavour */}
-            {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-2">
+                    Flavour
+                  </label>
+                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Flavour
+                  Quantity
                 </label>
-                <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
               </div>
-            )}
-
-            {/* Quantity */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Quantity
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
             </div>
-
-            {/* Due Date */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Due Date
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.deliveryDate}
-              </p>
-            </div>
-
-            {/* Method */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Method
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.method}</p>
-            </div>
-
-            {/* Storage */}
-            {extendedOrder.storage && (
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-2">
-                  Storage
-                </label>
-                <Badge className={`text-xs ${getStorageColor()}`}>
-                  {extendedOrder.storage}
-                </Badge>
-              </div>
-            )}
 
             {/* Writing on Cake */}
             {extendedOrder.writingOnCake && (
@@ -443,6 +431,40 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <div className="p-3 bg-muted/30 rounded-lg border">
                   <p className="text-sm text-foreground">{extendedOrder.writingOnCake}</p>
                 </div>
+              </div>
+            )}
+
+            {/* Accessories - list format with per-item quantities */}
+            {extendedOrder.accessories && extendedOrder.accessories.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Accessories
+                </label>
+                <div className="p-3 bg-muted/30 rounded-lg border space-y-2">
+                  {extendedOrder.accessories.map((acc: AccessoryItem, index: number) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">
+                        {acc.title}
+                        {acc.variant_title && (
+                          <span className="text-muted-foreground ml-1">#{acc.variant_title}</span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground font-medium">× {acc.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Storage */}
+            {extendedOrder.storage && (
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Storage
+                </label>
+                <Badge className={`text-xs ${getStorageColor()}`}>
+                  {extendedOrder.storage}
+                </Badge>
               </div>
             )}
 
@@ -457,7 +479,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
             </div>
 
             {/* Quality Control Section - Only for Packing stage */}
-            {extendedOrder.stage === "packing" && (
+            {isPackingStage && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
@@ -473,7 +495,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     Run AI QC
                   </Button>
                 </div>
-                
+
                 <div>
                   <label className="text-xs font-medium text-foreground block mb-2">
                     QC Issue
@@ -510,7 +532,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                       Storage Location
                     </label>
                   </div>
-                  
+
                   <div>
                     <label className="text-xs font-medium text-foreground block mb-2">
                       Select where to store this order
@@ -520,8 +542,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                         <span className="text-xs text-muted-foreground">Loading storage locations...</span>
                       </div>
                     ) : (
-                      <Select 
-                        value={selectedStorage || "none"} 
+                      <Select
+                        value={selectedStorage || "none"}
                         onValueChange={handleStorageChange}
                       >
                         <SelectTrigger className="w-full">
@@ -545,7 +567,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                         </SelectContent>
                       </Select>
                     )}
-                    
+
                     {selectedStorage && selectedStorage !== "none" && (
                       <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
                         ✓ Order will be stored in: <strong>{selectedStorage}</strong>
@@ -555,13 +577,14 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 </div>
               </div>
             )}
-          </div>}
+          </div>
+          )}
 
           <Separator />
 
           {/* Footer */}
           <div className="p-6">
-            {extendedOrder.stage === "packing" ? (
+            {isPackingStage ? (
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Button
