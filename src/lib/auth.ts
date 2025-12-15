@@ -229,6 +229,13 @@ class AuthService {
       if (typeof window !== 'undefined') {
         console.log('Clearing persisted auth storage...');
         clearSupabaseAuthStorage();
+
+        // Clear URL params to prevent stale routing on next login
+        // (e.g., supervisor logging in with leftover ?page= from previous session)
+        if (window.location.search) {
+          console.log('Clearing URL params...');
+          window.history.replaceState({}, '', '/');
+        }
       }
       
       // Update auth state - React will handle re-rendering

@@ -118,17 +118,33 @@ function extractCustomerName(shopifyOrder: any): string {
 
 function extractDeliveryDate(shopifyOrder: any): string | null {
   const noteAttributes = shopifyOrder.note_attributes || []
-  
-  const deliveryDateAttr = noteAttributes.find((attr: any) => 
+
+  const deliveryDateAttr = noteAttributes.find((attr: any) =>
     attr.name === 'Local Delivery Date and Time'
   )
-  
+
   if (deliveryDateAttr && deliveryDateAttr.value) {
     const dateText = deliveryDateAttr.value
     const datePart = dateText.split(' between ')[0].trim()
-    
+
     try {
-      const parsedDate = new Date(datePart)
+      let parsedDate: Date
+
+      // Check for DD/MM/YYYY numeric format (e.g., "08/12/2025" from Bannos)
+      // This format would be incorrectly parsed as MM/DD/YYYY by new Date()
+      const numericMatch = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+
+      if (numericMatch) {
+        // Explicitly parse as DD/MM/YYYY
+        const day = parseInt(numericMatch[1], 10)
+        const month = parseInt(numericMatch[2], 10) - 1 // JS months are 0-indexed
+        const year = parseInt(numericMatch[3], 10)
+        parsedDate = new Date(year, month, day)
+      } else {
+        // Text format like "Mon 8 Dec 2025" - new Date() handles this correctly
+        parsedDate = new Date(datePart)
+      }
+
       if (!isNaN(parsedDate.getTime())) {
         return parsedDate.toISOString().split('T')[0]
       }
@@ -136,7 +152,7 @@ function extractDeliveryDate(shopifyOrder: any): string | null {
       console.error('Failed to parse delivery date:', error)
     }
   }
-  
+
   return null
 }
 

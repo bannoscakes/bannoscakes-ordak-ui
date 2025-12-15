@@ -220,11 +220,21 @@ export interface StaffMember {
   user_id: string;
   full_name: string;
   role: 'Admin' | 'Supervisor' | 'Staff';
+  store: 'bannos' | 'flourlane' | 'both';
   phone: string | null;
   email: string | null;
   is_active: boolean;
   created_at: string;
-  last_login: string | null;
+  updated_at: string;
+  hourly_rate: number | null;
+  approved: boolean;
+}
+
+export interface ActiveShift {
+  staff_id: string;
+  shift_id: string;
+  store: string;
+  start_ts: string;
 }
 
 export interface Component {
@@ -265,6 +275,37 @@ export async function getStaffList(role?: string | null, isActive: boolean = tru
   });
   if (error) throw error;
   return (data || []) as StaffMember[];
+}
+
+export async function getAllActiveShifts(): Promise<ActiveShift[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_all_active_shifts');
+  if (error) throw error;
+  return (data || []) as ActiveShift[];
+}
+
+export interface UpdateStaffMemberParams {
+  userId: string;
+  fullName?: string;
+  role?: 'Admin' | 'Supervisor' | 'Staff';
+  hourlyRate?: number;
+  isActive?: boolean;
+  approved?: boolean;
+  phone?: string;
+}
+
+export async function updateStaffMember(params: UpdateStaffMemberParams): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase.rpc('update_staff_member', {
+    p_user_id: params.userId,
+    p_full_name: params.fullName ?? null,
+    p_role: params.role ?? null,
+    p_hourly_rate: params.hourlyRate ?? null,
+    p_is_active: params.isActive ?? null,
+    p_approved: params.approved ?? null,
+    p_phone: params.phone ?? null,
+  });
+  if (error) throw error;
 }
 
 // =============================================
@@ -499,12 +540,32 @@ export async function completeFilling(orderId: string, store: string, notes?: st
   return data;
 }
 
+export async function startCovering(orderId: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_covering', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function completeCovering(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_covering', {
     p_order_id: orderId,
     p_store: store,
     p_notes: notes || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function startDecorating(orderId: string, store: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('start_decorating', {
+    p_order_id: orderId,
+    p_store: store,
   });
   if (error) throw error;
   return data;
@@ -1861,5 +1922,226 @@ export async function removeParticipant(conversationId: string, userId: string):
       params: { conversationId, userId }
     }
   );
+}
+
+// =============================================
+// MANUAL ORDER CREATION
+// =============================================
+
+export interface CreateManualOrderParams {
+  store: Store;
+  order_number: string;
+  customer_name: string;
+  product_title: string;
+  size: string;
+  flavour: string;
+  due_date: string; // ISO date string (YYYY-MM-DD)
+  writing_on_cake?: string | null;
+  image_url?: string | null;
+  notes?: string | null;
+}
+
+export async function createManualOrder(params: CreateManualOrderParams): Promise<string> {
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('create_manual_order', {
+        p_store: params.store,
+        p_order_number: params.order_number,
+        p_customer_name: params.customer_name,
+        p_product_title: params.product_title,
+        p_size: params.size,
+        p_flavour: params.flavour,
+        p_due_date: params.due_date,
+        p_writing_on_cake: params.writing_on_cake || null,
+        p_image_url: params.image_url || null,
+        p_notes: params.notes || null,
+      });
+      if (error) throw error;
+      // Invalidate queue cache after creating a new order
+      invalidateQueueCache();
+      return data as string;
+    },
+    {
+      operation: 'createManualOrder',
+      rpcName: 'create_manual_order',
+      params
+    }
+  );
+}
+
+// =============================================
+// STORE ANALYTICS
+// =============================================
+
+export interface StoreAnalytics {
+  total_revenue: number;
+  total_orders: number;
+  avg_order_value: number;
+  pending_today: number;
+}
+
+export interface RevenueByDay {
+  day: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface TopProduct {
+  product_title: string;
+  order_count: number;
+  total_revenue: number;
+}
+
+export interface WeeklyForecast {
+  day_of_week: number;
+  day_date: string;
+  total_orders: number;
+  completed_orders: number;
+  pending_orders: number;
+}
+
+export interface DeliveryBreakdown {
+  delivery_method: string;
+  order_count: number;
+  percentage: number;
+}
+
+// Helper to coerce numeric strings to numbers (Supabase may return bigint/numeric as strings)
+function toNum(val: unknown): number {
+  if (val === null || val === undefined) return 0;
+  const n = Number(val);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+export async function getStoreAnalytics(
+  store: Store,
+  startDate?: string,
+  endDate?: string
+): Promise<StoreAnalytics | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_store_analytics', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+  if (error) throw error;
+  const row = data?.[0];
+  if (!row) return null;
+  return {
+    total_revenue: toNum(row.total_revenue),
+    total_orders: toNum(row.total_orders),
+    avg_order_value: toNum(row.avg_order_value),
+    pending_today: toNum(row.pending_today),
+  };
+}
+
+export async function getRevenueByDay(
+  store: Store,
+  startDate?: string,
+  endDate?: string
+): Promise<RevenueByDay[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_revenue_by_day', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    day: String(d.day),
+    revenue: toNum(d.revenue),
+    orders: toNum(d.orders),
+  }));
+}
+
+export async function getTopProducts(
+  store: Store,
+  startDate?: string,
+  endDate?: string,
+  limit: number = 5
+): Promise<TopProduct[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_top_products', {
+    p_store: store,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    product_title: String(d.product_title || 'Unknown'),
+    order_count: toNum(d.order_count),
+    total_revenue: toNum(d.total_revenue),
+  }));
+}
+
+export async function getWeeklyForecast(
+  store: Store,
+  weekStart?: string
+): Promise<WeeklyForecast[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_weekly_forecast', {
+    p_store: store,
+    p_week_start: weekStart || null,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    day_of_week: toNum(d.day_of_week),
+    day_date: String(d.day_date),
+    total_orders: toNum(d.total_orders),
+    completed_orders: toNum(d.completed_orders),
+    pending_orders: toNum(d.pending_orders),
+  }));
+}
+
+export async function getDeliveryBreakdown(
+  store: Store,
+  weekStart?: string
+): Promise<DeliveryBreakdown[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_delivery_breakdown', {
+    p_store: store,
+    p_week_start: weekStart || null,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    delivery_method: String(d.delivery_method || 'Unknown'),
+    order_count: toNum(d.order_count),
+    percentage: toNum(d.percentage),
+  }));
+}
+
+// =============================================
+// STAFF STAGE PERFORMANCE
+// =============================================
+
+export interface StaffStagePerformance {
+  staff_id: string;
+  staff_name: string;
+  filling_count: number;
+  covering_count: number;
+  decorating_count: number;
+  packing_count: number;
+  total_count: number;
+}
+
+export async function getStaffStagePerformance(
+  days: number = 30
+): Promise<StaffStagePerformance[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_stage_performance', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    staff_id: String(d.staff_id || ''),
+    staff_name: String(d.staff_name || 'Unknown'),
+    filling_count: toNum(d.filling_count),
+    covering_count: toNum(d.covering_count),
+    decorating_count: toNum(d.decorating_count),
+    packing_count: toNum(d.packing_count),
+    total_count: toNum(d.total_count),
+  }));
 }
 

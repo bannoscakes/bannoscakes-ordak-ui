@@ -30,3 +30,4 @@ dist/
 /NEW_PROCESSOR.txt
 /OLD_LOVABLE_WEBHOOK_CODE.txt
 supabase/.temp/
+.mcp.json

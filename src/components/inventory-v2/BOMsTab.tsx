@@ -17,7 +17,6 @@ import {
   deleteBom,
   invalidateInventoryCache,
   type BOM,
-  type BOMItem,
   type Component
 } from "../../lib/rpc-client";
 
@@ -223,11 +222,6 @@ export function BOMsTab() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const getComponentName = (componentId: string) => {
-    const component = components.find(c => c.id === componentId);
-    return component ? `${component.name} (${component.sku})` : 'Select component...';
   };
 
   const getStoreLabel = (store: string) => {

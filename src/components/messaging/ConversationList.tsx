@@ -1,9 +1,10 @@
 // components/messaging/ConversationList.tsx
 import { useMemo, useCallback } from "react";
-// import { ScrollArea } from "../ui/scroll-area"; // Removed - using native scroll
 import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Pin } from "lucide-react";
+import { Pin, MessageSquare } from "lucide-react";
+import { cn } from "../ui/utils";
+import { getAvatarColorHex } from "../../lib/message-utils";
 import type { UIConversation as Conversation } from "../../lib/messaging-adapters";
 
 interface ConversationListProps {
@@ -65,8 +66,14 @@ export function ConversationList({
 
   if (ordered.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32 text-muted-foreground">
-        <p>No conversations yet</p>
+      <div className="flex flex-col items-center justify-center h-48 text-center px-6">
+        <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+          <MessageSquare className="h-7 w-7 text-muted-foreground" />
+        </div>
+        <p className="text-sm text-muted-foreground">No conversations yet</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          Start a new conversation to begin
+        </p>
       </div>
     );
   }
@@ -86,11 +93,17 @@ export function ConversationList({
               tabIndex={0}
               onClick={() => handleClick(conversation.id)}
               onKeyDown={(e) => handleKeyDown(e, conversation.id)}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-accent transition-colors ${isSelected ? "bg-accent" : ""}`}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all",
+                "hover:bg-accent/80 hover:shadow-sm",
+                isSelected ? "bg-accent shadow-sm" : "bg-transparent"
+              )}
             >
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={conversation.avatar} />
-                <AvatarFallback>{firstLetter}</AvatarFallback>
+              <Avatar className="h-12 w-12">
+                {conversation.avatar && <AvatarImage src={conversation.avatar} />}
+                <AvatarFallback className="text-white font-medium" style={{ backgroundColor: getAvatarColorHex(conversation.name || "Unknown") }}>
+                  {firstLetter}
+                </AvatarFallback>
               </Avatar>
 
               <div className="flex-1 min-w-0">

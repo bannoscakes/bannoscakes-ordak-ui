@@ -18,7 +18,14 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
-import { getQueue } from "../lib/rpc-client";
+import {
+  getQueue,
+  startShift,
+  endShift,
+  startBreak,
+  endBreak,
+  getCurrentShift
+} from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -112,6 +119,7 @@ export function SupervisorWorkspacePage({
   const [shiftStartTime, setShiftStartTime] = useState<Date | null>(null);
   const [breakStartTime, setBreakStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("");
+  const [shiftLoading, setShiftLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -145,13 +153,46 @@ export function SupervisorWorkspacePage({
     order.product?.toLowerCase()?.includes(searchValue.toLowerCase())
   );
 
-  // Load orders from database when user is available
+  // Load current shift from database
+  async function loadCurrentShift() {
+    if (!user?.id) return;
+
+    try {
+      const shift = await getCurrentShift();
+
+      if (shift) {
+        // Has active shift
+        if (shift.active_break_id) {
+          // Currently on break
+          setShiftStatus("on-break");
+          setShiftStartTime(new Date(shift.start_ts));
+          setBreakStartTime(shift.break_start_ts ? new Date(shift.break_start_ts) : null);
+        } else {
+          // On shift, not on break
+          setShiftStatus("on-shift");
+          setShiftStartTime(new Date(shift.start_ts));
+          setBreakStartTime(null);
+        }
+      } else {
+        // No active shift
+        setShiftStatus("not-started");
+        setShiftStartTime(null);
+        setBreakStartTime(null);
+        setElapsedTime("");
+      }
+    } catch (error) {
+      console.error("Error loading current shift:", error);
+    }
+  }
+
+  // Load orders and shift from database when user is available
   useEffect(() => {
     // Only load when user is available
     if (!user?.id) {
       return;
     }
     loadSupervisorOrders();
+    loadCurrentShift();
   }, [user?.id]); // Re-run when user becomes available
 
   const loadSupervisorOrders = async () => {
@@ -213,32 +254,82 @@ export function SupervisorWorkspacePage({
     }
   };
 
-  const handleStartShift = () => {
-    setShiftStatus('on-shift');
-    setShiftStartTime(new Date());
-    setElapsedTime('0h 0m');
-    toast.success("Supervisor shift started");
+  const handleStartShift = async () => {
+    if (!user?.store || shiftLoading) return;
+
+    // Determine which store to start shift for
+    const store: 'bannos' | 'flourlane' = user.store === 'both' ? 'bannos' : user.store;
+
+    setShiftLoading(true);
+    try {
+      await startShift(store);
+      setShiftStatus("on-shift");
+      setShiftStartTime(new Date());
+      setElapsedTime("0h 0m");
+      toast.success("Supervisor shift started");
+      await loadCurrentShift();
+    } catch (error: any) {
+      console.error("Error starting shift:", error);
+      toast.error(error?.message || "Failed to start shift");
+    } finally {
+      setShiftLoading(false);
+    }
   };
 
-  const handleEndShift = () => {
-    setShiftStatus('not-started');
-    setShiftStartTime(null);
-    setBreakStartTime(null);
-    setElapsedTime('');
-    toast.success("Supervisor shift ended");
+  const handleEndShift = async () => {
+    if (shiftLoading) return;
+
+    setShiftLoading(true);
+    try {
+      await endShift();
+      setShiftStatus("not-started");
+      setShiftStartTime(null);
+      setBreakStartTime(null);
+      setElapsedTime("");
+      toast.success("Supervisor shift ended");
+    } catch (error: any) {
+      console.error("Error ending shift:", error);
+      toast.error(error?.message || "Failed to end shift");
+    } finally {
+      setShiftLoading(false);
+    }
   };
 
-  const handleStartBreak = () => {
-    setShiftStatus('on-break');
-    setBreakStartTime(new Date());
-    setElapsedTime('0:00');
-    toast.success("Break started");
+  const handleStartBreak = async () => {
+    if (shiftLoading) return;
+
+    setShiftLoading(true);
+    try {
+      await startBreak();
+      setShiftStatus("on-break");
+      setBreakStartTime(new Date());
+      setElapsedTime("0:00");
+      toast.success("Break started");
+      await loadCurrentShift();
+    } catch (error: any) {
+      console.error("Error starting break:", error);
+      toast.error(error?.message || "Failed to start break");
+    } finally {
+      setShiftLoading(false);
+    }
   };
 
-  const handleEndBreak = () => {
-    setShiftStatus('on-shift');
-    setBreakStartTime(null);
-    toast.success("Break ended");
+  const handleEndBreak = async () => {
+    if (shiftLoading) return;
+
+    setShiftLoading(true);
+    try {
+      await endBreak();
+      setShiftStatus("on-shift");
+      setBreakStartTime(null);
+      toast.success("Break ended");
+      await loadCurrentShift();
+    } catch (error: any) {
+      console.error("Error ending break:", error);
+      toast.error(error?.message || "Failed to end break");
+    } finally {
+      setShiftLoading(false);
+    }
   };
 
   const handleOpenOrder = (order: QueueItem) => {
@@ -313,9 +404,9 @@ export function SupervisorWorkspacePage({
               
               {/* Shift Controls */}
               {shiftStatus === 'not-started' ? (
-                <Button size="sm" onClick={handleStartShift}>
+                <Button size="sm" onClick={handleStartShift} disabled={shiftLoading}>
                   <Play className="mr-2 h-4 w-4" />
-                  Start Shift
+                  {shiftLoading ? "Starting..." : "Start Shift"}
                 </Button>
               ) : shiftStatus === 'on-shift' ? (
                 <div className="flex items-center gap-2">
@@ -323,11 +414,11 @@ export function SupervisorWorkspacePage({
                     <Clock className="mr-1 h-3 w-3" />
                     On Shift {elapsedTime}
                   </Badge>
-                  <Button variant="outline" size="sm" onClick={handleEndShift}>
+                  <Button variant="outline" size="sm" onClick={handleEndShift} disabled={shiftLoading}>
                     <Square className="mr-2 h-4 w-4" />
-                    End Shift
+                    {shiftLoading ? "Ending..." : "End Shift"}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleStartBreak}>
+                  <Button variant="outline" size="sm" onClick={handleStartBreak} disabled={shiftLoading}>
                     <Coffee className="mr-2 h-4 w-4" />
                     Start Break
                   </Button>
@@ -338,9 +429,9 @@ export function SupervisorWorkspacePage({
                     <Coffee className="mr-1 h-3 w-3" />
                     On Break {elapsedTime}
                   </Badge>
-                  <Button size="sm" onClick={handleEndBreak}>
+                  <Button size="sm" onClick={handleEndBreak} disabled={shiftLoading}>
                     <Play className="mr-2 h-4 w-4" />
-                    End Break
+                    {shiftLoading ? "Ending..." : "End Break"}
                   </Button>
                 </div>
               )}

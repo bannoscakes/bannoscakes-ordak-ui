@@ -17,6 +17,13 @@ jobs:
   preview:
     runs-on: ubuntu-latest
     steps:
+      # Checkout first with full history so paths-filter can compare commits
+      # This fixes git exit code 128 errors after squash merges
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: dorny/paths-filter@v3
         id: changes
         with:
@@ -24,10 +31,6 @@ jobs:
             sql:
               - 'supabase/sql/**'
               - 'supabase/migrations/**'
-      
-      - name: Checkout
-        if: steps.changes.outputs.sql == 'true'
-        uses: actions/checkout@v4
 
       - name: Use Node 18
         if: steps.changes.outputs.sql == 'true'

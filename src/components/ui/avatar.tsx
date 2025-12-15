@@ -39,17 +39,23 @@ AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
   React.ComponentProps<typeof AvatarPrimitive.Fallback>
->(({ className, ...props }, ref) => (
-  <AvatarPrimitive.Fallback
-    ref={ref}
-    data-slot="avatar-fallback"
-    className={cn(
-      "bg-muted flex size-full items-center justify-center rounded-full",
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, style, ...props }, ref) => {
+  const hasInlineBackground = !!(style as React.CSSProperties | undefined)?.backgroundColor;
+  return (
+    <AvatarPrimitive.Fallback
+      ref={ref}
+      data-slot="avatar-fallback"
+      delayMs={0}
+      className={cn(
+        "flex size-full items-center justify-center rounded-full",
+        !hasInlineBackground && "bg-muted",
+        className,
+      )}
+      style={style}
+      {...props}
+    />
+  );
+});
 
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 

@@ -1,3 +1,203 @@
+## v0.14.0-beta — Analytics Dashboard & Inventory Matching Improvements (2025-12-14)
+
+### 🎯 Overview
+Major analytics dashboard overhaul with real database data, new staff performance metrics by stage, and critical fixes for accessory/inventory matching to support both online and POS order formats.
+
+### ✨ New Features
+
+#### Real-Time Analytics Dashboard (PR #338)
+- **Revenue & Orders**: Daily revenue and order count charts with date range selector (7d/30d/90d)
+- **Top Products**: Top 5 products by order count with revenue breakdown
+- **Weekly Forecast**: Stacked bar chart showing completed vs pending orders by day of week
+- **Delivery/Pickup Breakdown**: Pie chart showing distribution of delivery methods
+- New RPCs: `get_store_analytics`, `get_revenue_by_day`, `get_top_products`, `get_weekly_forecast`, `get_delivery_breakdown`
+
+#### Staff Stage Performance Analytics (PR #339)
+- Replaced mock "Skills & Training" tab with real "Staff Performance" data
+- Shows orders completed per staff member broken down by stage (Filling, Covering, Decorating, Packing)
+- "Top Performers by Stage" cards highlighting best performer for each stage
+- New RPC: `get_staff_stage_performance`
+
+### 🐛 Bug Fixes
+
+#### POS Accessory Variant Separator (PR #342)
+- **Issue**: POS orders use "+" separator (e.g., "Blue + Metallic") but inventory deduction only handled "/" separator
+- **Fix**: Now handles both "/" (online) and "+" (POS) separators when parsing variant_title
+- Improved NULL handling with NULLIF throughout
+
+#### Exclude NULL from Top Products (PR #343)
+- **Issue**: POS accessory-only orders have NULL product_title and appeared as "Unknown" in analytics
+- **Fix**: Added `WHERE o.product_title IS NOT NULL` filter to `get_top_products` RPC
+
+#### Stock Transactions Missing transaction_type (PR #345)
+- **Issue**: `record_stock_adjustment` and inventory deduction INSERTs were missing required `transaction_type` column
+- **Fix**: Added explicit `transaction_type` values ('adjustment', 'order_deduction') to all stock_transactions INSERTs
+
+#### Accessory Variant Matching (PR #337)
+- **Issue**: Accessories like "Pink Glitter Number Candles 6" weren't matching orders with variant_title "Pink Glitter / 6"
+- **Fix**: Combine product title + variant suffix for matching (e.g., "Pink Glitter Number Candles" + "6")
+
+#### app_role() Auth Fix (PR #340)
+- **Issue**: `app_role()` failed when called from SECURITY DEFINER functions with restricted search_path
+- **Fix**: Use fully qualified references (`public.auth_email()`, `public.staff_shared`)
+
+#### Ambiguous Column Reference (PR #336)
+- **Issue**: `claim_inventory_sync_items` RPC failed with "column reference 'status' is ambiguous"
+- **Fix**: Use explicit column aliasing in RETURNING clause with CTE wrapper
+
+### 🔒 Security Hardening
+
+#### search_path Security (PR #334, #340)
+- Updated all public functions to use `SET search_path = pg_temp, public`
+- Prevents search_path injection attacks in SECURITY DEFINER functions
+- Fully qualified references in auth functions
+
+### 📋 PRs in This Release
+- PR #334: `fix: set search_path for public functions (security hardening)`
+- PR #336: `fix: resolve ambiguous column reference in claim_inventory_sync_items`
+- PR #337: `fix: include variant_title in accessory matching`
+- PR #338: `feat: wire analytics dashboards to real database data`
+- PR #339: `feat: add staff stage performance analytics`
+- PR #340: `fix: use fully qualified refs in app_role()`
+- PR #341: `docs: update CLAUDE.md database rules`
+- PR #342: `fix: handle POS accessory variant separator in inventory deduction`
+- PR #343: `fix: exclude NULL product_title from top_products analytics`
+- PR #345: `fix: add missing transaction_type to stock_transactions INSERTs`
+
+### 📁 Key Files Added/Modified
+
+#### Migrations
+- `20251212_fix_claim_inventory_sync_ambiguous_column.sql`
+- `20251213_fix_accessory_variant_matching.sql`
+- `20251213b_analytics_rpcs.sql`
+- `20251213c_staff_stage_performance_rpc.sql`
+- `20251213140000_fix_app_role_qualified_refs.sql`
+- `20251214_fix_pos_accessory_separator.sql`
+- `20251214100000_exclude_null_from_top_products.sql`
+- `20251214110000_fix_stock_transaction_type.sql`
+
+#### Frontend
+- `src/components/BannosAnalyticsPage.tsx` - Real data integration
+- `src/components/FlourlaneAnalyticsPage.tsx` - Real data integration
+- `src/components/StaffAnalyticsPage.tsx` - New Staff Performance tab
+- `src/lib/rpc-client.ts` - New analytics RPC functions
+
+### 🔧 Technical Details
+
+#### New Analytics RPCs
+| RPC | Purpose |
+|-----|---------|
+| `get_store_analytics` | Revenue, orders, avg value, pending today |
+| `get_revenue_by_day` | Daily revenue/order chart data |
+| `get_top_products` | Top N products by order count |
+| `get_weekly_forecast` | Orders by day of week with status |
+| `get_delivery_breakdown` | Pickup vs Delivery distribution |
+| `get_staff_stage_performance` | Staff completions by stage |
+
+#### Inventory Matching Logic
+```
+Online orders:  "Pink Glitter / 6" → extract "6" after "/"
+POS orders:     "Blue + Metallic" → extract "Metallic" after "+"
+Combined title: "Product Title" + " " + "Variant Value"
+```
+
+---
+
+## v0.13.0-beta — Order Flow & Timestamp System Overhaul (2025-12-09)
+
+### 🎯 Overview
+Major overhaul of the order flow system, restoring critical timestamp logic that was accidentally removed, adding new stage start functionality for Covering and Decorating stages, and comprehensive system audit with documentation.
+
+### ✨ New Features
+
+#### Scanner Start/Complete Pattern (PR #320)
+
+- Covering and Decorating stages now use first-scan-starts / second-scan-completes pattern
+- Added `startCovering()` and `startDecorating()` RPC wrappers to frontend
+- Updated `ScannerOverlay.tsx` to check timestamps before deciding which RPC to call
+- Staff can now track when they START working on a stage, not just when they COMPLETE it
+
+#### New Database Functions (PR #319)
+
+- `start_covering(p_order_id, p_store)` - Sets `covering_start_ts` on first scan
+- `start_decorating(p_order_id, p_store)` - Sets `decorating_start_ts` on first scan
+- Both functions log to `stage_events` with `event_type='start'`
+
+#### Order Flow Documentation
+
+- Created comprehensive `docs/ORDER_FLOW_CHECKLIST.md`
+- Documents all stages, timestamps, RPCs, and scanner behavior
+- Verified all 7 sections of the order flow system
+
+### 🐛 Critical Bugs Fixed
+
+#### Timestamp Logic Restoration (PR #319 - Migration 089)
+
+- **Issue**: Migration 053 accidentally removed timestamp logic from `complete_*` functions when adding `stage_events` logging
+- **Impact**: Timestamps like `filling_complete_ts`, `covering_complete_ts`, etc. were never being set
+- **Fix**: Restored timestamp setting in all `complete_*` UPDATE statements
+
+#### Missing Start Timestamps (PR #319 - Migration 089)
+
+- **Issue**: `covering_start_ts` and `decorating_start_ts` columns didn't exist
+- **Fix**: Added both columns to `orders_bannos` and `orders_flourlane` tables
+
+#### Print Barcode Not Setting Start Time (PR #319 - Migration 089)
+
+- **Issue**: `print_barcode()` function had `filling_start_ts` logic commented out
+- **Fix**: Restored the logic so first barcode print in Filling stage sets `filling_start_ts`
+
+#### Stage Events Constraint (PR #319 - Migration 089)
+
+- **Issue**: `stage_events.event_type` CHECK constraint didn't allow `'start'` value
+- **Fix**: Updated constraint to include `'start'` event type
+
+#### Queue Missing Timestamps (PR #320 - Migration 090)
+
+- **Issue**: `get_queue` RPC didn't return `covering_start_ts` or `decorating_start_ts`
+- **Fix**: Updated RPC to include these fields so scanner UI can make decisions
+
+### 📋 PRs in This Release
+- PR #319: `fix: restore timestamp logic for barcode printer and scanner`
+- PR #320: `feat: wire up start_covering and start_decorating in scanner UI`
+
+### 📁 Key Files Added/Modified
+
+#### Migrations
+
+- `supabase/migrations/089_restore_timestamp_logic.sql` - Restore all timestamp logic
+- `supabase/migrations/090_add_start_timestamps_to_queue.sql` - Add timestamps to get_queue
+
+#### Frontend
+
+- `src/lib/rpc-client.ts` - Added `startCovering()` and `startDecorating()`
+- `src/components/ScannerOverlay.tsx` - First-scan-starts / second-scan-completes logic
+
+#### Documentation
+
+- `docs/ORDER_FLOW_CHECKLIST.md` - Complete order flow verification checklist
+
+### 🔧 Technical Details
+
+#### Scanner Behavior After This Release
+
+| Stage | First Scan | Second Scan |
+|-------|------------|-------------|
+| Filling | N/A (print_barcode sets start) | `completeFilling()` |
+| Covering | `startCovering()` → sets `covering_start_ts` | `completeCovering()` |
+| Decorating | `startDecorating()` → sets `decorating_start_ts` | `completeDecorating()` |
+| Packing | N/A | `completePacking()` (single scan only) |
+
+#### All RPCs are SECURITY DEFINER with
+
+- Auth check (`auth.uid()` required)
+- Order existence check
+- Stage validation (idempotent - can't complete wrong stage)
+- Timestamp setting
+- Audit logging to `stage_events` and `audit_log`
+
+---
+
 ## v0.12.0-beta — Inventory System & Cake Toppers (2025-12-08)
 
 ### 🎯 Overview

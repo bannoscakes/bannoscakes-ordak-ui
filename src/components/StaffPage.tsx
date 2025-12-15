@@ -22,7 +22,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
-import { getStaffList } from "../lib/rpc-client";
+import { getStaffList, getAllActiveShifts, updateStaffMember } from "../lib/rpc-client";
 
 interface StaffMember {
   id: string;
@@ -35,7 +35,6 @@ interface StaffMember {
   phone?: string;
   avatar: string;
   hireDate: string;
-  lastLogin?: string;
 }
 
 export function StaffPage() {
@@ -43,11 +42,19 @@ export function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Fetch staff from Supabase
+  // Fetch staff and active shifts from Supabase
   useEffect(() => {
     async function fetchStaff() {
       try {
-        const staffList = await getStaffList();
+        // Fetch staff list and active shifts in parallel
+        const [staffList, activeShifts] = await Promise.all([
+          getStaffList(),
+          getAllActiveShifts()
+        ]);
+
+        // Create a Set of staff IDs who are currently on shift
+        const onShiftStaffIds = new Set(activeShifts.map(s => s.staff_id));
+
         // Map Supabase staff to UI format
         const mappedStaff: StaffMember[] = staffList.map((s) => ({
           id: s.user_id,
@@ -55,12 +62,11 @@ export function StaffPage() {
           email: s.email || '',
           role: s.role,
           status: s.is_active ? "Active" : "Approved",
-          onShift: false, // TODO: Get from shift data
-          hourlyRate: 20.00, // TODO: Get from staff_shared if we add this column
+          onShift: onShiftStaffIds.has(s.user_id),
+          hourlyRate: s.hourly_rate ?? 0,
           phone: s.phone || undefined,
           avatar: s.full_name.split(' ').map(n => n[0]).join('').toUpperCase(),
           hireDate: new Date(s.created_at).toISOString().split('T')[0],
-          lastLogin: s.last_login || undefined,
         }));
         setStaff(mappedStaff);
       } catch (error) {
@@ -135,13 +141,33 @@ export function StaffPage() {
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
-  const handleSaveProfile = () => {
-    if (selectedStaff) {
-      setStaff(prev => prev.map(member => 
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveProfile = async () => {
+    if (!selectedStaff) return;
+
+    setSaving(true);
+    try {
+      await updateStaffMember({
+        userId: selectedStaff.id,
+        fullName: selectedStaff.fullName,
+        role: selectedStaff.role,
+        hourlyRate: selectedStaff.hourlyRate,
+        isActive: selectedStaff.status === "Active",
+        phone: selectedStaff.phone,
+      });
+
+      // Update local state
+      setStaff(prev => prev.map(member =>
         member.id === selectedStaff.id ? selectedStaff : member
       ));
       toast.success("Profile updated successfully");
       setIsProfileModalOpen(false);
+    } catch (error: any) {
+      console.error('Error updating staff:', error);
+      toast.error(error?.message || "Failed to update profile");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -415,8 +441,8 @@ export function StaffPage() {
                 Cancel
               </Button>
               {editMode && (
-                <Button onClick={handleSaveProfile}>
-                  Save
+                <Button onClick={handleSaveProfile} disabled={saving}>
+                  {saving ? "Saving..." : "Save"}
                 </Button>
               )}
             </DialogFooter>
