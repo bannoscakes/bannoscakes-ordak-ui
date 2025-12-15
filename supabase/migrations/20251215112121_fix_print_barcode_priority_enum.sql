@@ -3,12 +3,12 @@
 -- Date: 2025-12-15
 --
 -- Issues fixed:
--- 1. Priority is smallint (0, 1) - map to semantic strings 'HIGH'/'MEDIUM'/'LOW'
+-- 1. Priority is enum - cast to text and uppercase for jsonb payload
 -- 2. Stage is enum - add ::text cast for jsonb payload
 -- 3. staff_id FK constraint - check if user exists in staff_shared before INSERT
 --
 -- Changes:
--- 1. priority: CASE v_order.priority WHEN 1 THEN 'HIGH' WHEN 0 THEN 'MEDIUM' ELSE 'LOW' END
+-- 1. priority: UPPER(v_order.priority::text)
 -- 2. stage: v_order.stage::text
 -- 3. staff_id: lookup in staff_shared, use NULL if not found (prevents FK violation)
 -- 4. meta.auth_uid: always log auth.uid() for audit trail (even if not in staff_shared)
@@ -107,11 +107,7 @@ BEGIN
     'due_date', v_order.due_date,
     'customer_name', v_order.customer_name,
     'stage', v_order.stage::text,
-    'priority', CASE v_order.priority
-      WHEN 1 THEN 'HIGH'
-      WHEN 0 THEN 'MEDIUM'
-      ELSE 'LOW'
-    END,
+    'priority', UPPER(v_order.priority::text),
     'barcode_content', format('#%s%s',
       CASE WHEN p_store = 'bannos' THEN 'B' ELSE 'F' END,
       v_order.shopify_order_number
