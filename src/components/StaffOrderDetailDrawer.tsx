@@ -124,7 +124,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           size: foundOrder.size || "Unknown",
           quantity: foundOrder.item_qty || 1,
           deliveryTime: foundOrder.due_date || new Date().toISOString(),
-          priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
+          priority: foundOrder.priority === 'High' ? 'High' : foundOrder.priority === 'Medium' ? 'Medium' : 'Low',
           status: mapStageToStatus(foundOrder.stage),
           flavor: foundOrder.flavour || "",
           dueTime: foundOrder.due_date || new Date().toISOString(),
