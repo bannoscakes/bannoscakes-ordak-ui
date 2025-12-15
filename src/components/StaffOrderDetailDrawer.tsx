@@ -9,7 +9,7 @@ import { Printer, QrCode, ExternalLink, Bot, Package, RotateCcw } from "lucide-r
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-import { setStorage, getStorageLocations, qcReturnToDecorating } from "../lib/rpc-client";
+import { setStorage, getStorageLocations, qcReturnToDecorating, getOrder } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 
@@ -30,9 +30,10 @@ interface QueueItem {
   storage?: string;
   store: 'bannos' | 'flourlane';
   stage: string;
+  // Database fields for order details
+  cakeWriting?: string;
   notes?: string;
-  productImage?: string;
-  writingOnCake?: string;
+  productImage?: string | null;
 }
 
 interface StaffOrderDetailDrawerProps {
@@ -42,8 +43,25 @@ interface StaffOrderDetailDrawerProps {
   onScanBarcode: () => void;
 }
 
-// Default placeholder image when no product image is available
-const DEFAULT_PRODUCT_IMAGE = "/placeholder-cake.png";
+// Extended order data - uses real values from database, no mock overrides
+const getExtendedOrderData = (order: QueueItem | null) => {
+  if (!order) return null;
+
+  // Use real values from the order, with safe fallbacks
+  return {
+    ...order,
+    // Use real size from database (no mock override)
+    size: order.size || 'Unknown',
+    // Use real cake writing from database
+    writingOnCake: order.cakeWriting || '',
+    // Use real due date
+    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
+    // Use real notes from database (null means no notes)
+    notes: order.notes || '',
+    // Use real product image from database
+    productImage: order.productImage || null,
+  };
+};
 
 const getPriorityColor = (priority: string) => {
   const colors = {
@@ -71,25 +89,94 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   const [selectedStorage, setSelectedStorage] = useState("");
   const [availableStorageLocations, setAvailableStorageLocations] = useState<string[]>([]);
   const [storageLoading, setStorageLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
 
-  const storeName = order?.store === "bannos" ? "Bannos" : "Flourlane";
+  // Fetch real order data when drawer opens
+  useEffect(() => {
+    if (isOpen && order) {
+      fetchRealOrderData();
+    }
+  }, [isOpen, order?.id, order?.store]);
+
+  const fetchRealOrderData = async () => {
+    if (!order) return;
+
+    try {
+      setLoading(true);
+
+      // Fetch the specific order using getOrder RPC
+      const foundOrder = await getOrder(order.id, order.store);
+
+      if (foundOrder) {
+        // Map database order to UI format
+        const mappedOrder: QueueItem = {
+          id: foundOrder.id,
+          orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
+          customerName: foundOrder.customer_name || "Unknown Customer",
+          product: foundOrder.product_title || "Unknown Product",
+          size: foundOrder.size || "Unknown",
+          quantity: foundOrder.item_qty || 1,
+          deliveryTime: foundOrder.due_date || new Date().toISOString(),
+          priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
+          status: mapStageToStatus(foundOrder.stage),
+          flavor: foundOrder.flavour || "",
+          dueTime: foundOrder.due_date || new Date().toISOString(),
+          method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+          storage: foundOrder.storage || "",
+          store: foundOrder.store || order.store,
+          stage: foundOrder.stage || "Filling",
+          // Add real data from database
+          cakeWriting: foundOrder.cake_writing || '',
+          notes: foundOrder.notes || '',
+          productImage: foundOrder.product_image || null
+        };
+
+        setRealOrder(mappedOrder);
+      } else {
+        // Fallback to original order if not found in database
+        setRealOrder(order);
+      }
+    } catch (error) {
+      console.error('Error fetching order data:', error);
+      // Fallback to original order
+      setRealOrder(order);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled' => {
+    switch (stage) {
+      case "Filling": return "In Production";
+      case "Covering": return "In Production";
+      case "Decorating": return "In Production";
+      case "Packing": return "Quality Check";
+      case "Complete": return "Completed";
+      default: return "Pending";
+    }
+  };
+
+  const extendedOrder = getExtendedOrderData(realOrder || order);
+  const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
 
   // Load storage locations when component mounts or order changes
   useEffect(() => {
-    if (isOpen && order?.store) {
+    if (isOpen && extendedOrder?.store) {
       loadStorageLocations();
       // Set current storage location
-      setSelectedStorage(order.storage || "");
+      setSelectedStorage(extendedOrder.storage || "");
     }
-  }, [isOpen, order?.store, order?.storage]);
+  }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
 
   // Early return after all hooks
-  if (!order) return null;
+  if (!extendedOrder) return null;
 
   const loadStorageLocations = async () => {
     try {
       setStorageLoading(true);
-      const locations = await getStorageLocations(order.store);
+      const locations = await getStorageLocations(extendedOrder.store);
       setAvailableStorageLocations(locations);
     } catch (error) {
       console.error('Error loading storage locations:', error);
@@ -108,10 +195,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   };
 
   const handleStorageChange = async (newStorage: string) => {
-    if (!order || newStorage === selectedStorage) return;
+    if (!extendedOrder || newStorage === selectedStorage) return;
 
     try {
-      await setStorage(order.id, order.store, newStorage);
+      await setStorage(extendedOrder.id, extendedOrder.store, newStorage);
       setSelectedStorage(newStorage);
       toast.success(`Storage location updated to ${newStorage}`);
     } catch (error) {
@@ -128,7 +215,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
     try {
       const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
-      await qcReturnToDecorating(order.id, order.store, notes);
+      await qcReturnToDecorating(extendedOrder.id, extendedOrder.store, notes);
       toast.success(`Order returned to Decorating stage: ${qcIssue}`);
       onClose();
     } catch (error) {
@@ -145,10 +232,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
     try {
       // Call print_barcode workflow: logs to stage_events, sets filling_start_ts, triggers browser print
       await printBarcodeWorkflow(
-        order.store as 'bannos' | 'flourlane',
-        order.id
+        extendedOrder.store as 'bannos' | 'flourlane',
+        extendedOrder.id
       );
-      toast.success(`Barcode printed for ${order.orderNumber}`);
+      toast.success(`Barcode printed for ${extendedOrder.orderNumber}`);
     } catch (error) {
       console.error('Error printing barcode:', error);
       toast.error("Failed to print barcode");
@@ -161,7 +248,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   };
 
   const handleViewInShopify = () => {
-    const id = order?.shopifyOrderNumber?.trim();
+    const id = extendedOrder?.shopifyOrderNumber?.trim();
     if (!id) {
       toast.error("Shopify order number not available");
       return;
@@ -192,10 +279,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           <div className="flex items-center justify-center py-4">
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
-                orderId={order.orderNumber}
-                productTitle={order.product}
-                dueDate={order.dueTime}
-                store={order.store}
+                orderId={extendedOrder.orderNumber}
+                productTitle={extendedOrder.product}
+                dueDate={extendedOrder.dueTime}
+                store={extendedOrder.store}
                 onPrint={handleBarcodePrint}
                 onDownload={handleBarcodeDownload}
               />
@@ -215,9 +302,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
             <div className="flex items-center justify-between">
               <div>
                 <SheetTitle className="text-lg font-medium text-foreground">
-                  {order.orderNumber}
+                  {extendedOrder.orderNumber}
                 </SheetTitle>
-                <p className="text-sm text-muted-foreground">{order.customerName}</p>
+                <p className="text-sm text-muted-foreground">{extendedOrder.customerName}</p>
               </div>
               <Button variant="outline" size="sm" onClick={handlePrintBarcode}>
                 <Printer className="mr-2 h-4 w-4" />
@@ -225,27 +312,36 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Order details for {order.orderNumber}
+              Order details for {extendedOrder.orderNumber}
             </SheetDescription>
           </SheetHeader>
 
           <Separator className="my-4" />
 
-          {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Product Image */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product Image
-              </label>
-              <div className="w-full h-48 rounded-lg overflow-hidden bg-muted/30 border">
-                <ImageWithFallback
-                  src={order.productImage || DEFAULT_PRODUCT_IMAGE}
-                  alt={order.product}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+          {/* Loading State */}
+          {loading && (
+            <div className="px-6 py-8 text-center">
+              <div className="text-sm text-muted-foreground">Loading order details...</div>
             </div>
+          )}
+
+          {/* Body - Scrollable */}
+          {!loading && <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Product Image - only show if image exists */}
+            {extendedOrder.productImage && (
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Product Image
+                </label>
+                <div className="w-full h-48 rounded-lg overflow-hidden bg-muted/30 border">
+                  <ImageWithFallback
+                    src={extendedOrder.productImage}
+                    alt={extendedOrder.product}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Details Grid */}
             <div className="grid grid-cols-2 gap-4">
@@ -254,7 +350,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Store
                 </label>
-                <Badge className={`text-xs ${getStoreColor(order.store)}`}>
+                <Badge className={`text-xs ${getStoreColor(extendedOrder.store)}`}>
                   {storeName}
                 </Badge>
               </div>
@@ -264,8 +360,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Priority
                 </label>
-                <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
-                  {order.priority}
+                <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
+                  {extendedOrder.priority}
                 </Badge>
               </div>
             </div>
@@ -276,7 +372,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Product
               </label>
               <p className="text-sm text-foreground">
-                {order.product}
+                {extendedOrder.product}
               </p>
             </div>
 
@@ -286,17 +382,17 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Size
               </label>
               <p className="text-sm text-foreground">
-                {order.size}
+                {extendedOrder.size}
               </p>
             </div>
 
             {/* Flavour */}
-            {order.flavor && order.flavor !== "Other" && (
+            {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Flavour
                 </label>
-                <p className="text-sm text-foreground">{order.flavor}</p>
+                <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
               </div>
             )}
 
@@ -305,7 +401,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               <label className="text-sm font-medium text-foreground block mb-2">
                 Quantity
               </label>
-              <p className="text-sm text-foreground">{order.quantity}</p>
+              <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
             </div>
 
             {/* Due Date */}
@@ -314,7 +410,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Due Date
               </label>
               <p className="text-sm text-foreground">
-                {order.dueTime}
+                {extendedOrder.deliveryDate}
               </p>
             </div>
 
@@ -323,29 +419,29 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               <label className="text-sm font-medium text-foreground block mb-2">
                 Method
               </label>
-              <p className="text-sm text-foreground">{order.method}</p>
+              <p className="text-sm text-foreground">{extendedOrder.method}</p>
             </div>
 
             {/* Storage */}
-            {order.storage && (
+            {extendedOrder.storage && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Storage
                 </label>
                 <Badge className={`text-xs ${getStorageColor()}`}>
-                  {order.storage}
+                  {extendedOrder.storage}
                 </Badge>
               </div>
             )}
 
             {/* Writing on Cake */}
-            {order.writingOnCake && (
+            {extendedOrder.writingOnCake && (
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Writing on Cake
                 </label>
                 <div className="p-3 bg-muted/30 rounded-lg border">
-                  <p className="text-sm text-foreground">{order.writingOnCake}</p>
+                  <p className="text-sm text-foreground">{extendedOrder.writingOnCake}</p>
                 </div>
               </div>
             )}
@@ -356,12 +452,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 Notes
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border min-h-[80px]">
-                <p className="text-sm text-foreground">{order.notes || "No notes"}</p>
+                <p className="text-sm text-foreground">{extendedOrder.notes}</p>
               </div>
             </div>
 
             {/* Quality Control Section - Only for Packing stage */}
-            {order.stage === "packing" && (
+            {extendedOrder.stage === "packing" && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
@@ -459,13 +555,13 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 </div>
               </div>
             )}
-          </div>
+          </div>}
 
           <Separator />
 
           {/* Footer */}
           <div className="p-6">
-            {order.stage === "packing" ? (
+            {extendedOrder.stage === "packing" ? (
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Button
