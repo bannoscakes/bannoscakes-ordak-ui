@@ -112,12 +112,25 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   useEffect(() => {
     if (!isOpen || !order) return;
 
+    // Validate store type
+    if (order.store !== 'bannos' && order.store !== 'flourlane') {
+      console.error('Invalid store type:', order.store);
+      toast.error('Invalid store type');
+      return;
+    }
+
+    // Race condition protection - track if effect is still active
+    let cancelled = false;
+
     const fetchRealOrderData = async () => {
       try {
         setLoading(true);
 
         // Fetch the specific order using getOrder RPC
         const foundOrder = await getOrder(order.id, order.store);
+
+        // Don't update state if effect was cancelled (order changed during fetch)
+        if (cancelled) return;
 
         if (foundOrder) {
           // Map database order to UI format
@@ -151,15 +164,26 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           setRealOrder(order);
         }
       } catch (error) {
+        // Don't update state if effect was cancelled
+        if (cancelled) return;
+
         console.error('Error fetching order data:', error);
+        toast.error('Failed to load order details');
         // Fallback to original order
         setRealOrder(order);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchRealOrderData();
+
+    // Cleanup: mark as cancelled when order changes or component unmounts
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, order]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order);
@@ -169,36 +193,50 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   // Load storage locations when component mounts or order changes
   useEffect(() => {
-    if (isOpen && extendedOrder?.store) {
-      loadStorageLocations();
-      // Set current storage location
-      setSelectedStorage(extendedOrder.storage || "");
-    }
+    if (!isOpen || !extendedOrder?.store) return;
+
+    // Race condition protection
+    let cancelled = false;
+
+    const loadStorageLocations = async () => {
+      try {
+        setStorageLoading(true);
+        const locations = await getStorageLocations(extendedOrder.store);
+
+        if (cancelled) return;
+
+        setAvailableStorageLocations(locations);
+        // Set current storage location
+        setSelectedStorage(extendedOrder.storage || "");
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error('Error loading storage locations:', error);
+        toast.error('Failed to load storage locations');
+        // Fallback to default locations
+        setAvailableStorageLocations([
+          "Store Fridge",
+          "Store Freezer",
+          "Kitchen Coolroom",
+          "Kitchen Freezer",
+          "Basement Coolroom"
+        ]);
+      } finally {
+        if (!cancelled) {
+          setStorageLoading(false);
+        }
+      }
+    };
+
+    loadStorageLocations();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
 
   // Early return after all hooks
   if (!extendedOrder) return null;
-
-  const loadStorageLocations = async () => {
-    try {
-      setStorageLoading(true);
-      const locations = await getStorageLocations(extendedOrder.store);
-      setAvailableStorageLocations(locations);
-    } catch (error) {
-      console.error('Error loading storage locations:', error);
-      toast.error('Failed to load storage locations');
-      // Fallback to default locations
-      setAvailableStorageLocations([
-        "Store Fridge",
-        "Store Freezer",
-        "Kitchen Coolroom",
-        "Kitchen Freezer",
-        "Basement Coolroom"
-      ]);
-    } finally {
-      setStorageLoading(false);
-    }
-  };
 
   const handleStorageChange = async (newStorage: string) => {
     if (!extendedOrder || newStorage === selectedStorage) return;
@@ -309,7 +347,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               <SheetTitle className="text-lg font-medium text-foreground">
                 Order Details
               </SheetTitle>
-              <Button variant="outline" size="sm" onClick={handlePrintBarcode}>
+              <Button variant="outline" size="sm" onClick={handlePrintBarcode} disabled={loading}>
                 <Printer className="mr-2 h-4 w-4" />
                 Print Barcode
               </Button>
@@ -589,6 +627,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="outline"
                     className="flex-1"
                     onClick={handleViewInShopify}
+                    disabled={loading}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     View in Shopify
@@ -599,6 +638,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="outline"
                     className="flex-1"
                     onClick={handlePrintPackingSlip}
+                    disabled={loading}
                   >
                     <Printer className="mr-2 h-4 w-4" />
                     Print Packing Slip
@@ -607,6 +647,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="outline"
                     className="flex-1"
                     onClick={handlePrintCareCard}
+                    disabled={loading}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Print Care Card QR
@@ -614,6 +655,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                   <Button
                     className="flex-1"
                     onClick={onScanBarcode}
+                    disabled={loading}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Scan Barcode
@@ -624,7 +666,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="destructive"
                     className="flex-1"
                     onClick={handleQCReturn}
-                    disabled={qcIssue === "None"}
+                    disabled={loading || qcIssue === "None"}
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Return to Decorating
@@ -637,6 +679,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                   variant="outline"
                   className="flex-1"
                   onClick={handleViewInShopify}
+                  disabled={loading}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View in Shopify
@@ -644,6 +687,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <Button
                   className="flex-1"
                   onClick={onScanBarcode}
+                  disabled={loading}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
                   Scan Barcode
