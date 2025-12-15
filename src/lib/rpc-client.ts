@@ -520,6 +520,20 @@ export async function handlePrintBarcode(barcode: string, orderId: string, perfo
   return data;
 }
 
+/**
+ * Print barcode for an order - logs to stage_events and sets filling_start_ts on first print
+ * Returns order details including barcode_content in format #B25649 (Bannos) / #F25649 (Flourlane)
+ */
+export async function printBarcode(store: string, orderId: string) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('print_barcode', {
+    p_store: store,
+    p_order_id: orderId
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function getOrderForScan(scan: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_order_for_scan', {
