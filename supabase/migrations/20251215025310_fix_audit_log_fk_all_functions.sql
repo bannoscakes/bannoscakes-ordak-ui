@@ -32,6 +32,7 @@ CREATE OR REPLACE FUNCTION public.assign_staff(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_table_name text;
@@ -106,6 +107,7 @@ CREATE OR REPLACE FUNCTION public.complete_filling(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_table_name text;
@@ -186,6 +188,7 @@ CREATE OR REPLACE FUNCTION public.complete_covering(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_table_name text;
@@ -266,6 +269,7 @@ CREATE OR REPLACE FUNCTION public.complete_decorating(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_table_name text;
@@ -346,6 +350,7 @@ CREATE OR REPLACE FUNCTION public.complete_packing(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_table_name text;
@@ -426,7 +431,7 @@ CREATE OR REPLACE FUNCTION public.adjust_staff_time(
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_user_id uuid;
@@ -492,7 +497,7 @@ CREATE OR REPLACE FUNCTION public.upload_order_photo(
 ) RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_temp, public
 AS $function$
 DECLARE
   v_photo_id uuid;
