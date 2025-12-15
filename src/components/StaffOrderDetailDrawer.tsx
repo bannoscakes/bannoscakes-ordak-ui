@@ -87,6 +87,17 @@ const getStorageColor = () => {
   return "bg-purple-100 text-purple-700 border-purple-200";
 };
 
+const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled' => {
+  switch (stage) {
+    case "Filling": return "In Production";
+    case "Covering": return "In Production";
+    case "Decorating": return "In Production";
+    case "Packing": return "Quality Check";
+    case "Complete": return "Completed";
+    default: return "Pending";
+  }
+};
+
 export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }: StaffOrderDetailDrawerProps) {
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
   const [qcIssue, setQcIssue] = useState("None");
@@ -99,70 +110,57 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   // Fetch real order data when drawer opens
   useEffect(() => {
-    if (isOpen && order) {
-      fetchRealOrderData();
-    }
-  }, [isOpen, order?.id, order?.store]);
+    if (!isOpen || !order) return;
 
-  const fetchRealOrderData = async () => {
-    if (!order) return;
+    const fetchRealOrderData = async () => {
+      try {
+        setLoading(true);
 
-    try {
-      setLoading(true);
+        // Fetch the specific order using getOrder RPC
+        const foundOrder = await getOrder(order.id, order.store);
 
-      // Fetch the specific order using getOrder RPC
-      const foundOrder = await getOrder(order.id, order.store);
+        if (foundOrder) {
+          // Map database order to UI format
+          const mappedOrder: QueueItem = {
+            id: foundOrder.id,
+            orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+            shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
+            customerName: foundOrder.customer_name || "Unknown Customer",
+            product: foundOrder.product_title || "Unknown Product",
+            size: foundOrder.size || "Unknown",
+            quantity: foundOrder.item_qty || 1,
+            deliveryTime: foundOrder.due_date || new Date().toISOString(),
+            priority: foundOrder.priority === 'High' ? 'High' : foundOrder.priority === 'Medium' ? 'Medium' : 'Low',
+            status: mapStageToStatus(foundOrder.stage),
+            flavor: foundOrder.flavour || "",
+            dueTime: foundOrder.due_date || new Date().toISOString(),
+            method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+            storage: foundOrder.storage || "",
+            store: foundOrder.store || order.store,
+            stage: foundOrder.stage || "Filling",
+            // Add real data from database
+            cakeWriting: foundOrder.cake_writing || '',
+            notes: foundOrder.notes || '',
+            productImage: foundOrder.product_image || null,
+            accessories: foundOrder.accessories || null
+          };
 
-      if (foundOrder) {
-        // Map database order to UI format
-        const mappedOrder: QueueItem = {
-          id: foundOrder.id,
-          orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
-          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
-          customerName: foundOrder.customer_name || "Unknown Customer",
-          product: foundOrder.product_title || "Unknown Product",
-          size: foundOrder.size || "Unknown",
-          quantity: foundOrder.item_qty || 1,
-          deliveryTime: foundOrder.due_date || new Date().toISOString(),
-          priority: foundOrder.priority === 'High' ? 'High' : foundOrder.priority === 'Medium' ? 'Medium' : 'Low',
-          status: mapStageToStatus(foundOrder.stage),
-          flavor: foundOrder.flavour || "",
-          dueTime: foundOrder.due_date || new Date().toISOString(),
-          method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
-          storage: foundOrder.storage || "",
-          store: foundOrder.store || order.store,
-          stage: foundOrder.stage || "Filling",
-          // Add real data from database
-          cakeWriting: foundOrder.cake_writing || '',
-          notes: foundOrder.notes || '',
-          productImage: foundOrder.product_image || null,
-          accessories: foundOrder.accessories || null
-        };
-
-        setRealOrder(mappedOrder);
-      } else {
-        // Fallback to original order if not found in database
+          setRealOrder(mappedOrder);
+        } else {
+          // Fallback to original order if not found in database
+          setRealOrder(order);
+        }
+      } catch (error) {
+        console.error('Error fetching order data:', error);
+        // Fallback to original order
         setRealOrder(order);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching order data:', error);
-      // Fallback to original order
-      setRealOrder(order);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled' => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
-    }
-  };
+    fetchRealOrderData();
+  }, [isOpen, order]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order);
   const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
