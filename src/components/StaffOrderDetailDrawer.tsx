@@ -1,16 +1,24 @@
 import { useState, useEffect } from "react";
+import { Bot, Printer, QrCode, ExternalLink, Package, RotateCcw } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Separator } from "./ui/separator";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { Printer, QrCode, ExternalLink, Bot, Package, RotateCcw } from "lucide-react";
-import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-import { handlePrintBarcode as printBarcodeRPC, setStorage, getStorageLocations, qcReturnToDecorating } from "../lib/rpc-client";
+import { toast } from "sonner";
+import { setStorage, getStorageLocations, qcReturnToDecorating, getOrder } from "../lib/rpc-client";
+import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
+
+interface AccessoryItem {
+  title: string;
+  quantity: number;
+  price: string;
+  variant_title?: string | null;
+}
 
 interface QueueItem {
   id: string;
@@ -18,7 +26,7 @@ interface QueueItem {
   shopifyOrderNumber: string;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string;
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -29,6 +37,11 @@ interface QueueItem {
   storage?: string;
   store: 'bannos' | 'flourlane';
   stage: string;
+  // Database fields for order details
+  cakeWriting?: string;
+  notes?: string;
+  productImage?: string | null;
+  accessories?: AccessoryItem[] | null;
 }
 
 interface StaffOrderDetailDrawerProps {
@@ -38,41 +51,27 @@ interface StaffOrderDetailDrawerProps {
   onScanBarcode: () => void;
 }
 
-// Sample extended order data for staff view
+// Extended order data - uses real values from database, no mock overrides
 const getExtendedOrderData = (order: QueueItem | null) => {
   if (!order) return null;
-  
+
+  // Use real values from the order, with safe fallbacks
   return {
     ...order,
-    writingOnCake: order.id.includes("003") || order.id.includes("C03") 
-      ? "Happy Birthday Sarah! Love, Mom & Dad" 
-      : order.id.includes("015") || order.id.includes("C01")
-      ? "Congratulations on your Wedding!"
-      : "",
-    deliveryDate: "2024-12-03",
-    notes: order.priority === "High" 
-      ? "Customer requested early morning pickup. Handle with extra care - VIP client."
-      : order.method === "Delivery"
-      ? "Standard delivery. Contact customer 30 mins before arrival."
-      : "Customer will pickup. Ensure order is ready at specified time.",
-    productImage: order.store === "bannos" 
-      ? "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop"
-      : "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop",
+    // Use real size from database (no mock override)
+    size: order.size || 'Unknown',
+    // Use real cake writing from database
+    writingOnCake: order.cakeWriting || '',
+    // Pass raw accessories for flexible rendering (not pre-formatted strings)
+    accessories: order.accessories || [],
+    // Use real due date
+    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
+    // Use real notes from database (null means no notes)
+    notes: order.notes || '',
+    // Use real product image from database
+    productImage: order.productImage || null,
+    imageCaption: order.product
   };
-};
-
-// Convert legacy size to realistic display
-const getRealisticSize = (originalSize: string, product: string, store: string) => {
-  if (product.toLowerCase().includes("cupcake")) {
-    return originalSize === 'S' ? 'Mini' : originalSize === 'M' ? 'Standard' : 'Jumbo';
-  } else if (product.toLowerCase().includes("wedding")) {
-    return originalSize === 'S' ? '6-inch Round' : originalSize === 'M' ? '8-inch Round' : '10-inch Round';
-  } else if (product.toLowerCase().includes("birthday") || product.toLowerCase().includes("cake")) {
-    return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium Tall' : '8-inch Round';
-  } else if (store === "flourlane") {
-    return originalSize === 'S' ? 'Small Loaf' : originalSize === 'M' ? 'Standard' : 'Large Batch';
-  }
-  return originalSize === 'S' ? 'Small' : originalSize === 'M' ? 'Medium' : 'Large';
 };
 
 const getPriorityColor = (priority: string) => {
@@ -88,10 +87,15 @@ const getStorageColor = () => {
   return "bg-purple-100 text-purple-700 border-purple-200";
 };
 
-const getStoreColor = (store: string) => {
-  return store === 'bannos' 
-    ? 'bg-blue-100 text-blue-700 border-blue-200' 
-    : 'bg-pink-100 text-pink-700 border-pink-200';
+const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled' => {
+  switch (stage) {
+    case "Filling": return "In Production";
+    case "Covering": return "In Production";
+    case "Decorating": return "In Production";
+    case "Packing": return "Quality Check";
+    case "Complete": return "Completed";
+    default: return "Pending";
+  }
 };
 
 export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }: StaffOrderDetailDrawerProps) {
@@ -101,42 +105,138 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
   const [selectedStorage, setSelectedStorage] = useState("");
   const [availableStorageLocations, setAvailableStorageLocations] = useState<string[]>([]);
   const [storageLoading, setStorageLoading] = useState(false);
-  
-  const extendedOrder = getExtendedOrderData(order);
+  const [loading, setLoading] = useState(false);
+  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
+
+  // Fetch real order data when drawer opens
+  useEffect(() => {
+    if (!isOpen || !order) return;
+
+    // Validate store type
+    if (order.store !== 'bannos' && order.store !== 'flourlane') {
+      console.error('Invalid store type:', order.store);
+      toast.error('Invalid store type');
+      return;
+    }
+
+    // Race condition protection - track if effect is still active
+    let cancelled = false;
+
+    const fetchRealOrderData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch the specific order using getOrder RPC
+        const foundOrder = await getOrder(order.id, order.store);
+
+        // Don't update state if effect was cancelled (order changed during fetch)
+        if (cancelled) return;
+
+        if (foundOrder) {
+          // Map database order to UI format
+          const mappedOrder: QueueItem = {
+            id: foundOrder.id,
+            orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+            shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
+            customerName: foundOrder.customer_name || "Unknown Customer",
+            product: foundOrder.product_title || "Unknown Product",
+            size: foundOrder.size || "Unknown",
+            quantity: foundOrder.item_qty || 1,
+            deliveryTime: foundOrder.due_date || new Date().toISOString(),
+            priority: foundOrder.priority === 'High' ? 'High' : foundOrder.priority === 'Medium' ? 'Medium' : 'Low',
+            status: mapStageToStatus(foundOrder.stage),
+            flavor: foundOrder.flavour || "",
+            dueTime: foundOrder.due_date || new Date().toISOString(),
+            method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+            storage: foundOrder.storage || "",
+            store: foundOrder.store || order.store,
+            stage: foundOrder.stage || "Filling",
+            // Add real data from database
+            cakeWriting: foundOrder.cake_writing || '',
+            notes: foundOrder.notes || '',
+            productImage: foundOrder.product_image || null,
+            accessories: foundOrder.accessories || null
+          };
+
+          setRealOrder(mappedOrder);
+        } else {
+          // Fallback to original order if not found in database
+          setRealOrder(order);
+        }
+      } catch (error) {
+        // Don't update state if effect was cancelled
+        if (cancelled) return;
+
+        console.error('Error fetching order data:', error);
+        toast.error('Failed to load order details');
+        // Fallback to original order
+        setRealOrder(order);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchRealOrderData();
+
+    // Cleanup: mark as cancelled when order changes or component unmounts
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, order]);
+
+  const extendedOrder = getExtendedOrderData(realOrder || order);
+  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
+  const isPackingStage = currentStage === "packing";
   const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
 
   // Load storage locations when component mounts or order changes
   useEffect(() => {
-    if (isOpen && extendedOrder?.store) {
-      loadStorageLocations();
-      // Set current storage location
-      setSelectedStorage(extendedOrder.storage || "");
-    }
+    if (!isOpen || !extendedOrder?.store) return;
+
+    // Race condition protection
+    let cancelled = false;
+
+    const loadStorageLocations = async () => {
+      try {
+        setStorageLoading(true);
+        const locations = await getStorageLocations(extendedOrder.store);
+
+        if (cancelled) return;
+
+        setAvailableStorageLocations(locations);
+        // Set current storage location
+        setSelectedStorage(extendedOrder.storage || "");
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error('Error loading storage locations:', error);
+        toast.error('Failed to load storage locations');
+        // Fallback to default locations
+        setAvailableStorageLocations([
+          "Store Fridge",
+          "Store Freezer",
+          "Kitchen Coolroom",
+          "Kitchen Freezer",
+          "Basement Coolroom"
+        ]);
+      } finally {
+        if (!cancelled) {
+          setStorageLoading(false);
+        }
+      }
+    };
+
+    loadStorageLocations();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
 
   // Early return after all hooks
   if (!extendedOrder) return null;
-
-  const loadStorageLocations = async () => {
-    try {
-      setStorageLoading(true);
-      const locations = await getStorageLocations(extendedOrder.store);
-      setAvailableStorageLocations(locations);
-    } catch (error) {
-      console.error('Error loading storage locations:', error);
-      toast.error('Failed to load storage locations');
-      // Fallback to default locations
-      setAvailableStorageLocations([
-        "Store Fridge",
-        "Store Freezer", 
-        "Kitchen Coolroom",
-        "Kitchen Freezer",
-        "Basement Coolroom"
-      ]);
-    } finally {
-      setStorageLoading(false);
-    }
-  };
 
   const handleStorageChange = async (newStorage: string) => {
     if (!extendedOrder || newStorage === selectedStorage) return;
@@ -174,10 +274,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   const handleBarcodePrint = async () => {
     try {
-      // Generate a simple barcode string for the order
-      const barcode = `ORD-${extendedOrder.orderNumber}`;
-      await printBarcodeRPC(barcode, extendedOrder.id);
-      toast.success(`Barcode sent to printer for ${extendedOrder.orderNumber}`);
+      // Call print_barcode workflow: logs to stage_events, sets filling_start_ts, triggers browser print
+      await printBarcodeWorkflow(
+        extendedOrder.store as 'bannos' | 'flourlane',
+        extendedOrder.id
+      );
+      toast.success(`Barcode printed for ${extendedOrder.orderNumber}`);
     } catch (error) {
       console.error('Error printing barcode:', error);
       toast.error("Failed to print barcode");
@@ -217,7 +319,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
           <DialogHeader>
             <DialogTitle>Print Barcode</DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex items-center justify-center py-4">
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
@@ -237,135 +339,124 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[480px] p-0">
+      <SheetContent className="!w-[540px] max-w-full sm:!max-w-[540px] p-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <SheetHeader className="p-6 pb-0">
             <div className="flex items-center justify-between">
-              <div>
-                <SheetTitle className="text-lg font-medium text-foreground">
-                  {extendedOrder.orderNumber}
-                </SheetTitle>
-                <p className="text-sm text-muted-foreground">{extendedOrder.customerName}</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={handlePrintBarcode}>
+              <SheetTitle className="text-lg font-medium text-foreground">
+                Order Details
+              </SheetTitle>
+              <Button variant="outline" size="sm" onClick={handlePrintBarcode} disabled={loading}>
                 <Printer className="mr-2 h-4 w-4" />
                 Print Barcode
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Order details for {extendedOrder.orderNumber}
+              Detailed view of order {extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
-          <Separator className="my-4" />
+          {/* Loading State */}
+          {loading && (
+            <div className="px-6 py-8 text-center">
+              <div className="text-sm text-muted-foreground">Loading order details...</div>
+            </div>
+          )}
+
+          {/* Subheader */}
+          {!loading && (
+            <div className="px-6 pt-4 pb-6 space-y-4">
+              <div className="grid gap-1 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Customer:</span> {extendedOrder.customerName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Store:</span> {storeName}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
+                  <div className="mt-2">
+                    <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
+                      {extendedOrder.priority}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
+                  <p className="mt-2 text-foreground">
+                    {extendedOrder.deliveryDate}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Method</p>
+                  <p className="mt-2 text-foreground">{extendedOrder.method}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Separator />
 
           {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Product Image */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product Image
-              </label>
-              <div className="w-full h-48 rounded-lg overflow-hidden bg-muted/30 border">
-                <ImageWithFallback
-                  src={extendedOrder.productImage}
-                  alt={extendedOrder.product}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Store */}
+          {!loading && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Product Image + Product */}
+            <div className="space-y-4">
+              {extendedOrder.productImage && (
+                <div>
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted/30 border">
+                    <ImageWithFallback
+                      src={extendedOrder.productImage}
+                      alt={extendedOrder.product}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {extendedOrder.imageCaption && (
+                    <p className="mt-2 text-xs text-muted-foreground">{extendedOrder.imageCaption}</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Store
+                  Product
                 </label>
-                <Badge className={`text-xs ${getStoreColor(extendedOrder.store)}`}>
-                  {storeName}
-                </Badge>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.product}
+                </p>
               </div>
+            </div>
 
-              {/* Priority */}
+            {/* Size + Flavour + Quantity (cake details together) */}
+            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Priority
+                  Size
                 </label>
-                <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                  {extendedOrder.priority}
-                </Badge>
+                <p className="text-sm text-foreground">
+                  {extendedOrder.size}
+                </p>
               </div>
-            </div>
-
-            {/* Product Title */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Product
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.product}
-              </p>
-            </div>
-
-            {/* Size */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Size
-              </label>
-              <p className="text-sm text-foreground">
-                {getRealisticSize(extendedOrder.size, extendedOrder.product, extendedOrder.store)}
-              </p>
-            </div>
-
-            {/* Flavour */}
-            {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+                <div>
+                  <label className="text-sm font-medium text-foreground block mb-2">
+                    Flavour
+                  </label>
+                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
-                  Flavour
+                  Quantity
                 </label>
-                <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
               </div>
-            )}
-
-            {/* Quantity */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Quantity
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.quantity}</p>
             </div>
-
-            {/* Due Date */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Due Date
-              </label>
-              <p className="text-sm text-foreground">
-                {extendedOrder.deliveryDate}
-              </p>
-            </div>
-
-            {/* Method */}
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">
-                Method
-              </label>
-              <p className="text-sm text-foreground">{extendedOrder.method}</p>
-            </div>
-
-            {/* Storage */}
-            {extendedOrder.storage && (
-              <div>
-                <label className="text-sm font-medium text-foreground block mb-2">
-                  Storage
-                </label>
-                <Badge className={`text-xs ${getStorageColor()}`}>
-                  {extendedOrder.storage}
-                </Badge>
-              </div>
-            )}
 
             {/* Writing on Cake */}
             {extendedOrder.writingOnCake && (
@@ -376,6 +467,40 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <div className="p-3 bg-muted/30 rounded-lg border">
                   <p className="text-sm text-foreground">{extendedOrder.writingOnCake}</p>
                 </div>
+              </div>
+            )}
+
+            {/* Accessories - list format with per-item quantities */}
+            {extendedOrder.accessories && extendedOrder.accessories.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Accessories
+                </label>
+                <div className="p-3 bg-muted/30 rounded-lg border space-y-2">
+                  {extendedOrder.accessories.map((acc: AccessoryItem, index: number) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">
+                        {acc.title}
+                        {acc.variant_title && (
+                          <span className="text-muted-foreground ml-1">#{acc.variant_title}</span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground font-medium">× {acc.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Storage */}
+            {extendedOrder.storage && (
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-2">
+                  Storage
+                </label>
+                <Badge className={`text-xs ${getStorageColor()}`}>
+                  {extendedOrder.storage}
+                </Badge>
               </div>
             )}
 
@@ -390,7 +515,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
             </div>
 
             {/* Quality Control Section - Only for Packing stage */}
-            {extendedOrder.stage === "packing" && (
+            {isPackingStage && (
               <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
@@ -406,7 +531,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     Run AI QC
                   </Button>
                 </div>
-                
+
                 <div>
                   <label className="text-xs font-medium text-foreground block mb-2">
                     QC Issue
@@ -443,7 +568,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                       Storage Location
                     </label>
                   </div>
-                  
+
                   <div>
                     <label className="text-xs font-medium text-foreground block mb-2">
                       Select where to store this order
@@ -453,8 +578,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                         <span className="text-xs text-muted-foreground">Loading storage locations...</span>
                       </div>
                     ) : (
-                      <Select 
-                        value={selectedStorage || "none"} 
+                      <Select
+                        value={selectedStorage || "none"}
                         onValueChange={handleStorageChange}
                       >
                         <SelectTrigger className="w-full">
@@ -478,7 +603,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                         </SelectContent>
                       </Select>
                     )}
-                    
+
                     {selectedStorage && selectedStorage !== "none" && (
                       <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
                         ✓ Order will be stored in: <strong>{selectedStorage}</strong>
@@ -489,18 +614,20 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
               </div>
             )}
           </div>
+          )}
 
           <Separator />
 
           {/* Footer */}
           <div className="p-6">
-            {extendedOrder.stage === "packing" ? (
+            {isPackingStage ? (
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     className="flex-1"
                     onClick={handleViewInShopify}
+                    disabled={loading}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     View in Shopify
@@ -511,6 +638,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="outline"
                     className="flex-1"
                     onClick={handlePrintPackingSlip}
+                    disabled={loading}
                   >
                     <Printer className="mr-2 h-4 w-4" />
                     Print Packing Slip
@@ -519,6 +647,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="outline"
                     className="flex-1"
                     onClick={handlePrintCareCard}
+                    disabled={loading}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Print Care Card QR
@@ -526,6 +655,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                   <Button
                     className="flex-1"
                     onClick={onScanBarcode}
+                    disabled={loading}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Scan Barcode
@@ -536,7 +666,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                     variant="destructive"
                     className="flex-1"
                     onClick={handleQCReturn}
-                    disabled={qcIssue === "None"}
+                    disabled={loading || qcIssue === "None"}
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Return to Decorating
@@ -549,6 +679,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                   variant="outline"
                   className="flex-1"
                   onClick={handleViewInShopify}
+                  disabled={loading}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View in Shopify
@@ -556,6 +687,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
                 <Button
                   className="flex-1"
                   onClick={onScanBarcode}
+                  disabled={loading}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
                   Scan Barcode
