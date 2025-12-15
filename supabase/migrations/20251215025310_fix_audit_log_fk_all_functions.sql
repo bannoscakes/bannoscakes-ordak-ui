@@ -118,6 +118,11 @@ DECLARE
   v_user_exists boolean := false;
   v_rows_affected integer;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
@@ -199,6 +204,11 @@ DECLARE
   v_user_exists boolean := false;
   v_rows_affected integer;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
@@ -280,6 +290,11 @@ DECLARE
   v_user_exists boolean := false;
   v_rows_affected integer;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
@@ -361,6 +376,11 @@ DECLARE
   v_user_exists boolean := false;
   v_rows_affected integer;
 BEGIN
+  -- Validate store parameter to prevent SQL injection
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
@@ -466,7 +486,7 @@ BEGIN
 
   -- Log adjustment only if user exists in public.users
   IF v_user_exists THEN
-    INSERT INTO audit_log (action, performed_by, source, meta)
+    INSERT INTO public.audit_log (action, performed_by, source, meta)
     VALUES (
       'time_entry_adjusted',
       v_user_id,
@@ -506,11 +526,16 @@ DECLARE
   v_user_id uuid;
   v_user_exists boolean := false;
 BEGIN
+  -- Validate required input: order_id
+  IF p_order_id IS NULL THEN
+    RAISE EXCEPTION 'order_id is required';
+  END IF;
+
   v_user_id := auth.uid();
 
-  -- Validate authentication
-  IF p_order_id IS NULL OR v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
+  -- Validate authentication: user must be logged in
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
   END IF;
 
   -- Check user existence once
