@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { X, AlertCircle, CheckCircle } from "lucide-react";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { X, AlertCircle, CheckCircle, CameraOff } from "lucide-react";
 import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
 import { completeFilling, completeCovering, completeDecorating, completePacking, startCovering, startDecorating } from "../lib/rpc-client";
@@ -40,6 +42,8 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   const [scanState, setScanState] = useState<ScanState>('scanning');
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cameraFailed, setCameraFailed] = useState(false);
+  const [manualInput, setManualInput] = useState("");
 
   if (!isOpen || !order) return null;
 
@@ -70,6 +74,16 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     console.error('Camera error:', error);
     setErrorMessage(error);
     setScanState('error');
+  };
+
+  const handleCameraFailed = () => {
+    setCameraFailed(true);
+  };
+
+  const handleManualScan = () => {
+    if (manualInput.trim()) {
+      handleScan(manualInput.trim());
+    }
   };
 
   const handleConfirm = async () => {
@@ -140,6 +154,8 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     setScanState('scanning');
     setErrorMessage("");
     setIsProcessing(false);
+    setCameraFailed(false);
+    setManualInput("");
     onClose();
   };
 
@@ -227,11 +243,45 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
           <CameraScanner
             onScan={handleCameraScan}
             onError={handleCameraError}
+            onCameraFailed={handleCameraFailed}
             isActive={isOpen && scanState === 'scanning'}
             className="w-full max-w-2xl"
           />
         </div>
       </div>
+
+      {/* Manual Entry Fallback - only shown when camera fails */}
+      {cameraFailed && scanState === 'scanning' && (
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/90 backdrop-blur-sm">
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2 text-amber-600">
+              <CameraOff className="h-5 w-5" />
+              <span className="text-sm font-medium">Camera unavailable - enter barcode manually</span>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-barcode" className="text-sm">Order Number</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="manual-barcode"
+                  type="text"
+                  placeholder="Enter order number..."
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
+                  disabled={isProcessing}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleManualScan}
+                  disabled={isProcessing || !manualInput.trim()}
+                >
+                  {isProcessing ? "Processing..." : "Submit"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Error Display */}
       {scanState === 'error' && errorMessage && (

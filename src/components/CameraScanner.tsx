@@ -6,11 +6,12 @@ import { AlertCircle, Camera, CameraOff } from 'lucide-react';
 interface CameraScannerProps {
   onScan: (result: string) => void;
   onError?: (error: string) => void;
+  onCameraFailed?: () => void;
   isActive: boolean;
   className?: string;
 }
 
-export function CameraScanner({ onScan, isActive, className = '' }: CameraScannerProps) {
+export function CameraScanner({ onScan, onCameraFailed, isActive, className = '' }: CameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -87,6 +88,7 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
       console.error('Error starting camera:', err);
       setError('Could not start camera. Please check permissions.');
       setIsScanning(false);
+      onCameraFailed?.();
     }
   };
 
@@ -170,7 +172,7 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
         {!isScanning ? (
           <Button
             onClick={startScanning}
-            disabled={!selectedDeviceId}
+            disabled={isScanning}
             className="flex items-center gap-2"
           >
             <Camera className="h-4 w-4" />
