@@ -234,8 +234,8 @@ export function SupervisorWorkspacePage({
         storage: order.storage || "Default",
         store: order.store || "bannos",
         stage: order.stage || "Filling",
-        covering_start_ts: order.covering_start_ts || null,
-        decorating_start_ts: order.decorating_start_ts || null
+        covering_start_ts: order.covering_start_ts ?? null,
+        decorating_start_ts: order.decorating_start_ts ?? null
       }));
       
       setOrders(mappedOrders);
