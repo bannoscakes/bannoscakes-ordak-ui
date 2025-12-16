@@ -63,6 +63,33 @@ export interface PrintBarcodeResponse {
 }
 
 // =============================================
+// SCANNER ORDER TYPES
+// =============================================
+
+export interface ScannerOrderResult {
+  id: string;
+  shopify_order_number: number;
+  customer_name: string | null;
+  product_title: string | null;
+  size: string | null;
+  notes: string | null;
+  due_date: string | null;
+  delivery_method: string | null;
+  stage: string;
+  priority: string;
+  storage: string | null;
+  store: 'bannos' | 'flourlane';
+  filling_start_ts: string | null;
+  covering_start_ts: string | null;
+  decorating_start_ts: string | null;
+  filling_complete_ts: string | null;
+  covering_complete_ts: string | null;
+  decorating_complete_ts: string | null;
+  packing_start_ts: string | null;
+  packing_complete_ts: string | null;
+}
+
+// =============================================
 // ERROR HANDLING WRAPPER
 // =============================================
 
@@ -552,13 +579,17 @@ export async function printBarcode(store: string, orderId: string): Promise<Prin
   return data as PrintBarcodeResponse;
 }
 
-export async function getOrderForScan(scan: string) {
+/**
+ * Lookup order by any barcode format
+ * Supports: #B18617, #F18617, bannos-18617, flourlane-18617, or plain 18617
+ */
+export async function getOrderForScan(scan: string): Promise<ScannerOrderResult | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_order_for_scan', {
     p_scan: scan,
   });
   if (error) throw error;
-  return data?.[0] || null;
+  return data as ScannerOrderResult | null;
 }
 
 export async function completeFilling(orderId: string, store: string, notes?: string) {
