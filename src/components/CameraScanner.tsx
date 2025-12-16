@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 import { Button } from './ui/button';
 import { AlertCircle, Camera, CameraOff } from 'lucide-react';
@@ -19,44 +19,15 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
 
-  // Initialize the barcode reader
-  useEffect(() => {
-    if (!readerRef.current) {
-      readerRef.current = new BrowserMultiFormatReader();
+  // Define callbacks before useEffects that reference them
+  const stopScanning = useCallback(() => {
+    if (readerRef.current) {
+      readerRef.current.reset();
     }
-
-    return () => {
-      stopScanning();
-    };
+    setIsScanning(false);
   }, []);
 
-  // Get available cameras
-  useEffect(() => {
-    if (isActive && readerRef.current) {
-      getAvailableDevices();
-    }
-  }, [isActive]);
-
-  const getAvailableDevices = async () => {
-    try {
-      const videoInputDevices = await readerRef.current!.listVideoInputDevices();
-      setDevices(videoInputDevices);
-      
-      // Prefer back camera if available (usually last in the list)
-      if (videoInputDevices.length > 0) {
-        const backCamera = videoInputDevices.find(device => 
-          device.label.toLowerCase().includes('back') || 
-          device.label.toLowerCase().includes('rear')
-        );
-        setSelectedDeviceId(backCamera?.deviceId || videoInputDevices[videoInputDevices.length - 1].deviceId);
-      }
-    } catch (err) {
-      console.error('Error getting camera devices:', err);
-      setError('Could not access camera devices');
-    }
-  };
-
-  const startScanning = async () => {
+  const startScanning = useCallback(async () => {
     if (!readerRef.current || !videoRef.current) {
       setError('Camera not available');
       return;
@@ -77,7 +48,7 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
             onScan(text);
             stopScanning();
           }
-          
+
           if (error && !(error instanceof NotFoundException)) {
             console.error('Scanning error:', error);
             setError('Scanning error: ' + error.message);
@@ -90,22 +61,51 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
       setIsScanning(false);
       onCameraFailed?.();
     }
-  };
+  }, [selectedDeviceId, onScan, onCameraFailed, stopScanning]);
 
-  const stopScanning = () => {
-    if (readerRef.current) {
-      readerRef.current.reset();
+  const getAvailableDevices = useCallback(async () => {
+    try {
+      const videoInputDevices = await readerRef.current!.listVideoInputDevices();
+      setDevices(videoInputDevices);
+
+      // Prefer back camera if available (usually last in the list)
+      if (videoInputDevices.length > 0) {
+        const backCamera = videoInputDevices.find(device =>
+          device.label.toLowerCase().includes('back') ||
+          device.label.toLowerCase().includes('rear')
+        );
+        setSelectedDeviceId(backCamera?.deviceId || videoInputDevices[videoInputDevices.length - 1].deviceId);
+      }
+    } catch (err) {
+      console.error('Error getting camera devices:', err);
+      setError('Could not access camera devices');
     }
-    setIsScanning(false);
-  };
+  }, []);
 
-  const handleDeviceChange = (deviceId: string) => {
+  const handleDeviceChange = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
     if (isScanning) {
       stopScanning();
-      // Let the useEffect handle restarting when device changes
     }
-  };
+  }, [isScanning, stopScanning]);
+
+  // Initialize the barcode reader
+  useEffect(() => {
+    if (!readerRef.current) {
+      readerRef.current = new BrowserMultiFormatReader();
+    }
+
+    return () => {
+      stopScanning();
+    };
+  }, [stopScanning]);
+
+  // Get available cameras
+  useEffect(() => {
+    if (isActive && readerRef.current) {
+      getAvailableDevices();
+    }
+  }, [isActive, getAvailableDevices]);
 
   // Auto-start scanning when component becomes active
   useEffect(() => {
@@ -114,7 +114,7 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
     } else if (!isActive && isScanning) {
       stopScanning();
     }
-  }, [isActive]);
+  }, [isActive, isScanning, startScanning, stopScanning]);
 
   if (!isActive) {
     return null;
