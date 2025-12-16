@@ -361,7 +361,11 @@ export function SupervisorWorkspacePage({
     setSelectedOrder(null);
 
     // Refetch fresh data from database
-    await loadSupervisorOrders();
+    try {
+      await loadSupervisorOrders();
+    } catch (error) {
+      console.error('Failed to refresh orders:', error);
+    }
   };
 
   const getStoreColor = (store: string) => {
