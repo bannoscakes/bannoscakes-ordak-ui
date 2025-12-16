@@ -133,7 +133,9 @@ BEGIN
     INTO v_result
     FROM public.orders_bannos o
     WHERE o.id = v_order_id
-       OR o.shopify_order_number = v_order_num;
+       OR o.shopify_order_number = v_order_num
+    ORDER BY (o.id = v_order_id) DESC
+    LIMIT 1;
 
     -- If not found in bannos and we had a plain number, try flourlane
     IF v_result.id IS NULL AND v_scan ~ '^\d+$' THEN
@@ -162,7 +164,9 @@ BEGIN
       INTO v_result
       FROM public.orders_flourlane o
       WHERE o.id = v_order_id
-         OR o.shopify_order_number = v_order_num;
+         OR o.shopify_order_number = v_order_num
+      ORDER BY (o.id = v_order_id) DESC
+      LIMIT 1;
     END IF;
 
   ELSIF v_store = 'flourlane' THEN
@@ -190,7 +194,9 @@ BEGIN
     INTO v_result
     FROM public.orders_flourlane o
     WHERE o.id = v_order_id
-       OR o.shopify_order_number = v_order_num;
+       OR o.shopify_order_number = v_order_num
+    ORDER BY (o.id = v_order_id) DESC
+    LIMIT 1;
   END IF;
 
   RETURN v_result;
