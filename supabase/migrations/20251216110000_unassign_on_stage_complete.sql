@@ -61,7 +61,7 @@ BEGIN
   END IF;
 
   EXECUTE format(
-    'UPDATE public.%I SET stage = ''Covering'', filling_complete_ts = now(), assignee_id = NULL, updated_at = now() WHERE id = $1',
+    'UPDATE public.%I SET stage = ''Covering'', filling_complete_ts = now(), assignee_id = NULL, updated_at = now() WHERE id = $1 AND stage = ''Filling''',
     v_table_name
   )
   USING p_order_id;
@@ -129,7 +129,7 @@ BEGIN
   END IF;
 
   EXECUTE format(
-    'UPDATE public.%I SET stage = ''Decorating'', covering_complete_ts = now(), assignee_id = NULL, updated_at = now() WHERE id = $1',
+    'UPDATE public.%I SET stage = ''Decorating'', covering_complete_ts = now(), assignee_id = NULL, updated_at = now() WHERE id = $1 AND stage = ''Covering''',
     v_table_name
   )
   USING p_order_id;
@@ -197,7 +197,7 @@ BEGIN
   END IF;
 
   EXECUTE format(
-    'UPDATE public.%I SET stage = ''Packing'', decorating_complete_ts = now(), packing_start_ts = now(), assignee_id = NULL, updated_at = now() WHERE id = $1',
+    'UPDATE public.%I SET stage = ''Packing'', decorating_complete_ts = now(), packing_start_ts = now(), assignee_id = NULL, updated_at = now() WHERE id = $1 AND stage = ''Decorating''',
     v_table_name
   )
   USING p_order_id;
