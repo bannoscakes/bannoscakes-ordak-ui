@@ -404,11 +404,11 @@ export function StaffWorkspacePage({
   };
 
   const handleOrderCompleted = async (orderId: string) => {
-    // Remove from local state
-    setOrders(orders.filter((order) => order.id !== orderId));
+    // Optimistically remove from local state (use callback to avoid stale closure)
+    setOrders(prev => prev.filter(order => order.id !== orderId));
     setScannerOpen(false);
     setSelectedOrder(null);
-    
+
     // Reload orders with fresh data (bypass cache to avoid stale data)
     await loadStaffOrders(true);
   };
