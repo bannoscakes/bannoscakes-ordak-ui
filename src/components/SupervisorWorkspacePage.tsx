@@ -354,10 +354,18 @@ export function SupervisorWorkspacePage({
     toast.success(`Barcode for ${order.orderNumber} sent to printer`);
   };
 
-  const handleOrderCompleted = (orderId: string) => {
-    setOrders(orders.filter(order => order.id !== orderId));
+  const handleOrderCompleted = async (orderId: string) => {
+    // Optimistically remove from local state (use callback to avoid stale closure)
+    setOrders(prev => prev.filter(order => order.id !== orderId));
     setScannerOpen(false);
     setSelectedOrder(null);
+
+    // Refetch fresh data from database
+    try {
+      await loadSupervisorOrders();
+    } catch (error) {
+      console.error('Failed to refresh orders:', error);
+    }
   };
 
   const getStoreColor = (store: string) => {
