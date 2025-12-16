@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 import { Button } from './ui/button';
 import { AlertCircle, Camera, CameraOff } from 'lucide-react';
@@ -6,11 +6,12 @@ import { AlertCircle, Camera, CameraOff } from 'lucide-react';
 interface CameraScannerProps {
   onScan: (result: string) => void;
   onError?: (error: string) => void;
+  onCameraFailed?: () => void;
   isActive: boolean;
   className?: string;
 }
 
-export function CameraScanner({ onScan, isActive, className = '' }: CameraScannerProps) {
+export function CameraScanner({ onScan, onCameraFailed, isActive, className = '' }: CameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -18,45 +19,16 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
 
-  // Initialize the barcode reader
-  useEffect(() => {
-    if (!readerRef.current) {
-      readerRef.current = new BrowserMultiFormatReader();
+  // Define callbacks before useEffects that reference them
+  const stopScanning = useCallback(() => {
+    if (readerRef.current) {
+      readerRef.current.reset();
     }
-
-    return () => {
-      stopScanning();
-    };
+    setIsScanning(false);
   }, []);
 
-  // Get available cameras
-  useEffect(() => {
-    if (isActive && readerRef.current) {
-      getAvailableDevices();
-    }
-  }, [isActive]);
-
-  const getAvailableDevices = async () => {
-    try {
-      const videoInputDevices = await readerRef.current!.listVideoInputDevices();
-      setDevices(videoInputDevices);
-      
-      // Prefer back camera if available (usually last in the list)
-      if (videoInputDevices.length > 0) {
-        const backCamera = videoInputDevices.find(device => 
-          device.label.toLowerCase().includes('back') || 
-          device.label.toLowerCase().includes('rear')
-        );
-        setSelectedDeviceId(backCamera?.deviceId || videoInputDevices[videoInputDevices.length - 1].deviceId);
-      }
-    } catch (err) {
-      console.error('Error getting camera devices:', err);
-      setError('Could not access camera devices');
-    }
-  };
-
-  const startScanning = async () => {
-    if (!readerRef.current || !videoRef.current || !selectedDeviceId) {
+  const startScanning = useCallback(async () => {
+    if (!readerRef.current || !videoRef.current) {
       setError('Camera not available');
       return;
     }
@@ -65,8 +37,9 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
       setError(null);
       setIsScanning(true);
 
+      // Pass null to use default camera - this triggers permission prompt on iOS
       await readerRef.current.decodeFromVideoDevice(
-        selectedDeviceId,
+        selectedDeviceId ?? null,
         videoRef.current,
         (result, error) => {
           if (result) {
@@ -75,7 +48,7 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
             onScan(text);
             stopScanning();
           }
-          
+
           if (error && !(error instanceof NotFoundException)) {
             console.error('Scanning error:', error);
             setError('Scanning error: ' + error.message);
@@ -86,32 +59,62 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
       console.error('Error starting camera:', err);
       setError('Could not start camera. Please check permissions.');
       setIsScanning(false);
+      onCameraFailed?.();
     }
-  };
+  }, [selectedDeviceId, onScan, onCameraFailed, stopScanning]);
 
-  const stopScanning = () => {
-    if (readerRef.current) {
-      readerRef.current.reset();
+  const getAvailableDevices = useCallback(async () => {
+    try {
+      const videoInputDevices = await readerRef.current!.listVideoInputDevices();
+      setDevices(videoInputDevices);
+
+      // Prefer back camera if available (usually last in the list)
+      if (videoInputDevices.length > 0) {
+        const backCamera = videoInputDevices.find(device =>
+          device.label.toLowerCase().includes('back') ||
+          device.label.toLowerCase().includes('rear')
+        );
+        setSelectedDeviceId(backCamera?.deviceId || videoInputDevices[videoInputDevices.length - 1].deviceId);
+      }
+    } catch (err) {
+      console.error('Error getting camera devices:', err);
+      setError('Could not access camera devices');
     }
-    setIsScanning(false);
-  };
+  }, []);
 
-  const handleDeviceChange = (deviceId: string) => {
+  const handleDeviceChange = useCallback((deviceId: string) => {
     setSelectedDeviceId(deviceId);
     if (isScanning) {
       stopScanning();
-      // Let the useEffect handle restarting when device changes
     }
-  };
+  }, [isScanning, stopScanning]);
+
+  // Initialize the barcode reader
+  useEffect(() => {
+    if (!readerRef.current) {
+      readerRef.current = new BrowserMultiFormatReader();
+    }
+
+    return () => {
+      stopScanning();
+    };
+  }, [stopScanning]);
+
+  // Get available cameras
+  useEffect(() => {
+    if (isActive && readerRef.current) {
+      getAvailableDevices();
+    }
+  }, [isActive, getAvailableDevices]);
 
   // Auto-start scanning when component becomes active
   useEffect(() => {
-    if (isActive && selectedDeviceId && !isScanning) {
+    if (isActive && !isScanning) {
       startScanning();
     } else if (!isActive && isScanning) {
       stopScanning();
     }
-  }, [isActive, selectedDeviceId, isScanning]);
+  }, [isActive, isScanning, startScanning, stopScanning]);
 
   if (!isActive) {
     return null;
@@ -169,7 +172,7 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
         {!isScanning ? (
           <Button
             onClick={startScanning}
-            disabled={!selectedDeviceId}
+            disabled={isScanning}
             className="flex items-center gap-2"
           >
             <Camera className="h-4 w-4" />
