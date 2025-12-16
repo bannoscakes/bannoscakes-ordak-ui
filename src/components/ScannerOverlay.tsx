@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { Card } from "./ui/card";
-import { X, Camera, AlertCircle, CheckCircle, Scan } from "lucide-react";
+import { X, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
 import { completeFilling, completeCovering, completeDecorating, completePacking, startCovering, startDecorating } from "../lib/rpc-client";
@@ -40,10 +38,8 @@ type ScanState = 'scanning' | 'confirming' | 'success' | 'error';
 
 export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: ScannerOverlayProps) {
   const [scanState, setScanState] = useState<ScanState>('scanning');
-  const [manualInput, setManualInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [useCamera, setUseCamera] = useState(true);
 
   if (!isOpen || !order) return null;
 
@@ -74,11 +70,6 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     console.error('Camera error:', error);
     setErrorMessage(error);
     setScanState('error');
-  };
-
-  const handleManualScan = () => {
-    if (!manualInput.trim()) return;
-    handleScan(manualInput.trim());
   };
 
   const handleConfirm = async () => {
@@ -147,7 +138,6 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   const handleClose = () => {
     setScanState('scanning');
-    setManualInput("");
     setErrorMessage("");
     setIsProcessing(false);
     onClose();
@@ -156,12 +146,6 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   const handleContinueScanning = () => {
     setScanState('scanning');
     setErrorMessage("");
-    setManualInput("");
-  };
-
-  const simulatedScan = () => {
-    // Simulate a successful scan for demo purposes
-    handleScan(order.orderNumber);
   };
 
   if (scanState === 'confirming') {
@@ -239,81 +223,27 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
       {/* Camera View */}
       <div className="absolute inset-0 bg-black flex items-center justify-center">
-        {useCamera ? (
-          <div className="w-full h-full flex items-center justify-center p-4">
-            <CameraScanner
-              onScan={handleCameraScan}
-              onError={handleCameraError}
-              isActive={isOpen && scanState === 'scanning'}
-              className="w-full max-w-2xl"
-            />
-          </div>
-        ) : (
-          <div className="text-center space-y-8">
-            <Camera className="h-24 w-24 text-white/60 mx-auto" />
-            <div className="text-white/80">
-              <p className="text-lg mb-2">Position the barcode in the camera view</p>
-              <p className="text-sm">Or use manual entry below</p>
-            </div>
-            
-            {/* Demo Scan Button */}
-            <Button 
-              onClick={simulatedScan}
-              disabled={isProcessing}
-              className="bg-white/20 hover:bg-white/30 text-white"
-            >
-              {isProcessing ? "Scanning..." : "Simulate Scan (Demo)"}
-            </Button>
-          </div>
-        )}
-
-        {/* Toggle Button */}
-        <div className="absolute top-20 right-6">
-          <Button
-            onClick={() => setUseCamera(!useCamera)}
-            variant="outline"
-            size="sm"
-            className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-          >
-            {useCamera ? <Scan className="h-4 w-4 mr-2" /> : <Camera className="h-4 w-4 mr-2" />}
-            {useCamera ? 'Manual Entry' : 'Camera Scan'}
-          </Button>
+        <div className="w-full h-full flex items-center justify-center p-4">
+          <CameraScanner
+            onScan={handleCameraScan}
+            onError={handleCameraError}
+            isActive={isOpen && scanState === 'scanning'}
+            className="w-full max-w-2xl"
+          />
         </div>
       </div>
 
-      {/* Manual Input Footer */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/80 backdrop-blur-sm">
-        <Card className="p-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="manual-input" className="text-sm">
-              Manual Entry
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="manual-input"
-                placeholder="Enter barcode or order number..."
-                value={manualInput}
-                onChange={(e) => setManualInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
-                disabled={isProcessing}
-              />
-              <Button 
-                onClick={handleManualScan}
-                disabled={!manualInput.trim() || isProcessing}
-              >
-                {isProcessing ? "Scanning..." : "Scan"}
-              </Button>
-            </div>
-          </div>
-
-          {scanState === 'error' && errorMessage && (
+      {/* Error Display */}
+      {scanState === 'error' && errorMessage && (
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/80 backdrop-blur-sm">
+          <Card className="p-4">
             <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
               <AlertCircle className="h-4 w-4 text-destructive" />
               <p className="text-sm text-destructive">{errorMessage}</p>
             </div>
-          )}
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

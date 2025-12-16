@@ -56,7 +56,7 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
   };
 
   const startScanning = async () => {
-    if (!readerRef.current || !videoRef.current || !selectedDeviceId) {
+    if (!readerRef.current || !videoRef.current) {
       setError('Camera not available');
       return;
     }
@@ -65,8 +65,9 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
       setError(null);
       setIsScanning(true);
 
+      // Pass null to use default camera - this triggers permission prompt on iOS
       await readerRef.current.decodeFromVideoDevice(
-        selectedDeviceId,
+        selectedDeviceId ?? null,
         videoRef.current,
         (result, error) => {
           if (result) {
@@ -106,12 +107,12 @@ export function CameraScanner({ onScan, isActive, className = '' }: CameraScanne
 
   // Auto-start scanning when component becomes active
   useEffect(() => {
-    if (isActive && selectedDeviceId && !isScanning) {
+    if (isActive && !isScanning) {
       startScanning();
     } else if (!isActive && isScanning) {
       stopScanning();
     }
-  }, [isActive, selectedDeviceId, isScanning]);
+  }, [isActive]);
 
   if (!isActive) {
     return null;
