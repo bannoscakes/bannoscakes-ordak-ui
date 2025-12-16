@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import { X, AlertCircle, CheckCircle, CameraOff } from "lucide-react";
 import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
-import { completeFilling, completeCovering, completeDecorating, completePacking, startCovering, startDecorating } from "../lib/rpc-client";
+import { completeFilling, completeCovering, completeDecorating, completePacking, startCovering, startDecorating, getOrderForScan } from "../lib/rpc-client";
 
 interface QueueItem {
   id: string;
@@ -47,22 +47,36 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   if (!isOpen || !order) return null;
 
-  const handleScan = (scannedCode: string) => {
+  const handleScan = async (scannedCode: string) => {
     setIsProcessing(true);
-    
-    // Simulate scan processing
-    setTimeout(() => {
+    setErrorMessage("");
+
+    try {
+      // Use RPC to normalize barcode and lookup order
+      // Handles: #B18617, #F18617, bannos-18617, flourlane-18617, plain 18617
+      const scannedOrder = await getOrderForScan(scannedCode);
+
       setIsProcessing(false);
-      
-      // Check if scanned code matches the order
-      if (scannedCode === order.orderNumber || scannedCode === order.id) {
+
+      if (!scannedOrder) {
+        setScanState('error');
+        setErrorMessage("Order not found. Check the barcode and try again.");
+        return;
+      }
+
+      // Check if scanned order matches the expected order
+      if (scannedOrder.id === order.id) {
         setScanState('confirming');
         setErrorMessage("");
       } else {
         setScanState('error');
-        setErrorMessage("Invalid barcode. This doesn't match the expected order.");
+        setErrorMessage(`Wrong order scanned. Expected ${order.orderNumber}, got ${scannedOrder.id}.`);
       }
-    }, 1000);
+    } catch (error) {
+      setIsProcessing(false);
+      setScanState('error');
+      setErrorMessage(`Scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleCameraScan = (result: string) => {
