@@ -206,3 +206,20 @@ COMMENT ON FUNCTION public.get_order_for_scan(text) IS
 - flourlane-18617 (full order ID)
 - 18617 (plain number, searches both stores)
 Returns scanner_order_result with order details and all stage timestamps.';
+
+-- ============================================================================
+-- INDEXES FOR SHOPIFY_ORDER_NUMBER LOOKUPS
+-- ============================================================================
+-- The WHERE clause in get_order_for_scan uses shopify_order_number which needs
+-- an index to avoid full table scans.
+--
+-- Note: CONCURRENTLY cannot be used inside a transaction block, and Supabase
+-- migrations run in transactions. For production with large tables, consider
+-- running these indexes manually with CONCURRENTLY outside of migrations.
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS idx_orders_bannos_shopify_order_number
+  ON public.orders_bannos (shopify_order_number);
+
+CREATE INDEX IF NOT EXISTS idx_orders_flourlane_shopify_order_number
+  ON public.orders_flourlane (shopify_order_number);
