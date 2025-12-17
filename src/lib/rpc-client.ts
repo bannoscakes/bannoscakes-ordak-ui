@@ -329,6 +329,26 @@ export async function getAllActiveShifts(): Promise<ActiveShift[]> {
   return (data || []) as ActiveShift[];
 }
 
+export interface StaffWithShiftStatus {
+  user_id: string;
+  full_name: string;
+  role: string;
+  email: string | null;
+  phone: string | null;
+  store: string | null;
+  is_active: boolean;
+  shift_status: 'On Shift' | 'On Break' | 'Off Shift';
+  shift_store: string | null;
+  shift_start: string | null;
+}
+
+export async function getStaffWithShiftStatus(): Promise<StaffWithShiftStatus[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_with_shift_status');
+  if (error) throw error;
+  return (data || []) as StaffWithShiftStatus[];
+}
+
 export interface UpdateStaffMemberParams {
   userId: string;
   fullName?: string;
