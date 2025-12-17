@@ -56,6 +56,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [loading, setLoading] = useState(true);
   const hasInitiallyLoadedRef = useRef(false); // Use ref to avoid stale closure
   const previousStoreRef = useRef(store); // Track store to detect changes
+  const isMountedRef = useRef(true); // Starts true - component IS mounted when first rendering
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -100,15 +101,26 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     fetchStorageLocations();
   }, [store]);
 
+  // Track component unmount to prevent state updates after unmount
+  useEffect(() => {
+    // No need to set true - ref already starts as true
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Fetch queue data - wrapped in useCallback to prevent stale closures
   const fetchQueueData = useCallback(async () => {
+    // Don't start fetch if component is unmounted
+    if (!isMountedRef.current) return;
+
     try {
       // Reset loading state when store changes (synchronous check avoids race condition)
       if (previousStoreRef.current !== store) {
         hasInitiallyLoadedRef.current = false;
         previousStoreRef.current = store;
       }
-      
+
       // Only show full loading skeleton on initial load
       if (!hasInitiallyLoadedRef.current) {
         setLoading(true);
@@ -124,6 +136,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         storage: storageFilter,
         limit: 200,
       });
+
+      // Check if still mounted before updating state
+      if (!isMountedRef.current) return;
 
       // Group orders by stage
       const grouped: { [key: string]: QueueItem[] } = {
@@ -167,10 +182,15 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         }
       });
 
+      // Final mount check before setting state
+      if (!isMountedRef.current) return;
+
       setQueueData(grouped);
       setLastUpdated(new Date()); // Store actual fetch timestamp
       hasInitiallyLoadedRef.current = true; // Mark as loaded using ref (no re-render needed)
     } catch (error) {
+      // Don't update state if unmounted
+      if (!isMountedRef.current) return;
       console.error('Failed to fetch queue:', error);
       setError(error);
       showErrorWithRetryRef.current(error, fetchQueueData, {
@@ -178,8 +198,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         showRecoveryActions: true,
       });
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      // Always update loading state if mounted
+      if (isMountedRef.current) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [store, storageFilter]); // showErrorWithRetry accessed via ref to keep callback stable
 

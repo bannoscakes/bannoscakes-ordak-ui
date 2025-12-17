@@ -21,10 +21,29 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { safePushState } from "@/lib/safeNavigate";
 
+// Helper to compute initial activeView from URL (avoids intermediate render states)
+function getActiveViewFromUrl(): string {
+  if (typeof window === 'undefined') return 'dashboard';
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  const view = urlParams.get('view');
+  const path = window.location.pathname;
+
+  if (path === '/bannos/settings') return 'bannos-settings';
+  if (path === '/flourlane/settings') return 'flourlane-settings';
+  if (path === '/staff') return 'staff';
+  if (path === '/admin/time') return 'time-payroll';
+  if (page) return page;
+  if (view) return view;
+  return 'dashboard';
+}
+
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const { user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeView, setActiveView] = useState("dashboard");
+  // Initialize activeView from URL to avoid intermediate "dashboard" state
+  const [activeView, setActiveView] = useState(getActiveViewFromUrl);
 
   // Check if user is a supervisor (used to show back button on queue pages)
   const isSupervisor = user?.role === 'Supervisor';
