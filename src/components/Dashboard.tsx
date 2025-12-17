@@ -47,6 +47,12 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     };
   }, [urlParams]);
   
+  // Track current URL for change detection
+  // RoleBasedRouter (App.tsx) handles URL change detection and re-renders Dashboard
+  // when navigation happens. By including currentUrl in deps, this effect re-runs
+  // whenever Dashboard re-renders with a new URL.
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
   // Parse URL parameters and update view reactively
   useEffect(() => {
     const handleUrlChange = () => {
@@ -55,9 +61,9 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         const page = currentUrlParams.get('page');
         const view = currentUrlParams.get('view');
         const path = window.location.pathname;
-        
+
         setUrlParams(currentUrlParams);
-        
+
         // Handle settings routes
         if (path === '/bannos/settings') {
           setActiveView('bannos-settings');
@@ -82,33 +88,22 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         setActiveView('dashboard');
       }
     };
-    
-    // Parse URL on mount
+
+    // Parse URL (runs on mount and whenever URL changes)
     handleUrlChange();
-    
+
     // Listen for browser back/forward navigation
     window.addEventListener('popstate', handleUrlChange);
-    
-    // Hook into programmatic navigation (pushState/replaceState)
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-    
-    window.history.pushState = function(...args) {
-      originalPushState.apply(window.history, args);
-      handleUrlChange();
-    };
-    
-    window.history.replaceState = function(...args) {
-      originalReplaceState.apply(window.history, args);
-      handleUrlChange();
-    };
-    
+
+    // NOTE: We intentionally do NOT patch pushState/replaceState here.
+    // RoleBasedRouter (App.tsx) already patches these and handles URL change detection.
+    // Having multiple components patch the same global functions causes race conditions
+    // and unpredictable navigation behavior (the "reload required" bug).
+
     return () => {
       window.removeEventListener('popstate', handleUrlChange);
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
     };
-  }, []);
+  }, [currentUrl]); // Re-run when URL changes (triggered by RoleBasedRouter re-render)
 
   const renderContent = () => {
     try {
