@@ -209,7 +209,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           return (
             <ErrorBoundary>
               <SettingsPage store="bannos" onBack={() => {
-                window.history.pushState({}, '', '/');
+                safePushState('/');
                 setActiveView("dashboard");
               }} />
             </ErrorBoundary>
@@ -218,7 +218,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           return (
             <ErrorBoundary>
               <SettingsPage store="flourlane" onBack={() => {
-                window.history.pushState({}, '', '/');
+                safePushState('/');
                 setActiveView("dashboard");
               }} />
             </ErrorBoundary>
@@ -235,7 +235,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               <TimePayrollPage 
                 initialStaffFilter={staffFilter || undefined}
                 onBack={() => {
-                  window.history.pushState({}, '', '/');
+                  safePushState('/');
                   setActiveView("dashboard");
                 }}
               />
