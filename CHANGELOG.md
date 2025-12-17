@@ -1,3 +1,105 @@
+## v0.15.0-beta — QC Flow & Workspace Improvements (2025-12-17)
+
+### 🎯 Overview
+Complete overhaul of the QC (Quality Control) flow in Packing stage, with fixes for storage dropdown, Return to Decorating functionality, and workspace refresh behavior. Orders now properly unassign when returned to queue.
+
+### ✨ New Features
+
+#### Workspace Refresh on Stage Changes (PR #363, #372)
+- Staff Workspace now auto-refreshes when orders complete via scanner
+- Workspace refreshes after QC return to decorating
+- Uses `onOrderCompleted` callback pattern for consistent behavior
+
+#### Unassign Orders on Stage Completion (PR #367)
+- Orders automatically unassign (`assignee_id = NULL`) when completing a stage
+- Next stage picks up from unassigned queue
+- Same pattern applied to QC return flow
+
+### 🐛 Bug Fixes
+
+#### Storage Dropdown Not Saving (PR #369)
+- **Issue**: Storage location dropdown in Packing stage showed selection but never saved to database
+- **Root Cause**: Parameter mismatch - frontend sent `p_storage_location` but RPC expected `p_storage`
+- **Fix**: Corrected parameter name in `rpc-client.ts`
+
+#### QC Return to Decorating RPC (PR #370)
+- **Issue**: `qc_return_to_decorating` function used UUID type but orders use text IDs
+- **Fix**: Rewrote function to accept `text` order_id and `text` store parameters
+- **Fix**: Added proper table selection based on store (orders_bannos/orders_flourlane)
+
+#### Stage Events Constraint (PR #371)
+- **Issue**: `qc_return` event type not allowed by `stage_events_event_type_check` constraint
+- **Fix**: Added `qc_return` to allowed event types: `assign`, `complete`, `print`, `start`, `qc_return`
+
+#### Staff Workspace Showing Complete Orders (PR #373)
+- **Issue**: Complete stage orders appeared in Staff Workspace, cluttering the view
+- **Fix**: Added filter to exclude `stage = 'Complete'` from workspace query
+
+#### QC Return Not Clearing Assignee (PR #374)
+- **Issue**: When returning order to Decorating, it kept the original assignee
+- **Fix**: Added `assignee_id = NULL` to the UPDATE statement
+- Orders now go back to unassigned queue for any decorator to pick up
+
+#### TOCTOU Race Condition Fix (PR #370)
+- **Issue**: Check-then-update pattern allowed race conditions
+- **Fix**: Atomic UPDATE with `WHERE stage = 'Packing'` clause prevents concurrent modifications
+
+#### Migration Filename Sync (PR #376)
+- **Issue**: Local migration filenames didn't match database versions, causing Supabase Preview failures
+- **Fix**: Renamed migrations to match database timestamps
+
+### 📋 PRs in This Release
+- PR #363: `fix: workspace order refresh after scan completion`
+- PR #367: `feat: unassign orders on stage completion`
+- PR #369: `fix: correct setStorage RPC parameter names for Packing stage`
+- PR #370: `fix: update qc_return_to_decorating RPC for text-based order IDs`
+- PR #371: `fix: add qc_return to stage_events event_type constraint`
+- PR #372: `fix: refresh workspace after QC return to decorating`
+- PR #373: `fix: filter out Complete stage orders from Staff Workspace`
+- PR #374: `fix: clear assignee_id when returning order to Decorating`
+- PR #376: `fix: sync migration filenames with database versions`
+
+### 📁 Key Files Added/Modified
+
+#### Migrations
+- `20251216235304_051_set_storage_rpc.sql` - Storage RPC fix
+- `20251217003447_fix_qc_return_to_decorating.sql` - QC return function rewrite
+- `20251217033221_add_qc_return_event_type.sql` - Event type constraint update
+- `20251217033243_qc_return_clear_assignee.sql` - Clear assignee on QC return
+
+#### Frontend
+- `src/lib/rpc-client.ts` - Fixed `setStorage` parameter name
+- `src/components/StaffOrderDetailDrawer.tsx` - Added `onOrderCompleted` callback
+- `src/components/StaffWorkspacePage.tsx` - Filter Complete stage, pass callback
+- `src/components/SupervisorWorkspacePage.tsx` - Pass callback to drawer
+
+### 🔧 Technical Details
+
+#### QC Return Flow
+```
+1. User selects QC issue (e.g., "Wrong spelling")
+2. Clicks "Return to Decorating" button
+3. RPC qc_return_to_decorating():
+   - Validates order is in Packing stage
+   - Atomic UPDATE: stage='Decorating', assignee_id=NULL
+   - Clears decorating_complete_ts and packing_start_ts
+   - Logs to stage_events with event_type='qc_return'
+   - Logs to audit_log
+4. Frontend calls onOrderCompleted to refresh workspace
+5. Order appears in unassigned Decorating queue
+```
+
+#### Storage Dropdown Fix
+```typescript
+// Before (broken)
+p_storage_location: storageLocation
+
+// After (working)
+p_storage: storageLocation
+```
+
+---
+
 ## v0.14.0-beta — Analytics Dashboard & Inventory Matching Improvements (2025-12-14)
 
 ### 🎯 Overview
