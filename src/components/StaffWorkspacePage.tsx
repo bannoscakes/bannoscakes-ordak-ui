@@ -751,6 +751,7 @@ export function StaffWorkspacePage({
           setOrderDetailOpen(false);
           setScannerOpen(true);
         }}
+        onOrderCompleted={handleOrderCompleted}
       />
 
       {/* Scanner Overlay */}
