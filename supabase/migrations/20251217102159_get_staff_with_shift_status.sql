@@ -45,3 +45,6 @@ AS $$
     END,
     st.full_name;
 $$;
+
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION public.get_staff_with_shift_status() TO authenticated;
