@@ -36,7 +36,7 @@ BEGIN
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
-  -- Get current stage
+  -- Check order exists first (for better error message)
   EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
   INTO v_current_stage
   USING p_order_id;
@@ -45,26 +45,26 @@ BEGIN
     RAISE EXCEPTION 'Order not found: %', p_order_id;
   END IF;
 
-  -- Only allow return from Packing stage
-  IF v_current_stage != 'Packing' THEN
-    RAISE EXCEPTION 'Order must be in Packing stage to return to Decorating. Current stage: %', v_current_stage;
-  END IF;
-
-  -- Update order: set stage back to Decorating, clear timestamps
+  -- Atomic update: only update if still in Packing stage (prevents TOCTOU race)
+  -- The WHERE clause ensures we only update if stage hasn't changed concurrently
   EXECUTE format(
     'UPDATE public.%I SET
       stage = ''Decorating'',
       decorating_complete_ts = NULL,
       packing_start_ts = NULL,
       updated_at = now()
-    WHERE id = $1',
+    WHERE id = $1 AND stage = ''Packing''',
     v_table_name
   )
   USING p_order_id;
 
   GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
-  IF v_rows_affected != 1 THEN
-    RAISE EXCEPTION 'Expected to update exactly 1 row, but updated % rows for order %', v_rows_affected, p_order_id;
+  IF v_rows_affected = 0 THEN
+    -- Re-fetch current stage for accurate error message
+    EXECUTE format('SELECT stage FROM public.%I WHERE id = $1', v_table_name)
+    INTO v_current_stage
+    USING p_order_id;
+    RAISE EXCEPTION 'Order must be in Packing stage to return to Decorating. Current stage: %', v_current_stage;
   END IF;
 
   -- Log to stage_events
