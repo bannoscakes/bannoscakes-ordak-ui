@@ -479,9 +479,9 @@ export async function unassignStaff(orderId: string, store: Store) {
 export async function setStorage(orderId: string, store: Store, storageLocation: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_storage', {
-    p_order_id: orderId,
     p_store: store,
-    p_storage_location: storageLocation,
+    p_order_id: orderId,
+    p_storage: storageLocation,
   });
   if (error) throw error;
   return data;
