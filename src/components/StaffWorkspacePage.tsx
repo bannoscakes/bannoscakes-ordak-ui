@@ -162,9 +162,10 @@ export function StaffWorkspacePage({
           : getQueueCached({ store: "flourlane", assignee_id: user.id, limit: 100 })
       ]);
       
-      // Combine orders from both stores
-      const allOrders = [...bannosOrders, ...flourlaneOrders];
-      
+      // Combine orders from both stores, excluding Complete stage
+      const allOrders = [...bannosOrders, ...flourlaneOrders]
+        .filter((order: any) => order.stage !== 'Complete');
+
       // Map database orders to UI format
       const mappedOrders = allOrders.map((order: any) => ({
         id: order.id,
