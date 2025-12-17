@@ -686,6 +686,7 @@ export function SupervisorWorkspacePage({
           setOrderDetailOpen(false);
           setScannerOpen(true);
         }}
+        onOrderCompleted={handleOrderCompleted}
       />
 
       {/* Scanner Overlay */}

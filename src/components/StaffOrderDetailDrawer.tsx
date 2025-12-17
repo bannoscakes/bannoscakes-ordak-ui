@@ -49,6 +49,7 @@ interface StaffOrderDetailDrawerProps {
   onClose: () => void;
   order: QueueItem | null;
   onScanBarcode: () => void;
+  onOrderCompleted?: (orderId: string) => void;
 }
 
 // Extended order data - uses real values from database, no mock overrides
@@ -98,7 +99,7 @@ const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality
   }
 };
 
-export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }: StaffOrderDetailDrawerProps) {
+export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, onOrderCompleted }: StaffOrderDetailDrawerProps) {
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
@@ -262,6 +263,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode }
       await qcReturnToDecorating(extendedOrder.id, extendedOrder.store, notes);
       toast.success(`Order returned to Decorating stage: ${qcIssue}`);
       onClose();
+      // Notify parent to refresh workspace (order moved to different stage)
+      onOrderCompleted?.(extendedOrder.id);
     } catch (error) {
       console.error('Failed to return order to decorating:', error);
       toast.error('Failed to return order to decorating stage');
