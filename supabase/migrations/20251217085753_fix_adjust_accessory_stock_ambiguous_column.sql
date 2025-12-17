@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.adjust_accessory_stock(
   p_change integer,
   p_reason text DEFAULT NULL,
   p_reference text DEFAULT NULL,
-  p_created_by uuid DEFAULT NULL
+  p_created_by text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -45,7 +45,7 @@ BEGIN
   END IF;
 
   -- If p_created_by is provided, it must match the current user
-  IF p_created_by IS NOT NULL AND p_created_by <> v_current_user_id THEN
+  IF p_created_by IS NOT NULL AND p_created_by::uuid <> v_current_user_id THEN
     RAISE EXCEPTION 'Unauthorized: p_created_by must match authenticated user';
   END IF;
 
