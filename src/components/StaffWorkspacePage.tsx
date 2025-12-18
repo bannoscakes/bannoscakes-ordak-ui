@@ -180,7 +180,12 @@ export function StaffWorkspacePage({
         status: mapStageToStatus(order.stage),
         flavor: order.flavour || "Unknown",
         dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+        method: (() => {
+          const normalized = order.delivery_method?.trim().toLowerCase();
+          if (normalized === "delivery") return "Delivery";
+          if (normalized === "pickup") return "Pickup";
+          return "Unknown";
+        })(),
         storage: order.storage || "Default",
         store: order.store || "bannos",
         stage: order.stage || "Filling"
