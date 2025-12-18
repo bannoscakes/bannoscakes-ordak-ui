@@ -141,9 +141,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         } catch (err: unknown) {
           // Only fallback to getOrder if the RPC function doesn't exist yet
           // PostgreSQL error code 42883 = undefined_function
+          const errMessage = err instanceof Error ? err.message : '';
           const isRpcNotFound =
             (err && typeof err === 'object' && 'code' in err && err.code === '42883') ||
-            (err instanceof Error && err.message?.includes('does not exist'));
+            (errMessage.includes('function') && errMessage.includes('does not exist'));
 
           if (isRpcNotFound) {
             console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
@@ -183,8 +184,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             notes: foundOrder.notes || '',
             productImage: foundOrder.product_image || null,
             accessories: foundOrder.accessories || null,
-            // shipping_address only available from getOrderV2
-            shippingAddress: (foundOrder as any).shipping_address || null
+            // shipping_address only available from getOrderV2, use type guard
+            shippingAddress: 'shipping_address' in foundOrder ? (foundOrder.shipping_address as ShippingAddress | null) : null
           };
 
           setRealOrder(mappedOrder);
