@@ -150,7 +150,12 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           status: order.assignee_id ? 'In Production' : 'Pending',
           flavor: order.flavour || '',
           dueTime: order.due_date || '',
-          method: order.delivery_method === 'delivery' ? 'Delivery' : 'Pickup',
+          method: (() => {
+            const normalized = order.delivery_method?.trim().toLowerCase();
+            if (normalized === "delivery") return "Delivery";
+            if (normalized === "pickup") return "Pickup";
+            return "Unknown";
+          })(),
           storage: order.storage || '',
         };
 
