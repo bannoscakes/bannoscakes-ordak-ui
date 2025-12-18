@@ -102,18 +102,20 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     fetchStorageLocations();
   }, [store]);
 
-  // Fetch staff list for bulk assignment
+  // Fetch staff list for bulk assignment (filtered by current store)
   useEffect(() => {
     async function fetchStaffList() {
       try {
         const staff = await getStaffList(null, true);
-        setStaffList(staff.map(s => ({ id: s.user_id, name: s.full_name })));
+        // Filter to only include staff for current store or staff that work at both stores
+        const filteredStaff = staff.filter(s => s.store === 'both' || s.store === store);
+        setStaffList(filteredStaff.map(s => ({ id: s.user_id, name: s.full_name })));
       } catch (error) {
         console.error('Failed to fetch staff list:', error);
       }
     }
     fetchStaffList();
-  }, []);
+  }, [store]);
 
   // Fetch queue data - wrapped in useCallback to prevent stale closures
   const fetchQueueData = useCallback(async () => {
