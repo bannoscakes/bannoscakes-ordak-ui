@@ -33,7 +33,7 @@ const navigationItems = [
   { icon: Users, label: "Staff", id: "staff", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
   { icon: Package, label: "Inventory", id: "inventory" },
-  { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true },
+  { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true, devOnly: true },
   { icon: AlertTriangle, label: "Error Test", id: "error-test", isSettings: true, devOnly: true },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
   { icon: Settings, label: "Flourlane Settings", id: "flourlane-settings", isSettings: true },
