@@ -1,0 +1,49 @@
+{
+  "sandbox": {
+    "enabled": true
+  },
+  "permissions": {
+    "allow": [
+      "Read(src/**)",
+      "Read(supabase/**)",
+      "Read(public/**)",
+      "Read(*.json)",
+      "Read(*.md)",
+      "Read(*.ts)",
+      "Read(*.tsx)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(rm -rf /*)",
+      "Bash(npx supabase db push:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}

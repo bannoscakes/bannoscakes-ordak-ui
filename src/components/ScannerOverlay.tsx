@@ -47,6 +47,17 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   if (!isOpen || !order) return null;
 
+  // Determine if this scan will START or COMPLETE the stage
+  const isStartAction = (): boolean => {
+    if (order.stage === 'Covering' && !order.covering_start_ts) return true;
+    if (order.stage === 'Decorating' && !order.decorating_start_ts) return true;
+    return false;
+  };
+
+  const actionVerb = isStartAction() ? 'start' : 'complete';
+  const actionVerbPast = isStartAction() ? 'started' : 'completed';
+  const actionVerbCapitalized = isStartAction() ? 'Start' : 'Completion';
+
   const handleScan = async (scannedCode: string) => {
     setIsProcessing(true);
     setErrorMessage("");
@@ -184,9 +195,9 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         <Card className="w-full max-w-md p-6 space-y-6">
           <div className="text-center space-y-2">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-            <h3 className="text-lg font-medium">Confirm Completion</h3>
+            <h3 className="text-lg font-medium">Confirm {actionVerbCapitalized}</h3>
             <p className="text-sm text-muted-foreground">
-              Mark <span className="font-medium">{order.orderNumber}</span> <span className="font-medium">{order.stage}</span> stage complete?
+              {isStartAction() ? 'Start' : 'Mark'} <span className="font-medium">{order.orderNumber}</span> <span className="font-medium">{order.stage}</span> stage {actionVerb}?
             </p>
           </div>
           <div className="flex gap-2">
@@ -217,9 +228,9 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         <Card className="w-full max-w-md p-6 space-y-6">
           <div className="text-center space-y-2">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h3 className="text-lg font-medium">Stage Completed!</h3>
+            <h3 className="text-lg font-medium">Stage {isStartAction() ? 'Started' : 'Completed'}!</h3>
             <p className="text-sm text-muted-foreground">
-              {order.orderNumber} - {order.stage} stage has been marked complete
+              {order.orderNumber} - {order.stage} stage has been {actionVerbPast}
             </p>
           </div>
         </Card>
@@ -234,7 +245,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-medium text-white">
-              Scan order to complete {order.stage}
+              Scan order to {actionVerb} {order.stage}
             </h2>
             <p className="text-sm text-white/80">
               Order: {order.orderNumber}
