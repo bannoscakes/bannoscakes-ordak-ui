@@ -9,7 +9,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { setStorage, getStorageLocations, qcReturnToDecorating, getOrderV2, type ShippingAddress } from "../lib/rpc-client";
+import { setStorage, getStorageLocations, qcReturnToDecorating, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
@@ -134,8 +134,15 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
       try {
         setLoading(true);
 
-        // Fetch the specific order using getOrderV2 RPC (includes shipping_address)
-        const foundOrder = await getOrderV2(order.id, order.store);
+        // Try getOrderV2 first (includes shipping_address), fallback to getOrder
+        let foundOrder;
+        try {
+          foundOrder = await getOrderV2(order.id, order.store);
+        } catch {
+          // getOrderV2 might not exist yet, fallback to getOrder
+          console.log('getOrderV2 not available, using getOrder');
+          foundOrder = await getOrder(order.id, order.store);
+        }
 
         // Don't update state if effect was cancelled (order changed during fetch)
         if (cancelled) return;
@@ -165,7 +172,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             notes: foundOrder.notes || '',
             productImage: foundOrder.product_image || null,
             accessories: foundOrder.accessories || null,
-            shippingAddress: foundOrder.shipping_address || null
+            // shipping_address only available from getOrderV2
+            shippingAddress: (foundOrder as any).shipping_address || null
           };
 
           setRealOrder(mappedOrder);
