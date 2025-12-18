@@ -80,6 +80,7 @@ interface PackingSlipData {
 
 /**
  * Format shipping address for display (with HTML escaping)
+ * Matches Shopify packing slip format
  */
 function formatAddress(address: ShippingAddress | null | undefined): string {
   if (!address) return '';
@@ -91,15 +92,15 @@ function formatAddress(address: ShippingAddress | null | undefined): string {
   if (address.address1) parts.push(escapeHtml(address.address1));
   if (address.address2) parts.push(escapeHtml(address.address2));
 
+  // Format city line with spaces like Shopify: "Gledswood Hills NSW 2557"
   const cityLine = [
     escapeHtml(address.city),
     escapeHtml(address.province_code || address.province),
     escapeHtml(address.zip)
-  ].filter(Boolean).join(', ');
+  ].filter(Boolean).join(' ');
   if (cityLine) parts.push(cityLine);
 
   if (address.country) parts.push(escapeHtml(address.country));
-  if (address.phone) parts.push(`Phone: ${escapeHtml(address.phone)}`);
 
   return parts.join('<br/>');
 }
@@ -120,10 +121,10 @@ function getShopInfo(store: 'bannos' | 'flourlane') {
   } else {
     return {
       name: "Flour Lane",
-      address1: "Shop 8/71 Rawson Street",
-      city: "Epping",
+      address1: "177 Parramatta Rd",
+      city: "Annandale",
       province: "NSW",
-      zip: "2121",
+      zip: "2038",
       country: "Australia"
     };
   }
@@ -239,6 +240,10 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
       ${isDelivery && data.shippingAddress ? `
       <div class="address-column">
         <strong>Ship to</strong>
+        ${formatAddress(data.shippingAddress)}
+      </div>
+      <div class="address-column">
+        <strong>Bill to</strong>
         ${formatAddress(data.shippingAddress)}
       </div>
       ` : ''}
