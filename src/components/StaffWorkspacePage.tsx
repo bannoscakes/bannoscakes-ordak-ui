@@ -68,48 +68,6 @@ interface StaffWorkspacePageProps {
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
 
-
-// Convert legacy size to realistic display
-const getRealisticSize = (
-  originalSize: string,
-  product: string,
-  store: string,
-) => {
-  if (product.toLowerCase().includes("cupcake")) {
-    return originalSize === "S"
-      ? "Mini"
-      : originalSize === "M"
-        ? "Standard"
-        : "Jumbo";
-  } else if (product.toLowerCase().includes("wedding")) {
-    return originalSize === "S"
-      ? "6-inch Round"
-      : originalSize === "M"
-        ? "8-inch Round"
-        : "10-inch Round";
-  } else if (
-    product.toLowerCase().includes("birthday") ||
-    product.toLowerCase().includes("cake")
-  ) {
-    return originalSize === "S"
-      ? "Small"
-      : originalSize === "M"
-        ? "Medium Tall"
-        : "8-inch Round";
-  } else if (store === "flourlane") {
-    return originalSize === "S"
-      ? "Small Loaf"
-      : originalSize === "M"
-        ? "Standard"
-        : "Large Batch";
-  }
-  return originalSize === "S"
-    ? "Small"
-    : originalSize === "M"
-      ? "Medium"
-      : "Large";
-};
-
 export function StaffWorkspacePage({
   onSignOut,
 }: StaffWorkspacePageProps) {
