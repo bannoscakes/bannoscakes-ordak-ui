@@ -90,6 +90,59 @@ export interface ScannerOrderResult {
 }
 
 // =============================================
+// SHIPPING ADDRESS TYPE (for packing slip)
+// =============================================
+
+export interface ShippingAddress {
+  first_name: string | null;
+  last_name: string | null;
+  name: string | null;
+  company: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  province: string | null;
+  province_code: string | null;
+  country: string | null;
+  country_code: string | null;
+  zip: string | null;
+  phone: string | null;
+}
+
+// =============================================
+// ORDER V2 TYPE (extended with shipping_address)
+// =============================================
+
+export interface OrderV2Result {
+  id: string;
+  shopify_order_id: number | null;
+  shopify_order_number: number | null;
+  human_id: string | null;
+  customer_name: string | null;
+  product_title: string | null;
+  flavour: string | null;
+  size: string | null;
+  item_qty: number | null;
+  notes: string | null;
+  cake_writing: string | null;
+  product_image: string | null;
+  delivery_method: string | null;
+  due_date: string | null;
+  stage: string;
+  priority: string;
+  storage: string | null;
+  assignee_id: string | null;
+  assignee_name: string | null;
+  store: 'bannos' | 'flourlane';
+  currency: string | null;
+  total_amount: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  shipping_address: ShippingAddress | null;
+  accessories: Array<{ title: string; quantity: number; price: string; variant_title?: string | null }> | null;
+}
+
+// =============================================
 // ERROR HANDLING WRAPPER
 // =============================================
 
@@ -464,6 +517,20 @@ export async function getUnassignedCounts(store?: Store | null) {
 export async function getOrder(orderId: string, store: Store) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_order', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+/**
+ * Get order with extended data including shipping_address and accessories
+ * Used for packing slip and order detail drawer
+ */
+export async function getOrderV2(orderId: string, store: Store): Promise<OrderV2Result | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_order_v2', {
     p_order_id: orderId,
     p_store: store,
   });
