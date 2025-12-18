@@ -20,7 +20,7 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 // import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getStorageLocations } from "../lib/rpc-client";
+import { getQueue, getStorageLocations, getStaffList, assignStaff } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
 
 // Auto-refresh interval for queue data (60 seconds - not too frequent to avoid visual distraction)
@@ -70,6 +70,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
   const [storageLocations, setStorageLocations] = useState<string[]>([]);
+  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const { showErrorWithRetry } = useErrorNotifications();
@@ -90,7 +92,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         // Fallback to default locations if fetch fails
         setStorageLocations([
           "Store Fridge",
-          "Store Freezer", 
+          "Store Freezer",
           "Kitchen Coolroom",
           "Kitchen Freezer",
           "Basement Coolroom"
@@ -99,6 +101,19 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     }
     fetchStorageLocations();
   }, [store]);
+
+  // Fetch staff list for bulk assignment
+  useEffect(() => {
+    async function fetchStaffList() {
+      try {
+        const staff = await getStaffList(null, true);
+        setStaffList(staff.map(s => ({ id: s.user_id, name: s.full_name })));
+      } catch (error) {
+        console.error('Failed to fetch staff list:', error);
+      }
+    }
+    fetchStaffList();
+  }, []);
 
   // Fetch queue data - wrapped in useCallback to prevent stale closures
   const fetchQueueData = useCallback(async () => {
@@ -152,9 +167,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           dueTime: order.due_date || '',
           method: (() => {
             const normalized = order.delivery_method?.trim().toLowerCase();
-            if (normalized === "delivery") return "Delivery";
-            if (normalized === "pickup") return "Pickup";
-            return "Unknown";
+            if (normalized === "delivery") return "Delivery" as const;
+            if (normalized === "pickup") return "Pickup" as const;
+            return undefined;
           })(),
           storage: order.storage || '',
         };
@@ -268,12 +283,36 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     }
   };
 
-  const handleAssignToStaff = () => {
+  const handleAssignToStaff = async () => {
     if (selectedItems.length > 0 && selectedStaff) {
-      // TODO: Implement staff assignment API call
-      // assignOrdersToStaff(selectedItems, selectedStaff);
-      setSelectedItems([]);
-      setSelectedStaff(null);
+      setIsAssigning(true);
+      try {
+        // Assign each selected order to the staff member
+        const results = await Promise.allSettled(
+          selectedItems.map(orderId => assignStaff(orderId, store, selectedStaff))
+        );
+
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failCount = results.filter(r => r.status === 'rejected').length;
+
+        if (failCount === 0) {
+          toast.success(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''} successfully`);
+        } else if (successCount > 0) {
+          toast.warning(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''}, ${failCount} failed`);
+        } else {
+          toast.error('Failed to assign orders');
+        }
+
+        // Refresh queue data
+        await fetchQueueData();
+        setSelectedItems([]);
+        setSelectedStaff(null);
+      } catch (error) {
+        console.error('Failed to assign staff:', error);
+        toast.error('Failed to assign orders');
+      } finally {
+        setIsAssigning(false);
+      }
     }
   };
 
@@ -402,15 +441,17 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               </span>
               <Select value={selectedStaff || "none"} onValueChange={(value) => setSelectedStaff(value === "none" ? null : value)}>
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Assign to staff..." />
+                  <SelectValue placeholder="Select staff member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* TODO: Replace with real staff data */}
                   <SelectItem value="none">Select staff member</SelectItem>
+                  {staffList.map(staff => (
+                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleAssignToStaff} disabled={!selectedStaff}>
-                Assign
+              <Button onClick={handleAssignToStaff} disabled={!selectedStaff || isAssigning}>
+                {isAssigning ? 'Assigning...' : 'Assign'}
               </Button>
             </div>
           )}
