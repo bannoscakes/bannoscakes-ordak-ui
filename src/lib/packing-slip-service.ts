@@ -19,6 +19,41 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * Format date as DD/MM/YY
+ */
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}/${month}/${year}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
+ * Format order number with store prefix (#F or #B)
+ */
+function formatOrderNumber(orderNumber: string, store: 'bannos' | 'flourlane'): string {
+  // If already has a prefix like #F or #B, return as is
+  if (orderNumber.startsWith('#F') || orderNumber.startsWith('#B')) {
+    return orderNumber;
+  }
+  // If starts with F or B (without #), add #
+  if (orderNumber.startsWith('F') || orderNumber.startsWith('B')) {
+    return `#${orderNumber}`;
+  }
+  // Add store prefix
+  const prefix = store === 'bannos' ? '#B' : '#F';
+  // Remove any existing #
+  const cleanNumber = orderNumber.replace(/^#/, '');
+  return `${prefix}${cleanNumber}`;
+}
+
 interface AccessoryItem {
   title: string;
   quantity: number;
@@ -130,9 +165,10 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
     propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Writing On Cake:</strong> ${escapeHtml(data.cakeWriting)}</small>`);
   }
 
-  // Escape user-provided content
-  const safeOrderNumber = escapeHtml(data.orderNumber);
-  const safeDueDate = escapeHtml(data.dueDate);
+  // Format and escape user-provided content
+  const formattedOrderNumber = formatOrderNumber(data.orderNumber, data.store);
+  const safeOrderNumber = escapeHtml(formattedOrderNumber);
+  const safeDueDate = escapeHtml(formatDate(data.dueDate));
   const safeProduct = escapeHtml(data.product);
   const safeNotes = escapeHtml(data.notes);
 
