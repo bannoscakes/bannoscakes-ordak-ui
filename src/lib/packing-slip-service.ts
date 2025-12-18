@@ -6,6 +6,19 @@
 
 import type { ShippingAddress } from './rpc-client';
 
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface AccessoryItem {
   title: string;
   quantity: number;
@@ -31,27 +44,27 @@ interface PackingSlipData {
 }
 
 /**
- * Format shipping address for display
+ * Format shipping address for display (with HTML escaping)
  */
 function formatAddress(address: ShippingAddress | null | undefined): string {
   if (!address) return '';
 
   const parts: string[] = [];
 
-  if (address.name) parts.push(address.name);
-  if (address.company) parts.push(address.company);
-  if (address.address1) parts.push(address.address1);
-  if (address.address2) parts.push(address.address2);
+  if (address.name) parts.push(escapeHtml(address.name));
+  if (address.company) parts.push(escapeHtml(address.company));
+  if (address.address1) parts.push(escapeHtml(address.address1));
+  if (address.address2) parts.push(escapeHtml(address.address2));
 
   const cityLine = [
-    address.city,
-    address.province_code || address.province,
-    address.zip
+    escapeHtml(address.city),
+    escapeHtml(address.province_code || address.province),
+    escapeHtml(address.zip)
   ].filter(Boolean).join(', ');
   if (cityLine) parts.push(cityLine);
 
-  if (address.country) parts.push(address.country);
-  if (address.phone) parts.push(`Phone: ${address.phone}`);
+  if (address.country) parts.push(escapeHtml(address.country));
+  if (address.phone) parts.push(`Phone: ${escapeHtml(address.phone)}`);
 
   return parts.join('<br/>');
 }
@@ -89,7 +102,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
   const isDelivery = data.deliveryMethod === 'Delivery';
   const dateLabel = isDelivery ? 'Delivery Date' : 'Pickup Date';
 
-  // Format accessories list
+  // Format accessories list (with HTML escaping)
   const accessoriesHTML = data.accessories && data.accessories.length > 0
     ? data.accessories.map(acc => `
         <tr>
@@ -98,31 +111,37 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
           </td>
           <td style="text-align: left; font-size: 1.2em; font-weight: bold;">${acc.quantity}</td>
           <td style="text-align: left;">
-            <strong style="font-size: 1.1em;">${acc.title}</strong>
-            ${acc.variant_title ? `<br/><small>${acc.variant_title}</small>` : ''}
+            <strong style="font-size: 1.1em;">${escapeHtml(acc.title)}</strong>
+            ${acc.variant_title ? `<br/><small>${escapeHtml(acc.variant_title)}</small>` : ''}
           </td>
         </tr>
       `).join('')
     : '';
 
-  // Build properties list (cake writing, size, flavor)
+  // Build properties list (cake writing, size, flavor) - with HTML escaping
   const propertiesHTML: string[] = [];
   if (data.size && data.size !== 'Unknown') {
-    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Size:</strong> ${data.size}</small>`);
+    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Size:</strong> ${escapeHtml(data.size)}</small>`);
   }
   if (data.flavor) {
-    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Flavour:</strong> ${data.flavor}</small>`);
+    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Flavour:</strong> ${escapeHtml(data.flavor)}</small>`);
   }
   if (data.cakeWriting) {
-    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Writing On Cake:</strong> ${data.cakeWriting}</small>`);
+    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Writing On Cake:</strong> ${escapeHtml(data.cakeWriting)}</small>`);
   }
+
+  // Escape user-provided content
+  const safeOrderNumber = escapeHtml(data.orderNumber);
+  const safeDueDate = escapeHtml(data.dueDate);
+  const safeProduct = escapeHtml(data.product);
+  const safeNotes = escapeHtml(data.notes);
 
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Packing Slip - ${data.orderNumber}</title>
+  <title>Packing Slip - ${safeOrderNumber}</title>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
   <style type="text/css">
     body { font-family: sans-serif; margin: 0; padding: 0; font-size: 14px; }
@@ -163,10 +182,10 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
       <h1>Packing Slip</h1>
       <div class="order-info">
         <p class="large-order-number">
-          Order ${data.orderNumber}
+          Order ${safeOrderNumber}
         </p>
         <p class="delivery-date-highlight">
-          ${dateLabel}: ${data.dueDate}
+          ${dateLabel}: ${safeDueDate}
         </p>
       </div>
     </div>
@@ -204,13 +223,13 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
         <tr>
           <td class="product-image-cell">
             ${data.productImage
-              ? `<img src="${data.productImage}" alt="${data.product}" class="product-image" />`
+              ? `<img src="${escapeHtml(data.productImage)}" alt="${safeProduct}" class="product-image" />`
               : '<span style="font-size: 10px; color: #777;">No image</span>'
             }
           </td>
           <td style="text-align: left; font-size: 1.2em; font-weight: bold;">${data.quantity}</td>
           <td style="text-align: left;">
-            <strong style="font-size: 1.1em;">${data.product}</strong><br/>
+            <strong style="font-size: 1.1em;">${safeProduct}</strong><br/>
             ${propertiesHTML.join('<br/>')}
           </td>
         </tr>
@@ -218,16 +237,16 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
       </tbody>
     </table>
 
-    ${data.notes ? `
+    ${safeNotes ? `
     <div class="notes-section">
-      <strong>Notes:</strong> ${data.notes}
+      <strong>Notes:</strong> ${safeNotes}
     </div>
     ` : ''}
 
     <!-- Big Barcode -->
     <div class="barcode-bottom-left">
-      <div class="barcode big-barcode">*${data.orderNumber.replace('#', '')}*</div>
-      <div class="barcode-label big-label">Order #: ${data.orderNumber}</div>
+      <div class="barcode big-barcode">*${safeOrderNumber.replace('#', '')}*</div>
+      <div class="barcode-label big-label">Order #: ${safeOrderNumber}</div>
     </div>
   </div>
 
