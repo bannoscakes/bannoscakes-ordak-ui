@@ -98,8 +98,16 @@ function formatAddress(address: ShippingAddress | null | undefined): string {
   if (cityLine) parts.push(cityLine);
 
   if (address.country) parts.push(escapeHtml(address.country));
+  if (address.phone) parts.push(escapeHtml(address.phone));
 
   return parts.join('<br/>');
+}
+
+/**
+ * Sanitize string for Code 39 barcode (A-Z 0-9 - . $ / + % SPACE only)
+ */
+function sanitizeForBarcode(str: string): string {
+  return str.toUpperCase().replace(/[^A-Z0-9\-.\$\/+% ]/g, '');
 }
 
 /**
@@ -169,10 +177,13 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
   const safeDueDate = escapeHtml(formatDate(data.dueDate));
   const safeProduct = escapeHtml(data.product);
   const safeNotes = escapeHtml(data.notes);
+  const safeCustomerName = escapeHtml(data.customerName);
+  // Sanitize for Code 39 barcode (uppercase, valid chars only)
+  const barcodeValue = sanitizeForBarcode(formattedOrderNumber.replace('#', ''));
 
   return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Packing Slip - ${safeOrderNumber}</title>
@@ -185,6 +196,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
     h2 { font-size: 1.5em; margin: 1.5em 0 0.5em; }
     .order-info { text-align: right; margin-left: auto; }
     .large-order-number { font-size: 2.2em; font-weight: bold; margin-bottom: 5px; }
+    .customer-name { font-size: 1.4em; font-weight: bold; color: #333; margin: 5px 0; }
     .delivery-date-highlight { font-size: 1.6em; font-weight: bold; color: red; margin-top: 10px; }
     .address-section { display: flex; justify-content: space-between; margin-top: 1.5em; }
     .address-column { flex: 1; padding-right: 1em; line-height: 1.5; }
@@ -199,7 +211,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
     .notes-section { margin-top: 1.5em; line-height: 1.5; padding: 10px; background-color: #fff8dc; border: 1px solid #ddd; border-radius: 4px; }
     .notes-section strong { display: block; margin-bottom: 0.3em; font-size: 1.1em; }
     .barcode-bottom-left { text-align: left; margin: 2em 0 0 0; }
-    .barcode { font-family: 'Libre Barcode 39', cursive; letter-spacing: 2px; margin-top: 20px; }
+    .barcode { font-family: 'Libre Barcode 39', monospace; letter-spacing: 2px; margin-top: 20px; }
     .barcode-label { font-weight: bold; margin-top: 8px; }
     .big-barcode { font-size: 64px; }
     .big-label { font-size: 28px; }
@@ -218,6 +230,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
         <p class="large-order-number">
           Order ${safeOrderNumber}
         </p>
+        <p class="customer-name">${safeCustomerName}</p>
         <p class="delivery-date-highlight">
           ${dateLabel}: ${safeDueDate}
         </p>
@@ -283,7 +296,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
 
     <!-- Big Barcode -->
     <div class="barcode-bottom-left">
-      <div class="barcode big-barcode">*${safeOrderNumber.replace('#', '')}*</div>
+      <div class="barcode big-barcode">*${barcodeValue}*</div>
       <div class="barcode-label big-label">Order #: ${safeOrderNumber}</div>
     </div>
   </div>
