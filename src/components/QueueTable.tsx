@@ -112,6 +112,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         setStaffList(filteredStaff.map(s => ({ id: s.user_id, name: s.full_name })));
       } catch (error) {
         console.error('Failed to fetch staff list:', error);
+        toast.error('Failed to load staff list');
       }
     }
     fetchStaffList();
@@ -295,7 +296,13 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         );
 
         const successCount = results.filter(r => r.status === 'fulfilled').length;
-        const failCount = results.filter(r => r.status === 'rejected').length;
+        const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+        const failCount = failures.length;
+
+        // Log failure reasons for debugging
+        if (failures.length > 0) {
+          console.error('Assignment failures:', failures.map(f => f.reason));
+        }
 
         if (failCount === 0) {
           toast.success(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''} successfully`);
