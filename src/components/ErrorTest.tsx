@@ -89,7 +89,7 @@ export const ErrorTest: React.FC = () => {
     throw new Error('Simulated component crash for error boundary testing');
   };
 
-  if (process.env.NODE_ENV !== 'development') {
+  if (import.meta.env.PROD) {
     return null; // Don't render in production
   }
 

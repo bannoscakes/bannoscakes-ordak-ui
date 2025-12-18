@@ -68,8 +68,8 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
         {navigationItems.filter(item => {
           // Filter by admin role
           if (item.adminOnly && !isAdmin) return false;
-          // Filter dev-only items in production
-          if (item.devOnly && process.env.NODE_ENV === 'production') return false;
+          // Filter dev-only items in production (use Vite's env variable)
+          if (item.devOnly && import.meta.env.PROD) return false;
           return true;
         }).map((item, index) => {
           const isActive = activeView === item.id;
