@@ -302,9 +302,18 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
   </div>
 
   <script>
-    // Auto-print when loaded
+    // Wait for fonts to load before printing
     window.onload = function() {
-      window.print();
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() {
+          window.print();
+        });
+      } else {
+        // Fallback for older browsers - wait a bit for font
+        setTimeout(function() {
+          window.print();
+        }, 500);
+      }
     };
   </script>
 </body>
