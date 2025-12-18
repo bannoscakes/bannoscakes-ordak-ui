@@ -138,10 +138,21 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         let foundOrder;
         try {
           foundOrder = await getOrderV2(order.id, order.store);
-        } catch {
-          // getOrderV2 might not exist yet, fallback to getOrder
-          console.log('getOrderV2 not available, using getOrder');
-          foundOrder = await getOrder(order.id, order.store);
+        } catch (err: unknown) {
+          // Only fallback to getOrder if the RPC function doesn't exist yet
+          // PostgreSQL error code 42883 = undefined_function
+          const isRpcNotFound =
+            (err && typeof err === 'object' && 'code' in err && err.code === '42883') ||
+            (err instanceof Error && err.message?.includes('does not exist'));
+
+          if (isRpcNotFound) {
+            console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
+            foundOrder = await getOrder(order.id, order.store);
+          } else {
+            // Rethrow other errors (network, permission, data issues)
+            console.error('getOrderV2 failed with unexpected error', err);
+            throw err;
+          }
         }
 
         // Don't update state if effect was cancelled (order changed during fetch)
