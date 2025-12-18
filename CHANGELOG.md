@@ -1,3 +1,86 @@
+## v0.16.0-beta — Packing Slip Printing & Real-Time Staff Status (2025-12-18)
+
+### 🎯 Overview
+Major improvements to the Packing stage with local packing slip printing and proper Shopify integration. Staff Overview now shows real-time shift status from the database. Multiple bug fixes for workspace display and production environment.
+
+### ✨ New Features
+
+#### Print Packing Slip (PR #383)
+- **Local HTML printing**: Generates packing slip using HTML template (no Shopify redirect required)
+- **Full order details**: Shows customer info, delivery date, products, accessories, shipping address, notes
+- **Scannable barcode**: Renders Code 39 barcode for order identification
+- **New RPC**: `get_order_v2` - Extended order data including `shipping_address` and `accessories`
+
+#### View in Shopify Button Fix (PR #383)
+- **Issue**: Button used incorrect URL format
+- **Fix**: Now generates correct Shopify admin URL with proper store slug
+
+#### Real-Time Staff Shift Status (PR #382)
+- **Issue**: Staff Overview showed placeholder/estimated shift counts
+- **Fix**: Queries actual `shifts` and `breaks` tables for real status
+- **On Shift**: Active shift with no active break
+- **On Break**: Active shift AND active break
+- **Off Shift**: No active shift
+- **New RPC**: `get_staff_with_shift_status`
+
+#### Hide Staff/Supervisor Workspace from Sidebar (PR #381)
+- Removed workspace links from dashboard sidebar (admin users)
+- Staff/Supervisor users still access via their direct login
+- Pages and components remain fully functional
+
+### 🐛 Bug Fixes
+
+#### Barcode Font Loading (PR #384)
+- **Issue**: Barcode showed as plain text `*F18619*` instead of scannable stripes
+- **Root Cause**: Print triggered before Google Font (Libre Barcode 39) finished loading
+- **Fix**: Wait for `document.fonts.ready` before triggering print, with fallback timeout
+
+#### Workspace Size & Delivery Display (PR #385)
+- **Issue**: Size showed "Unknown" and Delivery method was blank
+- **Root Cause**: `getRealisticSize()` expected `S/M/L` but database has `"Large"`, `"Medium"`, etc.
+- **Root Cause**: Case-sensitive comparison `=== "delivery"` failed on `"Delivery"`
+- **Fix**: Display database value directly, use case-insensitive comparison
+
+#### Ambiguous Column in adjust_accessory_stock (PR #380)
+- **Issue**: "column reference 'current_stock' is ambiguous" error when adjusting accessory stock
+- **Fix**: Qualified column as `accessories.current_stock` in UPDATE SET clause
+
+#### Hide Dev Pages in Production (PR #386, #387)
+- **Issue**: Error Test and Barcode Test pages visible in production
+- **Root Cause**: `process.env.NODE_ENV` doesn't work in Vite
+- **Fix**: Use `import.meta.env.PROD` and `devOnly: true` flag
+
+### 📋 PRs in This Release
+- PR #380: `fix: resolve ambiguous column reference in adjust_accessory_stock`
+- PR #381: `feat: hide Staff/Supervisor Workspace from dashboard sidebar`
+- PR #382: `feat: wire Staff Overview to real shift data`
+- PR #383: `feat: fix packing stage View in Shopify and Print Packing Slip buttons`
+- PR #384: `fix: wait for barcode font to load before printing`
+- PR #385: `fix: correct Size and Delivery display in workspace cards`
+- PR #386: `fix: hide Error Test from sidebar in production`
+- PR #387: `fix: hide Barcode Test from sidebar in production`
+
+### 📁 Key Files Added/Modified
+
+#### New Files
+- `src/lib/packing-slip-service.ts` - Local packing slip HTML generation
+
+#### Migrations
+- `20251217085753_fix_adjust_accessory_stock_ambiguous_column.sql`
+- `20251217102159_get_staff_with_shift_status.sql`
+- `20251218100000_get_order_v2_with_shipping.sql`
+
+#### Frontend
+- `src/components/StaffOrderDetailDrawer.tsx` - Shopify URL fix, packing slip printing
+- `src/components/StaffOverview.tsx` - Real shift status display
+- `src/components/StaffWorkspacePage.tsx` - Size/delivery display fixes
+- `src/components/SupervisorWorkspacePage.tsx` - Size/delivery display fixes
+- `src/components/Dashboard.tsx` - Removed workspace nav items
+- `src/components/Sidebar.tsx` - Dev-only page filtering
+- `src/lib/rpc-client.ts` - New types and RPC functions
+
+---
+
 ## v0.15.0-beta — QC Flow & Workspace Improvements (2025-12-17)
 
 ### 🎯 Overview
