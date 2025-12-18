@@ -180,7 +180,7 @@ export function StaffWorkspacePage({
         status: mapStageToStatus(order.stage),
         flavor: order.flavour || "Unknown",
         dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
+        method: order.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
         storage: order.storage || "Default",
         store: order.store || "bannos",
         stage: order.stage || "Filling"
@@ -666,12 +666,7 @@ export function StaffWorkspacePage({
                       {/* Size */}
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Size:{" "}
-                          {getRealisticSize(
-                            order.size,
-                            order.product,
-                            order.store,
-                          )}
+                          Size: {order.size || "Unknown"}
                         </p>
                       </div>
 
