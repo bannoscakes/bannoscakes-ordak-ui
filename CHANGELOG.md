@@ -1,3 +1,78 @@
+## v0.17.0-beta — Touch Targets, Scanner UX & Bug Fixes (2025-12-19)
+
+### 🎯 Overview
+Focus on mobile usability and production floor UX. Touch targets now meet WCAG 2.1 accessibility standards (44px minimum). Scanner modal now shows correct action text. Bulk assign is fully functional. Fixed cache bug causing stale data after QC returns.
+
+### ✨ New Features
+
+#### Bulk Assign Staff Dropdown (PR #397)
+- **Issue**: Bulk assign dropdown in QueueTable was not wired up
+- **Fix**: Connected dropdown to staff list and assignment API
+- **Staff filtering**: Only shows staff from current store (or "both" stores)
+- **Error handling**: Toast notifications for success/failure
+
+#### Scanner Start vs Complete Text (PR #399)
+- **Issue**: Scan modal always showed "Confirm Completion" even for stages not yet started
+- **Fix**: Shows "Confirm Start" for first scan, "Confirm Completion" for second scan
+- **Logic**: Uses `covering_start_ts` and `decorating_start_ts` to determine state
+- **Updated**: StaffWorkspacePage now passes timestamp fields to scanner
+
+### 🐛 Bug Fixes
+
+#### Touch Target Sizes - WCAG Compliance (PR #401, #403)
+- **Issue**: Buttons, inputs, and tabs too small for production floor use (messy hands)
+- **Standard**: WCAG 2.1 requires minimum 44x44px touch targets
+- **Fixes**:
+  - Default button height: 36px → 44px
+  - Large button height: 40px → 48px
+  - Icon button size: 36px → 44px
+  - Tab list height: 36px → 48px
+  - Input height: 36px → 44px
+  - Overflow menu button: 32px → 44px with larger icon
+  - Header search button aligned with input
+  - Scanner overlay button gaps increased
+  - Modal spinners: 16px → 24px for better visibility
+
+#### QC Return Cache Bug (PR #404)
+- **Issue**: Order still showed in Packing workspace after being sent back to Decorating
+- **Root Cause**: `qcReturnToDecorating` didn't invalidate queue cache
+- **Result**: Auto-refresh (every 30s) returned stale cached data
+- **Fix**: Added `invalidateQueueCache()` call after QC return RPC
+
+### 📋 PRs in This Release
+- PR #397: `fix: wire up bulk assign staff dropdown in QueueTable`
+- PR #399: `fix: show 'Confirm Start' vs 'Confirm Completion' in scan modal`
+- PR #401: `fix: increase touch target sizes for mobile compliance`
+- PR #403: `fix: improve touch targets and visibility for production floor UI`
+- PR #404: `fix: invalidate queue cache after QC return to decorating`
+
+### 📁 Key Files Modified
+
+#### Frontend Components
+- `src/components/ui/button.tsx` - Touch target size variants
+- `src/components/ui/tabs.tsx` - Tab list height
+- `src/components/ui/input.tsx` - Input height
+- `src/components/Header.tsx` - Search button alignment
+- `src/components/QueueTable.tsx` - Bulk assign wiring
+- `src/components/ScannerOverlay.tsx` - Start/Complete text logic, button gaps
+- `src/components/StaffWorkspacePage.tsx` - Timestamp fields for scanner
+- `src/components/SupervisorWorkspacePage.tsx` - Button size fixes
+- `src/components/OrderOverflowMenu.tsx` - Larger touch target
+- `src/components/StaffAssignmentModal.tsx` - Larger spinners
+
+#### RPC Client
+- `src/lib/rpc-client.ts` - Cache invalidation for QC return
+
+### 🔧 Technical Notes
+
+#### Touch Target Standards
+Production floor staff often have messy hands (flour, icing). Larger touch targets reduce mis-taps and improve workflow speed. All interactive elements now meet or exceed 44px minimum.
+
+#### Cache Invalidation Pattern
+When mutations change order data, call `invalidateQueueCache()` to ensure auto-refresh shows fresh data. This prevents the "ghost order" problem where orders appear in wrong stages.
+
+---
+
 ## v0.16.0-beta — Packing Slip Printing & Real-Time Staff Status (2025-12-18)
 
 ### 🎯 Overview
