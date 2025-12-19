@@ -671,7 +671,6 @@ export function StaffWorkspacePage({
                           Stage: {order.stage}
                         </span>
                         <Button
-                          size="sm"
                           variant="outline"
                           onClick={() => handleScanOrder(order)}
                           disabled={shiftStatus === "on-break"}
