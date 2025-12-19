@@ -9,8 +9,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { setStorage, getStorageLocations, qcReturnToDecorating, getOrder } from "../lib/rpc-client";
+import { setStorage, getStorageLocations, qcReturnToDecorating, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
+import { printPackingSlip } from "../lib/packing-slip-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 
 interface AccessoryItem {
@@ -24,6 +25,7 @@ interface QueueItem {
   id: string;
   orderNumber: string;
   shopifyOrderNumber: string;
+  shopifyOrderId?: number;  // Actual Shopify order ID for admin URLs
   customerName: string;
   product: string;
   size: string;
@@ -42,6 +44,7 @@ interface QueueItem {
   notes?: string;
   productImage?: string | null;
   accessories?: AccessoryItem[] | null;
+  shippingAddress?: ShippingAddress | null;  // For packing slip
 }
 
 interface StaffOrderDetailDrawerProps {
@@ -71,7 +74,11 @@ const getExtendedOrderData = (order: QueueItem | null) => {
     notes: order.notes || '',
     // Use real product image from database
     productImage: order.productImage || null,
-    imageCaption: order.product
+    imageCaption: order.product,
+    // Shopify order ID for admin links
+    shopifyOrderId: order.shopifyOrderId || null,
+    // Shipping address for packing slip
+    shippingAddress: order.shippingAddress || null
   };
 };
 
@@ -127,8 +134,27 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
       try {
         setLoading(true);
 
-        // Fetch the specific order using getOrder RPC
-        const foundOrder = await getOrder(order.id, order.store);
+        // Try getOrderV2 first (includes shipping_address), fallback to getOrder
+        let foundOrder;
+        try {
+          foundOrder = await getOrderV2(order.id, order.store);
+        } catch (err: unknown) {
+          // Only fallback to getOrder if the RPC function doesn't exist yet
+          // PostgreSQL error code 42883 = undefined_function
+          const errMessage = err instanceof Error ? err.message : '';
+          const isRpcNotFound =
+            (err && typeof err === 'object' && 'code' in err && err.code === '42883') ||
+            (errMessage.includes('function') && errMessage.includes('does not exist'));
+
+          if (isRpcNotFound) {
+            console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
+            foundOrder = await getOrder(order.id, order.store);
+          } else {
+            // Rethrow other errors (network, permission, data issues)
+            console.error('getOrderV2 failed with unexpected error', err);
+            throw err;
+          }
+        }
 
         // Don't update state if effect was cancelled (order changed during fetch)
         if (cancelled) return;
@@ -137,8 +163,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
           // Map database order to UI format
           const mappedOrder: QueueItem = {
             id: foundOrder.id,
-            orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
+            orderNumber: foundOrder.human_id || String(foundOrder.shopify_order_number) || foundOrder.id,
             shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
+            shopifyOrderId: foundOrder.shopify_order_id || undefined,
             customerName: foundOrder.customer_name || "Unknown Customer",
             product: foundOrder.product_title || "Unknown Product",
             size: foundOrder.size || "Unknown",
@@ -156,7 +183,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             cakeWriting: foundOrder.cake_writing || '',
             notes: foundOrder.notes || '',
             productImage: foundOrder.product_image || null,
-            accessories: foundOrder.accessories || null
+            accessories: foundOrder.accessories || null,
+            // shipping_address only available from getOrderV2, use type guard
+            shippingAddress: 'shipping_address' in foundOrder ? (foundOrder.shipping_address as ShippingAddress | null) : null
           };
 
           setRealOrder(mappedOrder);
@@ -295,16 +324,39 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   };
 
   const handleViewInShopify = () => {
-    const id = extendedOrder?.shopifyOrderNumber?.trim();
-    if (!id) {
-      toast.error("Shopify order number not available");
+    const shopifyId = extendedOrder?.shopifyOrderId;
+    if (!shopifyId) {
+      toast.error("Shopify order ID not available");
       return;
     }
-    window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+    // Use correct Shopify admin URL format with store slug
+    const storeSlug = extendedOrder.store === 'bannos' ? 'bannos' : 'flour-lane';
+    window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${shopifyId}`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {
-    toast.success("Packing slip sent to printer");
+    try {
+      printPackingSlip({
+        orderNumber: extendedOrder.orderNumber,
+        customerName: extendedOrder.customerName,
+        dueDate: extendedOrder.deliveryDate,
+        deliveryMethod: extendedOrder.method || 'Pickup',
+        product: extendedOrder.product,
+        size: extendedOrder.size,
+        quantity: extendedOrder.quantity,
+        flavor: extendedOrder.flavor,
+        cakeWriting: extendedOrder.writingOnCake,
+        accessories: extendedOrder.accessories,
+        notes: extendedOrder.notes,
+        productImage: extendedOrder.productImage,
+        shippingAddress: extendedOrder.shippingAddress,
+        store: extendedOrder.store
+      });
+      toast.success("Packing slip opened for printing");
+    } catch (error) {
+      console.error('Error printing packing slip:', error);
+      toast.error("Failed to open packing slip. Check popup blocker settings.");
+    }
   };
 
   const handlePrintCareCard = () => {

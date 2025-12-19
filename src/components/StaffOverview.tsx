@@ -3,25 +3,23 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { useEffect, useState } from "react";
-import { getStaffList, type StaffMember } from "../lib/rpc-client";
+import { getStaffWithShiftStatus, type StaffWithShiftStatus } from "../lib/rpc-client";
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "On Shift":
       return "bg-green-100 text-green-700 border-green-200";
     case "On Break":
-      return "bg-yellow-100 text-yellow-700 border-yellow-200"; 
+      return "bg-yellow-100 text-yellow-700 border-yellow-200";
     case "Off Shift":
       return "bg-gray-100 text-gray-700 border-gray-200";
-    case "On Call":
-      return "bg-blue-100 text-blue-700 border-blue-200";
     default:
       return "bg-gray-100 text-gray-700 border-gray-200";
   }
 };
 
 export function StaffOverview() {
-  const [staffData, setStaffData] = useState<StaffMember[]>([]);
+  const [staffData, setStaffData] = useState<StaffWithShiftStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,11 +29,10 @@ export function StaffOverview() {
   const fetchStaffData = async () => {
     try {
       setLoading(true);
-      const staff = await getStaffList(null, true); // Get all active staff
+      const staff = await getStaffWithShiftStatus();
       setStaffData(staff);
     } catch (error) {
       console.error('Failed to fetch staff data:', error);
-      // Use empty array if RPC fails
       setStaffData([]);
     } finally {
       setLoading(false);
@@ -57,14 +54,10 @@ export function StaffOverview() {
     );
   }
 
-  // TODO: Replace with actual shift status when shift tracking is implemented
-  // For now, use account status as a placeholder
-  const activeStaffCount = staffData.filter(staff => staff.is_active).length;
-  
-  // Placeholder values until shift tracking is implemented
-  const onShiftCount = Math.floor(activeStaffCount * 0.7); // Estimate 70% of active staff are on shift
-  const onBreakCount = Math.floor(activeStaffCount * 0.1); // Estimate 10% on break
-  const offShiftCount = activeStaffCount - onShiftCount - onBreakCount;
+  // Calculate counts from real shift data
+  const onShiftCount = staffData.filter(s => s.shift_status === 'On Shift').length;
+  const onBreakCount = staffData.filter(s => s.shift_status === 'On Break').length;
+  const offShiftCount = staffData.filter(s => s.shift_status === 'Off Shift').length;
 
   return (
     <Card className="p-6">
@@ -104,15 +97,15 @@ export function StaffOverview() {
                   <p className="text-sm text-muted-foreground">{staff.role}</p>
                 </div>
               </div>
-              <Badge className={getStatusColor(staff.is_active ? "On Shift" : "Off Shift")}>
-                {staff.is_active ? "On Shift" : "Off Shift"}
+              <Badge className={getStatusColor(staff.shift_status)}>
+                {staff.shift_status}
               </Badge>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>Store Location</span>
+                <span>{staff.shift_store || staff.store || 'No store assigned'}</span>
               </div>
               {staff.phone && (
                 <div className="flex items-center space-x-2 text-muted-foreground">
@@ -122,7 +115,11 @@ export function StaffOverview() {
               )}
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                <span>{staff.is_active ? "Active" : "Inactive"}</span>
+                <span>
+                  {staff.shift_start
+                    ? `Started ${new Date(staff.shift_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : 'Not clocked in'}
+                </span>
               </div>
               {staff.email && (
                 <div className="text-muted-foreground">

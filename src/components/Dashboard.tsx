@@ -13,8 +13,6 @@ import { FlourlaneAnalyticsPage } from "./FlourlaneAnalyticsPage";
 import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
 import { SettingsPage } from "./SettingsPage";
 import { TimePayrollPage } from "./TimePayrollPage";
-import { StaffWorkspacePage } from "./StaffWorkspacePage";
-import { SupervisorWorkspacePage } from "./SupervisorWorkspacePage";
 import { BarcodeTest } from "./BarcodeTest";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -165,24 +163,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           return (
             <ErrorBoundary>
               <StaffPage />
-            </ErrorBoundary>
-          );
-        case "staff-workspace":
-          return (
-            <ErrorBoundary>
-              <StaffWorkspacePage 
-                onSignOut={() => setActiveView('dashboard')}
-              />
-            </ErrorBoundary>
-          );
-        case "supervisor-workspace":
-          return (
-            <ErrorBoundary>
-              <SupervisorWorkspacePage 
-                onSignOut={() => setActiveView('dashboard')}
-                onNavigateToBannosQueue={() => setActiveView('bannos-production')}
-                onNavigateToFlourlaneQueue={() => setActiveView('flourlane-production')}
-              />
             </ErrorBoundary>
           );
         case "inventory":

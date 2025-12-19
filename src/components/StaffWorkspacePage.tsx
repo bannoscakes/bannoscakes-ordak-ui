@@ -60,6 +60,9 @@ interface QueueItem {
   storage?: string;
   store: "bannos" | "flourlane";
   stage: string;
+  // Timestamps for stage tracking (used by ScannerOverlay)
+  covering_start_ts?: string | null;
+  decorating_start_ts?: string | null;
 }
 
 interface StaffWorkspacePageProps {
@@ -67,48 +70,6 @@ interface StaffWorkspacePageProps {
 }
 
 type ShiftStatus = "not-started" | "on-shift" | "on-break";
-
-
-// Convert legacy size to realistic display
-const getRealisticSize = (
-  originalSize: string,
-  product: string,
-  store: string,
-) => {
-  if (product.toLowerCase().includes("cupcake")) {
-    return originalSize === "S"
-      ? "Mini"
-      : originalSize === "M"
-        ? "Standard"
-        : "Jumbo";
-  } else if (product.toLowerCase().includes("wedding")) {
-    return originalSize === "S"
-      ? "6-inch Round"
-      : originalSize === "M"
-        ? "8-inch Round"
-        : "10-inch Round";
-  } else if (
-    product.toLowerCase().includes("birthday") ||
-    product.toLowerCase().includes("cake")
-  ) {
-    return originalSize === "S"
-      ? "Small"
-      : originalSize === "M"
-        ? "Medium Tall"
-        : "8-inch Round";
-  } else if (store === "flourlane") {
-    return originalSize === "S"
-      ? "Small Loaf"
-      : originalSize === "M"
-        ? "Standard"
-        : "Large Batch";
-  }
-  return originalSize === "S"
-    ? "Small"
-    : originalSize === "M"
-      ? "Medium"
-      : "Large";
-};
 
 export function StaffWorkspacePage({
   onSignOut,
@@ -180,10 +141,18 @@ export function StaffWorkspacePage({
         status: mapStageToStatus(order.stage),
         flavor: order.flavour || "Unknown",
         dueTime: order.due_date || new Date().toISOString(),
-        method: order.delivery_method === "delivery" ? "Delivery" : "Pickup",
+        method: (() => {
+          const normalized = order.delivery_method?.trim().toLowerCase();
+          if (normalized === "delivery") return "Delivery";
+          if (normalized === "pickup") return "Pickup";
+          return "Unknown";
+        })(),
         storage: order.storage || "Default",
         store: order.store || "bannos",
-        stage: order.stage || "Filling"
+        stage: order.stage || "Filling",
+        // Timestamps for stage tracking (used by ScannerOverlay)
+        covering_start_ts: order.covering_start_ts ?? null,
+        decorating_start_ts: order.decorating_start_ts ?? null
       }));
       
       setOrders(mappedOrders);
@@ -666,12 +635,7 @@ export function StaffWorkspacePage({
                       {/* Size */}
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Size:{" "}
-                          {getRealisticSize(
-                            order.size,
-                            order.product,
-                            order.store,
-                          )}
+                          Size: {order.size || "Unknown"}
                         </p>
                       </div>
 

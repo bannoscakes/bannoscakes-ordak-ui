@@ -31,11 +31,9 @@ const navigationItems = [
   { icon: TallCakeIcon, label: "Flourlane Analytics", id: "flourlane-analytics", isAnalytics: true },
   { icon: Users, label: "Staff Analytics", id: "staff-analytics", isAnalytics: true },
   { icon: Users, label: "Staff", id: "staff", isStaff: true },
-  { icon: Users, label: "Staff Workspace", id: "staff-workspace", isStaff: true },
-  { icon: Users, label: "Supervisor Workspace", id: "supervisor-workspace", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
   { icon: Package, label: "Inventory", id: "inventory" },
-  { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true },
+  { icon: QrCode, label: "Barcode Test", id: "barcode-test", isSettings: true, devOnly: true },
   { icon: AlertTriangle, label: "Error Test", id: "error-test", isSettings: true, devOnly: true },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
   { icon: Settings, label: "Flourlane Settings", id: "flourlane-settings", isSettings: true },
@@ -70,12 +68,12 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
         {navigationItems.filter(item => {
           // Filter by admin role
           if (item.adminOnly && !isAdmin) return false;
-          // Filter dev-only items in production
-          if (item.devOnly && process.env.NODE_ENV === 'production') return false;
+          // Filter dev-only items in production (use Vite's env variable)
+          if (item.devOnly && import.meta.env.PROD) return false;
           return true;
         }).map((item, index) => {
           const isActive = activeView === item.id;
-          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "staff-workspace" || item.id === "supervisor-workspace" || item.id === "time-payroll" || item.id === "inventory" || item.id === "barcode-test" || item.id === "error-test" || item.id === "bannos-settings" || item.id === "flourlane-settings";
+          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "time-payroll" || item.id === "inventory" || item.id === "barcode-test" || item.id === "error-test" || item.id === "bannos-settings" || item.id === "flourlane-settings";
           
           return (
             <div key={index} className="relative">
@@ -118,10 +116,6 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
                       safePushState(`/?page=${item.id}`);
                     } else if (item.id === "staff") {
                       safePushState('/?view=staff');
-                    } else if (item.id === "staff-workspace") {
-                      safePushState('/?view=staff-workspace');
-                    } else if (item.id === "supervisor-workspace") {
-                      safePushState('/?view=supervisor-workspace');
                     } else if (item.id === "time-payroll") {
                       safePushState('/?view=time-payroll');
                     } else if (item.id === "bannos-settings") {
