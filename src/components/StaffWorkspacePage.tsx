@@ -60,6 +60,9 @@ interface QueueItem {
   storage?: string;
   store: "bannos" | "flourlane";
   stage: string;
+  // Timestamps for stage tracking (used by ScannerOverlay)
+  covering_start_ts?: string | null;
+  decorating_start_ts?: string | null;
 }
 
 interface StaffWorkspacePageProps {
@@ -146,7 +149,10 @@ export function StaffWorkspacePage({
         })(),
         storage: order.storage || "Default",
         store: order.store || "bannos",
-        stage: order.stage || "Filling"
+        stage: order.stage || "Filling",
+        // Timestamps for stage tracking (used by ScannerOverlay)
+        covering_start_ts: order.covering_start_ts ?? null,
+        decorating_start_ts: order.decorating_start_ts ?? null
       }));
       
       setOrders(mappedOrders);
