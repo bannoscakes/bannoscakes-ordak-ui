@@ -98,7 +98,6 @@ export function Header({ onSignOut }: HeaderProps) {
               />
             </div>
             <Button
-              size="sm"
               onClick={() => {
                 if (searchValue.trim()) {
                   setSearchOpen(true);
