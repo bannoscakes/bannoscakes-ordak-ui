@@ -608,8 +608,7 @@ export function SupervisorWorkspacePage({
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2 border-t border-border">
-                        <Button 
-                          size="sm" 
+                        <Button
                           variant="outline"
                           onClick={() => handleScanOrder(order)}
                           disabled={shiftStatus === 'on-break'}
@@ -617,8 +616,7 @@ export function SupervisorWorkspacePage({
                         >
                           Scan to Complete
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
                           variant="outline"
                           onClick={() => handlePrintBarcode(order)}
                           disabled={shiftStatus === 'on-break'}

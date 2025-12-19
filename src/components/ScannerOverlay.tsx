@@ -200,16 +200,16 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
               {isStartAction() ? 'Start' : 'Mark'} <span className="font-medium">{order.orderNumber}</span> <span className="font-medium">{order.stage}</span> stage {actionVerb}?
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button 
+          <div className="flex gap-4">
+            <Button
               onClick={handleConfirm}
               disabled={isProcessing}
               className="flex-1"
             >
               {isProcessing ? "Processing..." : "Confirm"}
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleContinueScanning}
               disabled={isProcessing}
               className="flex-1"
@@ -253,7 +253,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
           </div>
           <Button
             variant="ghost"
-            size="sm"
+            size="default"
             onClick={handleClose}
             className="text-white hover:bg-white/20"
           >
