@@ -157,7 +157,7 @@ export function StaffAssignmentModal({
             <label className="text-sm font-medium">Select Staff Member</label>
             {staffLoading ? (
               <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
                 <span className="text-sm text-muted-foreground">Loading staff...</span>
               </div>
             ) : (
@@ -228,7 +228,7 @@ export function StaffAssignmentModal({
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
                 {selectedStaffId === "unassign" ? "Unassigning..." : "Assigning..."}
               </>
             ) : (

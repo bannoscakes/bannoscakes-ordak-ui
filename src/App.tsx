@@ -8,8 +8,8 @@ import { useAuth } from "./hooks/useAuth";
 import type { AuthUser } from "./lib/auth";
 import { safePushState } from "./lib/safeNavigate";
 
-// ✅ real login screen
-import { LoginForm } from "./components/Auth/LoginForm";
+// ✅ Modern login page with Ordak branding
+import { ModernLoginPage } from "./components/Auth/ModernLoginPage";
 
 // ✅ panic sign-out route
 import Logout from "./components/Logout";
@@ -152,7 +152,7 @@ function RootApp() {
   if (!user) {
     return (
       <FadeTransition transitionKey={transitionKey}>
-        <LoginForm onSuccess={() => {}} />
+        <ModernLoginPage onSuccess={() => {}} />
       </FadeTransition>
     );
   }
@@ -247,7 +247,7 @@ function RoleBasedRouter() {
 
   // ✅ Early returns AFTER all hooks have been declared
   if (!user) {
-    return <LoginForm onSuccess={() => {}} />;
+    return <ModernLoginPage onSuccess={() => {}} />;
   }
 
   // Single URL architecture - route by USER ROLE, not URL

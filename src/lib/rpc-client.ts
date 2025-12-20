@@ -761,6 +761,7 @@ export async function qcReturnToDecorating(orderId: string, store: string, notes
     p_notes: notes || null,
   });
   if (error) throw error;
+  invalidateQueueCache();
   return data;
 }
 
