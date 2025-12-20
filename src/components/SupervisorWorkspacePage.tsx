@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -11,7 +10,9 @@ import {
   TabsTrigger,
 } from "./ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare, Briefcase } from "lucide-react";
+import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
+import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -19,34 +20,12 @@ import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 import {
-  getQueue,
   startShift,
   endShift,
   startBreak,
   endBreak,
   getCurrentShift
 } from "../lib/rpc-client";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  customerName: string;
-  product: string;
-  size: 'S' | 'M' | 'L';
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store: 'bannos' | 'flourlane';
-  stage: string;
-  covering_start_ts?: string | null;
-  decorating_start_ts?: string | null;
-}
 
 interface SupervisorWorkspacePageProps {
   onSignOut: () => void;
@@ -56,59 +35,32 @@ interface SupervisorWorkspacePageProps {
 
 type ShiftStatus = 'not-started' | 'on-shift' | 'on-break';
 
-// Mock assigned orders for supervisor
-const getSupervisorAssignedOrders = (): QueueItem[] => [
-  {
-    id: "SUP-001",
-    orderNumber: "BAN-001",
-    customerName: "Sweet Delights Co.",
-    product: "Chocolate Cupcakes",
-    size: "M",
-    quantity: 150,
-    deliveryTime: "09:30",
-    priority: "High",
-    status: "In Production",
-    flavor: "Chocolate",
-    dueTime: "10:00 AM",
-    method: "Delivery",
-    store: "bannos",
-    stage: "quality-check"
-  },
-  {
-    id: "SUP-002",
-    orderNumber: "FLR-003",
-    customerName: "Chocolate Dreams Café",
-    product: "Cocoa Swirl Bread",
-    size: "M",
-    quantity: 60,
-    deliveryTime: "10:00",
-    priority: "High",
-    status: "Pending",
-    flavor: "Chocolate",
-    dueTime: "11:15 AM",
-    method: "Delivery",
-    store: "flourlane",
-    stage: "final-check"
-  }
-];
-
-export function SupervisorWorkspacePage({ 
-  onSignOut, 
-  onNavigateToBannosQueue, 
-  onNavigateToFlourlaneQueue 
+export function SupervisorWorkspacePage({
+  onSignOut,
+  onNavigateToBannosQueue,
+  onNavigateToFlourlaneQueue
 }: SupervisorWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
 
-  const [orders, setOrders] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use React Query hook for orders
+  const { data: orders = [], isLoading: loading, isError } = useSupervisorQueue(user?.id);
+  const invalidateSupervisorQueue = useInvalidateSupervisorQueue();
+
+  // Show toast on error
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to load orders");
+    }
+  }, [isError]);
+
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] = useState<ShiftStatus>('not-started');
   const [shiftStartTime, setShiftStartTime] = useState<Date | null>(null);
   const [breakStartTime, setBreakStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState("");
   const [shiftLoading, setShiftLoading] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<SupervisorQueueItem | null>(null);
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(true);
@@ -173,81 +125,13 @@ export function SupervisorWorkspacePage({
     }
   }
 
-  // Load orders and shift from database when user is available
+  // Load shift on mount (React Query handles order polling automatically)
   useEffect(() => {
-    // Only load when user is available
     if (!user?.id) {
       return;
     }
-    loadSupervisorOrders();
     loadCurrentShift();
-  }, [user?.id]); // Re-run when user becomes available
-
-  const loadSupervisorOrders = async () => {
-    setLoading(true);
-    try {
-      // Guard: Ensure user is loaded
-      if (!user?.id) {
-        console.warn("Cannot load supervisor orders: user not loaded");
-        setOrders([]);
-        return;
-      }
-      
-      // Fetch orders assigned to current supervisor from both stores
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: "bannos", assignee_id: user.id, limit: 100 }),
-        getQueue({ store: "flourlane", assignee_id: user.id, limit: 100 })
-      ]);
-      
-      // Combine orders from both stores
-      const allOrders = [...bannosOrders, ...flourlaneOrders];
-      
-      // Map database orders to UI format
-      const mappedOrders = allOrders.map((order: any) => ({
-        id: order.id,
-        orderNumber: String(order.human_id || order.shopify_order_number || order.id),
-        shopifyOrderNumber: String(order.shopify_order_number || ''),
-        customerName: order.customer_name || "Unknown Customer",
-        product: order.product_title || "Unknown Product",
-        size: order.size || "M",
-        quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || new Date().toISOString(),
-        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
-        status: mapStageToStatus(order.stage),
-        flavor: order.flavour || "Unknown",
-        dueTime: order.due_date || new Date().toISOString(),
-        method: (() => {
-          const normalized = order.delivery_method?.trim().toLowerCase();
-          if (normalized === "delivery") return "Delivery";
-          if (normalized === "pickup") return "Pickup";
-          return "Unknown";
-        })(),
-        storage: order.storage || "Default",
-        store: order.store || "bannos",
-        stage: order.stage || "Filling",
-        covering_start_ts: order.covering_start_ts ?? null,
-        decorating_start_ts: order.decorating_start_ts ?? null
-      }));
-      
-      setOrders(mappedOrders);
-    } catch (error) {
-      console.error("Error loading supervisor orders:", error);
-      toast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const mapStageToStatus = (stage: string) => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
-    }
-  };
+  }, [user?.id]);
 
   const handleStartShift = async () => {
     if (!user?.store || shiftLoading) return;
@@ -327,12 +211,12 @@ export function SupervisorWorkspacePage({
     }
   };
 
-  const handleOpenOrder = (order: QueueItem) => {
+  const handleOpenOrder = (order: SupervisorQueueItem) => {
     setSelectedOrder(order);
     setOrderDetailOpen(true);
   };
 
-  const handleScanOrder = (order: QueueItem) => {
+  const handleScanOrder = (order: SupervisorQueueItem) => {
     if (shiftStatus === 'on-break') {
       toast.error("Cannot scan orders while on break");
       return;
@@ -341,22 +225,16 @@ export function SupervisorWorkspacePage({
     setScannerOpen(true);
   };
 
-  const handlePrintBarcode = (order: QueueItem) => {
+  const handlePrintBarcode = (order: SupervisorQueueItem) => {
     toast.success(`Barcode for ${order.orderNumber} sent to printer`);
   };
 
-  const handleOrderCompleted = async (orderId: string) => {
-    // Optimistically remove from local state (use callback to avoid stale closure)
-    setOrders(prev => prev.filter(order => order.id !== orderId));
+  const handleOrderCompleted = async (_orderId: string) => {
     setScannerOpen(false);
     setSelectedOrder(null);
 
-    // Refetch fresh data from database
-    try {
-      await loadSupervisorOrders();
-    } catch (error) {
-      console.error('Failed to refresh orders:', error);
-    }
+    // Invalidate and refetch via React Query
+    await invalidateSupervisorQueue(user?.id);
   };
 
   const getStoreColor = (store: string) => {
@@ -554,9 +432,9 @@ export function SupervisorWorkspacePage({
                           {order.store === 'bannos' ? 'Bannos' : 'Flourlane'}
                         </Badge>
                         <OrderOverflowMenu
+                          item={order}
+                          variant="queue"
                           onOpenOrder={() => handleOpenOrder(order)}
-                          onEditOrder={undefined}
-                          onAssignToStaff={undefined}
                           onViewDetails={() => {
                             const id = order.shopifyOrderNumber?.trim();
                             if (!id) {
@@ -565,7 +443,6 @@ export function SupervisorWorkspacePage({
                             }
                             window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
                           }}
-                          isCompleteTab={false}
                         />
                       </div>
 

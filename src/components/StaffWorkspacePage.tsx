@@ -1,10 +1,11 @@
-// @ts-nocheck
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useStaffQueue, useInvalidateStaffQueue } from "@/hooks/useStaffQueue";
+import type { StaffQueueItem } from "@/hooks/useStaffQueue";
 import {
   Tabs,
   TabsContent,
@@ -29,41 +30,12 @@ import { MainDashboardMessaging } from "./MainDashboardMessaging";
 
 // Import real RPCs
 import {
-  getQueue,
-  getQueueCached,
   startShift,
   endShift,
   startBreak,
   endBreak,
   getCurrentShift
 } from "../lib/rpc-client";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  customerName: string;
-  product: string;
-  size: "S" | "M" | "L";
-  quantity: number;
-  deliveryTime?: string;
-  priority: "High" | "Medium" | "Low";
-  status:
-    | "In Production"
-    | "Pending"
-    | "Quality Check"
-    | "Completed"
-    | "Scheduled";
-  flavor: string;
-  dueTime: string;
-  method?: "Delivery" | "Pickup";
-  storage?: string;
-  store: "bannos" | "flourlane";
-  stage: string;
-  // Timestamps for stage tracking (used by ScannerOverlay)
-  covering_start_ts?: string | null;
-  decorating_start_ts?: string | null;
-}
 
 interface StaffWorkspacePageProps {
   onSignOut: () => void;
@@ -74,12 +46,20 @@ type ShiftStatus = "not-started" | "on-shift" | "on-break";
 export function StaffWorkspacePage({
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
 
-  const [orders, setOrders] = useState<QueueItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const hasInitiallyLoaded = useRef(false); // Track initial load
+  // Use React Query hook for orders
+  const { data: orders = [], isLoading: loading, isError, refetch } = useStaffQueue(user?.id);
+  const invalidateStaffQueue = useInvalidateStaffQueue();
+
+  // Show toast on error
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to load orders");
+    }
+  }, [isError]);
+
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] =
     useState<ShiftStatus>("not-started");
@@ -90,91 +70,10 @@ export function StaffWorkspacePage({
   const [elapsedTime, setElapsedTime] = useState("");
   const [shiftLoading, setShiftLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] =
-    useState<QueueItem | null>(null);
+    useState<StaffQueueItem | null>(null);
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
-  const [showMessaging, setShowMessaging] = useState(false);
-
-  // Mock unread message count
-
-  // Load orders from real RPC
-  async function loadStaffOrders(bypassCache = false) {
-    // Only show loading skeleton on initial load, not during auto-refresh
-    if (!hasInitiallyLoaded.current) {
-      setLoading(true);
-    }
-    
-    try {
-      // Guard: Ensure user is loaded
-      if (!user?.id) {
-        console.warn("Cannot load staff orders: user not loaded");
-        setOrders([]);
-        return;
-      }
-      
-      // Fetch orders assigned to current user from both stores
-      const [bannosOrders, flourlaneOrders] = await Promise.all([
-        bypassCache
-          ? getQueue({ store: "bannos", assignee_id: user.id, limit: 100 })
-          : getQueueCached({ store: "bannos", assignee_id: user.id, limit: 100 }),
-        bypassCache
-          ? getQueue({ store: "flourlane", assignee_id: user.id, limit: 100 })
-          : getQueueCached({ store: "flourlane", assignee_id: user.id, limit: 100 })
-      ]);
-      
-      // Combine orders from both stores, excluding Complete stage
-      const allOrders = [...bannosOrders, ...flourlaneOrders]
-        .filter((order: any) => order.stage !== 'Complete');
-
-      // Map database orders to UI format
-      const mappedOrders = allOrders.map((order: any) => ({
-        id: order.id,
-        orderNumber: String(order.human_id || order.shopify_order_number || order.id),
-        shopifyOrderNumber: String(order.shopify_order_number || ''),
-        customerName: order.customer_name || "Unknown Customer",
-        product: order.product_title || "Unknown Product",
-        size: order.size || "M",
-        quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || new Date().toISOString(),
-        priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low",
-        status: mapStageToStatus(order.stage),
-        flavor: order.flavour || "Unknown",
-        dueTime: order.due_date || new Date().toISOString(),
-        method: (() => {
-          const normalized = order.delivery_method?.trim().toLowerCase();
-          if (normalized === "delivery") return "Delivery";
-          if (normalized === "pickup") return "Pickup";
-          return "Unknown";
-        })(),
-        storage: order.storage || "Default",
-        store: order.store || "bannos",
-        stage: order.stage || "Filling",
-        // Timestamps for stage tracking (used by ScannerOverlay)
-        covering_start_ts: order.covering_start_ts ?? null,
-        decorating_start_ts: order.decorating_start_ts ?? null
-      }));
-      
-      setOrders(mappedOrders);
-    } catch (error) {
-      console.error("Error loading staff orders:", error);
-      toast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-      hasInitiallyLoaded.current = true; // Mark initial load complete
-    }
-  }
-
-  const mapStageToStatus = (stage: string) => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
-    }
-  };
 
   // Load current shift from database
   async function loadCurrentShift() {
@@ -208,37 +107,13 @@ export function StaffWorkspacePage({
     }
   }
 
-  // Load orders and shift on mount and set up auto-refresh
+  // Load shift on mount (React Query handles order polling automatically)
   useEffect(() => {
-    // Only set up polling when user is loaded
     if (!user?.id) {
       return;
     }
-
-    loadStaffOrders();
     loadCurrentShift();
-    
-    // Auto-refresh every 30 seconds (uses cache for performance)
-    const interval = setInterval(() => {
-      if (!document.hidden) {
-        loadStaffOrders();
-      }
-    }, 30000);
-    
-    // Refresh when tab becomes visible
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadStaffOrders();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user?.id]); // Re-establish interval when user becomes available
+  }, [user?.id]);
 
   // Update elapsed time
   useEffect(() => {
@@ -359,12 +234,12 @@ export function StaffWorkspacePage({
     }
   };
 
-  const handleOpenOrder = (order: QueueItem) => {
+  const handleOpenOrder = (order: StaffQueueItem) => {
     setSelectedOrder(order);
     setOrderDetailOpen(true);
   };
 
-  const handleScanOrder = (order: QueueItem) => {
+  const handleScanOrder = (order: StaffQueueItem) => {
     if (shiftStatus === "on-break") {
       toast.error("Cannot scan orders while on break");
       return;
@@ -373,18 +248,16 @@ export function StaffWorkspacePage({
     setScannerOpen(true);
   };
 
-  const handleOrderCompleted = async (orderId: string) => {
-    // Optimistically remove from local state (use callback to avoid stale closure)
-    setOrders(prev => prev.filter(order => order.id !== orderId));
+  const handleOrderCompleted = async (_orderId: string) => {
     setScannerOpen(false);
     setSelectedOrder(null);
 
-    // Reload orders with fresh data (bypass cache to avoid stale data)
-    await loadStaffOrders(true);
+    // Invalidate and refetch via React Query
+    await invalidateStaffQueue(user?.id);
   };
 
   const handleRefresh = () => {
-    loadStaffOrders(true); // Bypass cache for manual refresh
+    refetch(); // React Query refetch
   };
 
   const getStoreColor = (store: string) => {
@@ -598,11 +471,11 @@ export function StaffWorkspacePage({
                             : "Flourlane"}
                         </Badge>
                         <OrderOverflowMenu
+                          item={order}
+                          variant="queue"
                           onOpenOrder={() =>
                             handleOpenOrder(order)
                           }
-                          onEditOrder={undefined}
-                          onAssignToStaff={undefined}
                           onViewDetails={() => {
                             const id = order.shopifyOrderNumber?.trim();
                             if (!id) {
@@ -614,7 +487,6 @@ export function StaffWorkspacePage({
                               "_blank",
                             );
                           }}
-                          isCompleteTab={false}
                         />
                       </div>
 
