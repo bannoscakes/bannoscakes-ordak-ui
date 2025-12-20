@@ -1,5 +1,7 @@
 import { getSupabase } from './supabase';
 import { clearSupabaseAuthStorage } from './supabase-storage';
+import { queryClient } from './query-client';
+import { requestCache } from './request-cache';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface AuthUser {
@@ -222,7 +224,13 @@ class AuthService {
       
       console.log('Supabase signOut successful');
       console.log('Supabase session after signout:', await this.supabase.auth.getSession());
-      
+
+      // Clear all caches to prevent stale data bleeding between user sessions
+      console.log('Clearing React Query cache...');
+      queryClient.clear();
+      console.log('Clearing request cache...');
+      requestCache.invalidate();
+
       // Clear any persisted auth storage regardless of current config, since
       // a previous session may have been stored before persistence was
       // disabled.
