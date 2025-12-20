@@ -57,6 +57,10 @@ class AuthService {
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           console.log('🚪 Explicit sign out detected');
+          // Clear all caches to prevent stale data bleeding between user sessions
+          // This handles sign-outs from other tabs or session invalidations
+          queryClient.clear();
+          requestCache.invalidate();
           this.updateAuthState({ user: null, session: null, loading: false });
           return;
         }
