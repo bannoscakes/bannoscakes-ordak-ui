@@ -170,7 +170,7 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="staff" className="space-y-4 mt-6">
+              <TabsContent value={role} className="space-y-4 mt-6" forceMount>
                 <LoginFormFields
                   email={email}
                   setEmail={setEmail}
@@ -184,25 +184,7 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
                   isFormValid={isFormValid}
                   handleSignIn={handleSignIn}
                   handleScanBadge={handleScanBadge}
-                  roleLabel="Staff"
-                />
-              </TabsContent>
-
-              <TabsContent value="supervisor" className="space-y-4 mt-6">
-                <LoginFormFields
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  showPassword={showPassword}
-                  setShowPassword={setShowPassword}
-                  handleKeyDown={handleKeyDown}
-                  isLoading={isLoading}
-                  error={error}
-                  isFormValid={isFormValid}
-                  handleSignIn={handleSignIn}
-                  handleScanBadge={handleScanBadge}
-                  roleLabel="Supervisor"
+                  roleLabel={role === 'supervisor' ? 'Supervisor' : 'Staff'}
                 />
               </TabsContent>
             </Tabs>
