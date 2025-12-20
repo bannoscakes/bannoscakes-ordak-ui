@@ -35,7 +35,7 @@ export function useUnassignedCounts(store: Store) {
  * Hook for recent orders list
  * Used by: RecentOrders
  */
-export function useRecentOrders(store: Store, limit = 5) {
+export function useRecentOrders(store: Store, limit = 10) {
   return useQuery({
     queryKey: ['recentOrders', store, limit],
     queryFn: () => getQueue({
@@ -69,10 +69,10 @@ export function usePrefetchStore() {
     });
     
     queryClient.prefetchQuery({
-      queryKey: ['recentOrders', targetStore, 5],
+      queryKey: ['recentOrders', targetStore, 10],
       queryFn: () => getQueue({
         store: targetStore,
-        limit: 5,
+        limit: 10,
         sort_by: 'due_date',
         sort_order: 'ASC',
       }),

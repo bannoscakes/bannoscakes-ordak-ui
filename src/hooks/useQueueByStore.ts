@@ -59,7 +59,7 @@ export function useQueueForMonitor(
     queryFn: () =>
       getQueue({
         store,
-        limit: 5000,
+        limit: 999999, // Fetch all orders - no order should ever be missed
         sort_by: 'due_date',
         sort_order: 'ASC',
       }),
