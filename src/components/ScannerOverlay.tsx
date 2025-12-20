@@ -6,7 +6,8 @@ import { Label } from "./ui/label";
 import { X, AlertCircle, CheckCircle, CameraOff } from "lucide-react";
 import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
-import { completeFilling, completeCovering, completeDecorating, completePacking, startCovering, startDecorating, getOrderForScan } from "../lib/rpc-client";
+import { getOrderForScan } from "../lib/rpc-client";
+import { useStageMutations } from "../hooks/useQueueMutations";
 
 interface QueueItem {
   id: string;
@@ -41,9 +42,13 @@ type ScanState = 'scanning' | 'confirming' | 'success' | 'error';
 export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: ScannerOverlayProps) {
   const [scanState, setScanState] = useState<ScanState>('scanning');
   const [errorMessage, setErrorMessage] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [cameraFailed, setCameraFailed] = useState(false);
   const [manualInput, setManualInput] = useState("");
+  const [isScanLookupPending, setIsScanLookupPending] = useState(false);
+
+  // Use centralized mutation hooks for cache invalidation
+  const stageMutations = useStageMutations();
+  const isProcessing = stageMutations.isPending || isScanLookupPending;
 
   if (!isOpen || !order) return null;
 
@@ -59,7 +64,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   const actionVerbCapitalized = isStartAction() ? 'Start' : 'Completion';
 
   const handleScan = async (scannedCode: string) => {
-    setIsProcessing(true);
+    setIsScanLookupPending(true);
     setErrorMessage("");
 
     try {
@@ -67,7 +72,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       // Handles: #B18617, #F18617, bannos-18617, flourlane-18617, plain 18617
       const scannedOrder = await getOrderForScan(scannedCode);
 
-      setIsProcessing(false);
+      setIsScanLookupPending(false);
 
       if (!scannedOrder) {
         setScanState('error');
@@ -84,7 +89,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         setErrorMessage(`Wrong order scanned. Expected ${order.orderNumber}, got ${scannedOrder.id}.`);
       }
     } catch (error) {
-      setIsProcessing(false);
+      setIsScanLookupPending(false);
       setScanState('error');
       setErrorMessage(`Scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -114,71 +119,86 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   const handleConfirm = async () => {
     if (!order) return;
 
-    setIsProcessing(true);
+    // Call appropriate stage RPC based on current stage
+    // Covering and Decorating use first-scan-starts / second-scan-completes pattern
+    const store = order.store || 'bannos'; // Default to bannos if store not found
+    let actionMessage = '';
 
-    try {
-      // Call appropriate stage RPC based on current stage
-      // Covering and Decorating use first-scan-starts / second-scan-completes pattern
-      const store = order.store || 'bannos'; // Default to bannos if store not found
-      let actionMessage = '';
-
-      switch (order.stage) {
-        case 'Filling':
-          await completeFilling(order.id, store);
-          actionMessage = `${order.stage} stage completed`;
-          break;
-        case 'Covering':
-          if (!order.covering_start_ts) {
-            // First scan - START the stage
-            await startCovering(order.id, store);
-            actionMessage = `${order.stage} stage started`;
-          } else {
-            // Second scan - COMPLETE the stage
-            await completeCovering(order.id, store);
-            actionMessage = `${order.stage} stage completed`;
-          }
-          break;
-        case 'Decorating':
-          if (!order.decorating_start_ts) {
-            // First scan - START the stage
-            await startDecorating(order.id, store);
-            actionMessage = `${order.stage} stage started`;
-          } else {
-            // Second scan - COMPLETE the stage
-            await completeDecorating(order.id, store);
-            actionMessage = `${order.stage} stage completed`;
-          }
-          break;
-        case 'Packing':
-          // Packing only needs one scan to complete (no start scan required)
-          await completePacking(order.id, store);
-          actionMessage = `${order.stage} stage completed`;
-          break;
-        default:
-          throw new Error(`Unknown stage: ${order.stage}`);
-      }
-
+    const onSuccess = () => {
       setScanState('success');
-      setIsProcessing(false);
 
       setTimeout(() => {
         toast.success(`${actionMessage} for ${order.orderNumber}`);
         onOrderCompleted(order.id);
         handleClose();
       }, 1500);
+    };
 
-    } catch (error) {
+    const onError = (error: Error) => {
       console.error('Error processing stage:', error);
-      setIsProcessing(false);
       setScanState('error');
-      setErrorMessage(`Failed to process ${order.stage} stage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorMessage(`Failed to process ${order.stage} stage: ${error.message}`);
+    };
+
+    switch (order.stage) {
+      case 'Filling':
+        actionMessage = `${order.stage} stage completed`;
+        stageMutations.completeFilling.mutate(
+          { orderId: order.id, store },
+          { onSuccess, onError }
+        );
+        break;
+      case 'Covering':
+        if (!order.covering_start_ts) {
+          // First scan - START the stage
+          actionMessage = `${order.stage} stage started`;
+          stageMutations.startCovering.mutate(
+            { orderId: order.id, store },
+            { onSuccess, onError }
+          );
+        } else {
+          // Second scan - COMPLETE the stage
+          actionMessage = `${order.stage} stage completed`;
+          stageMutations.completeCovering.mutate(
+            { orderId: order.id, store },
+            { onSuccess, onError }
+          );
+        }
+        break;
+      case 'Decorating':
+        if (!order.decorating_start_ts) {
+          // First scan - START the stage
+          actionMessage = `${order.stage} stage started`;
+          stageMutations.startDecorating.mutate(
+            { orderId: order.id, store },
+            { onSuccess, onError }
+          );
+        } else {
+          // Second scan - COMPLETE the stage
+          actionMessage = `${order.stage} stage completed`;
+          stageMutations.completeDecorating.mutate(
+            { orderId: order.id, store },
+            { onSuccess, onError }
+          );
+        }
+        break;
+      case 'Packing':
+        // Packing only needs one scan to complete (no start scan required)
+        actionMessage = `${order.stage} stage completed`;
+        stageMutations.completePacking.mutate(
+          { orderId: order.id, store },
+          { onSuccess, onError }
+        );
+        break;
+      default:
+        setScanState('error');
+        setErrorMessage(`Unknown stage: ${order.stage}`);
     }
   };
 
   const handleClose = () => {
     setScanState('scanning');
     setErrorMessage("");
-    setIsProcessing(false);
     setCameraFailed(false);
     setManualInput("");
     onClose();

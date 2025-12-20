@@ -20,8 +20,9 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 // import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getStorageLocations, getStaffList, assignStaff } from "../lib/rpc-client";
+import { getQueue, getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useErrorNotifications } from "../lib/error-notifications";
+import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 
 // Auto-refresh interval for queue data (60 seconds - not too frequent to avoid visual distraction)
 const QUEUE_REFRESH_INTERVAL = 60_000;
@@ -71,10 +72,13 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
   const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   const { showErrorWithRetry } = useErrorNotifications();
+
+  // Use centralized mutation hook for cache invalidation
+  const bulkAssignMutation = useBulkAssignStaff();
+  const isAssigning = bulkAssignMutation.isPending;
 
   // Store showErrorWithRetry in a ref to avoid it triggering useCallback recreation
   // (useErrorNotifications returns new function objects on every render)
@@ -286,42 +290,33 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     }
   };
 
-  const handleAssignToStaff = async () => {
+  const handleAssignToStaff = () => {
     if (selectedItems.length > 0 && selectedStaff) {
-      setIsAssigning(true);
-      try {
-        // Assign each selected order to the staff member
-        const results = await Promise.allSettled(
-          selectedItems.map(orderId => assignStaff(orderId, store, selectedStaff))
-        );
+      bulkAssignMutation.mutate(
+        { orderIds: selectedItems, store, staffId: selectedStaff },
+        {
+          onSuccess: (result) => {
+            const { successCount, failCount } = result;
 
-        const successCount = results.filter(r => r.status === 'fulfilled').length;
-        const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
-        const failCount = failures.length;
+            if (failCount === 0) {
+              toast.success(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''} successfully`);
+            } else if (successCount > 0) {
+              toast.warning(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''}, ${failCount} failed`);
+            } else {
+              toast.error('Failed to assign orders');
+            }
 
-        // Log failure reasons for debugging
-        if (failures.length > 0) {
-          console.error('Assignment failures:', failures.map(f => f.reason));
+            // Refresh queue data (cache already invalidated by mutation, but local state needs refresh)
+            fetchQueueData();
+            setSelectedItems([]);
+            setSelectedStaff(null);
+          },
+          onError: (error) => {
+            console.error('Failed to assign staff:', error);
+            toast.error('Failed to assign orders');
+          }
         }
-
-        if (failCount === 0) {
-          toast.success(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''} successfully`);
-        } else if (successCount > 0) {
-          toast.warning(`Assigned ${successCount} order${successCount !== 1 ? 's' : ''}, ${failCount} failed`);
-        } else {
-          toast.error('Failed to assign orders');
-        }
-
-        // Refresh queue data
-        await fetchQueueData();
-        setSelectedItems([]);
-        setSelectedStaff(null);
-      } catch (error) {
-        console.error('Failed to assign staff:', error);
-        toast.error('Failed to assign orders');
-      } finally {
-        setIsAssigning(false);
-      }
+      );
     }
   };
 

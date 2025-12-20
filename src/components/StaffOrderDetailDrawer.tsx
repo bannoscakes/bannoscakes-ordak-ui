@@ -9,10 +9,11 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { setStorage, getStorageLocations, qcReturnToDecorating, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
+import { getStorageLocations, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
 import { BarcodeGenerator } from "./BarcodeGenerator";
+import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 
 interface AccessoryItem {
   title: string;
@@ -115,6 +116,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [storageLoading, setStorageLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
+
+  // Use centralized mutation hooks for cache invalidation
+  const setStorageMutation = useSetStorage();
+  const qcReturnMutation = useQcReturnToDecorating();
 
   // Fetch real order data when drawer opens
   useEffect(() => {
@@ -268,36 +273,46 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   // Early return after all hooks
   if (!extendedOrder) return null;
 
-  const handleStorageChange = async (newStorage: string) => {
+  const handleStorageChange = (newStorage: string) => {
     if (!extendedOrder || newStorage === selectedStorage) return;
 
-    try {
-      await setStorage(extendedOrder.id, extendedOrder.store, newStorage);
-      setSelectedStorage(newStorage);
-      toast.success(`Storage location updated to ${newStorage}`);
-    } catch (error) {
-      console.error('Error updating storage location:', error);
-      toast.error('Failed to update storage location');
-    }
+    setStorageMutation.mutate(
+      { orderId: extendedOrder.id, store: extendedOrder.store, storageLocation: newStorage },
+      {
+        onSuccess: () => {
+          setSelectedStorage(newStorage);
+          toast.success(`Storage location updated to ${newStorage}`);
+        },
+        onError: (error) => {
+          console.error('Error updating storage location:', error);
+          toast.error('Failed to update storage location');
+        }
+      }
+    );
   };
 
-  const handleQCReturn = async () => {
+  const handleQCReturn = () => {
     if (qcIssue === "None") {
       toast.error("Please select a QC issue before returning order");
       return;
     }
 
-    try {
-      const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
-      await qcReturnToDecorating(extendedOrder.id, extendedOrder.store, notes);
-      toast.success(`Order returned to Decorating stage: ${qcIssue}`);
-      onClose();
-      // Notify parent to refresh workspace (order moved to different stage)
-      onOrderCompleted?.(extendedOrder.id);
-    } catch (error) {
-      console.error('Failed to return order to decorating:', error);
-      toast.error('Failed to return order to decorating stage');
-    }
+    const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
+    qcReturnMutation.mutate(
+      { orderId: extendedOrder.id, store: extendedOrder.store, notes },
+      {
+        onSuccess: () => {
+          toast.success(`Order returned to Decorating stage: ${qcIssue}`);
+          onClose();
+          // Notify parent to refresh workspace (order moved to different stage)
+          onOrderCompleted?.(extendedOrder.id);
+        },
+        onError: (error) => {
+          console.error('Failed to return order to decorating:', error);
+          toast.error('Failed to return order to decorating stage');
+        }
+      }
+    );
   };
 
   const handlePrintBarcode = () => {
