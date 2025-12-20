@@ -306,7 +306,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               toast.error('Failed to assign orders');
             }
 
-            // Refresh queue data (cache already invalidated by mutation, but local state needs refresh)
+            // Refresh local state (QueueTable uses local state, not React Query for fetching)
             fetchQueueData();
             setSelectedItems([]);
             setSelectedStaff(null);

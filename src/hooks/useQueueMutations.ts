@@ -69,8 +69,14 @@ export function useBulkAssignStaff() {
         orderIds.map(orderId => assignStaff(orderId, store, staffId))
       );
 
+      const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
       const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = results.filter(r => r.status === 'rejected').length;
+      const failCount = failures.length;
+
+      // Log failure reasons for debugging
+      if (failures.length > 0) {
+        console.error('Bulk assignment failures:', failures.map(f => f.reason));
+      }
 
       return { successCount, failCount, total: orderIds.length };
     },

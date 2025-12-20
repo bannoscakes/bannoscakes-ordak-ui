@@ -116,7 +116,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     }
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!order) return;
 
     // Call appropriate stage RPC based on current stage
