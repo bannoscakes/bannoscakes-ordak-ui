@@ -19,11 +19,13 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // TODO: Role selection is visual only - implement role-based auth flow when PIN/badge auth is added
   const [role, setRole] = useState<'staff' | 'supervisor'>('staff');
 
   const isFormValid = email.trim().length > 0 && password.length >= 6;
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!isFormValid || isLoading) return;
 
     setIsLoading(true);
@@ -220,7 +222,7 @@ interface LoginFormFieldsProps {
   isLoading: boolean;
   error: string;
   isFormValid: boolean;
-  handleSignIn: () => void;
+  handleSignIn: (e?: React.FormEvent) => void;
   handleScanBadge: () => void;
   roleLabel: string;
 }
@@ -241,7 +243,7 @@ function LoginFormFields({
   roleLabel,
 }: LoginFormFieldsProps) {
   return (
-    <>
+    <form onSubmit={handleSignIn} className="space-y-4">
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor={`email-${roleLabel}`}>Email</Label>
@@ -298,7 +300,7 @@ function LoginFormFields({
 
       <div className="space-y-3">
         <Button
-          onClick={handleSignIn}
+          type="submit"
           disabled={!isFormValid || isLoading}
           className="w-full h-12 text-base"
         >
@@ -315,6 +317,7 @@ function LoginFormFields({
         </div>
 
         <Button
+          type="button"
           variant="outline"
           onClick={handleScanBadge}
           disabled={isLoading}
@@ -324,6 +327,6 @@ function LoginFormFields({
           Scan {roleLabel} Badge
         </Button>
       </div>
-    </>
+    </form>
   );
 }

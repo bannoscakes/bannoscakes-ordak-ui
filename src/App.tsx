@@ -8,7 +8,7 @@ import { useAuth } from "./hooks/useAuth";
 import type { AuthUser } from "./lib/auth";
 import { safePushState } from "./lib/safeNavigate";
 
-// ✅ real login screen
+// ✅ Modern login page with Ordak branding
 import { ModernLoginPage } from "./components/Auth/ModernLoginPage";
 
 // ✅ panic sign-out route
