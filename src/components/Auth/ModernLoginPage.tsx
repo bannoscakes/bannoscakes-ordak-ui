@@ -9,6 +9,15 @@ import { Scan, AlertCircle, Shield, Users, ChefHat, Eye, EyeOff } from "lucide-r
 import { toast } from "sonner";
 import { OrdakLogo } from "../OrdakLogo";
 
+// Lazy-load authService once at module level to avoid per-call dynamic imports
+let authServicePromise: Promise<typeof import('../../lib/auth')> | null = null;
+function getAuthService() {
+  if (!authServicePromise) {
+    authServicePromise = import('../../lib/auth');
+  }
+  return authServicePromise;
+}
+
 interface ModernLoginPageProps {
   onSuccess: () => void;
 }
@@ -32,9 +41,7 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
     setError("");
 
     try {
-      // Import auth service dynamically to avoid circular imports
-      const { authService } = await import('../../lib/auth');
-
+      const { authService } = await getAuthService();
       const result = await authService.signIn(email, password);
 
       if (result.success) {
@@ -84,8 +91,8 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
       />
 
       <div
-        className="w-full items-center relative z-10"
-        style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '48px' }}
+        className="w-full grid grid-cols-1 md:grid-cols-2 items-center relative z-10"
+        style={{ maxWidth: '1100px', margin: '0 auto', gap: '48px' }}
       >
         {/* Left side - Branding */}
         <div className="text-white hidden md:block" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
