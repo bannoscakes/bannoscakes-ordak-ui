@@ -4,8 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Scan, AlertCircle, Shield, Users, ChefHat, Eye, EyeOff } from "lucide-react";
+import { Scan, AlertCircle, Shield, Users, ChefHat, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { OrdakLogo } from "../OrdakLogo";
 
@@ -28,9 +27,6 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // TODO: Role selection is visual only - implement role-based auth flow when PIN/badge auth is added
-  const [role, setRole] = useState<'staff' | 'supervisor'>('staff');
-
   const isFormValid = email.trim().length > 0 && password.length >= 6;
 
   const handleSignIn = async (e?: React.FormEvent) => {
@@ -58,11 +54,6 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
     }
   };
 
-  const handleScanBadge = () => {
-    toast.info("Badge scanning coming soon...");
-    // Future feature - badge scan integration
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && isFormValid) {
       handleSignIn();
@@ -71,8 +62,8 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ backgroundColor: '#1E1E1E', padding: '48px 24px' }}
+      className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-6 sm:px-6 sm:py-12 md:p-12"
+      style={{ backgroundColor: '#1E1E1E' }}
     >
       {/* Film grain texture */}
       <div
@@ -146,54 +137,51 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
         </div>
 
         {/* Right side - Login */}
-        <Card className="p-8 shadow-2xl backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb' }}>
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h1 className="text-3xl text-foreground font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
-                Welcome Back
-              </h1>
-              <p className="text-muted-foreground">
-                Sign in to access your workspace
-              </p>
+        <div className="w-full max-w-md">
+          {/* Mobile branding header - visible only on mobile */}
+          <div className="md:hidden text-center mb-6">
+            <div className="inline-flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-md" style={{ backgroundColor: '#FF6B00' }}>
+                <OrdakLogo className="h-6 w-6" variant="light" />
+              </div>
+              <span className="text-white text-xl font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
+                Ordak
+              </span>
             </div>
+            <p className="text-gray-400 text-sm">Manufacturing Hub</p>
+          </div>
 
-            {/* Role Selection - Visual only for now */}
-            <Tabs value={role} onValueChange={(v) => setRole(v as 'staff' | 'supervisor')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-12">
-                <TabsTrigger value="staff" className="gap-2">
-                  <Users className="h-4 w-4" />
-                  Staff
-                </TabsTrigger>
-                <TabsTrigger value="supervisor" className="gap-2">
-                  <Shield className="h-4 w-4" />
-                  Supervisor
-                </TabsTrigger>
-              </TabsList>
+          <Card className="p-6 sm:p-8 shadow-2xl backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb' }}>
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <h1 className="text-2xl sm:text-3xl text-foreground font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
+                  Welcome Back
+                </h1>
+                <p className="text-muted-foreground text-sm sm:text-base">
+                  Sign in to access your workspace
+                </p>
+              </div>
 
-              <TabsContent value={role} className="space-y-4 mt-6" forceMount>
-                <LoginFormFields
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  showPassword={showPassword}
-                  setShowPassword={setShowPassword}
-                  handleKeyDown={handleKeyDown}
-                  isLoading={isLoading}
-                  error={error}
-                  isFormValid={isFormValid}
-                  handleSignIn={handleSignIn}
-                  handleScanBadge={handleScanBadge}
-                  roleLabel={role === 'supervisor' ? 'Supervisor' : 'Staff'}
-                />
-              </TabsContent>
-            </Tabs>
+            <LoginFormFields
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              handleKeyDown={handleKeyDown}
+              isLoading={isLoading}
+              error={error}
+              isFormValid={isFormValid}
+              handleSignIn={handleSignIn}
+            />
 
             <p className="text-center text-sm text-muted-foreground">
               Need help? Contact your manager
             </p>
           </div>
         </Card>
+        </div>
       </div>
     </div>
   );
@@ -212,8 +200,6 @@ interface LoginFormFieldsProps {
   error: string;
   isFormValid: boolean;
   handleSignIn: (e?: React.FormEvent) => void;
-  handleScanBadge: () => void;
-  roleLabel: string;
 }
 
 function LoginFormFields({
@@ -228,16 +214,14 @@ function LoginFormFields({
   error,
   isFormValid,
   handleSignIn,
-  handleScanBadge,
-  roleLabel,
 }: LoginFormFieldsProps) {
   return (
     <form onSubmit={handleSignIn} className="space-y-4">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor={`email-${roleLabel}`}>Email</Label>
+          <Label htmlFor="login-email">Email</Label>
           <Input
-            id={`email-${roleLabel}`}
+            id="login-email"
             type="email"
             placeholder="Enter your email"
             value={email}
@@ -249,10 +233,10 @@ function LoginFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={`password-${roleLabel}`}>Password</Label>
+          <Label htmlFor="login-password">Password</Label>
           <div className="relative">
             <Input
-              id={`password-${roleLabel}`}
+              id="login-password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               value={password}
@@ -265,23 +249,24 @@ function LoginFormFields({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              size="icon"
+              className="absolute right-0 top-0 h-12 w-12 hover:bg-transparent"
               onClick={() => setShowPassword(!showPassword)}
               disabled={isLoading}
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                <EyeOff className="h-5 w-5 text-muted-foreground" />
               ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
+                <Eye className="h-5 w-5 text-muted-foreground" />
               )}
             </Button>
           </div>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+          <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
@@ -293,7 +278,14 @@ function LoginFormFields({
           disabled={!isFormValid || isLoading}
           className="w-full h-12 text-base"
         >
-          {isLoading ? "Signing in..." : "Sign In"}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            "Sign In"
+          )}
         </Button>
 
         <div className="relative">
@@ -308,12 +300,12 @@ function LoginFormFields({
         <Button
           type="button"
           variant="outline"
-          onClick={handleScanBadge}
-          disabled={isLoading}
+          disabled
           className="w-full h-12 text-base"
+          title="Badge scanning coming soon"
         >
           <Scan className="mr-2 h-5 w-5" />
-          Scan {roleLabel} Badge
+          Scan Badge (Coming Soon)
         </Button>
       </div>
     </form>
