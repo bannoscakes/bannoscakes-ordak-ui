@@ -1,14 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   Calendar as CalendarIcon
 } from "lucide-react";
 import { TallCakeIcon } from "./TallCakeIcon";
-import { useEffect, useState } from "react";
-import { getQueue } from "../lib/rpc-client";
+import { useState, useMemo } from "react";
+import { useQueueForMonitor } from "../hooks/useQueueByStore";
 
 interface OrderPill {
   id: string;
@@ -101,80 +101,52 @@ const getStageColorClasses = (stage: string) => {
 };
 
 export function FlourlaneMonitorPage() {
-  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getCurrentWeekStart());
 
-  useEffect(() => {
-    fetchWeeklyOrders();
-  }, [currentWeekStart]);
+  // Use React Query hook for queue data
+  const { data: orders = [], isLoading: loading } = useQueueForMonitor('flourlane');
 
-  const fetchWeeklyOrders = async () => {
-    try {
-      setLoading(true);
-      
-      // Calculate week's date range for reference
-      const weekStart = currentWeekStart;
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      
-      // Fetch orders with high limit to ensure we get orders across multiple weeks
-      // This handles cases where there are many orders or when navigating to future weeks
-      const orders = await getQueue({
-        store: 'flourlane',
-        limit: 5000, // Increased limit to cover more orders across time
-        sort_by: 'due_date',
-        sort_order: 'ASC'
-      });
+  // Group orders by week day using useMemo for performance
+  const weekDays = useMemo(() => {
+    // Initialize week structure
+    const days = getWeekDates(currentWeekStart);
 
-      // Initialize week structure
-      const days = getWeekDates(currentWeekStart);
-      
-      // Group orders by due date - only include orders within the displayed week
-      // Use local timezone formatting to avoid UTC date shift bugs
-      const weekStartStr = formatDateLocal(weekStart);
-      const weekEndStr = formatDateLocal(weekEnd);
-      
-      orders.forEach((order: any) => {
-        if (!order.due_date) return;
-        
-        // Convert order's due_date to local date string to match week boundaries
-        const due = new Date(order.due_date);
-        if (Number.isNaN(due.getTime())) {
-          console.warn('Invalid due_date for order:', order.id, order.human_id, order.due_date);
-          return;
+    // Calculate week's date range for filtering
+    const weekStart = currentWeekStart;
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const weekStartStr = formatDateLocal(weekStart);
+    const weekEndStr = formatDateLocal(weekEnd);
+
+    // Group orders by due date - only include orders within the displayed week
+    orders.forEach((order: any) => {
+      if (!order.due_date) return;
+
+      // Convert order's due_date to local date string to match week boundaries
+      const due = new Date(order.due_date);
+      if (Number.isNaN(due.getTime())) {
+        console.warn('Invalid due_date for order:', order.id, order.human_id, order.due_date);
+        return;
+      }
+      const orderDateLocal = formatDateLocal(due);
+
+      // Only process orders within the current week's date range
+      if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
+        const dayIndex = days.findIndex(d => d.dateStr === orderDateLocal);
+
+        if (dayIndex !== -1) {
+          days[dayIndex].orders.push({
+            id: order.id,
+            humanId: order.shopify_order_number ? `#F${order.shopify_order_number}` : (order.human_id || order.id),
+            stage: order.stage || 'Filling',
+            dueDate: order.due_date
+          });
         }
-        const orderDateLocal = formatDateLocal(due);
-        
-        // Only process orders within the current week's date range
-        if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
-          const dayIndex = days.findIndex(d => d.dateStr === orderDateLocal);
-          
-          if (dayIndex !== -1) {
-            days[dayIndex].orders.push({
-              id: order.id,
-              humanId: order.shopify_order_number ? `#F${order.shopify_order_number}` : (order.human_id || order.id),
-              stage: order.stage || 'Filling',
-              dueDate: order.due_date
-            });
-          }
-        }
-      });
+      }
+    });
 
-      setWeekDays(days);
-    } catch (error) {
-      console.error('RPC call failed:', {
-        rpc: 'get_queue',
-        store: 'flourlane',
-        weekStart: formatDateLocal(currentWeekStart),
-        weekEnd: formatDateLocal(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000)),
-        error: error instanceof Error ? error.message : String(error)
-      });
-      setWeekDays(getWeekDates(currentWeekStart));
-    } finally {
-      setLoading(false);
-    }
-  };
+    return days;
+  }, [orders, currentWeekStart]);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newStart = new Date(currentWeekStart);

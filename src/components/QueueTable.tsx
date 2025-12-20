@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Input } from "./ui/input";
 import { Checkbox } from "./ui/checkbox";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -19,13 +19,9 @@ import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
-// import { NetworkErrorRecovery } from "./NetworkErrorRecovery"; // Component doesn't exist
-import { getQueue, getStorageLocations, getStaffList } from "../lib/rpc-client";
-import { useErrorNotifications } from "../lib/error-notifications";
+import { getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
-
-// Auto-refresh interval for queue data (60 seconds - not too frequent to avoid visual distraction)
-const QUEUE_REFRESH_INTERVAL = 60_000;
+import { useQueueByStore } from "../hooks/useQueueByStore";
 
 interface QueueItem {
   id: string;
@@ -53,12 +49,6 @@ interface QueueTableProps {
 }
 
 export function QueueTable({ store, initialFilter }: QueueTableProps) {
-  const [queueData, setQueueData] = useState<{ [key: string]: QueueItem[] }>({});
-  const [loading, setLoading] = useState(true);
-  const hasInitiallyLoadedRef = useRef(false); // Use ref to avoid stale closure
-  const previousStoreRef = useRef(store); // Track store to detect changes
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
@@ -72,18 +62,23 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
   const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
-  const [error, setError] = useState<unknown>(null);
 
-  const { showErrorWithRetry } = useErrorNotifications();
+  // Use React Query hook for queue data
+  const {
+    data: orders = [],
+    isLoading: loading,
+    isFetching: isRefreshing,
+    error,
+    dataUpdatedAt,
+    refetch,
+  } = useQueueByStore(store, { storage: storageFilter });
+
+  // Convert dataUpdatedAt timestamp to Date for display
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
   // Use centralized mutation hook for cache invalidation
   const bulkAssignMutation = useBulkAssignStaff();
   const isAssigning = bulkAssignMutation.isPending;
-
-  // Store showErrorWithRetry in a ref to avoid it triggering useCallback recreation
-  // (useErrorNotifications returns new function objects on every render)
-  const showErrorWithRetryRef = useRef(showErrorWithRetry);
-  showErrorWithRetryRef.current = showErrorWithRetry;
 
   // Fetch storage locations for the current store
   useEffect(() => {
@@ -122,104 +117,56 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     fetchStaffList();
   }, [store]);
 
-  // Fetch queue data - wrapped in useCallback to prevent stale closures
-  const fetchQueueData = useCallback(async () => {
-    try {
-      // Reset loading state when store changes (synchronous check avoids race condition)
-      if (previousStoreRef.current !== store) {
-        hasInitiallyLoadedRef.current = false;
-        previousStoreRef.current = store;
-      }
-      
-      // Only show full loading skeleton on initial load
-      if (!hasInitiallyLoadedRef.current) {
-        setLoading(true);
-      } else {
-        // Show subtle refresh indicator for subsequent loads
-        setIsRefreshing(true);
-      }
-      setError(null);
+  // Group orders by stage using useMemo for performance
+  const queueData = useMemo(() => {
+    const grouped: { [key: string]: QueueItem[] } = {
+      unassigned: [],
+      filling: [],
+      covering: [],
+      decorating: [],
+      packing: [],
+      complete: [],
+    };
 
-      // Fetch queue data using the new RPC
-      const orders = await getQueue({
-        store,
-        storage: storageFilter,
-        limit: 200,
-      });
-
-      // Group orders by stage
-      const grouped: { [key: string]: QueueItem[] } = {
-        unassigned: [],
-        filling: [],
-        covering: [],
-        decorating: [],
-        packing: [],
-        complete: [],
+    orders.forEach((order: any) => {
+      const item: QueueItem = {
+        id: order.id,
+        orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+        shopifyOrderNumber: String(order.shopify_order_number || ''),
+        shopifyOrderId: order.shopify_order_id || undefined,
+        customerName: order.customer_name || 'Unknown',
+        product: order.product_title || 'Unknown',
+        size: order.size || 'M',
+        quantity: order.item_qty || 1,
+        deliveryTime: order.due_date || '',
+        priority: order.priority || 'Medium',
+        status: order.assignee_id ? 'In Production' : 'Pending',
+        flavor: order.flavour || '',
+        dueTime: order.due_date || '',
+        method: (() => {
+          const normalized = order.delivery_method?.trim().toLowerCase();
+          if (normalized === "delivery") return "Delivery" as const;
+          if (normalized === "pickup") return "Pickup" as const;
+          return undefined;
+        })(),
+        storage: order.storage || '',
       };
 
-      orders.forEach((order: any) => {
-        const item: QueueItem = {
-          id: order.id,
-          orderNumber: String(order.human_id || order.shopify_order_number || order.id),
-          shopifyOrderNumber: String(order.shopify_order_number || ''),
-          shopifyOrderId: order.shopify_order_id || undefined,
-          customerName: order.customer_name || 'Unknown',
-          product: order.product_title || 'Unknown',
-          size: order.size || 'M',
-          quantity: order.item_qty || 1,
-          deliveryTime: order.due_date || '',
-          priority: order.priority || 'Medium',
-          status: order.assignee_id ? 'In Production' : 'Pending',
-          flavor: order.flavour || '',
-          dueTime: order.due_date || '',
-          method: (() => {
-            const normalized = order.delivery_method?.trim().toLowerCase();
-            if (normalized === "delivery") return "Delivery" as const;
-            if (normalized === "pickup") return "Pickup" as const;
-            return undefined;
-          })(),
-          storage: order.storage || '',
-        };
+      // Group by stage
+      const stageKey = order.stage?.toLowerCase() || 'unassigned';
+      if (!order.assignee_id && stageKey === 'filling') {
+        grouped.unassigned.push(item);
+      } else if (stageKey === 'packing') {
+        grouped.packing.push(item);
+      } else if (stageKey === 'complete') {
+        grouped.complete.push(item);
+      } else if (grouped[stageKey]) {
+        grouped[stageKey].push(item);
+      }
+    });
 
-        // Group by stage
-        const stageKey = order.stage?.toLowerCase() || 'unassigned';
-        if (!order.assignee_id && stageKey === 'filling') {
-          grouped.unassigned.push(item);
-        } else if (stageKey === 'packing') {
-          grouped.packing.push(item);
-        } else if (stageKey === 'complete') {
-          grouped.complete.push(item);
-        } else if (grouped[stageKey]) {
-          grouped[stageKey].push(item);
-        }
-      });
-
-      setQueueData(grouped);
-      setLastUpdated(new Date()); // Store actual fetch timestamp
-      hasInitiallyLoadedRef.current = true; // Mark as loaded using ref (no re-render needed)
-    } catch (error) {
-      console.error('Failed to fetch queue:', error);
-      setError(error);
-      showErrorWithRetryRef.current(error, fetchQueueData, {
-        title: 'Failed to Load Queue',
-        showRecoveryActions: true,
-      });
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [store, storageFilter]); // showErrorWithRetry accessed via ref to keep callback stable
-
-  // Fetch real queue data from Supabase
-  useEffect(() => {
-    fetchQueueData();
-  }, [fetchQueueData]);
-
-  // Auto-refresh queue data every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(fetchQueueData, QUEUE_REFRESH_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchQueueData]);
+    return grouped;
+  }, [orders]);
 
   // Set initial filter if provided
   useEffect(() => {
@@ -306,8 +253,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               toast.error('Failed to assign orders');
             }
 
-            // Refresh local state (QueueTable uses local state, not React Query for fetching)
-            fetchQueueData();
+            // React Query cache is already invalidated by the mutation hook
+            // Just clear local selection state
             setSelectedItems([]);
             setSelectedStaff(null);
           },
@@ -339,11 +286,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   if (error) {
     return (
       <div className="space-y-4">
-        <ErrorDisplay error={error} onRetry={fetchQueueData} />
+        <ErrorDisplay error={error} onRetry={() => refetch()} />
         <ErrorDisplay
           error={error}
           title="Failed to Load Queue"
-          onRetry={fetchQueueData}
+          onRetry={() => refetch()}
           variant="card"
           showDetails={process.env.NODE_ENV === 'development'}
         />
@@ -634,17 +581,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         }}
         order={selectedOrder}
         store={store}
-        onAssigned={(updatedOrder) => {
-          // Update the order in the queue data
-          setQueueData(prev => {
-            const newData = { ...prev };
-            Object.keys(newData).forEach(stage => {
-              newData[stage] = newData[stage].map(item => 
-                item.id === updatedOrder.id ? { ...updatedOrder, shopifyOrderNumber: item.shopifyOrderNumber } : item
-              );
-            });
-            return newData;
-          });
+        onAssigned={() => {
+          // React Query cache is invalidated by the mutation hook
+          // Just close the modal
           setIsAssigningStaff(false);
           setSelectedOrder(null);
         }}
