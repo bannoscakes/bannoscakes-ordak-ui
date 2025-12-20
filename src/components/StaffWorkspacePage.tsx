@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -47,7 +46,7 @@ type ShiftStatus = "not-started" | "on-shift" | "on-break";
 export function StaffWorkspacePage({
   onSignOut,
 }: StaffWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
 
   // Use React Query hook for orders
@@ -228,12 +227,12 @@ export function StaffWorkspacePage({
     }
   };
 
-  const handleOpenOrder = (order: QueueItem) => {
+  const handleOpenOrder = (order: StaffQueueItem) => {
     setSelectedOrder(order);
     setOrderDetailOpen(true);
   };
 
-  const handleScanOrder = (order: QueueItem) => {
+  const handleScanOrder = (order: StaffQueueItem) => {
     if (shiftStatus === "on-break") {
       toast.error("Cannot scan orders while on break");
       return;
@@ -242,7 +241,7 @@ export function StaffWorkspacePage({
     setScannerOpen(true);
   };
 
-  const handleOrderCompleted = async (orderId: string) => {
+  const handleOrderCompleted = async (_orderId: string) => {
     setScannerOpen(false);
     setSelectedOrder(null);
 
@@ -465,11 +464,11 @@ export function StaffWorkspacePage({
                             : "Flourlane"}
                         </Badge>
                         <OrderOverflowMenu
+                          item={order}
+                          variant="queue"
                           onOpenOrder={() =>
                             handleOpenOrder(order)
                           }
-                          onEditOrder={undefined}
-                          onAssignToStaff={undefined}
                           onViewDetails={() => {
                             const id = order.shopifyOrderNumber?.trim();
                             if (!id) {
@@ -481,7 +480,6 @@ export function StaffWorkspacePage({
                               "_blank",
                             );
                           }}
-                          isCompleteTab={false}
                         />
                       </div>
 

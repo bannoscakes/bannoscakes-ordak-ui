@@ -20,7 +20,7 @@ export interface StaffQueueItem {
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
   dueTime: string;
-  method?: 'Delivery' | 'Pickup' | 'Unknown';
+  method?: 'Delivery' | 'Pickup';
   storage?: string;
   store: 'bannos' | 'flourlane';
   stage: string;
@@ -67,7 +67,7 @@ function mapOrderToQueueItem(order: any): StaffQueueItem {
     dueTime: order.due_date || new Date().toISOString(),
     method: normalizedMethod === 'delivery' ? 'Delivery'
           : normalizedMethod === 'pickup' ? 'Pickup'
-          : 'Unknown',
+          : undefined,
     storage: order.storage || 'Default',
     store: order.store || 'bannos',
     stage: order.stage || 'Filling',
