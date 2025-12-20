@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -13,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, ArrowRight, MessageSquare, Briefcase } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -41,12 +40,19 @@ export function SupervisorWorkspacePage({
   onNavigateToBannosQueue,
   onNavigateToFlourlaneQueue
 }: SupervisorWorkspacePageProps) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const displayName = user?.fullName || user?.email || "Signed in";
 
   // Use React Query hook for orders
-  const { data: orders = [], isLoading: loading, refetch } = useSupervisorQueue(user?.id);
+  const { data: orders = [], isLoading: loading, isError } = useSupervisorQueue(user?.id);
   const invalidateSupervisorQueue = useInvalidateSupervisorQueue();
+
+  // Show toast on error
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to load orders");
+    }
+  }, [isError]);
 
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] = useState<ShiftStatus>('not-started');
@@ -223,7 +229,7 @@ export function SupervisorWorkspacePage({
     toast.success(`Barcode for ${order.orderNumber} sent to printer`);
   };
 
-  const handleOrderCompleted = async (orderId: string) => {
+  const handleOrderCompleted = async (_orderId: string) => {
     setScannerOpen(false);
     setSelectedOrder(null);
 
@@ -426,9 +432,9 @@ export function SupervisorWorkspacePage({
                           {order.store === 'bannos' ? 'Bannos' : 'Flourlane'}
                         </Badge>
                         <OrderOverflowMenu
+                          item={order}
+                          variant="queue"
                           onOpenOrder={() => handleOpenOrder(order)}
-                          onEditOrder={undefined}
-                          onAssignToStaff={undefined}
                           onViewDetails={() => {
                             const id = order.shopifyOrderNumber?.trim();
                             if (!id) {
@@ -437,7 +443,6 @@ export function SupervisorWorkspacePage({
                             }
                             window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
                           }}
-                          isCompleteTab={false}
                         />
                       </div>
 

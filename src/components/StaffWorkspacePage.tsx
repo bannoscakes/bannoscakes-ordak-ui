@@ -50,8 +50,15 @@ export function StaffWorkspacePage({
   const displayName = user?.fullName || user?.email || "Signed in";
 
   // Use React Query hook for orders
-  const { data: orders = [], isLoading: loading, refetch } = useStaffQueue(user?.id);
+  const { data: orders = [], isLoading: loading, isError, refetch } = useStaffQueue(user?.id);
   const invalidateStaffQueue = useInvalidateStaffQueue();
+
+  // Show toast on error
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to load orders");
+    }
+  }, [isError]);
 
   const [searchValue, setSearchValue] = useState("");
   const [shiftStatus, setShiftStatus] =
