@@ -93,8 +93,8 @@ export function useStaffQueue(userId: string | undefined) {
       if (!userId) return [];
 
       const [bannosOrders, flourlaneOrders] = await Promise.all([
-        getQueue({ store: 'bannos', assignee_id: userId, limit: 100 }),
-        getQueue({ store: 'flourlane', assignee_id: userId, limit: 100 }),
+        getQueue({ store: 'bannos', assignee_id: userId, limit: 999999 }),
+        getQueue({ store: 'flourlane', assignee_id: userId, limit: 999999 }),
       ]);
 
       // Combine orders from both stores, excluding Complete stage
