@@ -4,7 +4,9 @@ import { Button } from "./ui/button";
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { useState, useMemo } from "react";
@@ -104,7 +106,13 @@ export function FlourlaneMonitorPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getCurrentWeekStart());
 
   // Use React Query hook for queue data
-  const { data: orders = [], isLoading: loading } = useQueueForMonitor('flourlane');
+  const {
+    data: orders = [],
+    isLoading: loading,
+    isError,
+    error,
+    refetch,
+  } = useQueueForMonitor('flourlane');
 
   // Group orders by week day using useMemo for performance
   const weekDays = useMemo(() => {
@@ -182,6 +190,30 @@ export function FlourlaneMonitorPage() {
                   <div key={i} className="h-96 bg-muted rounded-lg"></div>
                 ))}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <Card className="h-full">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="p-3 rounded-full bg-red-100 mb-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Failed to load queue</h3>
+              <p className="text-muted-foreground mb-4 max-w-md">
+                {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              </p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try again
+              </Button>
             </div>
           </CardContent>
         </Card>
