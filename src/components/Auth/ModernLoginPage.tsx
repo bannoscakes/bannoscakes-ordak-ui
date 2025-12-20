@@ -61,21 +61,34 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center p-6 relative overflow-hidden">
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden"
+      style={{ backgroundColor: '#1E1E1E', padding: '48px 24px' }}
+    >
       {/* Film grain texture */}
-      <div className="absolute inset-0 opacity-[0.15] pointer-events-none" style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
-      }} />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          opacity: 0.15,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+        }}
+      />
 
       {/* Subtle background accent */}
-      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-[#FF6B00]/5 rounded-full blur-3xl" />
+      <div
+        className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl"
+        style={{ backgroundColor: 'rgba(255, 107, 0, 0.05)' }}
+      />
 
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center relative z-10">
+      <div
+        className="w-full items-center relative z-10"
+        style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '48px' }}
+      >
         {/* Left side - Branding */}
-        <div className="text-white space-y-6 hidden lg:block" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
+        <div className="text-white hidden md:block" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
           <div className="inline-flex items-center gap-3 mb-8">
-            <div className="bg-[#FF6B00] p-3 rounded-md">
+            <div className="p-3 rounded-md" style={{ backgroundColor: '#FF6B00' }}>
               <OrdakLogo className="h-10 w-10" variant="light" />
             </div>
             <div>
@@ -84,11 +97,11 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="backdrop-blur-sm rounded-lg p-6" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
               <div className="flex items-start gap-4">
-                <div className="bg-[#FF6B00]/10 p-3 rounded-lg border border-[#FF6B00]/20">
-                  <ChefHat className="h-6 w-6 text-[#FF6B00]" />
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(255, 107, 0, 0.1)', border: '1px solid rgba(255, 107, 0, 0.2)' }}>
+                  <ChefHat className="h-6 w-6" style={{ color: '#FF6B00' }} />
                 </div>
                 <div>
                   <h3 className="text-lg mb-2 font-semibold">Streamlined Production</h3>
@@ -97,10 +110,10 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
               </div>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            <div className="backdrop-blur-sm rounded-lg p-6" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
               <div className="flex items-start gap-4">
-                <div className="bg-[#FF6B00]/10 p-3 rounded-lg border border-[#FF6B00]/20">
-                  <Users className="h-6 w-6 text-[#FF6B00]" />
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(255, 107, 0, 0.1)', border: '1px solid rgba(255, 107, 0, 0.2)' }}>
+                  <Users className="h-6 w-6" style={{ color: '#FF6B00' }} />
                 </div>
                 <div>
                   <h3 className="text-lg mb-2 font-semibold">Team Collaboration</h3>
@@ -109,10 +122,10 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
               </div>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6">
+            <div className="backdrop-blur-sm rounded-lg p-6" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
               <div className="flex items-start gap-4">
-                <div className="bg-[#FF6B00]/10 p-3 rounded-lg border border-[#FF6B00]/20">
-                  <Shield className="h-6 w-6 text-[#FF6B00]" />
+                <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(255, 107, 0, 0.1)', border: '1px solid rgba(255, 107, 0, 0.2)' }}>
+                  <Shield className="h-6 w-6" style={{ color: '#FF6B00' }} />
                 </div>
                 <div>
                   <h3 className="text-lg mb-2 font-semibold">Quality Control</h3>
@@ -124,7 +137,7 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
         </div>
 
         {/* Right side - Login */}
-        <Card className="p-8 shadow-2xl bg-white/95 backdrop-blur-sm border border-gray-200">
+        <Card className="p-8 shadow-2xl backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb' }}>
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h1 className="text-3xl text-foreground font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
