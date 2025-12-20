@@ -22,11 +22,10 @@ export function useQueueByStore(
   store: Store,
   options?: {
     storage?: string | null;
-    limit?: number;
     enabled?: boolean;
   }
 ) {
-  const { storage = null, limit = 200, enabled = true } = options || {};
+  const { storage = null, enabled = true } = options || {};
 
   return useQuery({
     queryKey: ['queue', store, { storage }],
@@ -34,7 +33,7 @@ export function useQueueByStore(
       getQueue({
         store,
         storage,
-        limit,
+        limit: 999999, // Fetch all orders - no order should ever be missed
       }),
     staleTime: QUEUE_STALE_TIME,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
