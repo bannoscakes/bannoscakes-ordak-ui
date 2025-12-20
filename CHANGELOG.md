@@ -1,3 +1,50 @@
+## v0.18.0-beta — Modern Login Page (2025-12-20)
+
+### 🎯 Overview
+New modern login page with Ordak branding, improved accessibility, and mobile-first design. The login experience now matches the production floor aesthetic with proper touch targets and visual feedback.
+
+### ✨ New Features
+
+#### Modern Login Page with Ordak Branding (PR #409)
+- **New design**: Dark theme login page with Ordak orange accents
+- **Branding panel**: Left side showcases product features (desktop only)
+- **Mobile branding**: Compact Ordak header visible on mobile devices
+- **Loading spinner**: Visual feedback during authentication
+- **Accessibility**: Password toggle with proper aria-label and 48px touch target
+
+### 🐛 Bug Fixes
+
+#### Login UX Improvements (PR #409)
+- **Password toggle**: Touch target increased from ~36px to 48x48px
+- **Badge scan button**: Disabled with "(Coming Soon)" instead of misleading toast
+- **Role tabs removed**: Non-functional Staff/Supervisor tabs removed to avoid confusion
+- **Mobile padding**: Responsive padding (16px → 24px → 48px) instead of fixed 48px
+- **Error icon**: Increased from 16px to 20px for better visibility
+
+### 📋 PRs in This Release
+- PR #409: `feat: Modern login page with Ordak branding`
+
+### 📁 Key Files Modified
+
+#### New Components
+- `src/components/Auth/ModernLoginPage.tsx` - Complete login page redesign
+- `src/components/OrdakLogo.tsx` - SVG logo component with light/dark variants
+
+#### Updated
+- `src/App.tsx` - Integrated new login page
+
+### 🔧 Technical Notes
+
+#### Lazy-loaded Auth Service
+The auth service is lazy-loaded at module level to avoid per-call dynamic imports, improving login performance on repeat submissions.
+
+#### Responsive Design
+- Mobile-first approach with responsive breakpoints
+- Touch targets meet WCAG 2.1 standards (44px minimum)
+- IBM Plex Sans font for branding consistency
+
+---
+
 ## v0.17.0-beta — Touch Targets, Scanner UX & Bug Fixes (2025-12-19)
 
 ### 🎯 Overview
