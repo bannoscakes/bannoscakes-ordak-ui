@@ -11,6 +11,7 @@ import {
 import { TallCakeIcon } from "./TallCakeIcon";
 import { useState, useMemo } from "react";
 import { useQueueForMonitor } from "../hooks/useQueueByStore";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface OrderPill {
   id: string;
