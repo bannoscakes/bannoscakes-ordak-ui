@@ -285,16 +285,13 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   if (error) {
     return (
-      <div className="space-y-4">
-        <ErrorDisplay error={error} onRetry={() => refetch()} />
-        <ErrorDisplay
-          error={error}
-          title="Failed to Load Queue"
-          onRetry={() => refetch()}
-          variant="card"
-          showDetails={process.env.NODE_ENV === 'development'}
-        />
-      </div>
+      <ErrorDisplay
+        error={error}
+        title="Failed to Load Queue"
+        onRetry={() => refetch()}
+        variant="card"
+        showDetails={process.env.NODE_ENV === 'development'}
+      />
     );
   }
 

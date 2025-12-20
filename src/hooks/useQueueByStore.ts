@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { getQueue } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
@@ -71,18 +71,3 @@ export function useQueueForMonitor(
   });
 }
 
-/**
- * Hook to manually invalidate and refetch queue data
- * Use after mutations when you need immediate refresh
- */
-export function useInvalidateQueueByStore() {
-  const queryClient = useQueryClient();
-
-  return async (store?: Store) => {
-    if (store) {
-      await queryClient.invalidateQueries({ queryKey: ['queue', store] });
-    } else {
-      await queryClient.invalidateQueries({ queryKey: ['queue'] });
-    }
-  };
-}
