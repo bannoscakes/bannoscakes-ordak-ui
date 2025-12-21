@@ -24,8 +24,8 @@ export const inventoryKeys = {
   accessoriesNeedingSync: () => [...inventoryKeys.accessoriesAll(), 'needingSync'] as const,
   // Components
   componentsAll: () => [...inventoryKeys.all(), 'components'] as const,
-  componentsFiltered: (category?: string) =>
-    [...inventoryKeys.componentsAll(), { category }] as const,
+  componentsFiltered: (category?: string, search?: string) =>
+    [...inventoryKeys.componentsAll(), { category, search }] as const,
   componentsLowStock: () => [...inventoryKeys.componentsAll(), 'lowStock'] as const,
 };
 
@@ -70,11 +70,12 @@ export function useAccessoriesNeedingSync() {
 /**
  * Hook for components list
  * Used by: ComponentsTab, BOMsTab
+ * Supports server-side category and search filtering
  */
-export function useComponents(options?: { category?: string }) {
+export function useComponents(options?: { category?: string; search?: string }) {
   return useQuery({
-    queryKey: inventoryKeys.componentsFiltered(options?.category),
-    queryFn: () => getComponents({ category: options?.category }),
+    queryKey: inventoryKeys.componentsFiltered(options?.category, options?.search),
+    queryFn: () => getComponents({ category: options?.category, search: options?.search }),
     // Uses global staleTime (30s) from query-client.ts
   });
 }

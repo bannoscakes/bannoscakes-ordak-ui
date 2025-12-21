@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -68,9 +68,10 @@ export function ComponentsTab() {
     direction: 'add'
   });
 
-  // React Query for data fetching
+  // React Query for data fetching (server-side filtering)
   const category = categoryFilter === 'all' ? undefined : categoryFilter;
-  const { data: allComponents = [], isLoading: loading, isError, error } = useComponents({ category });
+  const search = searchQuery || undefined;
+  const { data: components = [], isLoading: loading, isError, error } = useComponents({ category, search });
   const { data: lowStockData = [] } = useLowStockComponents();
   const invalidate = useInvalidateInventory();
 
@@ -81,17 +82,6 @@ export function ComponentsTab() {
       toast.error('Failed to load components');
     }
   }, [isError, error]);
-
-  // Filter components by search query (client-side, case-insensitive)
-  const components = useMemo(() => {
-    if (!searchQuery) return allComponents;
-    const query = searchQuery.toLowerCase();
-    return allComponents.filter(c =>
-      c.name.toLowerCase().includes(query) ||
-      c.sku.toLowerCase().includes(query) ||
-      (c.description && c.description.toLowerCase().includes(query))
-    );
-  }, [allComponents, searchQuery]);
 
   const lowStockCount = lowStockData.length;
 
