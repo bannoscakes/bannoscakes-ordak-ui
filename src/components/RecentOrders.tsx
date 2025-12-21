@@ -207,7 +207,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                     {order.priority}
                   </Badge>
                 </td>
-                <td className="py-4 text-foreground">{formatDate(order.dueDate)}</td>
+                <td className="py-4 text-foreground">{order.dueDate === 'N/A' ? 'N/A' : formatDate(order.dueDate)}</td>
                 <td className="py-4">
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded-full h-2">
