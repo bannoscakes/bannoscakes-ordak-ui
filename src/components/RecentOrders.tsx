@@ -71,7 +71,7 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   priority: order.priority as 'High' | 'Medium' | 'Low',
   status: order.status as any,
   flavor: "Vanilla", // Default flavor
-  dueTime: "10:00 AM", // Default time
+  dueTime: order.dueDate,
   method: "Pickup" as const, // Default method
   storage: order.status === "Completed" ? "Store Fridge" : undefined
 });
