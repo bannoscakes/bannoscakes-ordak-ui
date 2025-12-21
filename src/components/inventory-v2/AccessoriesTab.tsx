@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -11,14 +11,17 @@ import { Label } from "../ui/label";
 import { Search, Plus, Minus, AlertTriangle, RefreshCw, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getAccessoriesCached,
-  getAccessoriesNeedingSync,
   upsertAccessory,
   adjustAccessoryStock,
   deleteAccessory,
-  invalidateInventoryCache,
+  getAccessoriesNeedingSync,
   type Accessory
 } from "../../lib/rpc-client";
+import {
+  useAccessories,
+  useAccessoriesNeedingSync,
+  useInvalidateInventory
+} from "../../hooks/useInventoryQueries";
 
 const CATEGORIES = [
   { value: 'topper', label: 'Cake Topper' },
@@ -38,9 +41,6 @@ interface StockAdjustState {
 }
 
 export function AccessoriesTab() {
-  const [accessories, setAccessories] = useState<Accessory[]>([]);
-  const [needsSyncCount, setNeedsSyncCount] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -61,38 +61,29 @@ export function AccessoriesTab() {
     direction: 'add'
   });
 
-  // Fetch accessories
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [accessoriesData, needsSync] = await Promise.all([
-          getAccessoriesCached({
-            category: categoryFilter === 'all' ? undefined : categoryFilter,
-          }),
-          getAccessoriesNeedingSync()
-        ]);
+  // React Query for data fetching
+  const category = categoryFilter === 'all' ? undefined : categoryFilter;
+  const { data: allAccessories = [], isLoading: loading, isError, error } = useAccessories({ category });
+  const { data: needsSyncData = [] } = useAccessoriesNeedingSync();
+  const invalidate = useInvalidateInventory();
 
-        // Filter by search locally
-        const filtered = searchQuery
-          ? accessoriesData.filter(a =>
-              a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              a.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              a.product_match.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          : accessoriesData;
+  // Log fetch errors for debugging
+  if (isError && error) {
+    console.error('Error fetching accessories:', error);
+  }
 
-        setAccessories(filtered);
-        setNeedsSyncCount(needsSync.length);
-      } catch (error) {
-        console.error('Error fetching accessories:', error);
-        toast.error('Failed to load accessories');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [categoryFilter, searchQuery]);
+  // Filter accessories by search query (client-side, case-insensitive)
+  const accessories = useMemo(() => {
+    if (!searchQuery) return allAccessories;
+    const query = searchQuery.toLowerCase();
+    return allAccessories.filter(a =>
+      a.name.toLowerCase().includes(query) ||
+      a.sku.toLowerCase().includes(query) ||
+      a.product_match.toLowerCase().includes(query)
+    );
+  }, [allAccessories, searchQuery]);
+
+  const needsSyncCount = needsSyncData.length;
 
   const handleAddNew = () => {
     setEditingAccessory({
@@ -117,11 +108,7 @@ export function AccessoriesTab() {
 
     try {
       await deleteAccessory(accessory.id);
-      invalidateInventoryCache();
-
-      // Update local state
-      setAccessories(prev => prev.filter(a => a.id !== accessory.id));
-
+      await invalidate.accessoriesAll();
       toast.success("Accessory deleted");
     } catch (error) {
       console.error('Error deleting accessory:', error);
@@ -149,13 +136,7 @@ export function AccessoriesTab() {
         is_active: editingAccessory.is_active !== false,
       });
 
-      invalidateInventoryCache();
-
-      // Refresh data
-      const data = await getAccessoriesCached({
-        category: categoryFilter === 'all' ? undefined : categoryFilter,
-      });
-      setAccessories(data);
+      await invalidate.accessoriesAll();
 
       setIsAddEditOpen(false);
       setEditingAccessory(null);
@@ -193,23 +174,10 @@ export function AccessoriesTab() {
       });
 
       if (result.success) {
-        invalidateInventoryCache();
-
-        // Update local state
-        setAccessories(prev => prev.map(a =>
-          a.id === stockAdjust.accessoryId
-            ? {
-                ...a,
-                current_stock: result.after!,
-                is_low_stock: result.after! < a.min_stock && result.after! > 0,
-                is_out_of_stock: result.after! === 0
-              }
-            : a
-        ));
+        await invalidate.accessoriesAll();
 
         // Check if needs sync
         if (result.needs_sync) {
-          setNeedsSyncCount(prev => prev + 1);
           toast.warning(`${result.accessory} is now out of stock - Shopify sync needed`);
         } else {
           toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${result.before} → ${result.after}`);
@@ -368,6 +336,12 @@ export function AccessoriesTab() {
                   <TableCell><div className="h-8 bg-muted rounded w-16 animate-pulse" /></TableCell>
                 </TableRow>
               ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                  Failed to load accessories. Please refresh.
+                </TableCell>
+              </TableRow>
             ) : accessories.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
