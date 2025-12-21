@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -10,13 +10,12 @@ import { Label } from "../ui/label";
 import { Search, Plus, Minus, AlertTriangle, Package, Cake, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getCakeToppersCached,
   upsertCakeTopper,
   adjustCakeTopperStock,
   deleteCakeTopper,
-  invalidateInventoryCache,
   type CakeTopper
 } from "../../lib/rpc-client";
+import { useCakeToppers, useInvalidateInventory } from "../../hooks/useInventoryQueries";
 
 interface StockAdjustState {
   topperId: string;
@@ -29,8 +28,6 @@ interface StockAdjustState {
 }
 
 export function CakeToppersTab() {
-  const [toppers, setToppers] = useState<CakeTopper[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog states
@@ -49,37 +46,26 @@ export function CakeToppersTab() {
     direction: 'add'
   });
 
-  // Filter helper function
-  const applySearchFilter = (data: CakeTopper[], query: string): CakeTopper[] => {
-    if (!query) return data;
-    return data.filter(t =>
-      t.name_1.toLowerCase().includes(query.toLowerCase()) ||
-      (t.name_2 && t.name_2.toLowerCase().includes(query.toLowerCase())) ||
-      (t.shopify_product_id_1 && t.shopify_product_id_1.includes(query)) ||
-      (t.shopify_product_id_2 && t.shopify_product_id_2.includes(query))
+  // React Query for data fetching
+  const { data: allToppers = [], isLoading: loading, isError, error } = useCakeToppers();
+  const invalidate = useInvalidateInventory();
+
+  // Log fetch errors for debugging
+  if (isError && error) {
+    console.error('Error fetching cake toppers:', error);
+  }
+
+  // Filter toppers by search query (client-side, case-insensitive)
+  const toppers = useMemo(() => {
+    if (!searchQuery) return allToppers;
+    const query = searchQuery.toLowerCase();
+    return allToppers.filter(t =>
+      t.name_1.toLowerCase().includes(query) ||
+      (t.name_2 && t.name_2.toLowerCase().includes(query)) ||
+      (t.shopify_product_id_1 && t.shopify_product_id_1.toLowerCase().includes(query)) ||
+      (t.shopify_product_id_2 && t.shopify_product_id_2.toLowerCase().includes(query))
     );
-  };
-
-  // Fetch cake toppers
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const data = await getCakeToppersCached({});
-
-        // Filter by search locally
-        const filtered = applySearchFilter(data, searchQuery);
-
-        setToppers(filtered);
-      } catch (error) {
-        console.error('Error fetching cake toppers:', error);
-        toast.error('Failed to load cake toppers');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [searchQuery]);
+  }, [allToppers, searchQuery]);
 
   const handleAddNew = () => {
     setEditingTopper({
@@ -109,11 +95,7 @@ export function CakeToppersTab() {
 
     try {
       await deleteCakeTopper(topper.id);
-      invalidateInventoryCache();
-
-      // Update local state
-      setToppers(prev => prev.filter(t => t.id !== topper.id));
-
+      await invalidate.cakeToppersAll();
       toast.success("Cake topper deleted");
     } catch (error) {
       console.error('Error deleting cake topper:', error);
@@ -142,13 +124,7 @@ export function CakeToppersTab() {
       };
 
       await upsertCakeTopper(params);
-
-      invalidateInventoryCache();
-
-      // Refresh data and reapply search filter
-      const data = await getCakeToppersCached({});
-      const filtered = applySearchFilter(data, searchQuery);
-      setToppers(filtered);
+      await invalidate.cakeToppersAll();
 
       setIsAddEditOpen(false);
       setEditingTopper(null);
@@ -182,8 +158,8 @@ export function CakeToppersTab() {
       ? stockAdjust.amount
       : -stockAdjust.amount;
 
-    // Find current topper to validate
-    const currentTopper = toppers.find(t => t.id === stockAdjust.topperId);
+    // Find current topper to validate (use allToppers, not filtered list)
+    const currentTopper = allToppers.find(t => t.id === stockAdjust.topperId);
     if (!currentTopper) {
       toast.error('Cake topper not found');
       return;
@@ -204,19 +180,7 @@ export function CakeToppersTab() {
       });
 
       if (result.success) {
-        invalidateInventoryCache();
-
-        // Update local state
-        setToppers(prev => prev.map(t =>
-          t.id === stockAdjust.topperId
-            ? {
-                ...t,
-                current_stock: result.new_stock,
-                is_low_stock: result.new_stock < t.min_stock && result.new_stock > 0,
-                is_out_of_stock: result.new_stock === 0
-              }
-            : t
-        ));
+        await invalidate.cakeToppersAll();
 
         const displayName = result.name_2
           ? `${result.name_1} / ${result.name_2}`
@@ -303,6 +267,12 @@ export function CakeToppersTab() {
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Loading...
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                  Failed to load cake toppers. Please refresh.
                 </TableCell>
               </TableRow>
             ) : toppers.length === 0 ? (
