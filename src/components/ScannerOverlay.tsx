@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { CameraScanner } from "./CameraScanner";
 import { getOrderForScan } from "../lib/rpc-client";
 import { useStageMutations } from "../hooks/useQueueMutations";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber?: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -52,6 +54,11 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   if (!isOpen || !order) return null;
 
+  // Get formatted order number for display
+  const displayOrderNumber = order.shopifyOrderNumber
+    ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+    : order.orderNumber;
+
   // Determine if this scan will START or COMPLETE the stage
   const isStartAction = (): boolean => {
     if (order.stage === 'Covering' && !order.covering_start_ts) return true;
@@ -86,7 +93,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         setErrorMessage("");
       } else {
         setScanState('error');
-        setErrorMessage(`Wrong order scanned. Expected ${order.orderNumber}, got ${scannedOrder.id}.`);
+        setErrorMessage(`Wrong order scanned. Expected ${displayOrderNumber}, got ${scannedOrder.id}.`);
       }
     } catch (error) {
       setIsScanLookupPending(false);
@@ -128,7 +135,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       setScanState('success');
 
       setTimeout(() => {
-        toast.success(`${actionMessage} for ${order.orderNumber}`);
+        toast.success(`${actionMessage} for ${displayOrderNumber}`);
         onOrderCompleted(order.id);
         handleClose();
       }, 1500);
@@ -217,7 +224,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
             <h3 className="text-lg font-medium">Confirm {actionVerbCapitalized}</h3>
             <p className="text-sm text-muted-foreground">
-              {isStartAction() ? 'Start' : 'Mark'} <span className="font-medium">{order.orderNumber}</span> <span className="font-medium">{order.stage}</span> stage {actionVerb}?
+              {isStartAction() ? 'Start' : 'Mark'} <span className="font-medium">{displayOrderNumber}</span> <span className="font-medium">{order.stage}</span> stage {actionVerb}?
             </p>
           </div>
           <div className="flex gap-4">
@@ -250,7 +257,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
             <h3 className="text-lg font-medium">Stage {isStartAction() ? 'Started' : 'Completed'}!</h3>
             <p className="text-sm text-muted-foreground">
-              {order.orderNumber} - {order.stage} stage has been {actionVerbPast}
+              {displayOrderNumber} - {order.stage} stage has been {actionVerbPast}
             </p>
           </div>
         </Card>
@@ -268,7 +275,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
               Scan order to {actionVerb} {order.stage}
             </h2>
             <p className="text-sm text-white/80">
-              Order: {order.orderNumber}
+              Order: {displayOrderNumber}
             </p>
           </div>
           <Button

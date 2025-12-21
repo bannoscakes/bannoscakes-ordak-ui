@@ -22,6 +22,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface QueueItem {
   id: string;
@@ -464,7 +465,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Order</p>
-                            <p>{item.orderNumber}</p>
+                            <p>{item.shopifyOrderNumber
+                              ? formatOrderNumber(item.shopifyOrderNumber, store)
+                              : item.orderNumber}</p>
                           </div>
                           
                           <div>

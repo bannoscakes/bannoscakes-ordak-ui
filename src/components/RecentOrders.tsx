@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { useRecentOrders } from "../hooks/useDashboardQueries";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
@@ -188,7 +189,11 @@ export function RecentOrders({ store }: RecentOrdersProps) {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                <td className="py-4 font-medium text-foreground">{order.id}</td>
+                <td className="py-4 font-medium text-foreground">
+                  {order.shopify_order_number
+                    ? formatOrderNumber(String(order.shopify_order_number), store)
+                    : order.id}
+                </td>
                 <td className="py-4 text-foreground">{order.customer}</td>
                 <td className="py-4 text-foreground">{order.product}</td>
                 <td className="py-4 text-foreground">{order.quantity}</td>

@@ -19,6 +19,7 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
+import { formatOrderNumber } from "../lib/format-utils";
 import {
   startShift,
   endShift,
@@ -448,7 +449,11 @@ export function SupervisorWorkspacePage({
 
                       {/* Order Number */}
                       <div>
-                        <p className="font-medium text-foreground">{order.orderNumber}</p>
+                        <p className="font-medium text-foreground">
+                          {order.shopifyOrderNumber
+                            ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+                            : order.orderNumber}
+                        </p>
                       </div>
 
                       {/* Product Title */}
