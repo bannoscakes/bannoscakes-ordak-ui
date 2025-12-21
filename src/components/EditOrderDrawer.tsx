@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { toast } from "sonner";
 import { updateOrderCore } from "../lib/rpc-client";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate as formatDateDisplay } from "../lib/format-utils";
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
@@ -396,7 +396,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                       dirtyFields.dueDate ? 'border-orange-300 bg-orange-50' : ''
                     }`}
                   >
-                    {formData.dueDate ? formData.dueDate : "Select date"}
+                    {formData.dueDate ? formatDateDisplay(formData.dueDate) : "Select date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

@@ -22,7 +22,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 interface QueueItem {
   id: string;
@@ -482,7 +482,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           
                           <div className="hidden lg:block">
                             <p className="text-sm text-muted-foreground">Due Time</p>
-                            <p>{item.dueTime}</p>
+                            <p>{formatDate(item.dueTime)}</p>
                           </div>
                           
                           <div className="hidden md:block">

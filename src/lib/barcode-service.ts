@@ -1,5 +1,6 @@
 import JsBarcode from 'jsbarcode';
 import { printBarcode as printBarcodeRPC, PrintBarcodeResponse } from './rpc-client';
+import { formatDate } from './format-utils';
 
 export interface BarcodeData {
   orderId: string;
@@ -124,7 +125,7 @@ export function generatePrintableHTML(data: BarcodeData): string {
           <div class="order-info">
             <div class="order-id">${data.orderId}</div>
             <div class="product">${data.productTitle}</div>
-            <div class="due-date">Due: ${new Date(data.dueDate).toLocaleDateString()}</div>
+            <div class="due-date">Due: ${formatDate(data.dueDate)}</div>
             <div class="store-badge">${data.store.toUpperCase()}</div>
           </div>
         </div>

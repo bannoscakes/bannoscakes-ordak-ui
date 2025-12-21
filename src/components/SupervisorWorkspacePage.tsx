@@ -19,7 +19,7 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import {
   startShift,
   endShift,
@@ -474,7 +474,7 @@ export function SupervisorWorkspacePage({
                           {order.priority}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          Due: {order.dueTime.split(' ')[0]}
+                          Due: {formatDate(order.dueTime)}
                         </span>
                       </div>
 

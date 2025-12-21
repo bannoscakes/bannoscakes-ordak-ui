@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { getOrder } from "../lib/rpc-client";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 interface AccessoryItem {
   title: string;
@@ -245,7 +245,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
                   <p className="mt-2 text-foreground">
-                    {extendedOrder.deliveryDate}
+                    {formatDate(extendedOrder.deliveryDate)}
                   </p>
                 </div>
                 <div>
