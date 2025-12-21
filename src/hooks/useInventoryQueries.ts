@@ -5,6 +5,7 @@ import {
   getAccessoriesNeedingSync,
   getComponents,
   getLowStockComponents,
+  getBoms,
 } from '../lib/rpc-client';
 
 /**
@@ -27,6 +28,10 @@ export const inventoryKeys = {
   componentsFiltered: (category?: string, search?: string) =>
     [...inventoryKeys.componentsAll(), { category, search }] as const,
   componentsLowStock: () => [...inventoryKeys.componentsAll(), 'lowStock'] as const,
+  // BOMs
+  bomsAll: () => [...inventoryKeys.all(), 'boms'] as const,
+  bomsFiltered: (store?: string, search?: string) =>
+    [...inventoryKeys.bomsAll(), { store, search }] as const,
 };
 
 /**
@@ -93,6 +98,19 @@ export function useLowStockComponents() {
 }
 
 /**
+ * Hook for BOMs list
+ * Used by: BOMsTab
+ * Supports server-side store and search filtering
+ */
+export function useBoms(options?: { store?: string; search?: string }) {
+  return useQuery({
+    queryKey: inventoryKeys.bomsFiltered(options?.store, options?.search),
+    queryFn: () => getBoms(options?.store, true, options?.search),
+    // Uses global staleTime (30s) from query-client.ts
+  });
+}
+
+/**
  * Hook to invalidate inventory queries after mutations
  * Returns functions to invalidate specific or all inventory caches
  * Uses refetchType: 'active' to immediately refetch visible queries
@@ -119,6 +137,13 @@ export function useInvalidateInventory() {
     componentsAll: () =>
       queryClient.invalidateQueries({
         queryKey: inventoryKeys.componentsAll(),
+        refetchType: 'active',
+      }),
+
+    /** Invalidate all BOM queries */
+    bomsAll: () =>
+      queryClient.invalidateQueries({
+        queryKey: inventoryKeys.bomsAll(),
         refetchType: 'active',
       }),
 

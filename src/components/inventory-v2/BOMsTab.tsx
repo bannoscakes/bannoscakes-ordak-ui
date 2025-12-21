@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+// Note: useEffect kept for error handling, useMemo kept for component dropdown filtering
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -10,15 +11,16 @@ import { Label } from "../ui/label";
 import { Search, Plus, X, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getBomsCached,
-  getComponentsCached,
   upsertBom,
   saveBomItems,
   deleteBom,
-  invalidateInventoryCache,
   type BOM,
-  type Component
 } from "../../lib/rpc-client";
+import {
+  useBoms,
+  useComponents,
+  useInvalidateInventory
+} from "../../hooks/useInventoryQueries";
 
 const STAGES = [
   { value: 'none', label: 'No Stage' },
@@ -41,9 +43,6 @@ interface EditableBOMItem {
 }
 
 export function BOMsTab() {
-  const [boms, setBOMs] = useState<BOM[]>([]);
-  const [components, setComponents] = useState<Component[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [storeFilter, setStoreFilter] = useState("all");
 
@@ -60,26 +59,24 @@ export function BOMsTab() {
   const [isSaving, setIsSaving] = useState(false);
   const [componentSearch, setComponentSearch] = useState("");
 
-  // Fetch data
+  // React Query for data fetching (server-side filtering)
+  const store = storeFilter === 'all' ? undefined : storeFilter;
+  const search = searchQuery || undefined;
+  const { data: boms = [], isLoading: loading, isError: bomsError, error: bomsErrorObj } = useBoms({ store, search });
+  const { data: components = [], isError: componentsError, error: componentsErrorObj } = useComponents({});
+  const invalidate = useInvalidateInventory();
+
+  // Log and toast fetch errors
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [bomsData, componentsData] = await Promise.all([
-          getBomsCached(storeFilter === 'all' ? null : storeFilter, true, searchQuery || null),
-          getComponentsCached({})
-        ]);
-        setBOMs(bomsData);
-        setComponents(componentsData);
-      } catch (error) {
-        console.error('Error fetching BOMs:', error);
-        toast.error('Failed to load BOMs');
-      } finally {
-        setLoading(false);
-      }
+    if (bomsError && bomsErrorObj) {
+      console.error('Error fetching BOMs:', bomsErrorObj);
+      toast.error('Failed to load BOMs');
     }
-    fetchData();
-  }, [storeFilter, searchQuery]);
+    if (componentsError && componentsErrorObj) {
+      console.error('Error fetching components:', componentsErrorObj);
+      toast.error('Failed to load components');
+    }
+  }, [bomsError, bomsErrorObj, componentsError, componentsErrorObj]);
 
   // Filtered components for dropdown
   const filteredComponents = useMemo(() => {
@@ -128,11 +125,7 @@ export function BOMsTab() {
 
     try {
       await deleteBom(bom.id);
-      invalidateInventoryCache();
-
-      // Update local state
-      setBOMs(prev => prev.filter(b => b.id !== bom.id));
-
+      await invalidate.bomsAll();
       toast.success("BOM deleted");
     } catch (error) {
       console.error('Error deleting BOM:', error);
@@ -207,11 +200,8 @@ export function BOMsTab() {
         stage: item.stage === 'none' ? null : item.stage,
       })));
 
-      invalidateInventoryCache();
-
-      // Refresh data
-      const data = await getBomsCached(storeFilter === 'all' ? null : storeFilter, true, searchQuery || null);
-      setBOMs(data);
+      // Invalidate cache to trigger refetch
+      await invalidate.bomsAll();
 
       setIsEditorOpen(false);
       setEditingBOM(null);
@@ -294,6 +284,12 @@ export function BOMsTab() {
                   <TableCell><div className="h-8 bg-muted rounded w-16 animate-pulse" /></TableCell>
                 </TableRow>
               ))
+            ) : bomsError ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-red-500">
+                  <p>Failed to load BOMs. Please try again.</p>
+                </TableCell>
+              </TableRow>
             ) : boms.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
