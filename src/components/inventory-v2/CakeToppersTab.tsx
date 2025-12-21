@@ -47,8 +47,13 @@ export function CakeToppersTab() {
   });
 
   // React Query for data fetching
-  const { data: allToppers = [], isLoading: loading, isError } = useCakeToppers();
+  const { data: allToppers = [], isLoading: loading, isError, error } = useCakeToppers();
   const invalidate = useInvalidateInventory();
+
+  // Log fetch errors for debugging
+  if (isError && error) {
+    console.error('Error fetching cake toppers:', error);
+  }
 
   // Filter toppers by search query (client-side)
   const toppers = useMemo(() => {
@@ -153,8 +158,8 @@ export function CakeToppersTab() {
       ? stockAdjust.amount
       : -stockAdjust.amount;
 
-    // Find current topper to validate
-    const currentTopper = toppers.find(t => t.id === stockAdjust.topperId);
+    // Find current topper to validate (use allToppers, not filtered list)
+    const currentTopper = allToppers.find(t => t.id === stockAdjust.topperId);
     if (!currentTopper) {
       toast.error('Cake topper not found');
       return;
