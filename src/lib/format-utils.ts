@@ -1,5 +1,7 @@
 /**
  * Format a date to Australian format (dd/mm/yyyy).
+ * Uses UTC getters to avoid off-by-one errors when ISO date-only strings
+ * (e.g., "2024-12-25") are parsed as UTC midnight but displayed in local time.
  * @param date - Date string, Date object, or null/undefined
  * @returns Formatted date string (e.g., "25/12/2024") or empty string if invalid
  */
@@ -11,15 +13,16 @@ export function formatDate(date: string | Date | null | undefined): string {
   // Check for invalid date
   if (isNaN(d.getTime())) return '';
 
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
+  const day = d.getUTCDate().toString().padStart(2, '0');
+  const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+  const year = d.getUTCFullYear();
 
   return `${day}/${month}/${year}`;
 }
 
 /**
  * Format a date to Australian format with 24-hour time (dd/mm/yyyy HH:mm).
+ * Uses UTC getters to avoid timezone shift issues with ISO datetime strings.
  * @param date - Date string, Date object, or null/undefined
  * @returns Formatted date-time string (e.g., "25/12/2024 14:30") or empty string if invalid
  */
@@ -31,11 +34,11 @@ export function formatDateTime(date: string | Date | null | undefined): string {
   // Check for invalid date
   if (isNaN(d.getTime())) return '';
 
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const day = d.getUTCDate().toString().padStart(2, '0');
+  const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+  const year = d.getUTCFullYear();
+  const hours = d.getUTCHours().toString().padStart(2, '0');
+  const minutes = d.getUTCMinutes().toString().padStart(2, '0');
 
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }

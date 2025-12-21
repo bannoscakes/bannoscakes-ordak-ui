@@ -8,7 +8,7 @@ import { Loader2, User, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { getStaffList, type StaffMember } from "../lib/rpc-client";
 import { useAssignStaff, useUnassignStaff } from "../hooks/useQueueMutations";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 interface QueueItem {
   id: string;
@@ -230,7 +230,7 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due:</span>
-              <span>{new Date(order.dueTime).toLocaleDateString()}</span>
+              <span>{formatDate(order.dueTime)}</span>
             </div>
           </div>
         </div>
