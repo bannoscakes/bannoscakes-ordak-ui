@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -50,10 +50,13 @@ export function CakeToppersTab() {
   const { data: allToppers = [], isLoading: loading, isError, error } = useCakeToppers();
   const invalidate = useInvalidateInventory();
 
-  // Log fetch errors for debugging
-  if (isError && error) {
-    console.error('Error fetching cake toppers:', error);
-  }
+  // Log and toast fetch errors
+  useEffect(() => {
+    if (isError && error) {
+      console.error('Error fetching cake toppers:', error);
+      toast.error('Failed to load cake toppers');
+    }
+  }, [isError, error]);
 
   // Filter toppers by search query (client-side, case-insensitive)
   const toppers = useMemo(() => {
