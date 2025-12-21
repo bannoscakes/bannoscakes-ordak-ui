@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -67,11 +67,17 @@ export function AccessoriesTab() {
   const { data: needsSyncData = [] } = useAccessoriesNeedingSync();
   const invalidate = useInvalidateInventory();
 
-  // Log and toast fetch errors
+  // Track whether error has been shown to prevent duplicate toasts
+  const errorShownRef = useRef(false);
+
+  // Log and toast fetch errors (only once per error occurrence)
   useEffect(() => {
-    if (isError && error) {
+    if (isError && error && !errorShownRef.current) {
       console.error('Error fetching accessories:', error);
       toast.error('Failed to load accessories');
+      errorShownRef.current = true;
+    } else if (!isError) {
+      errorShownRef.current = false;
     }
   }, [isError, error]);
 
