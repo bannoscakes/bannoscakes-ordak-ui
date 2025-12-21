@@ -3,6 +3,8 @@ import {
   getCakeToppers,
   getAccessories,
   getAccessoriesNeedingSync,
+  getComponents,
+  getLowStockComponents,
 } from '../lib/rpc-client';
 
 /**
@@ -20,6 +22,11 @@ export const inventoryKeys = {
   accessoriesFiltered: (category?: string) =>
     [...inventoryKeys.accessoriesAll(), { category }] as const,
   accessoriesNeedingSync: () => [...inventoryKeys.accessoriesAll(), 'needingSync'] as const,
+  // Components
+  componentsAll: () => [...inventoryKeys.all(), 'components'] as const,
+  componentsFiltered: (category?: string) =>
+    [...inventoryKeys.componentsAll(), { category }] as const,
+  componentsLowStock: () => [...inventoryKeys.componentsAll(), 'lowStock'] as const,
 };
 
 /**
@@ -61,6 +68,30 @@ export function useAccessoriesNeedingSync() {
 }
 
 /**
+ * Hook for components list
+ * Used by: ComponentsTab, BOMsTab
+ */
+export function useComponents(options?: { category?: string }) {
+  return useQuery({
+    queryKey: inventoryKeys.componentsFiltered(options?.category),
+    queryFn: () => getComponents({ category: options?.category }),
+    // Uses global staleTime (30s) from query-client.ts
+  });
+}
+
+/**
+ * Hook for low stock components count
+ * Used by: ComponentsTab alert banner
+ */
+export function useLowStockComponents() {
+  return useQuery({
+    queryKey: inventoryKeys.componentsLowStock(),
+    queryFn: () => getLowStockComponents(),
+    // Uses global staleTime (30s) from query-client.ts
+  });
+}
+
+/**
  * Hook to invalidate inventory queries after mutations
  * Returns functions to invalidate specific or all inventory caches
  * Uses refetchType: 'active' to immediately refetch visible queries
@@ -80,6 +111,13 @@ export function useInvalidateInventory() {
     accessoriesAll: () =>
       queryClient.invalidateQueries({
         queryKey: inventoryKeys.accessoriesAll(),
+        refetchType: 'active',
+      }),
+
+    /** Invalidate all component queries (including lowStock) */
+    componentsAll: () =>
+      queryClient.invalidateQueries({
+        queryKey: inventoryKeys.componentsAll(),
         refetchType: 'active',
       }),
 
