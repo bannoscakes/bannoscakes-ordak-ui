@@ -55,15 +55,15 @@ export function CakeToppersTab() {
     console.error('Error fetching cake toppers:', error);
   }
 
-  // Filter toppers by search query (client-side)
+  // Filter toppers by search query (client-side, case-insensitive)
   const toppers = useMemo(() => {
     if (!searchQuery) return allToppers;
     const query = searchQuery.toLowerCase();
     return allToppers.filter(t =>
       t.name_1.toLowerCase().includes(query) ||
       (t.name_2 && t.name_2.toLowerCase().includes(query)) ||
-      (t.shopify_product_id_1 && t.shopify_product_id_1.includes(searchQuery)) ||
-      (t.shopify_product_id_2 && t.shopify_product_id_2.includes(searchQuery))
+      (t.shopify_product_id_1 && t.shopify_product_id_1.toLowerCase().includes(query)) ||
+      (t.shopify_product_id_2 && t.shopify_product_id_2.toLowerCase().includes(query))
     );
   }, [allToppers, searchQuery]);
 
