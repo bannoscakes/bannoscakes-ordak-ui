@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { useRecentOrders } from "../hooks/useDashboardQueries";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
@@ -71,7 +71,7 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   priority: order.priority as 'High' | 'Medium' | 'Low',
   status: order.status as any,
   flavor: "Vanilla", // Default flavor
-  dueTime: "10:00 AM", // Default time
+  dueTime: order.dueDate,
   method: "Pickup" as const, // Default method
   storage: order.status === "Completed" ? "Store Fridge" : undefined
 });
@@ -207,7 +207,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                     {order.priority}
                   </Badge>
                 </td>
-                <td className="py-4 text-foreground">{order.dueDate}</td>
+                <td className="py-4 text-foreground">{formatDate(order.dueDate)}</td>
                 <td className="py-4">
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded-full h-2">
