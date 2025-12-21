@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
-// Note: useEffect kept for error handling, useMemo kept for component dropdown filtering
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -66,15 +65,26 @@ export function BOMsTab() {
   const { data: components = [], isError: componentsError, error: componentsErrorObj } = useComponents({});
   const invalidate = useInvalidateInventory();
 
-  // Log and toast fetch errors
+  // Track whether errors have been shown to prevent duplicate toasts
+  const bomsErrorShownRef = useRef(false);
+  const componentsErrorShownRef = useRef(false);
+
+  // Log and toast fetch errors (only once per error occurrence)
   useEffect(() => {
-    if (bomsError && bomsErrorObj) {
+    if (bomsError && bomsErrorObj && !bomsErrorShownRef.current) {
       console.error('Error fetching BOMs:', bomsErrorObj);
       toast.error('Failed to load BOMs');
+      bomsErrorShownRef.current = true;
+    } else if (!bomsError) {
+      bomsErrorShownRef.current = false;
     }
-    if (componentsError && componentsErrorObj) {
+
+    if (componentsError && componentsErrorObj && !componentsErrorShownRef.current) {
       console.error('Error fetching components:', componentsErrorObj);
       toast.error('Failed to load components');
+      componentsErrorShownRef.current = true;
+    } else if (!componentsError) {
+      componentsErrorShownRef.current = false;
     }
   }, [bomsError, bomsErrorObj, componentsError, componentsErrorObj]);
 
