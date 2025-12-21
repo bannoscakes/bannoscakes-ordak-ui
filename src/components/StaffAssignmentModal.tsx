@@ -8,10 +8,12 @@ import { Loader2, User, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { getStaffList, type StaffMember } from "../lib/rpc-client";
 import { useAssignStaff, useUnassignStaff } from "../hooks/useQueueMutations";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber?: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -138,7 +140,7 @@ export function StaffAssignmentModal({
         <DialogHeader>
           <DialogTitle>Assign Order to Staff</DialogTitle>
           <DialogDescription>
-            Assign order #{order.orderNumber} for {order.customerName} to a staff member.
+            Assign order {formatOrderNumber(order.shopifyOrderNumber || order.orderNumber, store)} for {order.customerName} to a staff member.
           </DialogDescription>
         </DialogHeader>
 

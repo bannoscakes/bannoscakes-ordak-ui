@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { getStorageLocations, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
+import { formatOrderNumber } from "../lib/format-utils";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 
@@ -326,7 +327,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         extendedOrder.store as 'bannos' | 'flourlane',
         extendedOrder.id
       );
-      toast.success(`Barcode printed for ${extendedOrder.orderNumber}`);
+      const displayOrderNumber = extendedOrder.shopifyOrderNumber
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        : extendedOrder.orderNumber;
+      toast.success(`Barcode printed for ${displayOrderNumber}`);
     } catch (error) {
       console.error('Error printing barcode:', error);
       toast.error("Failed to print barcode");
@@ -351,8 +355,11 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
 
   const handlePrintPackingSlip = () => {
     try {
+      const displayOrderNumber = extendedOrder.shopifyOrderNumber
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        : extendedOrder.orderNumber;
       printPackingSlip({
-        orderNumber: extendedOrder.orderNumber,
+        orderNumber: displayOrderNumber,
         customerName: extendedOrder.customerName,
         dueDate: extendedOrder.deliveryDate,
         deliveryMethod: extendedOrder.method || 'Pickup',
@@ -393,7 +400,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
           <div className="flex items-center justify-center py-4">
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
-                orderId={extendedOrder.orderNumber}
+                orderId={extendedOrder.shopifyOrderNumber
+                  ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                  : extendedOrder.orderNumber}
                 productTitle={extendedOrder.product}
                 dueDate={extendedOrder.dueTime}
                 store={extendedOrder.store}
@@ -423,7 +432,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Detailed view of order {extendedOrder.orderNumber} for {extendedOrder.customerName}
+              Detailed view of order {extendedOrder.shopifyOrderNumber
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
@@ -445,7 +456,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   <span className="font-medium text-foreground">Store:</span> {storeName}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                  <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                    : extendedOrder.orderNumber}
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-3 text-sm">

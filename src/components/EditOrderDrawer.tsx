@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { toast } from "sonner";
 import { updateOrderCore } from "../lib/rpc-client";
+import { formatOrderNumber } from "../lib/format-utils";
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
@@ -295,7 +296,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
               </SheetTitle>
             </div>
             <SheetDescription className="sr-only">
-              Edit order {normalizedOrder.orderNumber} for {normalizedOrder.customerName}
+              Edit order {normalizedOrder.shopifyOrderNumber
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                : normalizedOrder.orderNumber} for {normalizedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
@@ -308,7 +311,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
               <span className="font-medium">Store:</span> {storeName}
             </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Order #:</span> {normalizedOrder.orderNumber}
+              <span className="font-medium">Order:</span> {normalizedOrder.shopifyOrderNumber
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                : normalizedOrder.orderNumber}
             </p>
           </div>
 

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { getOrder } from "../lib/rpc-client";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface AccessoryItem {
   title: string;
@@ -203,7 +204,9 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
               </SheetTitle>
             </div>
             <SheetDescription className="sr-only">
-              Detailed view of order {extendedOrder.orderNumber} for {extendedOrder.customerName}
+              Detailed view of order {extendedOrder.shopifyOrderNumber
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store)
+                : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
@@ -225,7 +228,9 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                   <span className="font-medium text-foreground">Store:</span> {storeName}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                  <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store)
+                    : extendedOrder.orderNumber}
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-3 text-sm">

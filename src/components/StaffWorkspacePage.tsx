@@ -27,6 +27,7 @@ import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
+import { formatOrderNumber } from "../lib/format-utils";
 
 // Import real RPCs
 import {
@@ -493,7 +494,9 @@ export function StaffWorkspacePage({
                       {/* Order Number */}
                       <div>
                         <p className="font-medium text-foreground">
-                          {order.orderNumber}
+                          {order.shopifyOrderNumber
+                            ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+                            : order.orderNumber}
                         </p>
                       </div>
 
