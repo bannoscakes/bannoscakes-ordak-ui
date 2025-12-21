@@ -11,14 +11,16 @@ import { Label } from "../ui/label";
 import { Search, Plus, Minus, AlertTriangle, Package, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getComponentsCached,
-  getLowStockComponents,
   upsertComponent,
   adjustComponentStock,
   deleteComponent,
-  invalidateInventoryCache,
   type Component
 } from "../../lib/rpc-client";
+import {
+  useComponents,
+  useLowStockComponents,
+  useInvalidateInventory
+} from "../../hooks/useInventoryQueries";
 
 const CATEGORIES = [
   { value: 'base', label: 'Cake Base' },
@@ -47,9 +49,6 @@ interface StockAdjustState {
 }
 
 export function ComponentsTab() {
-  const [components, setComponents] = useState<Component[]>([]);
-  const [lowStockCount, setLowStockCount] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
@@ -69,29 +68,22 @@ export function ComponentsTab() {
     direction: 'add'
   });
 
-  // Fetch components
+  // React Query for data fetching (server-side filtering)
+  const category = categoryFilter === 'all' ? undefined : categoryFilter;
+  const search = searchQuery || undefined;
+  const { data: components = [], isLoading: loading, isError, error } = useComponents({ category, search });
+  const { data: lowStockData = [] } = useLowStockComponents();
+  const invalidate = useInvalidateInventory();
+
+  // Log and toast fetch errors
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [componentsData, lowStock] = await Promise.all([
-          getComponentsCached({
-            category: categoryFilter === 'all' ? undefined : categoryFilter,
-            search: searchQuery || undefined,
-          }),
-          getLowStockComponents()
-        ]);
-        setComponents(componentsData);
-        setLowStockCount(lowStock.length);
-      } catch (error) {
-        console.error('Error fetching components:', error);
-        toast.error('Failed to load components');
-      } finally {
-        setLoading(false);
-      }
+    if (isError && error) {
+      console.error('Error fetching components:', error);
+      toast.error('Failed to load components');
     }
-    fetchData();
-  }, [categoryFilter, searchQuery]);
+  }, [isError, error]);
+
+  const lowStockCount = lowStockData.length;
 
   const handleAddNew = () => {
     setEditingComponent({
@@ -131,14 +123,7 @@ export function ComponentsTab() {
         is_active: editingComponent.is_active !== false,
       });
 
-      invalidateInventoryCache();
-
-      // Refresh data
-      const data = await getComponentsCached({
-        category: categoryFilter === 'all' ? undefined : categoryFilter,
-        search: searchQuery || undefined,
-      });
-      setComponents(data);
+      await invalidate.componentsAll();
 
       setIsAddEditOpen(false);
       setEditingComponent(null);
@@ -176,15 +161,7 @@ export function ComponentsTab() {
       });
 
       if (result.success) {
-        invalidateInventoryCache();
-
-        // Update local state
-        setComponents(prev => prev.map(c =>
-          c.id === stockAdjust.componentId
-            ? { ...c, current_stock: result.after!, is_low_stock: result.after! < c.min_stock }
-            : c
-        ));
-
+        await invalidate.componentsAll();
         toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${result.before} → ${result.after}`);
       } else {
         toast.error(result.error || 'Failed to adjust stock');
@@ -204,10 +181,7 @@ export function ComponentsTab() {
 
     try {
       await deleteComponent(component.id);
-      invalidateInventoryCache();
-
-      // Update local state
-      setComponents(prev => prev.filter(c => c.id !== component.id));
+      await invalidate.componentsAll();
       toast.success(`Deleted "${component.name}"`);
     } catch (error) {
       console.error('Error deleting component:', error);
@@ -302,6 +276,12 @@ export function ComponentsTab() {
                   <TableCell><div className="h-8 bg-muted rounded w-16 animate-pulse" /></TableCell>
                 </TableRow>
               ))
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                  Failed to load components. Please refresh.
+                </TableCell>
+              </TableRow>
             ) : components.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
