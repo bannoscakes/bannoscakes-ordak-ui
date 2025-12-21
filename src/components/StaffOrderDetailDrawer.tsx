@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { getStorageLocations, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 
@@ -473,7 +473,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
                   <p className="mt-2 text-foreground">
-                    {extendedOrder.deliveryDate}
+                    {formatDate(extendedOrder.deliveryDate)}
                   </p>
                 </div>
                 <div>

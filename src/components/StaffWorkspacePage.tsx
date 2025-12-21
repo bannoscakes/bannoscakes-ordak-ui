@@ -27,7 +27,7 @@ import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
-import { formatOrderNumber } from "../lib/format-utils";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 // Import real RPCs
 import {
@@ -522,7 +522,7 @@ export function StaffWorkspacePage({
                           {order.priority}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          Due: {order.dueTime.split(" ")[0]}
+                          Due: {formatDate(order.dueTime)}
                         </span>
                       </div>
 
