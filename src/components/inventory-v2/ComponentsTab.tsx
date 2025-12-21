@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -75,11 +75,17 @@ export function ComponentsTab() {
   const { data: lowStockData = [] } = useLowStockComponents();
   const invalidate = useInvalidateInventory();
 
-  // Log and toast fetch errors
+  // Track whether error has been shown to prevent duplicate toasts
+  const errorShownRef = useRef(false);
+
+  // Log and toast fetch errors (only once per error occurrence)
   useEffect(() => {
-    if (isError && error) {
+    if (isError && error && !errorShownRef.current) {
       console.error('Error fetching components:', error);
       toast.error('Failed to load components');
+      errorShownRef.current = true;
+    } else if (!isError) {
+      errorShownRef.current = false;
     }
   }, [isError, error]);
 
