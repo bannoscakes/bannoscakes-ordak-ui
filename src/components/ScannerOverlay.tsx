@@ -93,7 +93,8 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         setErrorMessage("");
       } else {
         setScanState('error');
-        setErrorMessage(`Wrong order scanned. Expected ${displayOrderNumber}, got ${scannedOrder.id}.`);
+        const scannedDisplayNumber = formatOrderNumber(scannedOrder.shopify_order_number, scannedOrder.store);
+        setErrorMessage(`Wrong order scanned. Expected ${displayOrderNumber}, got ${scannedDisplayNumber}.`);
       }
     } catch (error) {
       setIsScanLookupPending(false);
