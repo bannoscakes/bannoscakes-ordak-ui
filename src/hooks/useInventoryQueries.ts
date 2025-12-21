@@ -32,6 +32,7 @@ export function useCakeToppers(options?: { activeOnly?: boolean }) {
 /**
  * Hook to invalidate inventory queries after mutations
  * Returns functions to invalidate specific or all inventory caches
+ * Uses refetchType: 'active' to immediately refetch visible queries
  */
 export function useInvalidateInventory() {
   const queryClient = useQueryClient();
@@ -39,10 +40,16 @@ export function useInvalidateInventory() {
   return {
     /** Invalidate all cake topper queries */
     cakeToppersAll: () =>
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.cakeToppersAll() }),
+      queryClient.invalidateQueries({
+        queryKey: inventoryKeys.cakeToppersAll(),
+        refetchType: 'active',
+      }),
 
     /** Invalidate all inventory queries */
     all: () =>
-      queryClient.invalidateQueries({ queryKey: inventoryKeys.all }),
+      queryClient.invalidateQueries({
+        queryKey: inventoryKeys.all,
+        refetchType: 'active',
+      }),
   };
 }
