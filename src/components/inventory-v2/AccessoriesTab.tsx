@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -67,10 +67,13 @@ export function AccessoriesTab() {
   const { data: needsSyncData = [] } = useAccessoriesNeedingSync();
   const invalidate = useInvalidateInventory();
 
-  // Log fetch errors for debugging
-  if (isError && error) {
-    console.error('Error fetching accessories:', error);
-  }
+  // Log and toast fetch errors
+  useEffect(() => {
+    if (isError && error) {
+      console.error('Error fetching accessories:', error);
+      toast.error('Failed to load accessories');
+    }
+  }, [isError, error]);
 
   // Filter accessories by search query (client-side, case-insensitive)
   const accessories = useMemo(() => {
