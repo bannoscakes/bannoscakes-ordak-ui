@@ -6,6 +6,14 @@
 
 import { getSupabase } from './supabase';
 import type { Stage, Store, Priority } from '../types/db';
+import type {
+  GetQueueRow,
+  GetQueueStatsRow,
+  GetStaffTimesRow,
+  GetStaffTimesDetailRow,
+  GetCompleteRow,
+  FindOrderRow,
+} from '../types/supabase';
 import { createError, handleError, logError, ErrorCode } from './error-handler';
 
 // =============================================
@@ -442,7 +450,7 @@ export interface GetQueueParams {
   sort_order?: 'ASC' | 'DESC';
 }
 
-export async function getQueue(params: GetQueueParams = {}) {
+export async function getQueue(params: GetQueueParams = {}): Promise<GetQueueRow[]> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
@@ -459,7 +467,7 @@ export async function getQueue(params: GetQueueParams = {}) {
         p_sort_order: params.sort_order || 'DESC',
       });
       if (error) throw error;
-      return data || [];
+      return (data || []) as GetQueueRow[];
     },
     {
       operation: 'getQueue',
@@ -469,13 +477,13 @@ export async function getQueue(params: GetQueueParams = {}) {
   );
 }
 
-export async function getQueueStats(store?: Store | null) {
+export async function getQueueStats(store?: Store | null): Promise<GetQueueStatsRow | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_queue_stats', {
     p_store: store || null,
   });
   if (error) throw error;
-  return data?.[0] || null;
+  return (data?.[0] as GetQueueStatsRow) || null;
 }
 
 export async function getUnassignedCounts(store?: Store | null) {
@@ -1565,7 +1573,7 @@ export async function getComplete(params: {
   limit?: number;
   sort_by?: 'completed_at' | 'due_date' | 'customer_name' | 'product_title';
   sort_order?: 'ASC' | 'DESC';
-} = {}) {
+} = {}): Promise<GetCompleteRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_complete', {
     p_store: params.store || null,
@@ -1578,20 +1586,20 @@ export async function getComplete(params: {
     p_sort_order: params.sort_order || 'DESC',
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as GetCompleteRow[];
 }
 
 // =============================================
 // UNIVERSAL ORDER SEARCH (ALL STAGES)
 // =============================================
 
-export async function findOrder(search: string) {
+export async function findOrder(search: string): Promise<FindOrderRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('find_order', {
     p_search: search,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as FindOrderRow[];
 }
 
 // =============================================
@@ -1725,7 +1733,7 @@ export async function getQCReviewQueue(store?: Store, qcStatus?: string) {
 // TIME & PAYROLL
 // =============================================
 
-export async function getStaffTimes(from: string, to: string, staffId?: string) {
+export async function getStaffTimes(from: string, to: string, staffId?: string): Promise<GetStaffTimesRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_staff_times', {
     p_from: from,
@@ -1733,10 +1741,10 @@ export async function getStaffTimes(from: string, to: string, staffId?: string) 
     p_staff_id: staffId || null,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as GetStaffTimesRow[];
 }
 
-export async function getStaffTimesDetail(staffId: string, from: string, to: string) {
+export async function getStaffTimesDetail(staffId: string, from: string, to: string): Promise<GetStaffTimesDetailRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_staff_times_detail', {
     p_staff_id: staffId,
@@ -1744,7 +1752,7 @@ export async function getStaffTimesDetail(staffId: string, from: string, to: str
     p_to: to,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as GetStaffTimesDetailRow[];
 }
 
 export async function adjustStaffTime(
