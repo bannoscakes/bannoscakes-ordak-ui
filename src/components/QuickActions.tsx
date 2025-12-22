@@ -55,7 +55,7 @@ interface UrgentOrder {
   customerName: string;
   product: string;
   dueTime: string;
-  priority: 'High' | 'Medium';
+  priority: 'Urgent' | 'High' | 'Medium';
   store: 'Bannos' | 'Flourlane';
 }
 
@@ -511,7 +511,11 @@ export function QuickActions({ store }: QuickActionsProps) {
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{order.orderNumber}</span>
                           <div className="flex items-center gap-2">
-                            <Badge className={order.priority === 'High' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}>
+                            <Badge className={
+                              order.priority === 'Urgent' ? 'bg-rose-200 text-rose-800' :
+                              order.priority === 'High' ? 'bg-red-100 text-red-700' :
+                              'bg-orange-100 text-orange-700'
+                            }>
                               {order.priority}
                             </Badge>
                             <Badge variant="secondary">{order.store}</Badge>

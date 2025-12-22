@@ -353,6 +353,7 @@ const flourlaneWeekData: DaySchedule[] = [
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
+    case 'urgent': return 'text-rose-800 bg-rose-200 border-rose-300';
     case 'high': return 'text-red-600 bg-red-50 border-red-200';
     case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200';
     case 'low': return 'text-green-600 bg-green-50 border-green-200';

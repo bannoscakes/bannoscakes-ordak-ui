@@ -269,6 +269,7 @@ export function StaffWorkspacePage({
 
   const getPriorityColor = (priority: string) => {
     const colors = {
+      Urgent: "bg-rose-200 text-rose-800 border-rose-300",
       High: "bg-red-100 text-red-700 border-red-200",
       Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
       Low: "bg-green-100 text-green-700 border-green-200",

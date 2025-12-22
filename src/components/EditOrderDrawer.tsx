@@ -78,18 +78,20 @@ const parseDate = (dateStr: string) => {
 };
 
 // Calculate priority based on due date (same logic as database)
-const calculatePriority = (dueDate: string): 'High' | 'Medium' | 'Low' => {
+const calculatePriority = (dueDate: string): 'Urgent' | 'High' | 'Medium' | 'Low' => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate);
-  const deltaDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (deltaDays <= 1) return 'High';     // today/overdue/tomorrow
-  if (deltaDays <= 3) return 'Medium';   // within 3 days
-  return 'Low';                          // more than 3 days
+  due.setHours(0, 0, 0, 0);
+
+  if (due < today) return 'Urgent';      // overdue
+  if (due.getTime() === today.getTime()) return 'High';  // due today
+  return 'Medium';                        // future dates
 };
 
 const getPriorityColor = (priority: string) => {
   const colors = {
+    "Urgent": "bg-rose-200 text-rose-800 border-rose-300",
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
     "Low": "bg-green-100 text-green-700 border-green-200"
@@ -479,9 +481,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 </Badge>
                 <p className="text-xs text-muted-foreground mt-1">
                   Priority is automatically calculated based on due date:
-                  <br />• High: Today, overdue, or tomorrow
-                  <br />• Medium: Within 3 days
-                  <br />• Low: More than 3 days
+                  <br />• Urgent: Overdue (past due date)
+                  <br />• High: Due today
+                  <br />• Medium: Future dates
                 </p>
               </div>
             </div>

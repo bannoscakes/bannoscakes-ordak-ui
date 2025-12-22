@@ -217,9 +217,10 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Priority:</span>
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className={`text-xs ${
+                  order.priority === 'Urgent' ? 'bg-rose-200 text-rose-800' :
                   order.priority === 'High' ? 'bg-red-100 text-red-700' :
                   order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
                   'bg-green-100 text-green-700'
