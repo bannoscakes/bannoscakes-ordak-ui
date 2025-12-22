@@ -284,27 +284,34 @@ function extractNotes(shopifyOrder: any): string | null {
 // ============================================================================
 
 /**
- * Calculate priority based on due_date using the same logic as database RPCs
- * HIGH (1): today/overdue/tomorrow (deltaDays <= 1)
- * MEDIUM (0): within 3 days (deltaDays <= 3)
- * LOW (-1): more than 3 days (deltaDays > 3)
+ * Get current date in Sydney timezone (AEST/AEDT)
  */
-function calculatePriority(dueDate: string | null): number {
+function getSydneyDate(): Date {
+  const now = new Date()
+  // Format as Sydney date string, then parse back to get midnight Sydney time
+  const sydneyDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })
+  return new Date(sydneyDateStr + 'T00:00:00')
+}
+
+/**
+ * Calculate priority based on due_date using the same logic as database RPCs
+ * HIGH: today/overdue/tomorrow (deltaDays <= 1)
+ * MEDIUM: within 3 days (deltaDays <= 3)
+ * LOW: more than 3 days (deltaDays > 3)
+ */
+function calculatePriority(dueDate: string | null): 'High' | 'Medium' | 'Low' {
   if (!dueDate) {
-    return 0 // Default to MEDIUM if no due date
+    return 'Medium' // Default to Medium if no due date
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // Normalize to start of day
-
-  const due = new Date(dueDate)
-  due.setHours(0, 0, 0, 0) // Normalize to start of day
+  const today = getSydneyDate()
+  const due = new Date(dueDate + 'T00:00:00')
 
   const deltaDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (deltaDays <= 1) return 1   // HIGH: today/overdue/tomorrow
-  if (deltaDays <= 3) return 0   // MEDIUM: within 3 days
-  return -1                       // LOW: more than 3 days
+  if (deltaDays <= 1) return 'High'    // today/overdue/tomorrow
+  if (deltaDays <= 3) return 'Medium'  // within 3 days
+  return 'Low'                          // more than 3 days
 }
 
 // ============================================================================
