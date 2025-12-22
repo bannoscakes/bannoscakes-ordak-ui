@@ -30,7 +30,7 @@ interface QueueItem {
   size: string;
   quantity: number;
   deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low';
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
   dueTime: string;
@@ -56,7 +56,7 @@ interface FormData {
   method: 'Delivery' | 'Pickup';
   size: string;
   flavor: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low';
   storage: string;
   writingOnCake: string;
   accessories: string[];

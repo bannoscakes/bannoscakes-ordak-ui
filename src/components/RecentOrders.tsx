@@ -20,7 +20,7 @@ interface QueueItem {
   size: 'S' | 'M' | 'L';
   quantity: number;
   deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low';
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
   dueTime: string;
@@ -68,7 +68,7 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   size: 'M' as const, // Default size
   quantity: order.quantity,
   deliveryTime: order.dueDate,
-  priority: order.priority as 'High' | 'Medium' | 'Low',
+  priority: order.priority as 'Urgent' | 'High' | 'Medium' | 'Low',
   status: order.status as any,
   flavor: "Vanilla", // Default flavor
   dueTime: "10:00 AM", // Default time

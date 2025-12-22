@@ -33,7 +33,7 @@ interface QueueItem {
   size: string;
   quantity: number;
   deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low';
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
   dueTime: string;

@@ -98,7 +98,7 @@ export function useUpdateOrderPriority() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ orderId, store, priority }: { orderId: string; store: Store; priority: 'High' | 'Medium' | 'Low' }) =>
+    mutationFn: ({ orderId, store, priority }: { orderId: string; store: Store; priority: 'Urgent' | 'High' | 'Medium' | 'Low' }) =>
       updateOrderPriority(orderId, store, priority),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);

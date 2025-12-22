@@ -27,7 +27,7 @@ interface QueueItem {
   size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
   quantity: number;
   deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low';
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
   dueTime: string;

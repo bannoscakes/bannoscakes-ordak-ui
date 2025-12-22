@@ -280,6 +280,30 @@ function extractNotes(shopifyOrder: any): string | null {
 }
 
 // ============================================================================
+// PRIORITY CALCULATION
+// ============================================================================
+
+function calculateOrderPriority(dueDate: string | null): 'High' | 'Medium' | 'Low' | 'Urgent' {
+  if (!dueDate) {
+    return 'Medium'
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+
+  if (due < today) {
+    return 'Urgent'  // Overdue
+  } else if (due.getTime() === today.getTime()) {
+    return 'High'    // Due today
+  } else {
+    return 'Medium'  // Future date
+  }
+}
+
+// ============================================================================
 // ADMIN API - IMAGE FETCHING (THE ONLY NEW ADDITION)
 // ============================================================================
 
@@ -402,11 +426,12 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       delivery_method: deliveryMethod,
       product_image: productImage,
       item_qty: 1, // Each order represents 1 item (even if original had multiple)
-      accessories: formatAccessories(accessoryItems)
+      accessories: formatAccessories(accessoryItems),
+      priority: calculateOrderPriority(deliveryDate)
     }
-    
+
     orders.push(order)
-    
+
   } else {
     // Multiple cakes - split into separate orders
     const suffixes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
@@ -445,9 +470,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         delivery_method: deliveryMethod,
         product_image: productImage,
         item_qty: 1, // Each split order represents 1 item from the original quantity
-        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null // Accessories only on first order
+        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null, // Accessories only on first order
+        priority: calculateOrderPriority(deliveryDate)
       }
-      
+
       orders.push(order)
     }
   }
