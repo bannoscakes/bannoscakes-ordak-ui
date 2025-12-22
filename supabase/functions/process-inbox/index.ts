@@ -280,6 +280,54 @@ function extractNotes(shopifyOrder: any): string | null {
 }
 
 // ============================================================================
+// PRIORITY CALCULATION
+// ============================================================================
+
+/**
+ * Parse a YYYY-MM-DD date string and return a Date representing midnight UTC
+ * for that calendar date. This treats the date as a calendar date (not a point in time).
+ */
+function parseDateAsUTC(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
+}
+
+/**
+ * Get current Sydney date as a Date object representing midnight UTC for that calendar date.
+ * This allows comparing calendar dates without timezone offset issues.
+ */
+function getSydneyDateAsUTC(): Date {
+  const now = new Date()
+  // Get Sydney date in YYYY-MM-DD format
+  const sydneyDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })
+  return parseDateAsUTC(sydneyDateStr)
+}
+
+/**
+ * Calculate priority based on due_date using the same logic as database RPCs
+ * HIGH: today/overdue/tomorrow (deltaDays <= 1)
+ * MEDIUM: within 3 days (deltaDays <= 3)
+ * LOW: more than 3 days (deltaDays > 3)
+ *
+ * Note: Both dates are converted to midnight UTC for calendar day comparison.
+ * For precise historical/future DST handling, consider date-fns-tz.
+ */
+function calculatePriority(dueDate: string | null): 'High' | 'Medium' | 'Low' {
+  if (!dueDate) {
+    return 'Medium' // Default to Medium if no due date
+  }
+
+  const todayUTC = getSydneyDateAsUTC()
+  const dueUTC = parseDateAsUTC(dueDate)
+
+  const deltaDays = Math.floor((dueUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (deltaDays <= 1) return 'High'    // today/overdue/tomorrow
+  if (deltaDays <= 3) return 'Medium'  // within 3 days
+  return 'Low'                          // more than 3 days
+}
+
+// ============================================================================
 // ADMIN API - IMAGE FETCHING (THE ONLY NEW ADDITION)
 // ============================================================================
 
@@ -367,7 +415,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   const deliveryDate = extractDeliveryDate(shopifyOrder)
   const deliveryMethod = extractDeliveryMethod(shopifyOrder)
   const notes = extractNotes(shopifyOrder)
-  
+  const priority = calculatePriority(deliveryDate)
+
+  console.log(`Priority calculated: ${priority} (due_date: ${deliveryDate})`)
+
   const orders: any[] = []
   
   if (cakeItems.length <= 1) {
@@ -402,11 +453,12 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       delivery_method: deliveryMethod,
       product_image: productImage,
       item_qty: 1, // Each order represents 1 item (even if original had multiple)
-      accessories: formatAccessories(accessoryItems)
+      accessories: formatAccessories(accessoryItems),
+      priority: priority // Calculated from due_date: 'High', 'Medium', 'Low'
     }
-    
+
     orders.push(order)
-    
+
   } else {
     // Multiple cakes - split into separate orders
     const suffixes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
@@ -445,9 +497,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         delivery_method: deliveryMethod,
         product_image: productImage,
         item_qty: 1, // Each split order represents 1 item from the original quantity
-        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null // Accessories only on first order
+        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null, // Accessories only on first order
+        priority: priority // Calculated from due_date: 'High', 'Medium', 'Low'
       }
-      
+
       orders.push(order)
     }
   }

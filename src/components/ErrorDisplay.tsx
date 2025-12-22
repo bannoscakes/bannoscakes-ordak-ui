@@ -55,9 +55,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+          className="h-10 w-10 p-0 text-red-600 hover:text-red-700"
         >
-          <X className="w-3 h-3" />
+          <X className="w-4 h-4" />
         </Button>
       )}
     </div>

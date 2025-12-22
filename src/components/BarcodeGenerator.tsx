@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import JsBarcode from 'jsbarcode';
 import { Button } from './ui/button';
 import { Printer, Download } from 'lucide-react';
+import { formatDate } from '../lib/format-utils';
 
 interface BarcodeGeneratorProps {
   orderId: string;
@@ -105,7 +106,7 @@ export function BarcodeGenerator({
                   <div class="order-info">
                     <div class="order-id">${orderId}</div>
                     <div class="product">${productTitle}</div>
-                    <div class="due-date">Due: ${new Date(dueDate).toLocaleDateString()}</div>
+                    <div class="due-date">Due: ${formatDate(dueDate)}</div>
                   </div>
                 </div>
                 <script>
@@ -190,7 +191,7 @@ export function BarcodeGenerator({
           <div className="font-bold text-base text-gray-900 truncate">{orderId}</div>
           <div className="text-sm text-gray-600 mt-1 truncate">{productTitle}</div>
           <div className="text-xs text-gray-500 mt-1">
-            Due: {new Date(dueDate).toLocaleDateString()}
+            Due: {formatDate(dueDate)}
           </div>
         </div>
         

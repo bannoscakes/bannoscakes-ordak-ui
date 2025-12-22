@@ -1,14 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   Calendar as CalendarIcon,
-  Cake
+  Cake,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getQueue } from "../lib/rpc-client";
+import { useState, useMemo } from "react";
+import { useQueueForMonitor } from "../hooks/useQueueByStore";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface OrderPill {
   id: string;
@@ -101,80 +104,60 @@ const getStageColorClasses = (stage: string) => {
 };
 
 export function BannosMonitorPage() {
-  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getCurrentWeekStart());
 
-  useEffect(() => {
-    fetchWeeklyOrders();
-  }, [currentWeekStart]);
+  // Use React Query hook for queue data
+  const {
+    data: orders = [],
+    isLoading: loading,
+    isError,
+    error,
+    refetch,
+  } = useQueueForMonitor('bannos');
 
-  const fetchWeeklyOrders = async () => {
-    try {
-      setLoading(true);
-      
-      // Calculate week's date range for reference
-      const weekStart = currentWeekStart;
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      
-      // Fetch orders with high limit to ensure we get orders across multiple weeks
-      // This handles cases where there are many orders or when navigating to future weeks
-      const orders = await getQueue({
-        store: 'bannos',
-        limit: 5000, // Increased limit to cover more orders across time
-        sort_by: 'due_date',
-        sort_order: 'ASC'
-      });
+  // Group orders by week day using useMemo for performance
+  const weekDays = useMemo(() => {
+    // Initialize week structure
+    const days = getWeekDates(currentWeekStart);
 
-      // Initialize week structure
-      const days = getWeekDates(currentWeekStart);
-      
-      // Group orders by due date - only include orders within the displayed week
-      // Use local timezone formatting to avoid UTC date shift bugs
-      const weekStartStr = formatDateLocal(weekStart);
-      const weekEndStr = formatDateLocal(weekEnd);
-      
-      orders.forEach((order: any) => {
-        if (!order.due_date) return;
-        
-        // Convert order's due_date to local date string to match week boundaries
-        const due = new Date(order.due_date);
-        if (Number.isNaN(due.getTime())) {
-          console.warn('Invalid due_date for order:', order.id, order.human_id, order.due_date);
-          return;
+    // Calculate week's date range for filtering
+    const weekStart = currentWeekStart;
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const weekStartStr = formatDateLocal(weekStart);
+    const weekEndStr = formatDateLocal(weekEnd);
+
+    // Group orders by due date - only include orders within the displayed week
+    orders.forEach((order: any) => {
+      if (!order.due_date) return;
+
+      // Convert order's due_date to local date string to match week boundaries
+      const due = new Date(order.due_date);
+      if (Number.isNaN(due.getTime())) {
+        console.warn('Invalid due_date for order:', order.id, order.human_id, order.due_date);
+        return;
+      }
+      const orderDateLocal = formatDateLocal(due);
+
+      // Only process orders within the current week's date range
+      if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
+        const dayIndex = days.findIndex(d => d.dateStr === orderDateLocal);
+
+        if (dayIndex !== -1) {
+          days[dayIndex].orders.push({
+            id: order.id,
+            humanId: order.shopify_order_number
+              ? formatOrderNumber(String(order.shopify_order_number), 'bannos')
+              : (order.human_id || order.id),
+            stage: order.stage || 'Filling',
+            dueDate: order.due_date
+          });
         }
-        const orderDateLocal = formatDateLocal(due);
-        
-        // Only process orders within the current week's date range
-        if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
-          const dayIndex = days.findIndex(d => d.dateStr === orderDateLocal);
-          
-          if (dayIndex !== -1) {
-            days[dayIndex].orders.push({
-              id: order.id,
-              humanId: order.shopify_order_number ? `#B${order.shopify_order_number}` : (order.human_id || order.id),
-              stage: order.stage || 'Filling',
-              dueDate: order.due_date
-            });
-          }
-        }
-      });
+      }
+    });
 
-      setWeekDays(days);
-    } catch (error) {
-      console.error('RPC call failed:', {
-        rpc: 'get_queue',
-        store: 'bannos',
-        weekStart: formatDateLocal(currentWeekStart),
-        weekEnd: formatDateLocal(new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000)),
-        error: error instanceof Error ? error.message : String(error)
-      });
-      setWeekDays(getWeekDates(currentWeekStart));
-    } finally {
-      setLoading(false);
-    }
-  };
+    return days;
+  }, [orders, currentWeekStart]);
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newStart = new Date(currentWeekStart);
@@ -210,6 +193,30 @@ export function BannosMonitorPage() {
                   <div key={i} className="h-96 bg-muted rounded-lg"></div>
                 ))}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <Card className="h-full">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="p-3 rounded-full bg-red-100 mb-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Failed to load queue</h3>
+              <p className="text-muted-foreground mb-4 max-w-md">
+                {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              </p>
+              <Button onClick={() => refetch()} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try again
+              </Button>
             </div>
           </CardContent>
         </Card>

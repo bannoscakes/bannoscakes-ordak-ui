@@ -7,7 +7,6 @@
 import { getSupabase } from './supabase';
 import type { Stage, Store, Priority } from '../types/db';
 import { createError, handleError, logError, ErrorCode } from './error-handler';
-import { requestCache } from './request-cache';
 
 // =============================================
 // MESSAGING TYPES
@@ -479,32 +478,6 @@ export async function getQueueStats(store?: Store | null) {
   return data?.[0] || null;
 }
 
-/**
- * Cached version of getQueue with 30-second TTL
- * Use this for dashboard and monitoring pages where stale data is acceptable
- */
-export const getQueueCached = requestCache.cached(getQueue, {
-  ttl: 30000, // 30 seconds
-  keyPrefix: 'rpc.getQueue', // Stable prefix for cache keys (survives minification)
-});
-
-/**
- * Cached version of getQueueStats with 30-second TTL  
- * Use this for dashboard stats that don't need real-time updates
- */
-export const getQueueStatsCached = requestCache.cached(getQueueStats, {
-  ttl: 30000, // 30 seconds
-  keyPrefix: 'rpc.getQueueStats', // Stable prefix for cache keys (survives minification)
-});
-
-/**
- * Invalidate queue-related cache entries
- * Call this after mutations (create, update, delete orders)
- */
-export function invalidateQueueCache(): void {
-  requestCache.invalidate(/rpc\.getQueue/);
-}
-
 export async function getUnassignedCounts(store?: Store | null) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_unassigned_counts', {
@@ -551,6 +524,21 @@ export async function assignStaff(orderId: string, store: Store, staffId: string
   });
   if (error) throw error;
   return data;
+}
+
+/**
+ * Bulk assign staff to multiple orders in a single transaction.
+ * Returns the count of successfully assigned orders.
+ */
+export async function assignStaffBulk(orderIds: string[], store: Store, staffId: string): Promise<number> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('assign_staff_bulk', {
+    p_order_ids: orderIds,
+    p_store: store,
+    p_staff_id: staffId,
+  });
+  if (error) throw error;
+  return data as number;
 }
 
 export async function unassignStaff(orderId: string, store: Store) {
@@ -761,7 +749,6 @@ export async function qcReturnToDecorating(orderId: string, store: string, notes
     p_notes: notes || null,
   });
   if (error) throw error;
-  invalidateQueueCache();
   return data;
 }
 
@@ -1383,58 +1370,6 @@ export async function getStockTransactions(params: {
   });
   if (error) throw error;
   return (data || []) as StockTransaction[];
-}
-
-// =============================================
-// CACHED INVENTORY FUNCTIONS - SIMPLIFIED
-// =============================================
-
-/**
- * Cached version of getComponents with 60-second TTL
- */
-export const getComponentsCached = requestCache.cached(getComponents, {
-  ttl: 60000,
-  keyPrefix: 'rpc.getComponents',
-});
-
-/**
- * Cached version of getBoms with 60-second TTL
- */
-export const getBomsCached = requestCache.cached(getBoms, {
-  ttl: 60000,
-  keyPrefix: 'rpc.getBoms',
-});
-
-/**
- * Cached version of getAccessories with 60-second TTL
- */
-export const getAccessoriesCached = requestCache.cached(getAccessories, {
-  ttl: 60000,
-  keyPrefix: 'rpc.getAccessories',
-});
-
-/**
- * Cached version of getCakeToppers with 60-second TTL
- */
-export const getCakeToppersCached = requestCache.cached(getCakeToppers, {
-  ttl: 60000,
-  keyPrefix: 'rpc.getCakeToppers',
-});
-
-/**
- * Cached version of getStockTransactions with 60-second TTL
- */
-export const getStockTransactionsCached = requestCache.cached(getStockTransactions, {
-  ttl: 60000,
-  keyPrefix: 'rpc.getStockTransactions',
-});
-
-/**
- * Invalidate inventory-related cache entries
- * Call this after mutations (create, update, delete components/BOMs/accessories/cake toppers)
- */
-export function invalidateInventoryCache(): void {
-  requestCache.invalidate(/rpc\.(getComponents|getBoms|getAccessories|getCakeToppers|getStockTransactions)/);
 }
 
 // =============================================
@@ -2109,8 +2044,6 @@ export async function createManualOrder(params: CreateManualOrderParams): Promis
         p_notes: params.notes || null,
       });
       if (error) throw error;
-      // Invalidate queue cache after creating a new order
-      invalidateQueueCache();
       return data as string;
     },
     {

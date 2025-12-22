@@ -9,10 +9,12 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { setStorage, getStorageLocations, qcReturnToDecorating, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
+import { getStorageLocations, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { BarcodeGenerator } from "./BarcodeGenerator";
+import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 
 interface AccessoryItem {
   title: string;
@@ -115,6 +117,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [storageLoading, setStorageLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
+
+  // Use centralized mutation hooks for cache invalidation
+  const setStorageMutation = useSetStorage();
+  const qcReturnMutation = useQcReturnToDecorating();
 
   // Fetch real order data when drawer opens
   useEffect(() => {
@@ -268,36 +274,46 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   // Early return after all hooks
   if (!extendedOrder) return null;
 
-  const handleStorageChange = async (newStorage: string) => {
+  const handleStorageChange = (newStorage: string) => {
     if (!extendedOrder || newStorage === selectedStorage) return;
 
-    try {
-      await setStorage(extendedOrder.id, extendedOrder.store, newStorage);
-      setSelectedStorage(newStorage);
-      toast.success(`Storage location updated to ${newStorage}`);
-    } catch (error) {
-      console.error('Error updating storage location:', error);
-      toast.error('Failed to update storage location');
-    }
+    setStorageMutation.mutate(
+      { orderId: extendedOrder.id, store: extendedOrder.store, storageLocation: newStorage },
+      {
+        onSuccess: () => {
+          setSelectedStorage(newStorage);
+          toast.success(`Storage location updated to ${newStorage}`);
+        },
+        onError: (error) => {
+          console.error('Error updating storage location:', error);
+          toast.error('Failed to update storage location');
+        }
+      }
+    );
   };
 
-  const handleQCReturn = async () => {
+  const handleQCReturn = () => {
     if (qcIssue === "None") {
       toast.error("Please select a QC issue before returning order");
       return;
     }
 
-    try {
-      const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
-      await qcReturnToDecorating(extendedOrder.id, extendedOrder.store, notes);
-      toast.success(`Order returned to Decorating stage: ${qcIssue}`);
-      onClose();
-      // Notify parent to refresh workspace (order moved to different stage)
-      onOrderCompleted?.(extendedOrder.id);
-    } catch (error) {
-      console.error('Failed to return order to decorating:', error);
-      toast.error('Failed to return order to decorating stage');
-    }
+    const notes = qcComments ? `${qcIssue}: ${qcComments}` : qcIssue;
+    qcReturnMutation.mutate(
+      { orderId: extendedOrder.id, store: extendedOrder.store, notes },
+      {
+        onSuccess: () => {
+          toast.success(`Order returned to Decorating stage: ${qcIssue}`);
+          onClose();
+          // Notify parent to refresh workspace (order moved to different stage)
+          onOrderCompleted?.(extendedOrder.id);
+        },
+        onError: (error) => {
+          console.error('Failed to return order to decorating:', error);
+          toast.error('Failed to return order to decorating stage');
+        }
+      }
+    );
   };
 
   const handlePrintBarcode = () => {
@@ -311,7 +327,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         extendedOrder.store as 'bannos' | 'flourlane',
         extendedOrder.id
       );
-      toast.success(`Barcode printed for ${extendedOrder.orderNumber}`);
+      const displayOrderNumber = extendedOrder.shopifyOrderNumber
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        : extendedOrder.orderNumber;
+      toast.success(`Barcode printed for ${displayOrderNumber}`);
     } catch (error) {
       console.error('Error printing barcode:', error);
       toast.error("Failed to print barcode");
@@ -336,8 +355,11 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
 
   const handlePrintPackingSlip = () => {
     try {
+      const displayOrderNumber = extendedOrder.shopifyOrderNumber
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        : extendedOrder.orderNumber;
       printPackingSlip({
-        orderNumber: extendedOrder.orderNumber,
+        orderNumber: displayOrderNumber,
         customerName: extendedOrder.customerName,
         dueDate: extendedOrder.deliveryDate,
         deliveryMethod: extendedOrder.method || 'Pickup',
@@ -378,7 +400,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
           <div className="flex items-center justify-center py-4">
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
-                orderId={extendedOrder.orderNumber}
+                orderId={extendedOrder.shopifyOrderNumber
+                  ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                  : extendedOrder.orderNumber}
                 productTitle={extendedOrder.product}
                 dueDate={extendedOrder.dueTime}
                 store={extendedOrder.store}
@@ -408,7 +432,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
               </Button>
             </div>
             <SheetDescription className="sr-only">
-              Detailed view of order {extendedOrder.orderNumber} for {extendedOrder.customerName}
+              Detailed view of order {extendedOrder.shopifyOrderNumber
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
@@ -430,7 +456,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   <span className="font-medium text-foreground">Store:</span> {storeName}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Order #:</span> {extendedOrder.orderNumber}
+                  <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                    : extendedOrder.orderNumber}
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-3 text-sm">
@@ -445,7 +473,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
                   <p className="mt-2 text-foreground">
-                    {extendedOrder.deliveryDate}
+                    {formatDate(extendedOrder.deliveryDate)}
                   </p>
                 </div>
                 <div>

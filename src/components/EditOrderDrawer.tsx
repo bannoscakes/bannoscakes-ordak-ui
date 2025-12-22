@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { toast } from "sonner";
 import { updateOrderCore } from "../lib/rpc-client";
+import { formatOrderNumber, formatDate as formatDateDisplay } from "../lib/format-utils";
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
@@ -295,7 +296,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
               </SheetTitle>
             </div>
             <SheetDescription className="sr-only">
-              Edit order {normalizedOrder.orderNumber} for {normalizedOrder.customerName}
+              Edit order {normalizedOrder.shopifyOrderNumber
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                : normalizedOrder.orderNumber} for {normalizedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
 
@@ -308,7 +311,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
               <span className="font-medium">Store:</span> {storeName}
             </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Order #:</span> {normalizedOrder.orderNumber}
+              <span className="font-medium">Order:</span> {normalizedOrder.shopifyOrderNumber
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                : normalizedOrder.orderNumber}
             </p>
           </div>
 
@@ -326,7 +331,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('product')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -351,7 +356,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('size')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -376,7 +381,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('dueDate')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -391,7 +396,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                       dirtyFields.dueDate ? 'border-orange-300 bg-orange-50' : ''
                     }`}
                   >
-                    {formData.dueDate ? formData.dueDate : "Select date"}
+                    {formData.dueDate ? formatDateDisplay(formData.dueDate) : "Select date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -420,7 +425,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('method')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -448,7 +453,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('flavor')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -491,7 +496,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('storage')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -523,7 +528,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('writingOnCake')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -548,7 +553,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('accessories')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -569,21 +574,23 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   </Button>
                 </div>
                 {formData.accessories.length > 0 && (
-                  <div className={`flex flex-wrap gap-2 p-3 rounded-lg border ${
+                  <div className={`flex flex-wrap gap-3 p-3 rounded-lg border ${
                     dirtyFields.accessories ? 'border-orange-300 bg-orange-50' : 'bg-muted/30'
                   }`}>
                     {formData.accessories.map((accessory, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {accessory}
+                      <div key={index} className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {accessory}
+                        </Badge>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-4 w-4 p-0 ml-1"
+                          className="h-10 w-10 p-0"
                           onClick={() => removeAccessory(index)}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4" />
                         </Button>
-                      </Badge>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -600,7 +607,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('notes')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -626,7 +633,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0"
+                    className="h-10 w-10 p-0"
                     onClick={() => resetField('photos')}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -670,10 +677,10 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                         <Button
                           variant="destructive"
                           size="sm"
-                          className="absolute -top-1 -right-1 h-5 w-5 p-0"
+                          className="absolute -top-4 -right-4 h-10 w-10 p-0"
                           onClick={() => removePhoto(index)}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}

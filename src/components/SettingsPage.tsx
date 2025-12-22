@@ -509,10 +509,10 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0"
                   onClick={() => setShowToken(!showToken)}
                 >
-                  {showToken ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
 
@@ -762,21 +762,21 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
                   }}
                   className="flex-1"
                 />
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveFlavour(index)}
-                  className="h-8 w-8 p-0"
+                  className="h-10 w-10 p-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ))}
-            
+
             <div className="flex items-center gap-2">
               <GripVertical className="h-4 w-4 text-muted-foreground" />
               <Input value="Other" disabled className="flex-1" />
-              <div className="h-8 w-8" /> {/* Spacer for alignment */}
+              <div className="h-10 w-10" /> {/* Spacer for alignment */}
             </div>
           </div>
         </Card>
@@ -807,11 +807,11 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
                   }}
                   className="flex-1"
                 />
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveStorageLocation(index)}
-                  className="h-8 w-8 p-0"
+                  className="h-10 w-10 p-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>

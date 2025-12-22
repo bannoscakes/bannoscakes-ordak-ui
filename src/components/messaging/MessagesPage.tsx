@@ -359,7 +359,7 @@ export function MessagesPage() {
                   window.history.pushState({}, '', '/');
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }}
-                className="h-8 w-8 p-0 mr-2"
+                className="h-10 w-10 p-0 mr-2"
                 title="Back to Dashboard"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -371,7 +371,7 @@ export function MessagesPage() {
                 title={isConnected ? "Connected" : "Disconnected"}
               />
             </div>
-            <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-8 w-8 p-0">
+            <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0">
               <Plus className="h-4 w-4" />
             </Button>
           </div>

@@ -1,5 +1,6 @@
 import { getSupabase } from './supabase';
 import { clearSupabaseAuthStorage } from './supabase-storage';
+import { queryClient } from './query-client';
 import type { User, Session } from '@supabase/supabase-js';
 
 export interface AuthUser {
@@ -55,6 +56,9 @@ class AuthService {
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           console.log('🚪 Explicit sign out detected');
+          // Clear React Query cache to prevent stale data bleeding between user sessions
+          // This handles sign-outs from other tabs or session invalidations
+          queryClient.clear();
           this.updateAuthState({ user: null, session: null, loading: false });
           return;
         }
@@ -222,7 +226,11 @@ class AuthService {
       
       console.log('Supabase signOut successful');
       console.log('Supabase session after signout:', await this.supabase.auth.getSession());
-      
+
+      // Clear React Query cache to prevent stale data bleeding between user sessions
+      console.log('Clearing React Query cache...');
+      queryClient.clear();
+
       // Clear any persisted auth storage regardless of current config, since
       // a previous session may have been stored before persistence was
       // disabled.

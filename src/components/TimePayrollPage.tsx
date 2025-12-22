@@ -75,7 +75,11 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
   function getDateRange() {
     const today = new Date();
     const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+    // Calculate Monday of current week
+    // If today is Sunday (0), go back 6 days; otherwise go back to Monday
+    const dayOfWeek = today.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    thisWeekStart.setDate(today.getDate() - daysToMonday); // Monday
     
     const lastWeekStart = new Date(thisWeekStart);
     lastWeekStart.setDate(thisWeekStart.getDate() - 7);

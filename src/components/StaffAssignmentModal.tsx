@@ -6,11 +6,14 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Loader2, User, UserX } from "lucide-react";
 import { toast } from "sonner";
-import { getStaffList, assignStaff, unassignStaff, type StaffMember } from "../lib/rpc-client";
+import { getStaffList, type StaffMember } from "../lib/rpc-client";
+import { useAssignStaff, useUnassignStaff } from "../hooks/useQueueMutations";
+import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 interface QueueItem {
   id: string;
   orderNumber: string;
+  shopifyOrderNumber?: string;
   customerName: string;
   product: string;
   size: 'S' | 'M' | 'L';
@@ -35,17 +38,21 @@ interface StaffAssignmentModalProps {
   onAssigned: (order: QueueItem) => void;
 }
 
-export function StaffAssignmentModal({ 
-  isOpen, 
-  onClose, 
-  order, 
-  store, 
-  onAssigned 
+export function StaffAssignmentModal({
+  isOpen,
+  onClose,
+  order,
+  store,
+  onAssigned
 }: StaffAssignmentModalProps) {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
-  const [loading, setLoading] = useState(false);
   const [staffLoading, setStaffLoading] = useState(false);
+
+  // Use centralized mutation hooks for cache invalidation
+  const assignMutation = useAssignStaff();
+  const unassignMutation = useUnassignStaff();
+  const loading = assignMutation.isPending || unassignMutation.isPending;
 
   // Load staff list when modal opens
   useEffect(() => {
@@ -69,44 +76,54 @@ export function StaffAssignmentModal({
     }
   };
 
-  const handleAssign = async () => {
+  const handleAssign = () => {
     if (!order || !selectedStaffId) return;
 
-    try {
-      setLoading(true);
-      
-      if (selectedStaffId === "unassign") {
-        // Unassign staff
-        await unassignStaff(order.id, store);
-        toast.success('Order unassigned successfully');
-        
-        const updatedOrder = {
-          ...order,
-          assigneeId: undefined,
-          assigneeName: undefined
-        };
-        onAssigned(updatedOrder);
-      } else {
-        // Assign to staff
-        await assignStaff(order.id, store, selectedStaffId);
-        
-        const assignedStaff = staffList.find(s => s.user_id === selectedStaffId);
-        toast.success(`Order assigned to ${assignedStaff?.full_name || 'staff member'}`);
-        
-        const updatedOrder = {
-          ...order,
-          assigneeId: selectedStaffId,
-          assigneeName: assignedStaff?.full_name
-        };
-        onAssigned(updatedOrder);
-      }
-      
-      onClose();
-    } catch (error) {
-      console.error('Error assigning staff:', error);
-      toast.error('Failed to assign staff');
-    } finally {
-      setLoading(false);
+    if (selectedStaffId === "unassign") {
+      // Unassign staff
+      unassignMutation.mutate(
+        { orderId: order.id, store },
+        {
+          onSuccess: () => {
+            toast.success('Order unassigned successfully');
+
+            const updatedOrder = {
+              ...order,
+              assigneeId: undefined,
+              assigneeName: undefined
+            };
+            onAssigned(updatedOrder);
+            onClose();
+          },
+          onError: (error) => {
+            console.error('Error unassigning staff:', error);
+            toast.error('Failed to unassign order');
+          }
+        }
+      );
+    } else {
+      // Assign to staff
+      assignMutation.mutate(
+        { orderId: order.id, store, staffId: selectedStaffId },
+        {
+          onSuccess: () => {
+            const assignedStaff = staffList.find(s => s.user_id === selectedStaffId);
+            toast.success(`Order assigned to ${assignedStaff?.full_name || 'staff member'}`);
+
+            const updatedOrder = {
+              ...order,
+              assigneeId: selectedStaffId,
+              assigneeName: assignedStaff?.full_name
+            };
+            onAssigned(updatedOrder);
+            onClose();
+          },
+          onError: (error) => {
+            console.error('Error assigning staff:', error);
+            toast.error('Failed to assign staff');
+          }
+        }
+      );
     }
   };
 
@@ -123,7 +140,7 @@ export function StaffAssignmentModal({
         <DialogHeader>
           <DialogTitle>Assign Order to Staff</DialogTitle>
           <DialogDescription>
-            Assign order #{order.orderNumber} for {order.customerName} to a staff member.
+            Assign order {formatOrderNumber(order.shopifyOrderNumber || order.orderNumber, store)} for {order.customerName} to a staff member.
           </DialogDescription>
         </DialogHeader>
 
@@ -213,7 +230,7 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due:</span>
-              <span>{new Date(order.dueTime).toLocaleDateString()}</span>
+              <span>{formatDate(order.dueTime)}</span>
             </div>
           </div>
         </div>
