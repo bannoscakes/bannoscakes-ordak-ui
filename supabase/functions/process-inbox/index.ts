@@ -284,13 +284,23 @@ function extractNotes(shopifyOrder: any): string | null {
 // ============================================================================
 
 /**
- * Get current date in Sydney timezone (AEST/AEDT)
+ * Parse a YYYY-MM-DD date string and return a Date representing midnight UTC
+ * for that calendar date. This treats the date as a calendar date (not a point in time).
  */
-function getSydneyDate(): Date {
+function parseDateAsUTC(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
+}
+
+/**
+ * Get current Sydney date as a Date object representing midnight UTC for that calendar date.
+ * This allows comparing calendar dates without timezone offset issues.
+ */
+function getSydneyDateAsUTC(): Date {
   const now = new Date()
-  // Format as Sydney date string, then parse back to get midnight Sydney time
+  // Get Sydney date in YYYY-MM-DD format
   const sydneyDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })
-  return new Date(sydneyDateStr + 'T00:00:00')
+  return parseDateAsUTC(sydneyDateStr)
 }
 
 /**
@@ -298,16 +308,19 @@ function getSydneyDate(): Date {
  * HIGH: today/overdue/tomorrow (deltaDays <= 1)
  * MEDIUM: within 3 days (deltaDays <= 3)
  * LOW: more than 3 days (deltaDays > 3)
+ *
+ * Note: Both dates are converted to midnight UTC for calendar day comparison.
+ * For precise historical/future DST handling, consider date-fns-tz.
  */
 function calculatePriority(dueDate: string | null): 'High' | 'Medium' | 'Low' {
   if (!dueDate) {
     return 'Medium' // Default to Medium if no due date
   }
 
-  const today = getSydneyDate()
-  const due = new Date(dueDate + 'T00:00:00')
+  const todayUTC = getSydneyDateAsUTC()
+  const dueUTC = parseDateAsUTC(dueDate)
 
-  const deltaDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const deltaDays = Math.floor((dueUTC.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24))
 
   if (deltaDays <= 1) return 'High'    // today/overdue/tomorrow
   if (deltaDays <= 3) return 'Medium'  // within 3 days
