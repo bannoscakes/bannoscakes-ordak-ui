@@ -102,7 +102,7 @@ export function useSupervisorQueue(userId: string | undefined) {
       return allOrders.map(mapOrderToQueueItem);
     },
     enabled: !!userId,
-    staleTime: 30_000,
+    staleTime: SUPERVISOR_QUEUE_REFETCH_INTERVAL,
     refetchInterval: SUPERVISOR_QUEUE_REFETCH_INTERVAL,
     refetchOnWindowFocus: true,
   });

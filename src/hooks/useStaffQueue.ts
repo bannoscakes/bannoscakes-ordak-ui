@@ -104,7 +104,7 @@ export function useStaffQueue(userId: string | undefined) {
       return allOrders.map(mapOrderToQueueItem);
     },
     enabled: !!userId,
-    staleTime: 30_000,
+    staleTime: STAFF_QUEUE_REFETCH_INTERVAL,
     refetchInterval: STAFF_QUEUE_REFETCH_INTERVAL,
     refetchOnWindowFocus: true,
   });
