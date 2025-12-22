@@ -441,7 +441,7 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       product_image: productImage,
       item_qty: 1, // Each order represents 1 item (even if original had multiple)
       accessories: formatAccessories(accessoryItems),
-      priority: priority // Calculated from due_date: 1=High, 0=Medium, -1=Low
+      priority: priority // Calculated from due_date: 'High', 'Medium', 'Low'
     }
 
     orders.push(order)
@@ -485,7 +485,7 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         product_image: productImage,
         item_qty: 1, // Each split order represents 1 item from the original quantity
         accessories: isFirstOrder ? formatAccessories(accessoryItems) : null, // Accessories only on first order
-        priority: priority // Calculated from due_date: 1=High, 0=Medium, -1=Low
+        priority: priority // Calculated from due_date: 'High', 'Medium', 'Low'
       }
 
       orders.push(order)
