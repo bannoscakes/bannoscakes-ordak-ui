@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   assignStaff,
+  assignStaffBulk,
   unassignStaff,
   setStorage,
   updateOrderPriority,
@@ -65,18 +66,9 @@ export function useBulkAssignStaff() {
 
   return useMutation({
     mutationFn: async ({ orderIds, store, staffId }: { orderIds: string[]; store: Store; staffId: string }) => {
-      const results = await Promise.allSettled(
-        orderIds.map(orderId => assignStaff(orderId, store, staffId))
-      );
-
-      const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
-      const failCount = failures.length;
-
-      // Log failure reasons for debugging
-      if (failures.length > 0) {
-        console.error('Bulk assignment failures:', failures.map(f => f.reason));
-      }
+      // Single RPC call for all orders (atomic transaction)
+      const successCount = await assignStaffBulk(orderIds, store, staffId);
+      const failCount = orderIds.length - successCount;
 
       return { successCount, failCount, total: orderIds.length };
     },

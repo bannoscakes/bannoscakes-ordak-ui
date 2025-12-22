@@ -526,6 +526,21 @@ export async function assignStaff(orderId: string, store: Store, staffId: string
   return data;
 }
 
+/**
+ * Bulk assign staff to multiple orders in a single transaction.
+ * Returns the count of successfully assigned orders.
+ */
+export async function assignStaffBulk(orderIds: string[], store: Store, staffId: string): Promise<number> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('assign_staff_bulk', {
+    p_order_ids: orderIds,
+    p_store: store,
+    p_staff_id: staffId,
+  });
+  if (error) throw error;
+  return data as number;
+}
+
 export async function unassignStaff(orderId: string, store: Store) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('unassign_staff', {
