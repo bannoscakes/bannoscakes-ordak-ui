@@ -121,7 +121,7 @@ COMMENT ON FUNCTION public.calculate_order_priority IS
 'Calculate priority based on due date. Use during order import to set correct initial priority.';
 
 -- ============================================================================
--- 4. Create pg_cron jobs for daily execution
+-- 4. Create pg_cron jobs for daily execution (optional - may fail in preview)
 --
 --    NOTE: pg_cron is NOT timezone-aware - it only understands UTC.
 --    Sydney observes daylight saving time (DST):
@@ -135,25 +135,36 @@ COMMENT ON FUNCTION public.calculate_order_priority IS
 --    Both jobs will fire, but escalate_order_priorities() is idempotent
 --    so running twice has no adverse effect. Alternatively, you can
 --    manually enable/disable these jobs when DST changes.
+--
+--    NOTE: pg_cron setup is wrapped in exception handler because it may not
+--    be available in all environments (e.g., Supabase preview branches).
+--    Cron jobs should be set up manually via Dashboard if this fails.
 -- ============================================================================
--- Enable pg_cron extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+DO $$
+BEGIN
+  -- Try to create pg_cron extension and schedule jobs
+  -- This may fail in preview environments - that's OK
+  CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Schedule for AEST (standard time): First Sunday in April → First Sunday in October
--- 14:05 UTC = 00:05 AEST (UTC+10)
-SELECT cron.schedule(
-  'escalate-order-priorities-aest',
-  '5 14 * * *',
-  $$SELECT public.escalate_order_priorities()$$
-);
+  -- Schedule for AEST (standard time): 14:05 UTC = 00:05 AEST (UTC+10)
+  PERFORM cron.schedule(
+    'escalate-order-priorities-aest',
+    '5 14 * * *',
+    'SELECT public.escalate_order_priorities()'
+  );
 
--- Schedule for AEDT (daylight time): First Sunday in October → First Sunday in April
--- 13:05 UTC = 00:05 AEDT (UTC+11)
-SELECT cron.schedule(
-  'escalate-order-priorities-aedt',
-  '5 13 * * *',
-  $$SELECT public.escalate_order_priorities()$$
-);
+  -- Schedule for AEDT (daylight time): 13:05 UTC = 00:05 AEDT (UTC+11)
+  PERFORM cron.schedule(
+    'escalate-order-priorities-aedt',
+    '5 13 * * *',
+    'SELECT public.escalate_order_priorities()'
+  );
+
+  RAISE NOTICE 'pg_cron jobs scheduled successfully';
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE 'pg_cron setup skipped (not available in this environment): %', SQLERRM;
+END $$;
 
 -- ============================================================================
 -- 5. Grant execute permissions
