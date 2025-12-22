@@ -327,7 +327,7 @@ export function ComponentsTab() {
                         }}
                       >
                         <PopoverTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-8 w-8">
+                          <Button variant="outline" size="icon" className="h-10 w-10">
                             <Minus className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
@@ -376,7 +376,7 @@ export function ComponentsTab() {
                         }}
                       >
                         <PopoverTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-8 w-8">
+                          <Button variant="outline" size="icon" className="h-10 w-10">
                             <Plus className="h-4 w-4" />
                           </Button>
                         </PopoverTrigger>
@@ -425,7 +425,7 @@ export function ComponentsTab() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={() => handleDelete(component)}
                       >
                         <Trash2 className="h-4 w-4" />

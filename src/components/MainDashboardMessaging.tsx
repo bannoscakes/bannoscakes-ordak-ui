@@ -390,11 +390,11 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-8 w-8 p-0">
+          <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0">
             <Plus className="h-4 w-4" />
           </Button>
           {onClose && (
-            <Button size="sm" variant="ghost" onClick={onClose} className="h-8 w-8 p-0">
+            <Button size="sm" variant="ghost" onClick={onClose} className="h-10 w-10 p-0">
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -468,7 +468,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">Conversations</h4>
-                <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-6 w-6 p-0">
+                <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-10 w-10 p-0">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
