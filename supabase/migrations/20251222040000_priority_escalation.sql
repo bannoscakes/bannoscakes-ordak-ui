@@ -121,18 +121,37 @@ COMMENT ON FUNCTION public.calculate_order_priority IS
 'Calculate priority based on due date. Use during order import to set correct initial priority.';
 
 -- ============================================================================
--- 4. Create pg_cron job for daily execution
---    Runs at 00:05 Sydney time (14:05 UTC during AEDT, 13:05 UTC during AEST)
+-- 4. Create pg_cron jobs for daily execution
+--
+--    NOTE: pg_cron is NOT timezone-aware - it only understands UTC.
+--    Sydney observes daylight saving time (DST):
+--    - AEST (UTC+10): First Sunday in April → First Sunday in October
+--    - AEDT (UTC+11): First Sunday in October → First Sunday in April
+--
+--    To run at 00:05 Sydney time year-round, we need TWO schedules:
+--    - 14:05 UTC = 00:05 AEST (standard time, Apr-Oct)
+--    - 13:05 UTC = 00:05 AEDT (daylight time, Oct-Apr)
+--
+--    Both jobs will fire, but escalate_order_priorities() is idempotent
+--    so running twice has no adverse effect. Alternatively, you can
+--    manually enable/disable these jobs when DST changes.
 -- ============================================================================
 -- Enable pg_cron extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- Schedule the job (Sydney is UTC+10/+11 depending on DST)
--- Using 14:05 UTC which is approximately midnight AEDT (summer)
--- The 5-minute offset avoids exact midnight conflicts
+-- Schedule for AEST (standard time): First Sunday in April → First Sunday in October
+-- 14:05 UTC = 00:05 AEST (UTC+10)
 SELECT cron.schedule(
-  'escalate-order-priorities',
-  '5 14 * * *',  -- 14:05 UTC = 00:05 AEDT (Sydney summer time)
+  'escalate-order-priorities-aest',
+  '5 14 * * *',
+  $$SELECT public.escalate_order_priorities()$$
+);
+
+-- Schedule for AEDT (daylight time): First Sunday in October → First Sunday in April
+-- 13:05 UTC = 00:05 AEDT (UTC+11)
+SELECT cron.schedule(
+  'escalate-order-priorities-aedt',
+  '5 13 * * *',
   $$SELECT public.escalate_order_priorities()$$
 );
 
