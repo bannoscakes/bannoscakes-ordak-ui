@@ -425,7 +425,7 @@ export function SupervisorWorkspacePage({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredOrders.map((order) => (
-                  <Card key={order.id} className="p-4 hover:bg-muted/30 transition-colors">
+                  <Card key={order.id} className="p-4 border border-border shadow hover:shadow-lg hover:bg-muted/30 transition-all">
                     <div className="space-y-3">
                       {/* Header with Store and Overflow Menu */}
                       <div className="flex items-center justify-between">
