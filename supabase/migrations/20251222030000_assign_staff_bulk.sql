@@ -11,6 +11,16 @@
 -- - Single network round-trip instead of N
 -- - Atomic transaction (all succeed or all fail)
 -- - Better performance for large batch assignments
+--
+-- SECURITY:
+-- - Only Admin and Supervisor roles can call this function
+-- - Staff ID must be valid and active in staff_shared
+-- - Array size limited to 100 orders to prevent abuse
+--
+-- BEHAVIOR:
+-- - Skips orders that don't exist (returns count of successful assignments)
+-- - Logs each assignment to stage_events
+-- - Logs to audit_log if user exists in public.users
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.assign_staff_bulk(
@@ -26,6 +36,7 @@ AS $function$
 DECLARE
   v_table_name text;
   v_user_id uuid;
+  v_user_role text;
   v_user_exists boolean := false;
   v_order_id text;
   v_current_stage stage_type;
@@ -41,11 +52,27 @@ BEGIN
     RAISE EXCEPTION 'Order IDs array cannot be empty';
   END IF;
 
+  -- Limit array size to prevent abuse/timeouts
+  IF array_length(p_order_ids, 1) > 100 THEN
+    RAISE EXCEPTION 'Cannot assign more than 100 orders at once';
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Authentication required: auth.uid() returned NULL';
+  END IF;
+
+  -- Authorization check: only Admin and Supervisor can bulk assign
+  v_user_role := public.app_role();
+  IF v_user_role NOT IN ('Admin', 'Supervisor') THEN
+    RAISE EXCEPTION 'Access denied: only Admin and Supervisor can bulk assign orders';
+  END IF;
+
+  -- Validate staff ID exists and is active
+  IF NOT EXISTS (SELECT 1 FROM public.staff_shared WHERE user_id = p_staff_id AND is_active = true) THEN
+    RAISE EXCEPTION 'Invalid or inactive staff ID: %', p_staff_id;
   END IF;
 
   -- Check user existence once for audit_log
@@ -98,4 +125,7 @@ BEGIN
 END;
 $function$;
 
-COMMENT ON FUNCTION public.assign_staff_bulk IS 'Bulk assign staff to multiple orders in a single transaction. Returns count of successfully assigned orders.';
+COMMENT ON FUNCTION public.assign_staff_bulk IS 'Bulk assign staff to multiple orders in a single transaction. Requires Admin/Supervisor role. Returns count of successfully assigned orders.';
+
+-- Grant execute to authenticated users (authorization is checked inside the function)
+GRANT EXECUTE ON FUNCTION public.assign_staff_bulk(text[], text, uuid) TO authenticated;
