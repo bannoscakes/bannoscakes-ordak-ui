@@ -280,6 +280,34 @@ function extractNotes(shopifyOrder: any): string | null {
 }
 
 // ============================================================================
+// PRIORITY CALCULATION
+// ============================================================================
+
+/**
+ * Calculate priority based on due_date using the same logic as database RPCs
+ * HIGH (1): today/overdue/tomorrow (deltaDays <= 1)
+ * MEDIUM (0): within 3 days (deltaDays <= 3)
+ * LOW (-1): more than 3 days (deltaDays > 3)
+ */
+function calculatePriority(dueDate: string | null): number {
+  if (!dueDate) {
+    return 0 // Default to MEDIUM if no due date
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Normalize to start of day
+
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0) // Normalize to start of day
+
+  const deltaDays = Math.floor((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (deltaDays <= 1) return 1   // HIGH: today/overdue/tomorrow
+  if (deltaDays <= 3) return 0   // MEDIUM: within 3 days
+  return -1                       // LOW: more than 3 days
+}
+
+// ============================================================================
 // ADMIN API - IMAGE FETCHING (THE ONLY NEW ADDITION)
 // ============================================================================
 
@@ -367,7 +395,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   const deliveryDate = extractDeliveryDate(shopifyOrder)
   const deliveryMethod = extractDeliveryMethod(shopifyOrder)
   const notes = extractNotes(shopifyOrder)
-  
+  const priority = calculatePriority(deliveryDate)
+
+  console.log(`Priority calculated: ${priority} (due_date: ${deliveryDate})`)
+
   const orders: any[] = []
   
   if (cakeItems.length <= 1) {
@@ -402,11 +433,12 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       delivery_method: deliveryMethod,
       product_image: productImage,
       item_qty: 1, // Each order represents 1 item (even if original had multiple)
-      accessories: formatAccessories(accessoryItems)
+      accessories: formatAccessories(accessoryItems),
+      priority: priority // Calculated from due_date: 1=High, 0=Medium, -1=Low
     }
-    
+
     orders.push(order)
-    
+
   } else {
     // Multiple cakes - split into separate orders
     const suffixes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
@@ -445,9 +477,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         delivery_method: deliveryMethod,
         product_image: productImage,
         item_qty: 1, // Each split order represents 1 item from the original quantity
-        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null // Accessories only on first order
+        accessories: isFirstOrder ? formatAccessories(accessoryItems) : null, // Accessories only on first order
+        priority: priority // Calculated from due_date: 1=High, 0=Medium, -1=Low
       }
-      
+
       orders.push(order)
     }
   }
