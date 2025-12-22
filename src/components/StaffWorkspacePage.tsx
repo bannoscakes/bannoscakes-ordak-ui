@@ -459,7 +459,7 @@ export function StaffWorkspacePage({
                 {filteredOrders.map((order) => (
                   <Card
                     key={order.id}
-                    className="p-4 hover:bg-muted/30 transition-colors"
+                    className="p-4 border border-border shadow hover:shadow-lg hover:bg-muted/30 transition-all"
                   >
                     <div className="space-y-3">
                       {/* Header with Store and Overflow Menu */}
