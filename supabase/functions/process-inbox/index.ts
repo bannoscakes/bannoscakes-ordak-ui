@@ -283,20 +283,23 @@ function extractNotes(shopifyOrder: any): string | null {
 // PRIORITY CALCULATION
 // ============================================================================
 
+/**
+ * Calculate order priority based on due date relative to Sydney time.
+ * Uses Australia/Sydney timezone for date comparison to match business hours.
+ */
 function calculateOrderPriority(dueDate: string | null): 'High' | 'Medium' | 'Low' | 'Urgent' {
   if (!dueDate) {
     return 'Medium'
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // Get today's date in Sydney timezone (YYYY-MM-DD format)
+  const sydneyToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' })
 
-  const due = new Date(dueDate)
-  due.setHours(0, 0, 0, 0)
-
-  if (due < today) {
+  // dueDate is already in YYYY-MM-DD format from extractDeliveryDate
+  // Compare as strings (YYYY-MM-DD format sorts correctly)
+  if (dueDate < sydneyToday) {
     return 'Urgent'  // Overdue
-  } else if (due.getTime() === today.getTime()) {
+  } else if (dueDate === sydneyToday) {
     return 'High'    // Due today
   } else {
     return 'Medium'  // Future date

@@ -102,7 +102,7 @@ Run daily via pg_cron at midnight Sydney time.';
 CREATE OR REPLACE FUNCTION public.calculate_order_priority(p_due_date date)
 RETURNS priority_level
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 AS $function$
 BEGIN
   IF p_due_date IS NULL THEN
