@@ -23,6 +23,7 @@ import { getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
+import type { GetQueueRow } from "../types/supabase";
 
 interface QueueItem {
   id: string;
@@ -31,7 +32,7 @@ interface QueueItem {
   shopifyOrderId?: number;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string;
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -129,7 +130,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
       complete: [],
     };
 
-    orders.forEach((order: any) => {
+    orders.forEach((order: GetQueueRow) => {
       const item: QueueItem = {
         id: order.id,
         orderNumber: String(order.human_id || order.shopify_order_number || order.id),
@@ -137,7 +138,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         shopifyOrderId: order.shopify_order_id || undefined,
         customerName: order.customer_name || 'Unknown',
         product: order.product_title || 'Unknown',
-        size: order.size || 'M',
+        size: order.size || 'Unknown',
         quantity: order.item_qty || 1,
         deliveryTime: order.due_date || '',
         priority: order.priority || 'Medium',

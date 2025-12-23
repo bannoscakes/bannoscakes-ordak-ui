@@ -12,6 +12,7 @@ import { TallCakeIcon } from "./TallCakeIcon";
 import { useState, useMemo } from "react";
 import { useQueueForMonitor } from "../hooks/useQueueByStore";
 import { formatOrderNumber } from "../lib/format-utils";
+import type { GetQueueRow } from "../types/supabase";
 
 interface OrderPill {
   id: string;
@@ -128,7 +129,7 @@ export function FlourlaneMonitorPage() {
     const weekEndStr = formatDateLocal(weekEnd);
 
     // Group orders by due date - only include orders within the displayed week
-    orders.forEach((order: any) => {
+    orders.forEach((order: GetQueueRow) => {
       if (!order.due_date) return;
 
       // Convert order's due_date to local date string to match week boundaries

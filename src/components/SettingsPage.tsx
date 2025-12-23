@@ -10,20 +10,21 @@ import { Badge } from "./ui/badge";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { 
-  getSettings, 
-  setSetting, 
-  getFlavours, 
-  setFlavours, 
-  getStorageLocations, 
-  setStorageLocations, 
-  getPrintingSettings, 
-  setPrintingSettings, 
-  getMonitorDensity, 
+import {
+  getSettings,
+  setSetting,
+  getFlavours,
+  setFlavours,
+  getStorageLocations,
+  setStorageLocations,
+  getPrintingSettings,
+  setPrintingSettings,
+  getMonitorDensity,
   setMonitorDensity,
   testAdminToken,
   syncShopifyOrders
 } from "../lib/rpc-client";
+import type { GetSettingsRow } from "../types/supabase";
 
 interface SettingsPageProps {
   store: "bannos" | "flourlane";
@@ -146,12 +147,12 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         ]);
 
         // Extract specific settings from the allSettings array
-        const dueDateDefault = allSettings?.find((s: any) => s.key === 'dueDates.defaultDue')?.value;
-        const dueDateDays = allSettings?.find((s: any) => s.key === 'dueDates.allowedDays')?.value;
-        const dueDateBlackouts = allSettings?.find((s: any) => s.key === 'dueDates.blackoutDates')?.value;
-        const autoRefresh = allSettings?.find((s: any) => s.key === 'monitor.autoRefresh')?.value;
-        const shopifyToken = allSettings?.find((s: any) => s.key === 'shopifyToken')?.value;
-        const inventoryTracking = allSettings?.find((s: any) => s.key === 'inventory_tracking_enabled')?.value;
+        const dueDateDefault = allSettings?.find((s: GetSettingsRow) => s.key === 'dueDates.defaultDue')?.value;
+        const dueDateDays = allSettings?.find((s: GetSettingsRow) => s.key === 'dueDates.allowedDays')?.value;
+        const dueDateBlackouts = allSettings?.find((s: GetSettingsRow) => s.key === 'dueDates.blackoutDates')?.value;
+        const autoRefresh = allSettings?.find((s: GetSettingsRow) => s.key === 'monitor.autoRefresh')?.value;
+        const shopifyToken = allSettings?.find((s: GetSettingsRow) => s.key === 'shopifyToken')?.value;
+        const inventoryTracking = allSettings?.find((s: GetSettingsRow) => s.key === 'inventory_tracking_enabled')?.value;
 
         console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
         console.log('Storage locations details:', { 

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import type { QueueItem, QueueItemStatus, QueueItemSize, QueueItemStore } from '../types/queue';
+import type { QueueItem, QueueItemStatus, QueueItemStore } from '../types/queue';
 import type { GetQueueRow } from '../types/supabase';
 
 /** Auto-refresh interval for queue hooks (30 seconds) */
@@ -24,14 +24,6 @@ export function mapStageToStatus(stage: string): QueueItemStatus {
 }
 
 /**
- * Validate size value, defaulting to 'M' if invalid
- */
-function normalizeSize(size: string | null | undefined): QueueItemSize {
-  if (size === 'S' || size === 'M' || size === 'L') return size;
-  return 'M';
-}
-
-/**
  * Validate store value, defaulting to 'bannos' if invalid
  */
 function normalizeStore(store: string | null | undefined): QueueItemStore {
@@ -51,7 +43,7 @@ export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
     shopifyOrderNumber: String(order.shopify_order_number || ''),
     customerName: order.customer_name || 'Unknown Customer',
     product: order.product_title || 'Unknown Product',
-    size: normalizeSize(order.size),
+    size: order.size || 'Unknown',
     quantity: order.item_qty || 1,
     deliveryTime: order.due_date || new Date().toISOString(),
     priority: order.priority || 'Medium',

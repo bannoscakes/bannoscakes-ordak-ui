@@ -10,6 +10,7 @@ import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
 import { adjustStaffTime, getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
+import type { GetStaffTimesRow, GetStaffTimesDetailRow } from "../types/supabase";
 import { 
   Calendar,
   Search, 
@@ -115,16 +116,16 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
         const staffTimes = await getStaffTimes(from, to);
         
         // Convert to UI format
-        const staffTimeRecords: StaffTimeRecord[] = staffTimes.map((staff: any) => ({
+        const staffTimeRecords: StaffTimeRecord[] = staffTimes.map((staff: GetStaffTimesRow) => ({
           id: staff.staff_id,
           name: staff.staff_name || 'Unknown Staff',
           avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
           daysWorked: staff.days_worked || 0,
-          totalShiftHours: parseFloat(staff.total_shift_hours) || 0,
-          totalBreakMinutes: parseFloat(staff.total_break_minutes) || 0,
-          totalNetHours: parseFloat(staff.net_hours) || 0,
-          hourlyRate: parseFloat(staff.hourly_rate) || 0,
-          totalPay: parseFloat(staff.total_pay) || 0,
+          totalShiftHours: staff.total_shift_hours || 0,
+          totalBreakMinutes: staff.total_break_minutes || 0,
+          totalNetHours: staff.net_hours || 0,
+          hourlyRate: staff.hourly_rate || 0,
+          totalPay: staff.total_pay || 0,
           timeEntries: [] // Loaded separately when "View Details" clicked
         }));
         
@@ -171,18 +172,18 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
       const detailData = await getStaffTimesDetail(staff.id, from, to);
       
       // Convert to UI format
-      const timeEntries: TimeEntry[] = detailData.map((day: any) => {
+      const timeEntries: TimeEntry[] = detailData.map((day: GetStaffTimesDetailRow) => {
         // Extract time from ISO timestamp
         const startTime = day.shift_start ? new Date(day.shift_start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
         const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
-        
+
         return {
           shiftId: day.shift_id,
           date: day.shift_date,
           shiftStart: startTime,
           shiftEnd: endTime,
-          breakMinutes: parseFloat(day.break_minutes) || 0,
-          netHours: parseFloat(day.net_hours) || 0,
+          breakMinutes: day.break_minutes || 0,
+          netHours: day.net_hours || 0,
           adjustmentNote: day.notes || undefined
         };
       });
@@ -230,23 +231,23 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
       // Refresh data from database to get updated totals
       const { from, to } = getDateRange();
       const staffTimes = await getStaffTimes(from, to);
-      const updatedData = staffTimes.map((staff: any) => ({
+      const updatedData = staffTimes.map((staff: GetStaffTimesRow) => ({
         id: staff.staff_id,
         name: staff.staff_name || 'Unknown Staff',
         avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
         daysWorked: staff.days_worked || 0,
-        totalShiftHours: parseFloat(staff.total_shift_hours) || 0,
-        totalBreakMinutes: parseFloat(staff.total_break_minutes) || 0,
-        totalNetHours: parseFloat(staff.net_hours) || 0,
-        hourlyRate: parseFloat(staff.hourly_rate) || 0,
-        totalPay: parseFloat(staff.total_pay) || 0,
+        totalShiftHours: staff.total_shift_hours || 0,
+        totalBreakMinutes: staff.total_break_minutes || 0,
+        totalNetHours: staff.net_hours || 0,
+        hourlyRate: staff.hourly_rate || 0,
+        totalPay: staff.total_pay || 0,
         timeEntries: []
       }));
       setTimeData(updatedData);
       
       // Also refresh the details for the currently selected staff
       const detailData = await getStaffTimesDetail(selectedStaff.id, from, to);
-      const timeEntries: TimeEntry[] = detailData.map((day: any) => {
+      const timeEntries: TimeEntry[] = detailData.map((day: GetStaffTimesDetailRow) => {
         const startTime = day.shift_start ? new Date(day.shift_start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
         const endTime = day.shift_end ? new Date(day.shift_end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
         return {
@@ -254,14 +255,14 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
           date: day.shift_date,
           shiftStart: startTime,
           shiftEnd: endTime,
-          breakMinutes: parseFloat(day.break_minutes) || 0,
-          netHours: parseFloat(day.net_hours) || 0,
+          breakMinutes: day.break_minutes || 0,
+          netHours: day.net_hours || 0,
           adjustmentNote: day.notes || undefined
         };
       });
-      
+
       // Update selectedStaff with fresh data including updated totals
-      const freshStaffData = updatedData.find((s: any) => s.id === selectedStaff.id);
+      const freshStaffData = updatedData.find((s) => s.id === selectedStaff.id);
       if (freshStaffData) {
         setSelectedStaff({ ...freshStaffData, timeEntries });
       }
