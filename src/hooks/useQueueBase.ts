@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import type { QueueItem, QueueItemStatus } from '../types/queue';
+import type { QueueItem, QueueItemStatus, QueueItemSize, QueueItemStore } from '../types/queue';
+import type { GetQueueRow } from '../types/supabase';
 
 /** Auto-refresh interval for queue hooks (30 seconds) */
 export const QUEUE_REFETCH_INTERVAL = 30_000;
@@ -23,9 +24,25 @@ export function mapStageToStatus(stage: string): QueueItemStatus {
 }
 
 /**
+ * Validate size value, defaulting to 'M' if invalid
+ */
+function normalizeSize(size: string | null | undefined): QueueItemSize {
+  if (size === 'S' || size === 'M' || size === 'L') return size;
+  return 'M';
+}
+
+/**
+ * Validate store value, defaulting to 'bannos' if invalid
+ */
+function normalizeStore(store: string | null | undefined): QueueItemStore {
+  if (store === 'bannos' || store === 'flourlane') return store;
+  return 'bannos';
+}
+
+/**
  * Map database order to UI format
  */
-export function mapOrderToQueueItem(order: any): QueueItem {
+export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
   const normalizedMethod = order.delivery_method?.trim().toLowerCase();
 
   return {
@@ -34,7 +51,7 @@ export function mapOrderToQueueItem(order: any): QueueItem {
     shopifyOrderNumber: String(order.shopify_order_number || ''),
     customerName: order.customer_name || 'Unknown Customer',
     product: order.product_title || 'Unknown Product',
-    size: order.size || 'M',
+    size: normalizeSize(order.size),
     quantity: order.item_qty || 1,
     deliveryTime: order.due_date || new Date().toISOString(),
     priority: order.priority || 'Medium',
@@ -45,7 +62,7 @@ export function mapOrderToQueueItem(order: any): QueueItem {
           : normalizedMethod === 'pickup' ? 'Pickup'
           : undefined,
     storage: order.storage || 'Default',
-    store: order.store || 'bannos',
+    store: normalizeStore(order.store),
     stage: order.stage || 'Filling',
     covering_start_ts: order.covering_start_ts ?? null,
     decorating_start_ts: order.decorating_start_ts ?? null,

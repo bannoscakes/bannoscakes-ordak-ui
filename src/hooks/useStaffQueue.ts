@@ -29,7 +29,7 @@ export function useStaffQueue(userId: string | undefined) {
 
       // Combine orders from both stores, excluding Complete stage
       const allOrders = [...bannosOrders, ...flourlaneOrders]
-        .filter((order: any) => order.stage !== 'Complete');
+        .filter((order) => order.stage !== 'Complete');
 
       return allOrders.map(mapOrderToQueueItem);
     },
