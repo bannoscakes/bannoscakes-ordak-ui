@@ -481,9 +481,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                             <p className="truncate">{item.product}</p>
                           </div>
                           
-                          <div className="hidden lg:block">
-                            <p className="text-sm text-muted-foreground">Due Time</p>
-                            <p>{formatDate(item.dueTime)}</p>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Flavour</p>
+                            <p className="truncate">{item.flavor || '-'}</p>
                           </div>
                           
                           <div className="hidden md:block">
