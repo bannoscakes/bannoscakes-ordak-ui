@@ -36,6 +36,7 @@ function normalizeStore(store: string | null | undefined): QueueItemStore {
  */
 export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
   const normalizedMethod = order.delivery_method?.trim().toLowerCase();
+  const hasDueDate = !!order.due_date;
 
   return {
     id: order.id,
@@ -58,6 +59,7 @@ export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
     stage: order.stage || 'Filling',
     covering_start_ts: order.covering_start_ts ?? null,
     decorating_start_ts: order.decorating_start_ts ?? null,
+    needsAttention: !hasDueDate,
   };
 }
 

@@ -13,6 +13,7 @@ import {
   TabsTrigger,
 } from "./ui/tabs";
 import {
+  AlertTriangle,
   Search,
   LogOut,
   Play,
@@ -459,7 +460,7 @@ export function StaffWorkspacePage({
                 {filteredOrders.map((order) => (
                   <Card
                     key={order.id}
-                    className="p-4 border border-border shadow hover:shadow-lg hover:bg-muted/30 transition-all"
+                    className={`p-4 border border-border shadow hover:shadow-lg hover:bg-muted/30 transition-all ${order.needsAttention ? 'border-l-4 border-l-orange-500' : ''}`}
                   >
                     <div className="space-y-3">
                       {/* Header with Store and Overflow Menu */}
@@ -521,9 +522,16 @@ export function StaffWorkspacePage({
                         >
                           {order.priority}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Due: {formatDate(order.dueTime)}
-                        </span>
+                        {order.needsAttention ? (
+                          <Badge className="text-xs bg-orange-100 text-orange-800 border-orange-200">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            No due date
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Due: {formatDate(order.dueTime)}
+                          </span>
+                        )}
                       </div>
 
                       {/* Method and Storage */}

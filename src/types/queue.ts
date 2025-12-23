@@ -31,4 +31,6 @@ export interface QueueItem {
   stage: string;
   covering_start_ts?: string | null;
   decorating_start_ts?: string | null;
+  /** True when due_date is missing and requires manual attention */
+  needsAttention?: boolean;
 }

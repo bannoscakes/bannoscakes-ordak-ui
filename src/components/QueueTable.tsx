@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Clock, Search, X } from "lucide-react";
+import { AlertTriangle, Clock, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
@@ -43,6 +43,7 @@ interface QueueItem {
   storage?: string;
   assigneeId?: string;
   assigneeName?: string;
+  needsAttention?: boolean;
 }
 
 interface QueueTableProps {
@@ -152,6 +153,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           return undefined;
         })(),
         storage: order.storage || '',
+        needsAttention: !order.due_date,
       };
 
       // Group by stage
@@ -453,7 +455,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                       key={item.id}
                       className={`p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer ${
                         selectedItems.includes(item.id) ? 'border-blue-500 bg-blue-50' : ''
-                      }`}
+                      } ${item.needsAttention ? 'border-l-4 border-l-orange-500' : ''}`}
                       onClick={() => setSelectedOrder(item)}
                     >
                       <div className="flex items-center space-x-3">
@@ -483,7 +485,14 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           
                           <div className="hidden lg:block">
                             <p className="text-sm text-muted-foreground">Due Time</p>
-                            <p>{formatDate(item.dueTime)}</p>
+                            {item.needsAttention ? (
+                              <Badge className="bg-orange-100 text-orange-800 border-orange-200" variant="secondary">
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                No due date
+                              </Badge>
+                            ) : (
+                              <p>{formatDate(item.dueTime)}</p>
+                            )}
                           </div>
                           
                           <div className="hidden md:block">

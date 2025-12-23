@@ -11,8 +11,9 @@ import {
 } from "./ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
+import { useNeedsAttentionCount } from "@/hooks/useNeedsAttentionCount";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
+import { AlertTriangle, Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -47,6 +48,9 @@ export function SupervisorWorkspacePage({
   // Use React Query hook for orders
   const { data: orders = [], isLoading: loading, isError } = useSupervisorQueue(user?.id);
   const invalidateSupervisorQueue = useInvalidateSupervisorQueue();
+
+  // Get count of orders needing attention
+  const { data: needsAttentionData } = useNeedsAttentionCount();
 
   // Show toast on error
   useEffect(() => {
@@ -328,26 +332,60 @@ export function SupervisorWorkspacePage({
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Needs Attention Alert */}
+        {needsAttentionData && needsAttentionData.total > 0 && (
+          <Card className="p-4 border-l-4 border-l-orange-500 bg-orange-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                <div>
+                  <p className="font-medium text-orange-800">
+                    {needsAttentionData.total} order{needsAttentionData.total !== 1 ? 's' : ''} need attention
+                  </p>
+                  <p className="text-sm text-orange-600">
+                    Missing due date - requires manual entry
+                    {needsAttentionData.bannos > 0 && needsAttentionData.flourlane > 0 && (
+                      <span className="ml-2">
+                        (Bannos: {needsAttentionData.bannos}, Flourlane: {needsAttentionData.flourlane})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Queue Shortcuts */}
         <div className="flex flex-wrap gap-2 mb-6">
           {/* Bannos Queue Shortcut */}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2 px-4 py-2"
             onClick={onNavigateToBannosQueue}
           >
             <Users className="h-4 w-4" />
             Open Bannos Queue
+            {needsAttentionData && needsAttentionData.bannos > 0 && (
+              <Badge className="ml-1 bg-orange-100 text-orange-800 border-orange-200">
+                {needsAttentionData.bannos}
+              </Badge>
+            )}
           </Button>
 
           {/* Flourlane Queue Shortcut */}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2 px-4 py-2"
             onClick={onNavigateToFlourlaneQueue}
           >
             <TallCakeIcon className="h-4 w-4" />
             Open Flourlane Queue
+            {needsAttentionData && needsAttentionData.flourlane > 0 && (
+              <Badge className="ml-1 bg-orange-100 text-orange-800 border-orange-200">
+                {needsAttentionData.flourlane}
+              </Badge>
+            )}
           </Button>
 
         </div>
@@ -425,7 +463,7 @@ export function SupervisorWorkspacePage({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredOrders.map((order) => (
-                  <Card key={order.id} className="p-4 border border-border shadow hover:shadow-lg hover:bg-muted/30 transition-all">
+                  <Card key={order.id} className={`p-4 border border-border shadow hover:shadow-lg hover:bg-muted/30 transition-all ${order.needsAttention ? 'border-l-4 border-l-orange-500' : ''}`}>
                     <div className="space-y-3">
                       {/* Header with Store and Overflow Menu */}
                       <div className="flex items-center justify-between">
@@ -473,9 +511,16 @@ export function SupervisorWorkspacePage({
                         <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
                           {order.priority}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Due: {formatDate(order.dueTime)}
-                        </span>
+                        {order.needsAttention ? (
+                          <Badge className="text-xs bg-orange-100 text-orange-800 border-orange-200">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            No due date
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Due: {formatDate(order.dueTime)}
+                          </span>
+                        )}
                       </div>
 
                       {/* Method and Storage */}
