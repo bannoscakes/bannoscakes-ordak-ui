@@ -16,7 +16,7 @@ interface QueueItem {
   shopifyOrderNumber?: string;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string;
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';

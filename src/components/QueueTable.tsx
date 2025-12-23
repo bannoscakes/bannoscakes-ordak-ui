@@ -25,12 +25,6 @@ import { useQueueByStore } from "../hooks/useQueueByStore";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/supabase";
 
-/** Validate size value, defaulting to 'M' if invalid */
-function normalizeSize(size: string | null | undefined): 'S' | 'M' | 'L' {
-  if (size === 'S' || size === 'M' || size === 'L') return size;
-  return 'M';
-}
-
 interface QueueItem {
   id: string;
   orderNumber: string;
@@ -38,7 +32,7 @@ interface QueueItem {
   shopifyOrderId?: number;
   customerName: string;
   product: string;
-  size: 'S' | 'M' | 'L';
+  size: string;
   quantity: number;
   deliveryTime: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -144,7 +138,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         shopifyOrderId: order.shopify_order_id || undefined,
         customerName: order.customer_name || 'Unknown',
         product: order.product_title || 'Unknown',
-        size: normalizeSize(order.size),
+        size: order.size || 'Unknown',
         quantity: order.item_qty || 1,
         deliveryTime: order.due_date || '',
         priority: order.priority || 'Medium',

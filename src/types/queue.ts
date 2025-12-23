@@ -2,7 +2,7 @@
  * Shared queue types for staff and supervisor queue hooks
  */
 
-export type QueueItemSize = 'S' | 'M' | 'L';
+export type QueueItemSize = string;
 export type QueueItemPriority = 'High' | 'Medium' | 'Low';
 export type QueueItemStatus = 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
 export type QueueItemMethod = 'Delivery' | 'Pickup';
