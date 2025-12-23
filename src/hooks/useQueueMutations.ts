@@ -96,7 +96,7 @@ export function useUnassignStaff() {
  * Hook to bulk assign a staff member to multiple orders in a single atomic transaction
  *
  * @returns Mutation object with `mutate({ orderIds, store, staffId })` function.
- *          On success, returns `{ successCount, failCount, total }`.
+ *          The mutation's `data` property will contain `{ successCount, failCount, total }` on success.
  *
  * @example
  * const { mutate: bulkAssign } = useBulkAssignStaff();
