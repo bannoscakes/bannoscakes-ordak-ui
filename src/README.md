@@ -148,6 +148,29 @@ A comprehensive manufacturing management system with a modern, card-based interf
 - URL-based routing for navigation
 - Session management for user authentication
 
+### Database & Type Generation
+
+- **Supabase** for backend database and authentication
+- **Generated TypeScript types** from database schema
+
+#### Regenerating Types
+
+After any database migration, regenerate TypeScript types to keep the codebase in sync:
+
+```bash
+npm run gen:types
+```
+
+This generates `src/types/supabase.ts` from the live database schema, ensuring type safety for:
+- RPC function parameters and return types
+- Table row types for CRUD operations
+- Enum types matching database constraints
+
+**When to regenerate:**
+- After applying new migrations (`supabase db push` or `supabase migration up`)
+- After modifying tables, columns, or RPC functions
+- When you see type errors related to database operations
+
 ## 📱 Responsive Design
 
 - **Mobile-first approach**
