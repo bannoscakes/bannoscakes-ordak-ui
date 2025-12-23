@@ -483,7 +483,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           
                           <div className="hidden lg:block">
                             <p className="text-sm text-muted-foreground">Due Time</p>
-                            <p>{formatDate(item.dueTime)}</p>
+                            {item.dueTime ? (
+                              <p>{formatDate(item.dueTime)}</p>
+                            ) : (
+                              <p className="text-red-600 font-medium">No due date</p>
+                            )}
                           </div>
                           
                           <div className="hidden md:block">

@@ -473,9 +473,15 @@ export function SupervisorWorkspacePage({
                         <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
                           {order.priority}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Due: {formatDate(order.dueTime)}
-                        </span>
+                        {order.dueTime ? (
+                          <span className="text-xs text-muted-foreground">
+                            Due: {formatDate(order.dueTime)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-600 font-medium">
+                            No due date
+                          </span>
+                        )}
                       </div>
 
                       {/* Method and Storage */}
