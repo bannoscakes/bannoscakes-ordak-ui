@@ -167,9 +167,10 @@ This generates `src/types/supabase.ts` from the live database schema, ensuring t
 - Enum types matching database constraints
 
 **When to regenerate:**
-- After applying new migrations (`supabase db push` or `supabase migration up`)
-- After modifying tables, columns, or RPC functions
+- After applying database migrations via `supabase db push`
 - When you see type errors related to database operations
+
+**Note:** Requires Supabase CLI authentication. The generated file should be committed to version control.
 
 ## 📱 Responsive Design
 
