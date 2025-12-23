@@ -463,7 +463,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           onClick={(e) => e.stopPropagation()}
                         />
                         
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-7 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Order</p>
                             <p>{item.shopifyOrderNumber
@@ -480,7 +480,18 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                             <p className="text-sm text-muted-foreground">Product</p>
                             <p className="truncate">{item.product}</p>
                           </div>
-                          
+
+                          <div className="hidden md:block">
+                            <p className="text-sm text-muted-foreground">Flavour</p>
+                            {item.flavor ? (
+                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                {item.flavor}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </div>
+
                           <div className="hidden lg:block">
                             <p className="text-sm text-muted-foreground">Due Time</p>
                             <p>{formatDate(item.dueTime)}</p>
