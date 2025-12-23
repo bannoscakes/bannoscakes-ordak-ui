@@ -55,7 +55,7 @@ BEGIN
     RETURN QUERY
     SELECT
       o.id,
-      o.human_id,
+      COALESCE(o.human_id, o.id) as human_id,
       o.shopify_order_id,
       o.shopify_order_number,
       o.customer_name,
@@ -103,7 +103,7 @@ BEGIN
     RETURN QUERY
     SELECT
       o.id,
-      o.human_id,
+      COALESCE(o.human_id, o.id) as human_id,
       o.shopify_order_id,
       o.shopify_order_number,
       o.customer_name,
