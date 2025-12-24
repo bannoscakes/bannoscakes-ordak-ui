@@ -64,7 +64,7 @@ BEGIN
       o.product_title,
       o.flavour,
       o.notes,
-      (o.order_json->>'currency')::text as currency,
+      COALESCE(o.order_json->>'currency', 'AUD')::text as currency,
       o.total_amount,
       o.stage,
       o.priority,
@@ -93,7 +93,7 @@ BEGIN
            o.human_id ILIKE '%' || p_search || '%' OR
            o.id ILIKE '%' || p_search || '%')
       -- Exclude POS orders from production queue (they go straight to Complete)
-      AND (o.order_json->>'source_name' IS NULL OR o.order_json->>'source_name' != 'pos')
+      AND (o.order_json->>'source_name' IS NULL OR LOWER(o.order_json->>'source_name') != 'pos')
     ORDER BY
       -- Priority: Use explicit CASE to get High -> Medium -> Low ordering
       CASE WHEN p_sort_by = 'priority' AND p_sort_order = 'DESC' THEN
@@ -130,7 +130,7 @@ BEGIN
       o.product_title,
       o.flavour,
       o.notes,
-      (o.order_json->>'currency')::text as currency,
+      COALESCE(o.order_json->>'currency', 'AUD')::text as currency,
       o.total_amount,
       o.stage,
       o.priority,
@@ -159,7 +159,7 @@ BEGIN
            o.human_id ILIKE '%' || p_search || '%' OR
            o.id ILIKE '%' || p_search || '%')
       -- Exclude POS orders from production queue (they go straight to Complete)
-      AND (o.order_json->>'source_name' IS NULL OR o.order_json->>'source_name' != 'pos')
+      AND (o.order_json->>'source_name' IS NULL OR LOWER(o.order_json->>'source_name') != 'pos')
     ORDER BY
       -- Priority: Use explicit CASE to get High -> Medium -> Low ordering
       CASE WHEN p_sort_by = 'priority' AND p_sort_order = 'DESC' THEN
