@@ -136,7 +136,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         orderNumber: String(order.human_id || order.shopify_order_number || order.id),
         shopifyOrderNumber: String(order.shopify_order_number || ''),
         shopifyOrderId: order.shopify_order_id || undefined,
-        customerName: order.customer_name || 'Unknown',
+        customerName: order.customer_name || '',
         product: order.product_title || '',
         size: order.size || '',
         quantity: order.item_qty || 1,

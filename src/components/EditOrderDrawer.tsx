@@ -151,10 +151,12 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     if (normalizedOrder) {
       const initialData: FormData = {
         product: normalizedOrder.product,
+        // Form needs a date value - use today as default for editing when missing
         dueDate: formatDate(normalizedOrder.deliveryDate || new Date().toISOString()),
         method: normalizedOrder.method || "Pickup",
         size: normalizedOrder.size,
         flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
+        // Form needs a priority value - calculate from date or default to 'Low' when missing
         priority: normalizedOrder.priority ?? (normalizedOrder.deliveryDate ? calculatePriority(normalizedOrder.deliveryDate) : 'Low'),
         storage: normalizedOrder.storage || "",
         writingOnCake: normalizedOrder.writingOnCake || "",

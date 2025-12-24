@@ -41,7 +41,7 @@ export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
     id: order.id,
     orderNumber: String(order.human_id || order.shopify_order_number || order.id),
     shopifyOrderNumber: String(order.shopify_order_number || ''),
-    customerName: order.customer_name || 'Unknown Customer',
+    customerName: order.customer_name || '',
     product: order.product_title || '',
     size: order.size || '',
     quantity: order.item_qty || 1,
@@ -53,7 +53,7 @@ export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
     method: normalizedMethod === 'delivery' ? 'Delivery'
           : normalizedMethod === 'pickup' ? 'Pickup'
           : undefined,
-    storage: order.storage || 'Default',
+    storage: order.storage || '',
     store: normalizeStore(order.store),
     stage: order.stage || 'Filling',
     covering_start_ts: order.covering_start_ts ?? null,
