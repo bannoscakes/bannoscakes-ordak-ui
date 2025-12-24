@@ -118,7 +118,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           size: foundOrder.size || "Unknown",
           quantity: foundOrder.item_qty || 1,
           deliveryTime: foundOrder.due_date || new Date().toISOString(),
-          priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
+          priority: foundOrder.priority as "High" | "Medium" | "Low",
           status: mapStageToStatus(foundOrder.stage),
           flavor: foundOrder.flavour || "",
           dueTime: foundOrder.due_date || new Date().toISOString(),

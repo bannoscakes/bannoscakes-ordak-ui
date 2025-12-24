@@ -170,21 +170,17 @@ This document details the exact fields the frontend expects from `orders_table_b
   ```
 
 ### `priority`
-- **Expected Type**: `number` (0, 1, 2) OR `string` ('high', 'medium', 'low')
-- **Frontend Expects**:
-  - **From Database**: `0` = Medium, `1` = High, `2` = Low
-  - **OR**: `'high'`, `'medium'`, `'low'` (lowercase strings)
+- **Database Type**: `priority_level` enum - `'High'` | `'Medium'` | `'Low'`
 - **Frontend Logic**:
   ```typescript
-  priority: order.priority === 1 ? "High" : order.priority === 0 ? "Medium" : "Low"
-  // OR if string:
-  priority: order.priority || 'Medium'
+  priority: foundOrder.priority as "High" | "Medium" | "Low"
   ```
 - **Display Values**: `"High"` | `"Medium"` | `"Low"` (capitalized)
-- **Auto-calculation**: Frontend calculates priority from `due_date`:
+- **Auto-calculation**: Priority is calculated from `due_date` on import:
   - Due today or overdue → High
   - Due within 3 days → Medium
   - Due > 3 days away → Low
+- **Note**: Orders with missing `due_date` should be flagged for manual attention. See issue #454.
 
 ### `assignee_id`
 - **Expected Type**: `string` (UUID) or `null`
