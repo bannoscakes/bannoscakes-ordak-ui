@@ -417,6 +417,10 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   const notes = extractNotes(shopifyOrder)
   const priority = calculatePriority(deliveryDate)
 
+  // POS orders should skip production queue and go straight to Complete
+  const sourceName = shopifyOrder.source_name || ''
+  const initialStage = sourceName === 'pos' ? 'Complete' : 'Filling'
+
   console.log(`Priority calculated: ${priority} (due_date: ${deliveryDate})`)
 
   const orders: any[] = []
@@ -454,7 +458,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
       product_image: productImage,
       item_qty: 1, // Each order represents 1 item (even if original had multiple)
       accessories: formatAccessories(accessoryItems),
-      priority: priority // Calculated from due_date: 'High', 'Medium', 'Low'
+      priority: priority, // Calculated from due_date: 'High', 'Medium', 'Low'
+      stage: initialStage // POS orders start as 'Complete', web orders as 'Filling'
     }
 
     orders.push(order)
@@ -498,7 +503,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
         product_image: productImage,
         item_qty: 1, // Each split order represents 1 item from the original quantity
         accessories: isFirstOrder ? formatAccessories(accessoryItems) : null, // Accessories only on first order
-        priority: priority // Calculated from due_date: 'High', 'Medium', 'Low'
+        priority: priority, // Calculated from due_date: 'High', 'Medium', 'Low'
+        stage: initialStage // POS orders start as 'Complete', web orders as 'Filling'
       }
 
       orders.push(order)
