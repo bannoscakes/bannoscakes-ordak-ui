@@ -510,7 +510,7 @@ export function StaffWorkspacePage({
                       {/* Size */}
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Size: {order.size || "Unknown"}
+                          Size: {order.size || '-'}
                         </p>
                       </div>
 

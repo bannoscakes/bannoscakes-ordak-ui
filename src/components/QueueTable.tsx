@@ -34,11 +34,11 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  deliveryTime: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string;
+  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   assigneeId?: string;
@@ -137,14 +137,14 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         shopifyOrderNumber: String(order.shopify_order_number || ''),
         shopifyOrderId: order.shopify_order_id || undefined,
         customerName: order.customer_name || 'Unknown',
-        product: order.product_title || 'Unknown',
-        size: order.size || 'Unknown',
+        product: order.product_title || '',
+        size: order.size || '',
         quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || '',
-        priority: order.priority || 'Medium',
+        deliveryTime: order.due_date || null,
+        priority: order.priority || null,
         status: order.assignee_id ? 'In Production' : 'Pending',
         flavor: order.flavour || '',
-        dueTime: order.due_date || '',
+        dueTime: order.due_date || null,
         method: (() => {
           const normalized = order.delivery_method?.trim().toLowerCase();
           if (normalized === "delivery") return "Delivery" as const;
@@ -203,7 +203,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     });
   }, [currentItems, searchQuery, priorityFilter, statusFilter, storageFilter]);
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | null) => {
     switch (priority) {
       case 'High': return 'bg-red-100 text-red-800';
       case 'Medium': return 'bg-yellow-100 text-yellow-800';
@@ -489,7 +489,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           <div className="hidden md:block">
                             <p className="text-sm text-muted-foreground">Priority</p>
                             <Badge className={getPriorityColor(item.priority)} variant="secondary">
-                              {item.priority}
+                              {item.priority || '-'}
                             </Badge>
                           </div>
                           

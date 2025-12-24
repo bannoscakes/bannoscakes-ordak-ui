@@ -106,7 +106,7 @@ export function BarcodeGenerator({
                   <div class="order-info">
                     <div class="order-id">${orderId}</div>
                     <div class="product">${productTitle}</div>
-                    <div class="due-date">Due: ${formatDate(dueDate)}</div>
+                    <div class="due-date">Due: ${dueDate ? formatDate(dueDate) : 'No date'}</div>
                   </div>
                 </div>
                 <script>
@@ -191,7 +191,7 @@ export function BarcodeGenerator({
           <div className="font-bold text-base text-gray-900 truncate">{orderId}</div>
           <div className="text-sm text-gray-600 mt-1 truncate">{productTitle}</div>
           <div className="text-xs text-gray-500 mt-1">
-            Due: {formatDate(dueDate)}
+            Due: {dueDate ? formatDate(dueDate) : 'No date'}
           </div>
         </div>
         
