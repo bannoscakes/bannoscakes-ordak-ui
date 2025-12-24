@@ -52,7 +52,7 @@ interface EditOrderDrawerProps {
 
 interface FormData {
   product: string;
-  dueDate: string;
+  dueDate: string | null;
   method: 'Delivery' | 'Pickup';
   size: string;
   flavor: string;
@@ -151,8 +151,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     if (normalizedOrder) {
       const initialData: FormData = {
         product: normalizedOrder.product,
-        // Form needs a date value - use today as default for editing when missing
-        dueDate: formatDate(normalizedOrder.deliveryDate || new Date().toISOString()),
+        dueDate: normalizedOrder.deliveryDate ? formatDate(normalizedOrder.deliveryDate) : null,
         method: normalizedOrder.method || "Pickup",
         size: normalizedOrder.size,
         flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
@@ -476,8 +475,8 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 Priority (Auto-calculated from due date)
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <Badge className={`text-xs ${getPriorityColor(calculatePriority(formData.dueDate))}`}>
-                  {calculatePriority(formData.dueDate)}
+                <Badge className={`text-xs ${formData.dueDate ? getPriorityColor(calculatePriority(formData.dueDate)) : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                  {formData.dueDate ? calculatePriority(formData.dueDate) : '-'}
                 </Badge>
                 <p className="text-xs text-muted-foreground mt-1">
                   Priority is automatically calculated based on due date:

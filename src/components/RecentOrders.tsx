@@ -35,7 +35,7 @@ interface DisplayOrder {
   quantity: number;
   status: string;
   priority: string | null;
-  dueDate: string;
+  dueDate: string | null;
   progress: number;
   shopify_order_id?: number;
   shopify_order_number?: number;
@@ -67,11 +67,11 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   product: order.product,
   size: '', // Not available from dashboard data
   quantity: order.quantity,
-  deliveryTime: order.dueDate === 'N/A' ? null : order.dueDate,
+  deliveryTime: order.dueDate,
   priority: order.priority as 'High' | 'Medium' | 'Low' | null,
   status: order.status as any,
   flavor: '', // Not available from dashboard data
-  dueTime: order.dueDate === 'N/A' ? null : order.dueDate,
+  dueTime: order.dueDate,
   method: undefined, // Not available from dashboard data
   storage: undefined
 });
@@ -113,7 +113,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
       quantity: order.item_qty || 1,
       status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
       priority: order.priority || null,
-      dueDate: order.due_date || 'N/A',
+      dueDate: order.due_date || null,
       progress: getProgressFromStage(order.stage),
       shopify_order_id: order.shopify_order_id,
       shopify_order_number: order.shopify_order_number
@@ -208,7 +208,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                     {order.priority || '-'}
                   </Badge>
                 </td>
-                <td className="py-4 text-foreground">{order.dueDate === 'N/A' ? 'N/A' : formatDate(order.dueDate)}</td>
+                <td className="py-4 text-foreground">{order.dueDate ? formatDate(order.dueDate) : 'No date'}</td>
                 <td className="py-4">
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded-full h-2">
