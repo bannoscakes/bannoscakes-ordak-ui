@@ -44,7 +44,7 @@ interface AccessoryItem {
 interface PackingSlipData {
   orderNumber: string;
   customerName: string;
-  dueDate: string;
+  dueDate: string | null;
   deliveryMethod: 'Delivery' | 'Pickup';
   product: string;
   size: string;
@@ -157,7 +157,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
   // Format and escape user-provided content
   const formattedOrderNumber = formatOrderNumber(data.orderNumber, data.store);
   const safeOrderNumber = escapeHtml(formattedOrderNumber);
-  const safeDueDate = escapeHtml(formatDate(data.dueDate));
+  const safeDueDate = escapeHtml(data.dueDate ? formatDate(data.dueDate) : 'No date');
   const safeProduct = escapeHtml(data.product);
   const safeNotes = escapeHtml(data.notes);
   const safeCustomerName = escapeHtml(data.customerName);

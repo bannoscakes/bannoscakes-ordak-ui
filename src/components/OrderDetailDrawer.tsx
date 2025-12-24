@@ -26,11 +26,11 @@ interface QueueItem {
   product: string;
   size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
   quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  deliveryTime: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string;
+  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store?: 'bannos' | 'flourlane';
@@ -57,13 +57,13 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
   return {
     ...order,
     // Use real size from database (no mock override)
-    size: order.size || 'Unknown',
+    size: order.size || '',
     // Use real cake writing from database
     writingOnCake: order.cakeWriting || '',
     // Pass raw accessories for flexible rendering (not pre-formatted strings)
     accessories: order.accessories || [],
     // Use real due date
-    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
+    deliveryDate: order.dueTime || order.deliveryTime || null,
     // Use real notes from database (null means no notes)
     notes: order.notes || '',
     // Use real product image from database
@@ -72,7 +72,7 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
   };
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | null) => {
   const colors = {
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -113,18 +113,18 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           id: foundOrder.id,
           orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
           shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
-          customerName: foundOrder.customer_name || "Unknown Customer",
-          product: foundOrder.product_title || "Unknown Product",
-          size: foundOrder.size || "Unknown",
+          customerName: foundOrder.customer_name || '',
+          product: foundOrder.product_title || '',
+          size: foundOrder.size || '',
           quantity: foundOrder.item_qty || 1,
-          deliveryTime: foundOrder.due_date || new Date().toISOString(),
-          priority: foundOrder.priority as "High" | "Medium" | "Low",
+          deliveryTime: foundOrder.due_date || null,
+          priority: foundOrder.priority as "High" | "Medium" | "Low" | null,
           status: mapStageToStatus(foundOrder.stage),
           flavor: foundOrder.flavour || "",
-          dueTime: foundOrder.due_date || new Date().toISOString(),
+          dueTime: foundOrder.due_date || null,
           // Fix case-insensitive check for delivery_method
           method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
-          storage: foundOrder.storage || "Default",
+          storage: foundOrder.storage || '',
           store: foundOrder.store || store,
           stage: foundOrder.stage || "Filling",
           // Add real data from database
@@ -238,14 +238,14 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
                   <div className="mt-2">
                     <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                      {extendedOrder.priority}
+                      {extendedOrder.priority || '-'}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
                   <p className="mt-2 text-foreground">
-                    {formatDate(extendedOrder.deliveryDate)}
+                    {extendedOrder.deliveryDate ? formatDate(extendedOrder.deliveryDate) : 'No due date'}
                   </p>
                 </div>
                 <div>

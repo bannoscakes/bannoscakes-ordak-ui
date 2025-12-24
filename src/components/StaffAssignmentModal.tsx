@@ -18,11 +18,11 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  deliveryTime: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string;
+  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store?: 'bannos' | 'flourlane';
@@ -217,20 +217,21 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Priority:</span>
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className={`text-xs ${
                   order.priority === 'High' ? 'bg-red-100 text-red-700' :
                   order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-green-100 text-green-700'
+                  order.priority === 'Low' ? 'bg-green-100 text-green-700' :
+                  'bg-gray-100 text-gray-700'
                 }`}
               >
-                {order.priority}
+                {order.priority || '-'}
               </Badge>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due:</span>
-              <span>{formatDate(order.dueTime)}</span>
+              <span>{order.dueTime ? formatDate(order.dueTime) : 'No due date'}</span>
             </div>
           </div>
         </div>

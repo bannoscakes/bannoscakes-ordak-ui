@@ -244,7 +244,7 @@ export function SupervisorWorkspacePage({
       : 'bg-pink-100 text-pink-700 border-pink-200';
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | null) => {
     const colors = {
       "High": "bg-red-100 text-red-700 border-red-200",
       "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -464,17 +464,17 @@ export function SupervisorWorkspacePage({
                       {/* Size */}
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Size: {order.size || "Unknown"}
+                          Size: {order.size || '-'}
                         </p>
                       </div>
 
                       {/* Priority and Due Date */}
                       <div className="flex items-center justify-between">
                         <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
-                          {order.priority}
+                          {order.priority || '-'}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
-                          Due: {formatDate(order.dueTime)}
+                          {order.dueTime ? `Due: ${formatDate(order.dueTime)}` : 'No due date'}
                         </span>
                       </div>
 

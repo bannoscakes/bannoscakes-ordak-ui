@@ -19,11 +19,11 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  deliveryTime: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string;
+  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
 }
@@ -34,8 +34,8 @@ interface DisplayOrder {
   product: string;
   quantity: number;
   status: string;
-  priority: string;
-  dueDate: string;
+  priority: string | null;
+  dueDate: string | null;
   progress: number;
   shopify_order_id?: number;
   shopify_order_number?: number;
@@ -65,15 +65,15 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   shopifyOrderNumber: order.shopify_order_number ? String(order.shopify_order_number) : '',
   customerName: order.customer,
   product: order.product,
-  size: 'M' as const, // Default size
+  size: '', // Not available from dashboard data
   quantity: order.quantity,
   deliveryTime: order.dueDate,
-  priority: order.priority as 'High' | 'Medium' | 'Low',
+  priority: order.priority as 'High' | 'Medium' | 'Low' | null,
   status: order.status as any,
-  flavor: "Vanilla", // Default flavor
-  dueTime: "10:00 AM", // Default time
-  method: "Pickup" as const, // Default method
-  storage: order.status === "Completed" ? "Store Fridge" : undefined
+  flavor: '', // Not available from dashboard data
+  dueTime: order.dueDate,
+  method: undefined, // Not available from dashboard data
+  storage: undefined
 });
 
 const getStatusColor = (status: string) => {
@@ -87,7 +87,8 @@ const getStatusColor = (status: string) => {
   return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-700";
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | null) => {
+  if (!priority) return "bg-gray-100 text-gray-700 border-gray-200";
   const colors = {
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -107,12 +108,12 @@ export function RecentOrders({ store }: RecentOrdersProps) {
     
     return data.map((order: any): DisplayOrder => ({
       id: order.id,
-      customer: order.customer_name || 'Unknown',
-      product: order.product_title || 'Unknown',
+      customer: order.customer_name || '',
+      product: order.product_title || '',
       quantity: order.item_qty || 1,
       status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
-      priority: order.priority || 'Medium',
-      dueDate: order.due_date || 'N/A',
+      priority: order.priority || null,
+      dueDate: order.due_date || null,
       progress: getProgressFromStage(order.stage),
       shopify_order_id: order.shopify_order_id,
       shopify_order_number: order.shopify_order_number
@@ -204,10 +205,10 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                 </td>
                 <td className="py-4">
                   <Badge className={getPriorityColor(order.priority)}>
-                    {order.priority}
+                    {order.priority || '-'}
                   </Badge>
                 </td>
-                <td className="py-4 text-foreground">{order.dueDate === 'N/A' ? 'N/A' : formatDate(order.dueDate)}</td>
+                <td className="py-4 text-foreground">{order.dueDate ? formatDate(order.dueDate) : 'No date'}</td>
                 <td className="py-4">
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded-full h-2">

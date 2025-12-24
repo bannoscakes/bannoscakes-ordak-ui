@@ -29,11 +29,11 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  deliveryTime: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string;
+  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   writingOnCake?: string;
@@ -52,7 +52,7 @@ interface EditOrderDrawerProps {
 
 interface FormData {
   product: string;
-  dueDate: string;
+  dueDate: string | null;
   method: 'Delivery' | 'Pickup';
   size: string;
   flavor: string;
@@ -151,11 +151,12 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     if (normalizedOrder) {
       const initialData: FormData = {
         product: normalizedOrder.product,
-        dueDate: formatDate(normalizedOrder.deliveryDate || new Date().toISOString()),
+        dueDate: normalizedOrder.deliveryDate ? formatDate(normalizedOrder.deliveryDate) : null,
         method: normalizedOrder.method || "Pickup",
         size: normalizedOrder.size,
         flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
-        priority: normalizedOrder.priority,
+        // Form needs a priority value - calculate from date or default to 'Low' when missing
+        priority: normalizedOrder.priority ?? (normalizedOrder.deliveryDate ? calculatePriority(normalizedOrder.deliveryDate) : 'Low'),
         storage: normalizedOrder.storage || "",
         writingOnCake: normalizedOrder.writingOnCake || "",
         accessories: [...normalizedOrder.accessories],
@@ -474,8 +475,8 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 Priority (Auto-calculated from due date)
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <Badge className={`text-xs ${getPriorityColor(calculatePriority(formData.dueDate))}`}>
-                  {calculatePriority(formData.dueDate)}
+                <Badge className={`text-xs ${formData.dueDate ? getPriorityColor(calculatePriority(formData.dueDate)) : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                  {formData.dueDate ? calculatePriority(formData.dueDate) : '-'}
                 </Badge>
                 <p className="text-xs text-muted-foreground mt-1">
                   Priority is automatically calculated based on due date:
