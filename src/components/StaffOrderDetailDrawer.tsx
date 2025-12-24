@@ -32,11 +32,11 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
+  deliveryTime: string | null;
+  priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string;
+  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store: 'bannos' | 'flourlane';
@@ -84,7 +84,7 @@ const getExtendedOrderData = (order: QueueItem | null) => {
   };
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | null) => {
   const colors = {
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",

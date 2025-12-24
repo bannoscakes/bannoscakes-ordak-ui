@@ -7,7 +7,7 @@ import { formatDate } from '../lib/format-utils';
 interface BarcodeGeneratorProps {
   orderId: string;
   productTitle: string;
-  dueDate: string;
+  dueDate: string | null;
   store: 'bannos' | 'flourlane';
   onPrint?: () => void;
   onDownload?: () => void;

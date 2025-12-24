@@ -22,7 +22,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
-import { formatOrderNumber, formatDate } from "../lib/format-utils";
+import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/supabase";
 
 interface QueueItem {
