@@ -418,7 +418,8 @@ async function processOrderItems(shopifyOrder: any, storeSource: string): Promis
   const priority = calculatePriority(deliveryDate)
 
   // POS orders should skip production queue and go straight to Complete
-  const sourceName = shopifyOrder.source_name || ''
+  // Check both REST (source_name) and GraphQL (sourceName) field names
+  const sourceName = shopifyOrder.source_name || shopifyOrder.sourceName || ''
   const initialStage = sourceName.toLowerCase() === 'pos' ? 'Complete' : 'Filling'
 
   console.log(`Priority calculated: ${priority} (due_date: ${deliveryDate})`)
