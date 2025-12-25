@@ -230,7 +230,7 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due:</span>
-              <span>{order.dueDate ? formatDate(order.dueDate) : 'No due date'}</span>
+              <span className={order.dueDate ? '' : 'text-red-600 font-bold'}>{order.dueDate ? formatDate(order.dueDate) : 'No due date'}</span>
             </div>
           </div>
         </div>

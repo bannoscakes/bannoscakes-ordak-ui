@@ -521,7 +521,7 @@ export function StaffWorkspacePage({
                         >
                           {order.priority || '-'}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <span className={`text-xs ${order.dueDate ? 'text-muted-foreground' : 'text-red-600 font-bold'}`}>
                           {order.dueDate ? `Due: ${formatDate(order.dueDate)}` : 'No due date'}
                         </span>
                       </div>

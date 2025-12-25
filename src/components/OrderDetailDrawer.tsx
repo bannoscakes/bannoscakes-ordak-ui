@@ -242,7 +242,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
-                  <p className="mt-2 text-foreground">
+                  <p className={`mt-2 ${extendedOrder.deliveryDate ? 'text-foreground' : 'text-red-600 font-bold'}`}>
                     {extendedOrder.deliveryDate ? formatDate(extendedOrder.deliveryDate) : 'No due date'}
                   </p>
                 </div>
