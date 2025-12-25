@@ -1,7 +1,18 @@
 // src/features/messages/__tests__/optimistic-reconciliation.test.ts
 import { describe, it, expect } from 'vitest';
-import type { OptimisticMessage, ServerMessage, Message } from '../../../types/messages';
+import type { OptimisticMessage, ServerMessage } from '../../../types/messages';
 import { isOptimistic } from '../utils';
+
+// Test-only type for mock message data
+interface TestMessage {
+  id: string | number;
+  body: string;
+  optimistic?: boolean;
+  conversationId?: string;
+  authorId?: string;
+  createdAt?: string;
+  clientId?: string;
+}
 
 describe('Optimistic Message Reconciliation', () => {
   it('should reconcile optimistic message with server ID', () => {
@@ -19,14 +30,14 @@ describe('Optimistic Message Reconciliation', () => {
     };
 
     // Simulate messages list with optimistic message
-    let messages: (Message | any)[] = [
+    let messages: TestMessage[] = [
       { id: 100, body: 'Previous message', conversationId: 'conv-123', authorId: 'user-1', createdAt: '2025-02-01T09:00:00.000Z' },
-      { ...optimistic, id: clientId } as any, // Optimistic with temp clientId as id
+      { ...optimistic, id: clientId }, // Optimistic with temp clientId as id
     ];
 
     // Reconcile: replace optimistic with server message
     messages = messages.map((m) => {
-      if ((m as any).id === clientId) {
+      if (m.id === clientId) {
         const reconciled: ServerMessage = {
           id: serverId,
           conversationId: optimistic.conversationId,
@@ -43,14 +54,14 @@ describe('Optimistic Message Reconciliation', () => {
     expect(messages).toHaveLength(2);
     expect((messages[1] as ServerMessage).id).toBe(serverId);
     expect(messages[1].body).toBe('Hello world');
-    expect(isOptimistic(messages[1])).toBe(false);
+    expect(isOptimistic(messages[1] as ServerMessage)).toBe(false);
   });
 
   it('should remove optimistic message on failure', () => {
     const clientId = 'client-uuid-456';
 
     // Simulate messages list with optimistic message
-    let messages: any[] = [
+    let messages: TestMessage[] = [
       { id: 100, body: 'Previous message' },
       { id: clientId, body: 'Failed message', optimistic: true },
       { id: 101, body: 'Another message' },
@@ -81,7 +92,7 @@ describe('Optimistic Message Reconciliation', () => {
     };
 
     // Initial state with optimistic
-    let messages: any[] = [
+    let messages: TestMessage[] = [
       { id: clientId, ...optimistic },
     ];
 
@@ -110,7 +121,7 @@ describe('Optimistic Message Reconciliation', () => {
     const serverId1 = 100;
 
     // Two optimistic messages
-    let messages: any[] = [
+    let messages: TestMessage[] = [
       { id: clientId1, body: 'Message 1', optimistic: true },
       { id: clientId2, body: 'Message 2', optimistic: true },
     ];

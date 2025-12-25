@@ -68,10 +68,10 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
             email: r.email ?? null
           })) as StaffRow[];
         setStaff(mapped);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
           console.error("Staff load error:", e);
-          setErrorMsg(e?.message ?? "Failed to load staff");
+          setErrorMsg(e instanceof Error ? e.message : "Failed to load staff");
           setStaff([]);
         }
       } finally {
@@ -166,8 +166,8 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
       await onCreateConversation(ids, isGroup); // parent awaits RPC + selects convo
       setSelected([]); // clear only after success
       onClose();
-    } catch (e: any) {
-      setErrorMsg(e?.message ?? "Failed to create conversation");
+    } catch (e: unknown) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to create conversation");
     } finally {
       setIsSubmitting(false);
     }
