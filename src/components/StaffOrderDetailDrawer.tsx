@@ -32,11 +32,10 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store: 'bannos' | 'flourlane';
@@ -71,7 +70,7 @@ const getExtendedOrderData = (order: QueueItem | null) => {
     // Pass raw accessories for flexible rendering (not pre-formatted strings)
     accessories: order.accessories || [],
     // Use real due date
-    deliveryDate: order.dueTime || order.deliveryTime || null,
+    deliveryDate: order.dueDate || null,
     // Use real notes from database (null means no notes)
     notes: order.notes || '',
     // Use real product image from database
@@ -176,11 +175,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             product: foundOrder.product_title || '',
             size: foundOrder.size || '',
             quantity: foundOrder.item_qty || 1,
-            deliveryTime: foundOrder.due_date || null,
+            dueDate: foundOrder.due_date || null,
             priority: foundOrder.priority as 'High' | 'Medium' | 'Low' | null,
             status: mapStageToStatus(foundOrder.stage),
             flavor: foundOrder.flavour || "",
-            dueTime: foundOrder.due_date || null,
             method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
             storage: foundOrder.storage || "",
             store: foundOrder.store || order.store,
@@ -404,7 +402,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
                   : extendedOrder.orderNumber}
                 productTitle={extendedOrder.product}
-                dueDate={extendedOrder.dueTime}
+                dueDate={extendedOrder.deliveryDate}
                 store={extendedOrder.store}
                 onPrint={handleBarcodePrint}
                 onDownload={handleBarcodeDownload}

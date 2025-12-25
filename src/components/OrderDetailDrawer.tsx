@@ -26,11 +26,10 @@ interface QueueItem {
   product: string;
   size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store?: 'bannos' | 'flourlane';
@@ -63,7 +62,7 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
     // Pass raw accessories for flexible rendering (not pre-formatted strings)
     accessories: order.accessories || [],
     // Use real due date
-    deliveryDate: order.dueTime || order.deliveryTime || null,
+    deliveryDate: order.dueDate || null,
     // Use real notes from database (null means no notes)
     notes: order.notes || '',
     // Use real product image from database
@@ -117,11 +116,10 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           product: foundOrder.product_title || '',
           size: foundOrder.size || '',
           quantity: foundOrder.item_qty || 1,
-          deliveryTime: foundOrder.due_date || null,
+          dueDate: foundOrder.due_date || null,
           priority: foundOrder.priority as "High" | "Medium" | "Low" | null,
           status: mapStageToStatus(foundOrder.stage),
           flavor: foundOrder.flavour || "",
-          dueTime: foundOrder.due_date || null,
           // Fix case-insensitive check for delivery_method
           method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
           storage: foundOrder.storage || '',

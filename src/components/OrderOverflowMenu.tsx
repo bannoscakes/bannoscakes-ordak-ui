@@ -14,11 +14,10 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
 }

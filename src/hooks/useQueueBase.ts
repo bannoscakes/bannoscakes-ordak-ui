@@ -45,11 +45,10 @@ export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
     product: order.product_title || '',
     size: order.size || '',
     quantity: order.item_qty || 1,
-    deliveryTime: order.due_date || null,
+    dueDate: order.due_date || null,
     priority: order.priority || null,
     status: mapStageToStatus(order.stage),
     flavor: order.flavour || '',
-    dueTime: order.due_date || null,
     method: normalizedMethod === 'delivery' ? 'Delivery'
           : normalizedMethod === 'pickup' ? 'Pickup'
           : undefined,

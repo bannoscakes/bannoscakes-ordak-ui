@@ -18,11 +18,10 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store?: 'bannos' | 'flourlane';
@@ -231,7 +230,7 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due:</span>
-              <span>{order.dueTime ? formatDate(order.dueTime) : 'No due date'}</span>
+              <span>{order.dueDate ? formatDate(order.dueDate) : 'No due date'}</span>
             </div>
           </div>
         </div>
