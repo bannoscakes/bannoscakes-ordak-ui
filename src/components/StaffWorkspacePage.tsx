@@ -171,9 +171,9 @@ export function StaffWorkspacePage({
       toast.success("Shift started");
       // Reload shift data to sync with database
       await loadCurrentShift();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting shift:", error);
-      toast.error(error?.message || "Failed to start shift");
+      toast.error(error instanceof Error ? error.message : "Failed to start shift");
     } finally {
       setShiftLoading(false);
     }
@@ -190,9 +190,9 @@ export function StaffWorkspacePage({
       setBreakStartTime(null);
       setElapsedTime("");
       toast.success("Shift ended");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error ending shift:", error);
-      toast.error(error?.message || "Failed to end shift");
+      toast.error(error instanceof Error ? error.message : "Failed to end shift");
     } finally {
       setShiftLoading(false);
     }
@@ -209,9 +209,9 @@ export function StaffWorkspacePage({
       setElapsedTime("0:00");
       toast.success("Break started");
       await loadCurrentShift();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting break:", error);
-      toast.error(error?.message || "Failed to start break");
+      toast.error(error instanceof Error ? error.message : "Failed to start break");
     } finally {
       setShiftLoading(false);
     }
@@ -227,9 +227,9 @@ export function StaffWorkspacePage({
       setBreakStartTime(null);
       toast.success("Break ended");
       await loadCurrentShift();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error ending break:", error);
-      toast.error(error?.message || "Failed to end break");
+      toast.error(error instanceof Error ? error.message : "Failed to end break");
     } finally {
       setShiftLoading(false);
     }

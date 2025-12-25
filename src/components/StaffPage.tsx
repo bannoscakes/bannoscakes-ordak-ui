@@ -163,9 +163,9 @@ export function StaffPage() {
       ));
       toast.success("Profile updated successfully");
       setIsProfileModalOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating staff:', error);
-      toast.error(error?.message || "Failed to update profile");
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setSaving(false);
     }
