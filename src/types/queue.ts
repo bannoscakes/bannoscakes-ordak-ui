@@ -20,11 +20,10 @@ export interface QueueItem {
   product: string;
   size: QueueItemSize;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: QueueItemPriority | null;
   status: QueueItemStatus;
   flavor: string;
-  dueTime: string | null;
   method?: QueueItemMethod;
   storage?: string;
   store: QueueItemStore;

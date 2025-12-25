@@ -19,11 +19,10 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
 }
@@ -67,11 +66,10 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   product: order.product,
   size: '', // Not available from dashboard data
   quantity: order.quantity,
-  deliveryTime: order.dueDate,
+  dueDate: order.dueDate,
   priority: order.priority as 'High' | 'Medium' | 'Low' | null,
   status: order.status as any,
   flavor: '', // Not available from dashboard data
-  dueTime: order.dueDate,
   method: undefined, // Not available from dashboard data
   storage: undefined
 });

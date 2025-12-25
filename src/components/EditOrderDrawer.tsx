@@ -29,17 +29,15 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   writingOnCake?: string;
   accessories?: string[];
   notes?: string;
-  deliveryDate?: string;
 }
 
 interface EditOrderDrawerProps {
@@ -102,7 +100,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     if (!order) return null;
     return {
       ...order,
-      deliveryDate: order.deliveryDate || order.dueTime || order.deliveryTime || "",
+      deliveryDate: order.dueDate || "",
       writingOnCake: order.writingOnCake || "",
       accessories: order.accessories || [],
       notes: order.notes || "",

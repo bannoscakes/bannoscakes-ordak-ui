@@ -34,11 +34,10 @@ interface QueueItem {
   product: string;
   size: string;
   quantity: number;
-  deliveryTime: string | null;
+  dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
   flavor: string;
-  dueTime: string | null;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   assigneeId?: string;
@@ -140,11 +139,10 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         product: order.product_title || '',
         size: order.size || '',
         quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || null,
+        dueDate: order.due_date || null,
         priority: order.priority || null,
         status: order.assignee_id ? 'In Production' : 'Pending',
         flavor: order.flavour || '',
-        dueTime: order.due_date || null,
         method: (() => {
           const normalized = order.delivery_method?.trim().toLowerCase();
           if (normalized === "delivery") return "Delivery" as const;
