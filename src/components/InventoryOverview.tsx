@@ -123,7 +123,7 @@ const sharedInventoryData = [
     supplier: "Ocean Harvest Co.",
     lastRestocked: "Aug 20, 2025", 
     expiryDate: "No expiry",
-    usedIn: ["Both stores: All recipes for flavor enhancement"]
+    usedIn: ["Both stores: All recipes for flavour enhancement"]
   }
 ];
 

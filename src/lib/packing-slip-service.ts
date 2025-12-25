@@ -49,7 +49,7 @@ interface PackingSlipData {
   product: string;
   size: string;
   quantity: number;
-  flavor?: string;
+  flavour?: string;
   cakeWriting?: string;
   accessories?: AccessoryItem[] | null;
   notes?: string;
@@ -142,13 +142,13 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
       `).join('')
     : '';
 
-  // Build properties list (cake writing, size, flavor) - with HTML escaping
+  // Build properties list (cake writing, size, flavour) - with HTML escaping
   const propertiesHTML: string[] = [];
   if (data.size && data.size !== 'Unknown') {
     propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Size:</strong> ${escapeHtml(data.size)}</small>`);
   }
-  if (data.flavor) {
-    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Flavour:</strong> ${escapeHtml(data.flavor)}</small>`);
+  if (data.flavour) {
+    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Flavour:</strong> ${escapeHtml(data.flavour)}</small>`);
   }
   if (data.cakeWriting) {
     propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Writing On Cake:</strong> ${escapeHtml(data.cakeWriting)}</small>`);

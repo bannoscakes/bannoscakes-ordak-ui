@@ -37,7 +37,7 @@ interface QueueItem {
   dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
+  flavour: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   assigneeId?: string;
@@ -142,7 +142,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         dueDate: order.due_date || null,
         priority: order.priority || null,
         status: order.assignee_id ? 'In Production' : 'Pending',
-        flavor: order.flavour || '',
+        flavour: order.flavour || '',
         method: (() => {
           const normalized = order.delivery_method?.trim().toLowerCase();
           if (normalized === "delivery") return "Delivery" as const;
@@ -481,7 +481,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           
                           <div>
                             <p className="text-sm text-muted-foreground">Flavour</p>
-                            <p className="truncate">{item.flavor || '-'}</p>
+                            <p className="truncate">{item.flavour || '-'}</p>
                           </div>
                           
                           <div className="hidden md:block">

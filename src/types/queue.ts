@@ -23,7 +23,7 @@ export interface QueueItem {
   dueDate: string | null;
   priority: QueueItemPriority | null;
   status: QueueItemStatus;
-  flavor: string;
+  flavour: string;
   method?: QueueItemMethod;
   storage?: string;
   store: QueueItemStore;
