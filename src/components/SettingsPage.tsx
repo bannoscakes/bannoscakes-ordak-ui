@@ -217,11 +217,12 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     fetchSettings();
   }, [store]);
 
-  const handleSettingsChange = (path: string, value: any) => {
+  const handleSettingsChange = (path: string, value: unknown) => {
     setSettings(prev => {
       const keys = path.split('.');
       const newSettings = { ...prev };
-      let current: any = newSettings;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let current: Record<string, any> = newSettings;
       
       for (let i = 0; i < keys.length - 1; i++) {
         current[keys[i]] = { ...current[keys[i]] };

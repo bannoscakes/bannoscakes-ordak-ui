@@ -216,7 +216,7 @@ export function AccessoriesTab() {
       // TODO: Implement actual Shopify API calls here
       // For now, just show what would be synced
       toast.warning(
-        `Shopify sync not yet implemented.\n\nWould sync ${needsSync.length} out-of-stock accessories:\n${needsSync.map((a: any) => `- ${a.name} (match: "${a.product_match}")`).join('\n')}`,
+        `Shopify sync not yet implemented.\n\nWould sync ${needsSync.length} out-of-stock accessories:\n${needsSync.map((a: Accessory) => `- ${a.name} (match: "${a.product_match}")`).join('\n')}`,
         { duration: 7000 }
       );
 

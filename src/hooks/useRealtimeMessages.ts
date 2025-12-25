@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useErrorNotifications } from '../lib/error-notifications';
-import type { RealtimeMessageRow } from '../lib/messaging-types';
+import type { RealtimeMessageRow, RealtimeConversationRow } from '../lib/messaging-types';
 
 interface UseRealtimeMessagesProps {
   conversationId: string | null; // kept for compatibility; see note in alt version
   onNewMessage: (message: RealtimeMessageRow) => void;
-  onConversationUpdate?: (conversation: any, action: 'INSERT' | 'UPDATE' | 'DELETE') => void;
+  onConversationUpdate?: (conversation: RealtimeConversationRow, action: 'INSERT' | 'UPDATE' | 'DELETE') => void;
 }
 
 export const useRealtimeMessages = ({
@@ -93,7 +93,7 @@ export const useRealtimeMessages = ({
         (payload) => {
           const action = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
           const row = action === 'DELETE' ? payload.old : payload.new;
-          latestOnConversationUpdate.current?.(row, action);
+          latestOnConversationUpdate.current?.(row as RealtimeConversationRow, action);
         }
       )
       .subscribe((status) => {

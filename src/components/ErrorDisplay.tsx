@@ -110,10 +110,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                 <div className="space-y-1">
                   <div><strong>Correlation ID:</strong> {error.correlationId}</div>
                   <div><strong>Timestamp:</strong> {error.timestamp}</div>
-                  {error.details && (
+                  {error.details != null && (
                     <div><strong>Details:</strong> {JSON.stringify(error.details, null, 2)}</div>
                   )}
-                  {error.context && (
+                  {error.context != null && (
                     <div><strong>Context:</strong> {JSON.stringify(error.context, null, 2)}</div>
                   )}
                 </div>
@@ -198,10 +198,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               <div className="space-y-2">
                 <div><strong>Correlation ID:</strong> {error.correlationId}</div>
                 <div><strong>Timestamp:</strong> {error.timestamp}</div>
-                {error.details && (
+                {error.details != null && (
                   <div><strong>Details:</strong> {JSON.stringify(error.details, null, 2)}</div>
                 )}
-                {error.context && (
+                {error.context != null && (
                   <div><strong>Context:</strong> {JSON.stringify(error.context, null, 2)}</div>
                 )}
               </div>

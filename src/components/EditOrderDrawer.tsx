@@ -181,7 +181,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     }
   }, [isOpen, handleKeyDown]);
 
-  const updateField = useCallback((field: keyof FormData, value: any) => {
+  const updateField = useCallback((field: keyof FormData, value: FormData[keyof FormData]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Check if field is dirty

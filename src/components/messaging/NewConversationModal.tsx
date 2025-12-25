@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { getStaffList, getStaffMe } from "../../lib/rpc-client";
+import { getStaffList, getStaffMe, type StaffMember } from "../../lib/rpc-client";
 import { toId } from "../../lib/messaging-adapters";
 
 interface StaffRow {
@@ -60,8 +60,8 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
         // Map to a shape with user_id (UUID) — DO NOT pass email here
         // EXCLUDE current user from the list
         const mapped = (list || [])
-          .filter((r: any) => toId(r.user_id) !== myUserId) // Exclude self
-          .map((r: any) => ({
+          .filter((r: StaffMember) => toId(r.user_id) !== myUserId) // Exclude self
+          .map((r: StaffMember) => ({
             user_id: toId(r.user_id),
             full_name: r.full_name ?? "Unknown",
             role: r.role ?? "Staff",
@@ -102,8 +102,8 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
           setCurrentUserId(myUserId);
 
           const mapped = (list || [])
-            .filter((r: any) => toId(r.user_id) !== myUserId)
-            .map((r: any) => ({
+            .filter((r: StaffMember) => toId(r.user_id) !== myUserId)
+            .map((r: StaffMember) => ({
               user_id: toId(r.user_id),
               full_name: r.full_name ?? "Unknown",
               role: r.role ?? "Staff",

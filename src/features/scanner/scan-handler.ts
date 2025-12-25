@@ -5,7 +5,13 @@ import { advance_stage, get_order_for_scan, handle_print_barcode } from "@/lib/r
  *  - plain ID: "bannos-12345" → advance one stage based on current stage
  *  - print ID: "print bannos-12345" → set filling_start_ts (idempotent)
  */
-export async function handleScanCommand(input: string): Promise<{ ok: boolean; message: string; order?: any }> {
+interface ScannedOrder {
+  id: string;
+  stage?: string;
+  [key: string]: unknown;
+}
+
+export async function handleScanCommand(input: string): Promise<{ ok: boolean; message: string; order?: ScannedOrder }> {
   const trimmed = input.trim();
   const [cmd, maybeId] = trimmed.split(/\s+/, 2);
 
