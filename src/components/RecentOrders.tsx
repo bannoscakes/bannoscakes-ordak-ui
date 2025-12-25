@@ -40,6 +40,19 @@ interface DisplayOrder {
   shopify_order_number?: number;
 }
 
+// Raw order row from useRecentOrders hook
+interface RawOrderRow {
+  id: string;
+  customer_name?: string;
+  product_title?: string;
+  item_qty?: number;
+  stage?: string;
+  priority?: string | null;
+  due_date?: string | null;
+  shopify_order_id?: number;
+  shopify_order_number?: number;
+}
+
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
   bannos: 'bannos',
@@ -104,7 +117,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
   const orders = useMemo<DisplayOrder[]>(() => {
     if (!data) return [];
     
-    return data.map((order: any): DisplayOrder => ({
+    return data.map((order: RawOrderRow): DisplayOrder => ({
       id: order.id,
       customer: order.customer_name || '',
       product: order.product_title || '',

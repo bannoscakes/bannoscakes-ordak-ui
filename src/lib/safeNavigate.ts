@@ -1,5 +1,5 @@
 /** Safe navigation for window.history.pushState (current architecture) */
-export function safePushState(path: string, title = '', state?: any) {
+export function safePushState(path: string, title = '', state?: unknown) {
   if (typeof path !== "string") {
     // eslint-disable-next-line no-console
     console.warn("Blocked pushState with non-string path:", {
