@@ -35,7 +35,7 @@ interface QueueItem {
   dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
+  flavour: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store: 'bannos' | 'flourlane';
@@ -178,7 +178,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             dueDate: foundOrder.due_date || null,
             priority: foundOrder.priority as 'High' | 'Medium' | 'Low' | null,
             status: mapStageToStatus(foundOrder.stage),
-            flavor: foundOrder.flavour || "",
+            flavour: foundOrder.flavour || "",
             method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
             storage: foundOrder.storage || "",
             store: foundOrder.store || order.store,
@@ -364,7 +364,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         product: extendedOrder.product,
         size: extendedOrder.size,
         quantity: extendedOrder.quantity,
-        flavor: extendedOrder.flavor,
+        flavour: extendedOrder.flavour,
         cakeWriting: extendedOrder.writingOnCake,
         accessories: extendedOrder.accessories,
         notes: extendedOrder.notes,
@@ -514,7 +514,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             </div>
 
             {/* Size + Flavour + Quantity (cake details together) */}
-            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-4 ${extendedOrder.flavour && extendedOrder.flavour !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Size
@@ -523,12 +523,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   {extendedOrder.size}
                 </p>
               </div>
-              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+              {extendedOrder.flavour && extendedOrder.flavour !== "Other" && (
                 <div>
                   <label className="text-sm font-medium text-foreground block mb-2">
                     Flavour
                   </label>
-                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                  <p className="text-sm text-foreground">{extendedOrder.flavour}</p>
                 </div>
               )}
               <div>

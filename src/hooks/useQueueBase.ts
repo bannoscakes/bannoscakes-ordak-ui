@@ -48,7 +48,7 @@ export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
     dueDate: order.due_date || null,
     priority: order.priority || null,
     status: mapStageToStatus(order.stage),
-    flavor: order.flavour || '',
+    flavour: order.flavour || '',
     method: normalizedMethod === 'delivery' ? 'Delivery'
           : normalizedMethod === 'pickup' ? 'Pickup'
           : undefined,

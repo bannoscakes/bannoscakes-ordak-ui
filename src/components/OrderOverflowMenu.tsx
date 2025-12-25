@@ -17,7 +17,7 @@ interface QueueItem {
   dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
+  flavour: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
 }

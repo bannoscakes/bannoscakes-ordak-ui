@@ -32,7 +32,7 @@ interface QueueItem {
   dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
+  flavour: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   writingOnCake?: string;
@@ -53,7 +53,7 @@ interface FormData {
   dueDate: string | null;
   method: 'Delivery' | 'Pickup';
   size: string;
-  flavor: string;
+  flavour: string;
   priority: 'High' | 'Medium' | 'Low';
   storage: string;
   writingOnCake: string;
@@ -113,7 +113,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     dueDate: "",
     method: "Pickup",
     size: "",
-    flavor: "",
+    flavour: "",
     priority: "Medium",
     storage: "",
     writingOnCake: "",
@@ -127,7 +127,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     dueDate: "",
     method: "Pickup",
     size: "",
-    flavor: "",
+    flavour: "",
     priority: "Medium",
     storage: "",
     writingOnCake: "",
@@ -152,7 +152,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         dueDate: normalizedOrder.deliveryDate ? formatDate(normalizedOrder.deliveryDate) : null,
         method: normalizedOrder.method || "Pickup",
         size: normalizedOrder.size,
-        flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
+        flavour: normalizedOrder.flavour === "Other" ? "" : normalizedOrder.flavour,
         // Form needs a priority value - calculate from date or default to 'Low' when missing
         priority: normalizedOrder.priority ?? (normalizedOrder.deliveryDate ? calculatePriority(normalizedOrder.deliveryDate) : 'Low'),
         storage: normalizedOrder.storage || "",
@@ -211,7 +211,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         product_title: formData.product,
         size: formData.size,
         delivery_method: formData.method.toLowerCase(),
-        flavour: formData.flavor || "Other",
+        flavour: formData.flavour || "Other",
         storage: formData.storage,
         due_date: formData.dueDate,
         notes: formData.writingOnCake || undefined,
@@ -224,7 +224,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         size: formData.size,
         priority: calculatePriority(formData.dueDate),
         method: formData.method,
-        flavor: formData.flavor || "Other",
+        flavour: formData.flavour || "Other",
         storage: formData.storage,
         deliveryDate: formData.dueDate,
       };
@@ -448,22 +448,22 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 <label className="text-sm font-medium text-foreground">
                   Flavour
                 </label>
-                {dirtyFields.flavor && (
+                {dirtyFields.flavour && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-10 w-10 p-0"
-                    onClick={() => resetField('flavor')}
+                    onClick={() => resetField('flavour')}
                   >
                     <RotateCcw className="h-3 w-3" />
                   </Button>
                 )}
               </div>
               <Input
-                value={formData.flavor}
-                onChange={(e) => updateField('flavor', e.target.value)}
+                value={formData.flavour}
+                onChange={(e) => updateField('flavour', e.target.value)}
                 placeholder="Enter flavour..."
-                className={dirtyFields.flavor ? 'border-orange-300 bg-orange-50' : ''}
+                className={dirtyFields.flavour ? 'border-orange-300 bg-orange-50' : ''}
               />
             </div>
 

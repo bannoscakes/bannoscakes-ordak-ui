@@ -29,7 +29,7 @@ interface QueueItem {
   dueDate: string | null;
   priority: 'High' | 'Medium' | 'Low' | null;
   status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
+  flavour: string;
   method?: 'Delivery' | 'Pickup';
   storage?: string;
   store?: 'bannos' | 'flourlane';
@@ -119,7 +119,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
           dueDate: foundOrder.due_date || null,
           priority: foundOrder.priority as "High" | "Medium" | "Low" | null,
           status: mapStageToStatus(foundOrder.stage),
-          flavor: foundOrder.flavour || "",
+          flavour: foundOrder.flavour || "",
           // Fix case-insensitive check for delivery_method
           method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
           storage: foundOrder.storage || '',
@@ -286,7 +286,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
             </div>
 
             {/* Size + Flavour + Quantity (cake details together) */}
-            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-4 ${extendedOrder.flavour && extendedOrder.flavour !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Size
@@ -295,12 +295,12 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                   {extendedOrder.size}
                 </p>
               </div>
-              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+              {extendedOrder.flavour && extendedOrder.flavour !== "Other" && (
                 <div>
                   <label className="text-sm font-medium text-foreground block mb-2">
                     Flavour
                   </label>
-                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                  <p className="text-sm text-foreground">{extendedOrder.flavour}</p>
                 </div>
               )}
               <div>
