@@ -1,10 +1,8 @@
 // Database types for the application
 export type Store = 'bannos' | 'flourlane';
 export type Stage = 'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete';
-// Priority type is for display purposes (capitalized labels)
+// Priority type matches database enum (PascalCase)
 export type Priority = 'High' | 'Medium' | 'Low';
-// Note: Order interfaces use lowercase priority ('high'|'medium'|'low') to match backend schema
-// Components convert between formats as needed using .toLowerCase() or mapping
 
 // Core Order interface matching backend schema
 export interface Order {
@@ -25,7 +23,7 @@ export interface Order {
   created_at?: string;
   updated_at?: string;
   // New fields from Task 1
-  priority?: 'high' | 'medium' | 'low';
+  priority?: Priority;
   assignee_id?: string | null;
   storage?: string | null;
   status?: 'pending' | 'in_progress' | 'complete';
@@ -49,7 +47,7 @@ export interface QueueMinimalRow {
   created_at: string;
   updated_at: string;
   // New fields from Task 1
-  priority?: 'high' | 'medium' | 'low';
+  priority?: Priority;
   assignee_id?: string | null;
   storage?: string | null;
   status?: 'pending' | 'in_progress' | 'complete';
@@ -79,7 +77,7 @@ export interface CompleteMinimalRow {
   created_at: string;
   updated_at: string;
   // New fields from Task 1
-  priority?: 'high' | 'medium' | 'low';
+  priority?: Priority;
   assignee_id?: string | null;
   storage?: string | null;
   status?: 'pending' | 'in_progress' | 'complete';
