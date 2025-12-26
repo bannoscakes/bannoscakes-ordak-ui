@@ -1,4 +1,5 @@
-import { useQuery, skipToken } from '@tanstack/react-query';
+import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { getStorageLocations, getFlavours } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
@@ -10,7 +11,8 @@ export const settingsKeys = {
   all: () => ['settings'] as const,
   storageLocations: (store: Store | undefined) =>
     [...settingsKeys.all(), 'storageLocations', store ?? 'none'] as const,
-  flavours: (store: Store) => [...settingsKeys.all(), 'flavours', store] as const,
+  flavours: (store: Store | undefined) =>
+    [...settingsKeys.all(), 'flavours', store ?? 'none'] as const,
 };
 
 /**
@@ -30,14 +32,26 @@ export function useStorageLocations(store: Store | undefined) {
 
 /**
  * Hook for flavours by store
- * Used by: EditOrderDrawer, CreateOrderForm
+ * TODO: Will be used by EditOrderDrawer and CreateManualOrderModal
  *
  * Settings change rarely, so we use a longer staleTime (5 minutes)
+ * Uses skipToken pattern for type-safe conditional fetching
  */
-export function useFlavours(store: Store) {
+export function useFlavours(store: Store | undefined) {
   return useQuery({
     queryKey: settingsKeys.flavours(store),
-    queryFn: () => getFlavours(store),
+    queryFn: store ? () => getFlavours(store) : skipToken,
     staleTime: 5 * 60 * 1000, // 5 minutes - settings change rarely
   });
+}
+
+/**
+ * Hook to invalidate settings queries after mutations
+ * Used by: SettingsPage after saving storage locations or flavours
+ */
+export function useInvalidateSettings() {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: settingsKeys.all() });
+  }, [queryClient]);
 }

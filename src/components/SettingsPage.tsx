@@ -24,6 +24,7 @@ import {
   testAdminToken,
   syncShopifyOrders
 } from "../lib/rpc-client";
+import { useInvalidateSettings } from "../hooks/useSettingsQueries";
 import type { GetSettingsRow } from "../types/supabase";
 
 interface SettingsPageProps {
@@ -115,7 +116,10 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
   const [loading, setLoading] = useState(true);
-  
+
+  // Hook to invalidate React Query cache when settings are saved
+  const invalidateSettings = useInvalidateSettings();
+
   // Track current store to prevent race conditions with in-flight requests
   const currentStoreRef = useRef(store);
 
@@ -396,6 +400,10 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
       console.log('Settings saved successfully');
       setHasUnsavedChanges(false);
+
+      // Invalidate React Query cache so other components get fresh data
+      invalidateSettings();
+
       toast.success("Settings saved successfully");
     } catch (error) {
       console.error('Error saving settings:', error);

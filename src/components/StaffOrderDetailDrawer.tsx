@@ -17,6 +17,15 @@ import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 import { useStorageLocations } from "../hooks/useSettingsQueries";
 
+// Fallback storage locations if fetch fails or store is undefined
+const DEFAULT_STORAGE_LOCATIONS = [
+  "Store Fridge",
+  "Store Freezer",
+  "Kitchen Coolroom",
+  "Kitchen Freezer",
+  "Basement Coolroom"
+];
+
 interface AccessoryItem {
   title: string;
   quantity: number;
@@ -120,8 +129,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const setStorageMutation = useSetStorage();
   const qcReturnMutation = useQcReturnToDecorating();
 
-  // Fetch storage locations using React Query
-  const { data: availableStorageLocations = [], isLoading: storageLoading } = useStorageLocations(order?.store);
+  // Fetch storage locations using React Query (with fallback for errors/undefined store)
+  const { data: availableStorageLocations = DEFAULT_STORAGE_LOCATIONS, isLoading: storageLoading } = useStorageLocations(order?.store);
 
   // Fetch real order data when drawer opens
   useEffect(() => {
