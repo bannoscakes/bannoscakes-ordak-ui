@@ -122,11 +122,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const queueData = useMemo(() => {
     const grouped: { [key: string]: QueueItem[] } = {
       unassigned: [],
-      filling: [],
-      covering: [],
-      decorating: [],
-      packing: [],
-      complete: [],
+      Filling: [],
+      Covering: [],
+      Decorating: [],
+      Packing: [],
+      Complete: [],
     };
 
     orders.forEach((order: GetQueueRow) => {
@@ -152,16 +152,16 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
         storage: order.storage || '',
       };
 
-      // Group by stage
-      const stageKey = order.stage?.toLowerCase() || 'unassigned';
-      if (!order.assignee_id && stageKey === 'filling') {
+      // Group by stage (using PascalCase to match database enum)
+      const stage = order.stage || 'unassigned';
+      if (!order.assignee_id && stage === 'Filling') {
         grouped.unassigned.push(item);
-      } else if (stageKey === 'packing') {
-        grouped.packing.push(item);
-      } else if (stageKey === 'complete') {
-        grouped.complete.push(item);
-      } else if (grouped[stageKey]) {
-        grouped[stageKey].push(item);
+      } else if (stage === 'Packing') {
+        grouped.Packing.push(item);
+      } else if (stage === 'Complete') {
+        grouped.Complete.push(item);
+      } else if (grouped[stage]) {
+        grouped[stage].push(item);
       }
     });
 
@@ -177,11 +177,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const productionStages = [
     { value: "unassigned", label: "Unassigned", count: 0 },
-    { value: "filling", label: "Filling", count: 0 },
-    { value: "covering", label: "Covering", count: 0 },
-    { value: "decorating", label: "Decorating", count: 0 },
-    { value: "packing", label: "Packing", count: 0 },
-    { value: "complete", label: "Complete", count: 0 }
+    { value: "Filling", label: "Filling", count: 0 },
+    { value: "Covering", label: "Covering", count: 0 },
+    { value: "Decorating", label: "Decorating", count: 0 },
+    { value: "Packing", label: "Packing", count: 0 },
+    { value: "Complete", label: "Complete", count: 0 }
   ];
 
   const currentItems = queueData[selectedStage] || [];
