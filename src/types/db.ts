@@ -1,6 +1,8 @@
 // Database types for the application
 export type Store = 'bannos' | 'flourlane';
-export type Stage = 'Filling' | 'Covering' | 'Decorating' | 'Packing' | 'Complete';
+// Stage type imported from stage.ts (single source of truth)
+import type { Stage } from './stage';
+export type { Stage };
 // Priority type matches database enum (PascalCase)
 export type Priority = 'High' | 'Medium' | 'Low';
 
