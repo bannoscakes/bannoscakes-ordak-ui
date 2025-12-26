@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, skipToken } from '@tanstack/react-query';
 import { getStorageLocations, getFlavours } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
@@ -8,7 +8,8 @@ import type { Store } from '../types/db';
  */
 export const settingsKeys = {
   all: () => ['settings'] as const,
-  storageLocations: (store: Store) => [...settingsKeys.all(), 'storageLocations', store] as const,
+  storageLocations: (store: Store | undefined) =>
+    [...settingsKeys.all(), 'storageLocations', store ?? 'none'] as const,
   flavours: (store: Store) => [...settingsKeys.all(), 'flavours', store] as const,
 };
 
@@ -17,14 +18,13 @@ export const settingsKeys = {
  * Used by: QueueTable (filter dropdown), StaffOrderDetailDrawer (storage selector)
  *
  * Settings change rarely, so we use a longer staleTime (5 minutes)
- * Supports optional store param with enabled flag for conditional fetching
+ * Uses skipToken pattern for type-safe conditional fetching
  */
 export function useStorageLocations(store: Store | undefined) {
   return useQuery({
-    queryKey: settingsKeys.storageLocations(store as Store),
-    queryFn: () => getStorageLocations(store as Store),
+    queryKey: settingsKeys.storageLocations(store),
+    queryFn: store ? () => getStorageLocations(store) : skipToken,
     staleTime: 5 * 60 * 1000, // 5 minutes - settings change rarely
-    enabled: !!store, // Only fetch when store is available
   });
 }
 
