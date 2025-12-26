@@ -19,9 +19,10 @@ import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { getStorageLocations, getStaffList } from "../lib/rpc-client";
+import { getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
+import { useStorageLocations } from "../hooks/useSettingsQueries";
 import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/supabase";
 
@@ -61,7 +62,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
-  const [storageLocations, setStorageLocations] = useState<string[]>([]);
   const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
 
   // Use React Query hook for queue data
@@ -81,26 +81,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const bulkAssignMutation = useBulkAssignStaff();
   const isAssigning = bulkAssignMutation.isPending;
 
-  // Fetch storage locations for the current store
-  useEffect(() => {
-    async function fetchStorageLocations() {
-      try {
-        const locations = await getStorageLocations(store);
-        setStorageLocations(locations);
-      } catch (error) {
-        console.error('Failed to fetch storage locations:', error);
-        // Fallback to default locations if fetch fails
-        setStorageLocations([
-          "Store Fridge",
-          "Store Freezer",
-          "Kitchen Coolroom",
-          "Kitchen Freezer",
-          "Basement Coolroom"
-        ]);
-      }
-    }
-    fetchStorageLocations();
-  }, [store]);
+  // Fetch storage locations using React Query
+  const { data: storageLocations = [] } = useStorageLocations(store);
 
   // Fetch staff list for bulk assignment (filtered by current store)
   useEffect(() => {

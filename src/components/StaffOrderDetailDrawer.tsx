@@ -9,12 +9,22 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { getStorageLocations, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
+import { getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
+import { useStorageLocations } from "../hooks/useSettingsQueries";
+
+// Fallback storage locations if fetch fails or store is undefined
+const DEFAULT_STORAGE_LOCATIONS = [
+  "Store Fridge",
+  "Store Freezer",
+  "Kitchen Coolroom",
+  "Kitchen Freezer",
+  "Basement Coolroom"
+];
 
 interface AccessoryItem {
   title: string;
@@ -112,14 +122,15 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
   const [selectedStorage, setSelectedStorage] = useState("");
-  const [availableStorageLocations, setAvailableStorageLocations] = useState<string[]>([]);
-  const [storageLoading, setStorageLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
 
   // Use centralized mutation hooks for cache invalidation
   const setStorageMutation = useSetStorage();
   const qcReturnMutation = useQcReturnToDecorating();
+
+  // Fetch storage locations using React Query (with fallback for errors/undefined store)
+  const { data: availableStorageLocations = DEFAULT_STORAGE_LOCATIONS, isLoading: storageLoading } = useStorageLocations(order?.store);
 
   // Fetch real order data when drawer opens
   useEffect(() => {
@@ -225,49 +236,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const isPackingStage = currentStage === "Packing";
   const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
 
-  // Load storage locations when component mounts or order changes
+  // Sync selectedStorage with order's current storage when order changes
   useEffect(() => {
-    if (!isOpen || !extendedOrder?.store) return;
-
-    // Race condition protection
-    let cancelled = false;
-
-    const loadStorageLocations = async () => {
-      try {
-        setStorageLoading(true);
-        const locations = await getStorageLocations(extendedOrder.store);
-
-        if (cancelled) return;
-
-        setAvailableStorageLocations(locations);
-        // Set current storage location
-        setSelectedStorage(extendedOrder.storage || "");
-      } catch (error) {
-        if (cancelled) return;
-
-        console.error('Error loading storage locations:', error);
-        toast.error('Failed to load storage locations');
-        // Fallback to default locations
-        setAvailableStorageLocations([
-          "Store Fridge",
-          "Store Freezer",
-          "Kitchen Coolroom",
-          "Kitchen Freezer",
-          "Basement Coolroom"
-        ]);
-      } finally {
-        if (!cancelled) {
-          setStorageLoading(false);
-        }
-      }
-    };
-
-    loadStorageLocations();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
+    if (extendedOrder?.storage !== undefined) {
+      setSelectedStorage(extendedOrder.storage || "");
+    }
+  }, [extendedOrder?.storage]);
 
   // Early return after all hooks
   if (!extendedOrder) return null;
