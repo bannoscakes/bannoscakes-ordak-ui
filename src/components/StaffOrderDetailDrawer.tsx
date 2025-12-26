@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Bot, Printer, QrCode, ExternalLink, Package, RotateCcw } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -9,13 +9,14 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
+import { type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 import { useStorageLocations } from "../hooks/useSettingsQueries";
+import { useOrderDetail } from "../hooks/useOrderQueries";
 
 // Fallback storage locations if fetch fails or store is undefined
 const DEFAULT_STORAGE_LOCATIONS = [
@@ -122,8 +123,6 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
   const [selectedStorage, setSelectedStorage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
 
   // Use centralized mutation hooks for cache invalidation
   const setStorageMutation = useSetStorage();
@@ -132,104 +131,47 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   // Fetch storage locations using React Query (with fallback for errors/undefined store)
   const { data: availableStorageLocations = DEFAULT_STORAGE_LOCATIONS, isLoading: storageLoading } = useStorageLocations(order?.store);
 
-  // Fetch real order data when drawer opens
-  useEffect(() => {
-    if (!isOpen || !order) return;
+  // Fetch order detail using React Query (handles race conditions automatically)
+  const { data: fetchedOrder, isLoading: loading, error } = useOrderDetail(
+    order?.id,
+    order?.store,
+    { enabled: isOpen && !!order }
+  );
 
-    // Validate store type
-    if (order.store !== 'bannos' && order.store !== 'flourlane') {
-      console.error('Invalid store type:', order.store);
-      toast.error('Invalid store type');
-      return;
+  // Show error in console when fetch fails
+  if (error) {
+    console.error('Error fetching order data:', error);
+  }
+
+  // Map fetched order to UI format, fallback to original order
+  const realOrder = useMemo((): QueueItem | null => {
+    if (fetchedOrder) {
+      return {
+        id: fetchedOrder.id,
+        orderNumber: fetchedOrder.human_id || String(fetchedOrder.shopify_order_number) || fetchedOrder.id,
+        shopifyOrderNumber: String(fetchedOrder.shopify_order_number || ''),
+        shopifyOrderId: fetchedOrder.shopify_order_id || undefined,
+        customerName: fetchedOrder.customer_name || '',
+        product: fetchedOrder.product_title || '',
+        size: fetchedOrder.size || '',
+        quantity: fetchedOrder.item_qty || 1,
+        dueDate: fetchedOrder.due_date || null,
+        priority: fetchedOrder.priority as 'High' | 'Medium' | 'Low' | null,
+        status: mapStageToStatus(fetchedOrder.stage),
+        flavour: fetchedOrder.flavour || "",
+        method: fetchedOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+        storage: fetchedOrder.storage || "",
+        store: fetchedOrder.store || order?.store || 'bannos',
+        stage: fetchedOrder.stage || "Filling",
+        cakeWriting: fetchedOrder.cake_writing || '',
+        notes: fetchedOrder.notes || '',
+        productImage: fetchedOrder.product_image || null,
+        accessories: fetchedOrder.accessories || null,
+        shippingAddress: fetchedOrder.shipping_address || null
+      };
     }
-
-    // Race condition protection - track if effect is still active
-    let cancelled = false;
-
-    const fetchRealOrderData = async () => {
-      try {
-        setLoading(true);
-
-        // Try getOrderV2 first (includes shipping_address), fallback to getOrder
-        let foundOrder;
-        try {
-          foundOrder = await getOrderV2(order.id, order.store);
-        } catch (err: unknown) {
-          // Only fallback to getOrder if the RPC function doesn't exist yet
-          // PostgreSQL error code 42883 = undefined_function
-          const errMessage = err instanceof Error ? err.message : '';
-          const isRpcNotFound =
-            (err && typeof err === 'object' && 'code' in err && err.code === '42883') ||
-            (errMessage.includes('function') && errMessage.includes('does not exist'));
-
-          if (isRpcNotFound) {
-            console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
-            foundOrder = await getOrder(order.id, order.store);
-          } else {
-            // Rethrow other errors (network, permission, data issues)
-            console.error('getOrderV2 failed with unexpected error', err);
-            throw err;
-          }
-        }
-
-        // Don't update state if effect was cancelled (order changed during fetch)
-        if (cancelled) return;
-
-        if (foundOrder) {
-          // Map database order to UI format
-          const mappedOrder: QueueItem = {
-            id: foundOrder.id,
-            orderNumber: foundOrder.human_id || String(foundOrder.shopify_order_number) || foundOrder.id,
-            shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
-            shopifyOrderId: foundOrder.shopify_order_id || undefined,
-            customerName: foundOrder.customer_name || '',
-            product: foundOrder.product_title || '',
-            size: foundOrder.size || '',
-            quantity: foundOrder.item_qty || 1,
-            dueDate: foundOrder.due_date || null,
-            priority: foundOrder.priority as 'High' | 'Medium' | 'Low' | null,
-            status: mapStageToStatus(foundOrder.stage),
-            flavour: foundOrder.flavour || "",
-            method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
-            storage: foundOrder.storage || "",
-            store: foundOrder.store || order.store,
-            stage: foundOrder.stage || "Filling",
-            // Add real data from database
-            cakeWriting: foundOrder.cake_writing || '',
-            notes: foundOrder.notes || '',
-            productImage: foundOrder.product_image || null,
-            accessories: foundOrder.accessories || null,
-            // shipping_address only available from getOrderV2, use type guard
-            shippingAddress: 'shipping_address' in foundOrder ? (foundOrder.shipping_address as ShippingAddress | null) : null
-          };
-
-          setRealOrder(mappedOrder);
-        } else {
-          // Fallback to original order if not found in database
-          setRealOrder(order);
-        }
-      } catch (error) {
-        // Don't update state if effect was cancelled
-        if (cancelled) return;
-
-        console.error('Error fetching order data:', error);
-        toast.error('Failed to load order details');
-        // Fallback to original order
-        setRealOrder(order);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchRealOrderData();
-
-    // Cleanup: mark as cancelled when order changes or component unmounts
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, order]);
+    return order || null;
+  }, [fetchedOrder, order]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order);
   const currentStage = realOrder?.stage || order?.stage || "";

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Bot, Printer, QrCode } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -8,8 +8,8 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { getOrder } from "../lib/rpc-client";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
+import { useOrderDetail } from "../hooks/useOrderQueries";
 
 interface AccessoryItem {
   title: string;
@@ -87,65 +87,18 @@ const getStorageColor = () => {
 export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetailDrawerProps) {
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
-  
-  // Fetch real order data when drawer opens
-  useEffect(() => {
-    if (isOpen && order) {
-      fetchRealOrderData();
-    }
-  }, [isOpen, order, store]);
 
-  const fetchRealOrderData = async () => {
-    if (!order) return;
-    
-    try {
-      setLoading(true);
-      
-      // Fetch the specific order using getOrder RPC
-      const foundOrder = await getOrder(order.id, store);
-      
-      if (foundOrder) {
-        // Map database order to UI format
-        const mappedOrder: QueueItem = {
-          id: foundOrder.id,
-          orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
-          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
-          customerName: foundOrder.customer_name || '',
-          product: foundOrder.product_title || '',
-          size: foundOrder.size || '',
-          quantity: foundOrder.item_qty || 1,
-          dueDate: foundOrder.due_date || null,
-          priority: foundOrder.priority as "High" | "Medium" | "Low" | null,
-          status: mapStageToStatus(foundOrder.stage),
-          flavour: foundOrder.flavour || "",
-          // Fix case-insensitive check for delivery_method
-          method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
-          storage: foundOrder.storage || '',
-          store: foundOrder.store || store,
-          stage: foundOrder.stage || "Filling",
-          // Add real data from database
-          cakeWriting: foundOrder.cake_writing || '',
-          notes: foundOrder.notes || '',
-          productImage: foundOrder.product_image || null,
-          accessories: foundOrder.accessories || null
-        };
-        
-        setRealOrder(mappedOrder);
-      } else {
-        // Fallback to original order if not found in database
-        setRealOrder(order);
-      }
-    } catch (error) {
-      console.error('Error fetching order data:', error);
-      toast.error('Failed to load order details');
-      // Fallback to original order
-      setRealOrder(order);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch order detail using React Query
+  const { data: fetchedOrder, isLoading: loading, error } = useOrderDetail(
+    order?.id,
+    store,
+    { enabled: isOpen && !!order }
+  );
+
+  // Show error toast when fetch fails
+  if (error) {
+    console.error('Error fetching order data:', error);
+  }
 
   const mapStageToStatus = (stage: string) => {
     switch (stage) {
@@ -157,6 +110,34 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
       default: return "Pending";
     }
   };
+
+  // Map fetched order to UI format, fallback to original order
+  const realOrder = useMemo((): QueueItem | null => {
+    if (fetchedOrder) {
+      return {
+        id: fetchedOrder.id,
+        orderNumber: fetchedOrder.human_id || String(fetchedOrder.shopify_order_number) || fetchedOrder.id,
+        shopifyOrderNumber: String(fetchedOrder.shopify_order_number || ''),
+        customerName: fetchedOrder.customer_name || '',
+        product: fetchedOrder.product_title || '',
+        size: fetchedOrder.size || '',
+        quantity: fetchedOrder.item_qty || 1,
+        dueDate: fetchedOrder.due_date || null,
+        priority: fetchedOrder.priority as "High" | "Medium" | "Low" | null,
+        status: mapStageToStatus(fetchedOrder.stage),
+        flavour: fetchedOrder.flavour || "",
+        method: fetchedOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+        storage: fetchedOrder.storage || '',
+        store: fetchedOrder.store || store,
+        stage: fetchedOrder.stage || "Filling",
+        cakeWriting: fetchedOrder.cake_writing || '',
+        notes: fetchedOrder.notes || '',
+        productImage: fetchedOrder.product_image || null,
+        accessories: fetchedOrder.accessories || null
+      };
+    }
+    return order || null;
+  }, [fetchedOrder, order, store]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order, store);
   const currentStage = realOrder?.stage || order?.stage || "";
