@@ -981,7 +981,7 @@ export async function getBomByProduct(productTitle: string, store: string) {
 interface BomDetailsRow {
   bom_id: string;
   product_title: string;
-  store: string;
+  store: 'bannos' | 'flourlane' | 'both';
   description: string | null;
   component_id: string | null;
   component_sku: string | null;
