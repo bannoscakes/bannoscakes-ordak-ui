@@ -17,6 +17,16 @@ import type {
 import { createError, handleError, logError, ErrorCode } from './error-handler';
 
 // =============================================
+// ERROR TYPES
+// =============================================
+
+interface SupabaseError {
+  message?: string;
+  code?: string;
+  details?: string;
+}
+
+// =============================================
 // MESSAGING TYPES
 // =============================================
 
@@ -252,7 +262,7 @@ async function withErrorHandling<T>(
     
     if (error && typeof error === 'object' && 'code' in error) {
       // Supabase error
-      const supabaseError = error as any;
+      const supabaseError = error as SupabaseError;
       
       switch (supabaseError.code) {
         case '23505': // PostgreSQL unique constraint violation
@@ -640,7 +650,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
 // SCANNER & STAGE MANAGEMENT
 // =============================================
 
-export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, any>) {
+export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, unknown>) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('handle_print_barcode', {
     p_barcode: barcode,
@@ -1444,7 +1454,7 @@ export async function getSetting(store: Store, key: string) {
 }
 
 // JSON-compatible value type for settings
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export async function setSetting(store: Store, key: string, value: JsonValue) {
   const supabase = getSupabase();
