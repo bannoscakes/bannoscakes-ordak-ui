@@ -159,8 +159,8 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
   };
 
   const extendedOrder = getExtendedOrderData(realOrder || order, store);
-  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
-  const isPackingStage = currentStage === "packing";
+  const currentStage = realOrder?.stage || order?.stage || "";
+  const isPackingStage = currentStage === "Packing";
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   if (!extendedOrder) return null;

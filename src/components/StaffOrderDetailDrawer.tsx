@@ -221,8 +221,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   }, [isOpen, order]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order);
-  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
-  const isPackingStage = currentStage === "packing";
+  const currentStage = realOrder?.stage || order?.stage || "";
+  const isPackingStage = currentStage === "Packing";
   const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
 
   // Load storage locations when component mounts or order changes

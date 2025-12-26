@@ -18,7 +18,7 @@ interface OrderItem {
   items: string[];
   quantity: number;
   deliveryTime: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: 'High' | 'Medium' | 'Low';
   status: 'pending' | 'in-progress' | 'completed';
   specialNotes?: string;
 }
@@ -42,7 +42,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Chocolate Cake", "Cupcakes x12"],
         quantity: 2,
         deliveryTime: "10:00 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       },
       {
@@ -51,7 +51,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Wedding Cake"],
         quantity: 1,
         deliveryTime: "2:00 PM",
-        priority: "high",
+        priority: "High",
         status: "in-progress",
         specialNotes: "3-tier, vanilla & strawberry"
       },
@@ -61,7 +61,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Birthday Cake"],
         quantity: 1,
         deliveryTime: "4:00 PM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       }
     ],
@@ -77,7 +77,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Cheesecake", "Brownies x6"],
         quantity: 2,
         deliveryTime: "11:00 AM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       },
       {
@@ -86,7 +86,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Custom Cake"],
         quantity: 1,
         deliveryTime: "3:00 PM",
-        priority: "high",
+        priority: "High",
         status: "pending",
         specialNotes: "Gluten-free, chocolate"
       }
@@ -103,7 +103,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Tiramisu", "Macarons x24"],
         quantity: 2,
         deliveryTime: "9:00 AM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       }
     ],
@@ -119,7 +119,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Anniversary Cake"],
         quantity: 1,
         deliveryTime: "1:00 PM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       },
       {
@@ -128,7 +128,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Cupcakes x18"],
         quantity: 1,
         deliveryTime: "5:00 PM",
-        priority: "low",
+        priority: "Low",
         status: "pending"
       }
     ],
@@ -144,7 +144,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Graduation Cake"],
         quantity: 1,
         deliveryTime: "10:00 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       },
       {
@@ -153,7 +153,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Donuts x12"],
         quantity: 1,
         deliveryTime: "12:00 PM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       },
       {
@@ -162,7 +162,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Strawberry Cake"],
         quantity: 1,
         deliveryTime: "3:00 PM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       }
     ],
@@ -178,7 +178,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Birthday Cake", "Cupcakes x6"],
         quantity: 2,
         deliveryTime: "11:00 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       },
       {
@@ -187,7 +187,7 @@ const bannosWeekData: DaySchedule[] = [
         items: ["Cheesecake"],
         quantity: 1,
         deliveryTime: "2:00 PM",
-        priority: "low",
+        priority: "Low",
         status: "pending"
       }
     ],
@@ -207,7 +207,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Sourdough x10", "Bagels x24"],
         quantity: 34,
         deliveryTime: "6:00 AM",
-        priority: "high",
+        priority: "High",
         status: "in-progress"
       },
       {
@@ -216,7 +216,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Rye Bread x6", "Whole Wheat x8"],
         quantity: 14,
         deliveryTime: "7:30 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       },
       {
@@ -225,7 +225,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Croissants x20", "Danish x12"],
         quantity: 32,
         deliveryTime: "8:00 AM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       }
     ],
@@ -241,7 +241,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["French Baguettes x15"],
         quantity: 15,
         deliveryTime: "5:30 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       },
       {
@@ -250,7 +250,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Dinner Rolls x40"],
         quantity: 40,
         deliveryTime: "4:00 PM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       }
     ],
@@ -266,7 +266,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Sandwich Bread x25", "Hamburger Buns x50"],
         quantity: 75,
         deliveryTime: "7:00 AM",
-        priority: "high",
+        priority: "High",
         status: "pending",
         specialNotes: "Weekly delivery"
       }
@@ -283,7 +283,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Artisan Loaves x8"],
         quantity: 8,
         deliveryTime: "9:00 AM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       },
       {
@@ -292,7 +292,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Muffins x24", "Scones x12"],
         quantity: 36,
         deliveryTime: "6:30 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       }
     ],
@@ -308,7 +308,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Focaccia x12", "Ciabatta x10"],
         quantity: 22,
         deliveryTime: "8:00 AM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       },
       {
@@ -317,7 +317,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Pizza Dough x30"],
         quantity: 30,
         deliveryTime: "11:00 AM",
-        priority: "high",
+        priority: "High",
         status: "pending"
       }
     ],
@@ -333,7 +333,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Assorted Breads x20", "Pastries x30"],
         quantity: 50,
         deliveryTime: "6:00 AM",
-        priority: "high",
+        priority: "High",
         status: "pending",
         specialNotes: "Market stall setup"
       },
@@ -343,7 +343,7 @@ const flourlaneWeekData: DaySchedule[] = [
         items: ["Brioche x8", "Challah x4"],
         quantity: 12,
         deliveryTime: "9:00 AM",
-        priority: "medium",
+        priority: "Medium",
         status: "pending"
       }
     ],
@@ -353,9 +353,9 @@ const flourlaneWeekData: DaySchedule[] = [
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'high': return 'text-red-600 bg-red-50 border-red-200';
-    case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200';
-    case 'low': return 'text-green-600 bg-green-50 border-green-200';
+    case 'High': return 'text-red-600 bg-red-50 border-red-200';
+    case 'Medium': return 'text-orange-600 bg-orange-50 border-orange-200';
+    case 'Low': return 'text-green-600 bg-green-50 border-green-200';
     default: return 'text-gray-600 bg-gray-50 border-gray-200';
   }
 };
@@ -429,7 +429,7 @@ function KitchenMonitor({ storeName, storeIcon: StoreIcon, weekData, primaryColo
               {/* Orders List */}
               <div className="flex-1 space-y-3 overflow-y-auto">
                 {day.orders.map((order) => (
-                  <Card key={order.id} className={`border-l-4 ${order.priority === 'high' ? 'border-l-red-500' : order.priority === 'medium' ? 'border-l-orange-500' : 'border-l-green-500'} shadow-sm hover:shadow-md transition-shadow`}>
+                  <Card key={order.id} className={`border-l-4 ${order.priority === 'High' ? 'border-l-red-500' : order.priority === 'Medium' ? 'border-l-orange-500' : 'border-l-green-500'} shadow-sm hover:shadow-md transition-shadow`}>
                     <CardContent className="p-4">
                       <div className="space-y-2">
                         {/* Order Header */}
