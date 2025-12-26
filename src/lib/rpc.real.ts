@@ -14,8 +14,8 @@ interface QueueViewRow {
   due_date: string | null;
 }
 
-// Normalized queue item
-interface QueueItem {
+// Normalized queue item (internal to this file to avoid collision with src/types/queue.ts)
+interface InternalQueueItem {
   id: string;
   store: string;
   stage: string;
@@ -24,7 +24,7 @@ interface QueueItem {
   due_date: string | null;
 }
 
-export const get_queue = async (..._args: unknown[]): Promise<QueueItem[]> => {
+export const get_queue = async (..._args: unknown[]): Promise<InternalQueueItem[]> => {
   try {
     if (!supabase) return []; // no envs set → safe fallback
     // Adjust the view/columns to your schema; this is a conservative example.
