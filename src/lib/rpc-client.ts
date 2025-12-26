@@ -17,6 +17,16 @@ import type {
 import { createError, handleError, logError, ErrorCode } from './error-handler';
 
 // =============================================
+// ERROR TYPES
+// =============================================
+
+interface SupabaseError {
+  message?: string;
+  code?: string;
+  details?: string;
+}
+
+// =============================================
 // MESSAGING TYPES
 // =============================================
 
@@ -156,13 +166,17 @@ export interface OrderV2Result {
 /**
  * Check if error is related to JWT/auth token expiration
  */
-function isJWTError(error: any): boolean {
+function isJWTError(error: unknown): boolean {
   if (!error) return false;
-  
+
   const errorString = JSON.stringify(error).toLowerCase();
-  const message = error.message?.toLowerCase() || '';
-  const code = error.code?.toString() || '';
-  
+  const message = (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string')
+    ? error.message.toLowerCase()
+    : '';
+  const code = (error && typeof error === 'object' && 'code' in error)
+    ? String(error.code)
+    : '';
+
   return (
     code === '401' ||
     code === 'PGRST301' ||
@@ -180,7 +194,7 @@ function isJWTError(error: any): boolean {
  */
 async function withErrorHandling<T>(
   rpcCall: () => Promise<T>,
-  context: { operation: string; rpcName: string; params?: any; retryCount?: number }
+  context: { operation: string; rpcName: string; params?: object; retryCount?: number }
 ): Promise<T> {
   const startTime = Date.now();
   const maxRetries = 1; // Retry once on JWT errors
@@ -248,7 +262,7 @@ async function withErrorHandling<T>(
     
     if (error && typeof error === 'object' && 'code' in error) {
       // Supabase error
-      const supabaseError = error as any;
+      const supabaseError = error as SupabaseError;
       
       switch (supabaseError.code) {
         case '23505': // PostgreSQL unique constraint violation
@@ -636,7 +650,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
 // SCANNER & STAGE MANAGEMENT
 // =============================================
 
-export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, any>) {
+export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, unknown>) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('handle_print_barcode', {
     p_barcode: barcode,
@@ -963,6 +977,23 @@ export async function getBomByProduct(productTitle: string, store: string) {
   return data || [];
 }
 
+// Raw row type from get_bom_details RPC
+interface BomDetailsRow {
+  bom_id: string;
+  product_title: string;
+  store: 'bannos' | 'flourlane' | 'both';
+  description: string | null;
+  component_id: string | null;
+  component_sku: string | null;
+  component_name: string | null;
+  quantity_required: number | null;
+  unit: string | null;
+  current_stock: number | null;
+  is_optional: boolean;
+  notes: string | null;
+  stage_to_consume: 'Filling' | 'Decorating' | 'Packing' | null;
+}
+
 /**
  * Fetch BOM details including all items for a specific BOM
  * Use this when opening a BOM for editing to get the full item list
@@ -975,11 +1006,9 @@ export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
   if (error) throw error;
 
   // Transform flat RPC result to BOMItem array
-  // RPC returns: bom_id, product_title, store, description, component_id, component_sku,
-  //              component_name, quantity_required, unit, current_stock, is_optional, notes, stage_to_consume
   return (data || [])
-    .filter((row: any) => row.component_id !== null) // Filter out BOMs with no items
-    .map((row: any) => ({
+    .filter((row: BomDetailsRow) => row.component_id !== null) // Filter out BOMs with no items
+    .map((row: BomDetailsRow) => ({
       id: `${row.bom_id}-${row.component_id}`, // Composite ID for UI
       bom_id: row.bom_id,
       component_id: row.component_id,
@@ -1135,13 +1164,31 @@ export async function deleteBom(id: string): Promise<boolean> {
   return data as boolean;
 }
 
+// Deduction result from deduct_for_order RPC
+interface DeductionResult {
+  component_id: string;
+  component_name: string;
+  quantity_deducted: number;
+  previous_stock: number;
+  new_stock: number;
+}
+
+interface DeductForOrderResponse {
+  success: boolean;
+  error?: string;
+  bom_id?: string;
+  order_id?: string;
+  quantity?: number;
+  deductions?: DeductionResult[];
+}
+
 export async function deductForOrder(params: {
   order_id: string;
   product_title: string;
   store: string;
   quantity?: number;
   created_by?: string;
-}) {
+}): Promise<DeductForOrderResponse> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
@@ -1153,7 +1200,7 @@ export async function deductForOrder(params: {
         p_created_by: params.created_by || null,
       });
       if (error) throw error;
-      return data as { success: boolean; error?: string; bom_id?: string; order_id?: string; quantity?: number; deductions?: any[] };
+      return data as DeductForOrderResponse;
     },
     {
       operation: 'deductForOrder',
@@ -1268,9 +1315,12 @@ export interface CakeTopper {
   updated_at: string;
 }
 
+// Raw RPC result without computed fields
+type RawCakeTopper = Omit<CakeTopper, 'is_low_stock' | 'is_out_of_stock'>;
+
 export async function getCakeToppers(params: {
   activeOnly?: boolean;
-} = {}) {
+} = {}): Promise<CakeTopper[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_cake_toppers', {
     p_active_only: params.activeOnly ?? true,  // Default to showing active only
@@ -1278,11 +1328,11 @@ export async function getCakeToppers(params: {
   if (error) throw error;
 
   // Add computed fields
-  return (data || []).map((topper: any) => ({
+  return (data || []).map((topper: RawCakeTopper) => ({
     ...topper,
     is_low_stock: topper.current_stock < topper.min_stock && topper.current_stock > 0,
     is_out_of_stock: topper.current_stock === 0,
-  })) as CakeTopper[];
+  }));
 }
 
 export async function upsertCakeTopper(params: {
@@ -1403,7 +1453,10 @@ export async function getSetting(store: Store, key: string) {
   return data;
 }
 
-export async function setSetting(store: Store, key: string, value: any) {
+// JSON-compatible value type for settings
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+export async function setSetting(store: Store, key: string, value: JsonValue) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_setting', {
     p_store: store,
@@ -1423,7 +1476,7 @@ export async function getPrintingSettings(store: Store) {
   return data;
 }
 
-export async function setPrintingSettings(store: Store, settings: any) {
+export async function setPrintingSettings(store: Store, settings: Record<string, JsonValue>) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_printing_settings', {
     p_store: store,
