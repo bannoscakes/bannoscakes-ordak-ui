@@ -138,10 +138,13 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
     { enabled: isOpen && !!order }
   );
 
-  // Show error in console when fetch fails
-  if (error) {
-    console.error('Error fetching order data:', error);
-  }
+  // Show error toast when fetch fails
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching order data:', error);
+      toast.error('Failed to load order details');
+    }
+  }, [error]);
 
   // Map fetched order to UI format, fallback to original order
   const realOrder = useMemo((): QueueItem | null => {

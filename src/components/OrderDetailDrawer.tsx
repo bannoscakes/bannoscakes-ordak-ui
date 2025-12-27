@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Bot, Printer, QrCode } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -96,9 +96,12 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
   );
 
   // Show error toast when fetch fails
-  if (error) {
-    console.error('Error fetching order data:', error);
-  }
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching order data:', error);
+      toast.error('Failed to load order details');
+    }
+  }, [error]);
 
   const mapStageToStatus = (stage: string) => {
     switch (stage) {
