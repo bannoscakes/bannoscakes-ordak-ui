@@ -126,7 +126,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
         size: fetchedOrder.size || '',
         quantity: fetchedOrder.item_qty || 1,
         dueDate: fetchedOrder.due_date || null,
-        priority: fetchedOrder.priority as "High" | "Medium" | "Low" | null,
+        priority: fetchedOrder.priority,
         status: mapStageToStatus(fetchedOrder.stage),
         flavour: fetchedOrder.flavour || "",
         method: fetchedOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",

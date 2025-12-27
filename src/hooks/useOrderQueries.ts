@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { getOrderV2, getOrder, type OrderV2Result } from '../lib/rpc-client';
+import { getOrderV2, getOrder, type OrderV2Result, type LegacyOrderResult } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 /**
@@ -12,6 +12,19 @@ export const orderKeys = {
   detail: (orderId: string | undefined, store: Store | undefined) =>
     [...orderKeys.all(), 'detail', orderId ?? 'none', store ?? 'none'] as const,
 };
+
+/**
+ * Convert legacy order result to V2 format
+ * LegacyOrderResult shares all base fields with OrderV2Result,
+ * so we only need to add the missing V2-specific fields as null
+ */
+function legacyToV2Order(legacy: LegacyOrderResult): OrderV2Result {
+  return {
+    ...legacy,
+    shipping_address: null,
+    accessories: null,
+  };
+}
 
 /**
  * Fetches order with fallback from getOrderV2 to getOrder
@@ -30,8 +43,8 @@ async function fetchOrderWithFallback(orderId: string, store: Store): Promise<Or
     if (isRpcNotFound) {
       console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
       const legacyOrder = await getOrder(orderId, store);
-      // Cast legacy order to OrderV2Result (shipping_address will be undefined)
-      return legacyOrder as OrderV2Result | null;
+      // Convert legacy order to V2 format with null for V2-specific fields
+      return legacyOrder ? legacyToV2Order(legacyOrder) : null;
     }
     // Rethrow other errors
     throw err;
