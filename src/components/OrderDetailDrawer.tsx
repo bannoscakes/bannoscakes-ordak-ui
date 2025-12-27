@@ -10,36 +10,7 @@ import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { useOrderDetail } from "../hooks/useOrderQueries";
-
-interface AccessoryItem {
-  title: string;
-  quantity: number;
-  price: string;
-  variant_title?: string | null;
-}
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  customerName: string;
-  product: string;
-  size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store?: 'bannos' | 'flourlane';
-  stage?: string;
-  // Database fields for order details
-  cakeWriting?: string;
-  notes?: string;
-  productImage?: string | null;
-  accessories?: AccessoryItem[] | null;
-}
+import type { QueueItem } from "../types/queue";
 
 interface OrderDetailDrawerProps {
   isOpen: boolean;

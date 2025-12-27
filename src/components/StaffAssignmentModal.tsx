@@ -9,25 +9,7 @@ import { toast } from "sonner";
 import { useAssignStaff, useUnassignStaff } from "../hooks/useQueueMutations";
 import { useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber?: string;
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store?: 'bannos' | 'flourlane';
-  assigneeId?: string;
-  assigneeName?: string;
-}
+import type { QueueItem } from "../types/queue";
 
 interface StaffAssignmentModalProps {
   isOpen: boolean;

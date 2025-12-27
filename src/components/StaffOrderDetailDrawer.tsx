@@ -9,7 +9,6 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
@@ -17,6 +16,7 @@ import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
 import { useStorageLocations } from "../hooks/useSettingsQueries";
 import { useOrderDetail } from "../hooks/useOrderQueries";
+import type { QueueItem, AccessoryItem } from "../types/queue";
 
 // Fallback storage locations if fetch fails or store is undefined
 const DEFAULT_STORAGE_LOCATIONS = [
@@ -26,38 +26,6 @@ const DEFAULT_STORAGE_LOCATIONS = [
   "Kitchen Freezer",
   "Basement Coolroom"
 ];
-
-interface AccessoryItem {
-  title: string;
-  quantity: number;
-  price: string;
-  variant_title?: string | null;
-}
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  shopifyOrderId?: number;  // Actual Shopify order ID for admin URLs
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store: 'bannos' | 'flourlane';
-  stage: string;
-  // Database fields for order details
-  cakeWriting?: string;
-  notes?: string;
-  productImage?: string | null;
-  accessories?: AccessoryItem[] | null;
-  shippingAddress?: ShippingAddress | null;  // For packing slip
-}
 
 interface StaffOrderDetailDrawerProps {
   isOpen: boolean;

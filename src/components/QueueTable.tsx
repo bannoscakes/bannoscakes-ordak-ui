@@ -24,25 +24,7 @@ import { useQueueByStore } from "../hooks/useQueueByStore";
 import { useStorageLocations, useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/supabase";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  shopifyOrderId?: number;
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  assigneeId?: string;
-  assigneeName?: string;
-}
+import type { QueueItem } from "../types/queue";
 
 interface QueueTableProps {
   store: "bannos" | "flourlane";
@@ -126,6 +108,8 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           return undefined;
         })(),
         storage: order.storage || '',
+        store: store,
+        stage: order.stage || 'Filling',
       };
 
       // Group by stage (using PascalCase to match database enum)
