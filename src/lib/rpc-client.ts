@@ -1913,6 +1913,16 @@ export async function cancelOrder(orderId: string, store: Store, reason?: string
   return data;
 }
 
+export async function markOrderComplete(orderId: string, store: Store) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('mark_order_complete', {
+    p_order_id: orderId,
+    p_store: store,
+  });
+  if (error) throw error;
+  return data;
+}
+
 // =============================================
 // MESSAGING
 // =============================================
