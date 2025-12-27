@@ -125,7 +125,7 @@ export function StaffPage() {
 
   const handleDeactivate = async (staffMember: StaffMember) => {
     try {
-      const newStatus = staffMember.status === "Active" ? false : true;
+      const newStatus = staffMember.status !== "Active";
       await updateStaffMember({
         userId: staffMember.id,
         isActive: newStatus,
