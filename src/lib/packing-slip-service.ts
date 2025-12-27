@@ -6,6 +6,7 @@
 
 import type { ShippingAddress } from './rpc-client';
 import { formatOrderNumber } from './format-utils';
+import type { AccessoryItem } from '../types/queue';
 
 /**
  * Escape HTML to prevent XSS
@@ -31,14 +32,6 @@ function formatDate(dateStr: string | null | undefined): string {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear().toString().slice(-2);
   return `${day}/${month}/${year}`;
-}
-
-
-interface AccessoryItem {
-  title: string;
-  quantity: number;
-  price: string;
-  variant_title?: string | null;
 }
 
 interface PackingSlipData {

@@ -9,12 +9,12 @@ import {
 import type { QueueItem } from "../types/queue";
 
 interface OrderOverflowMenuProps {
-  item: QueueItem | any;
+  item: QueueItem;
   variant: 'queue' | 'complete' | 'dashboard';
-  onAssignToStaff?: (item: QueueItem | any) => void;
-  onEditOrder?: (item: QueueItem | any) => void;
-  onOpenOrder: (item: QueueItem | any) => void;
-  onViewDetails: (item: QueueItem | any) => void;
+  onAssignToStaff?: (item: QueueItem) => void;
+  onEditOrder?: (item: QueueItem) => void;
+  onOpenOrder: (item: QueueItem) => void;
+  onViewDetails: (item: QueueItem) => void;
 }
 
 export function OrderOverflowMenu({ 

@@ -229,7 +229,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                 </td>
                 <td className="py-4">
                   <OrderOverflowMenu
-                    item={order}
+                    item={convertToQueueItem(order, store)}
                     variant="dashboard"
                     onOpenOrder={() => handleOpenOrder(order)}
                     onViewDetails={() => handleViewDetails(order)}

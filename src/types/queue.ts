@@ -21,13 +21,21 @@ export interface AccessoryItem {
 }
 
 /**
- * Queue item interface matching the UI format
- * Used by staff workspace, supervisor views, and queue components
+ * Shared QueueItem type used across all queue-related components.
+ *
+ * Used by staff workspace, supervisor views, queue tables, order drawers,
+ * scanner overlays, and assignment modals.
+ *
+ * @remarks
+ * - `shopifyOrderNumber` is optional as not all data sources provide it
+ * - Both `cakeWriting` and `writingOnCake` are supported for backwards compatibility
+ * - `accessories` can be AccessoryItem[] (structured) or string[] (legacy display)
  */
 export interface QueueItem {
   id: string;
   orderNumber: string;
-  shopifyOrderNumber: string;
+  /** Shopify order number - optional as not all sources provide this */
+  shopifyOrderNumber?: string;
   customerName: string;
   product: string;
   size: QueueItemSize;
