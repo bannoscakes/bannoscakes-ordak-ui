@@ -54,6 +54,7 @@ export function StaffPage() {
   const {
     data: activeShifts = [],
     isLoading: isShiftsLoading,
+    isError: isShiftsError,
   } = useQuery({
     queryKey: ['settings', 'activeShifts'],
     queryFn: getAllActiveShifts,
@@ -74,7 +75,10 @@ export function StaffPage() {
       onShift: onShiftStaffIds.has(s.user_id),
       hourlyRate: s.hourly_rate ?? 0,
       phone: s.phone || undefined,
-      avatar: s.full_name.split(' ').map(n => n[0]).join('').toUpperCase(),
+      avatar: ((name) => {
+        const initials = name.split(/\s+/).filter(Boolean).map(n => n[0]).join('');
+        return (initials || s.email?.[0] || '?').toUpperCase();
+      })((s.full_name || '').trim()),
       hireDate: new Date(s.created_at).toISOString().split('T')[0],
     }));
   }, [staffData, activeShifts]);
@@ -220,6 +224,14 @@ export function StaffPage() {
           />
         </div>
       </Card>
+
+      {/* Shift status warning */}
+      {isShiftsError && (
+        <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span className="text-sm">Unable to load shift data. On Shift status may be inaccurate.</span>
+        </div>
+      )}
 
       {/* Staff Table */}
       <Card>
