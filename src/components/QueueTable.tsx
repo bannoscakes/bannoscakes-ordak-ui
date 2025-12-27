@@ -19,10 +19,9 @@ import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
-import { useStorageLocations } from "../hooks/useSettingsQueries";
+import { useStorageLocations, useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/supabase";
 
@@ -62,7 +61,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
-  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
 
   // Use React Query hook for queue data
   const {
@@ -85,20 +83,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const { data: storageLocations = [] } = useStorageLocations(store);
 
   // Fetch staff list for bulk assignment (filtered by current store)
-  useEffect(() => {
-    async function fetchStaffList() {
-      try {
-        const staff = await getStaffList(null, true);
-        // Filter to only include staff for current store or staff that work at both stores
-        const filteredStaff = staff.filter(s => s.store === 'both' || s.store === store);
-        setStaffList(filteredStaff.map(s => ({ id: s.user_id, name: s.full_name })));
-      } catch (error) {
-        console.error('Failed to fetch staff list:', error);
-        toast.error('Failed to load staff list');
-      }
-    }
-    fetchStaffList();
-  }, [store]);
+  const { data: staffData = [] } = useStaffList({ store });
+  const staffList = useMemo(
+    () => staffData.map(s => ({ id: s.user_id, name: s.full_name })),
+    [staffData]
+  );
 
   // Group orders by stage using useMemo for performance
   const queueData = useMemo(() => {
