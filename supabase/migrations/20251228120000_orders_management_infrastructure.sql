@@ -42,6 +42,11 @@ DECLARE
   v_user_id uuid;
   v_rows_affected integer;
 BEGIN
+  -- Validate store parameter
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
@@ -98,6 +103,11 @@ DECLARE
   v_user_id uuid;
   v_rows_affected integer;
 BEGIN
+  -- Validate store parameter
+  IF p_store NOT IN ('bannos', 'flourlane') THEN
+    RAISE EXCEPTION 'Invalid store: %', p_store;
+  END IF;
+
   v_table_name := 'orders_' || p_store;
   v_user_id := auth.uid();
 
