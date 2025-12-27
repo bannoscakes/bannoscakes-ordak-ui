@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -10,19 +11,21 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
-  UserX, 
-  RotateCcw, 
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  UserX,
+  RotateCcw,
   Clock,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
-import { getStaffList, getAllActiveShifts, updateStaffMember } from "../lib/rpc-client";
+import { getAllActiveShifts, updateStaffMember } from "../lib/rpc-client";
+import { useStaffList, useInvalidateStaffList } from "../hooks/useSettingsQueries";
 
 interface StaffMember {
   id: string;
@@ -38,46 +41,45 @@ interface StaffMember {
 }
 
 export function StaffPage() {
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // Fetch staff and active shifts from Supabase
-  useEffect(() => {
-    async function fetchStaff() {
-      try {
-        // Fetch staff list and active shifts in parallel
-        const [staffList, activeShifts] = await Promise.all([
-          getStaffList(),
-          getAllActiveShifts()
-        ]);
 
-        // Create a Set of staff IDs who are currently on shift
-        const onShiftStaffIds = new Set(activeShifts.map(s => s.staff_id));
+  // Fetch staff list using React Query
+  const {
+    data: staffData = [],
+    isLoading: isStaffLoading,
+    isError: isStaffError,
+  } = useStaffList();
 
-        // Map Supabase staff to UI format
-        const mappedStaff: StaffMember[] = staffList.map((s) => ({
-          id: s.user_id,
-          fullName: s.full_name,
-          email: s.email || '',
-          role: s.role,
-          status: s.is_active ? "Active" : "Approved",
-          onShift: onShiftStaffIds.has(s.user_id),
-          hourlyRate: s.hourly_rate ?? 0,
-          phone: s.phone || undefined,
-          avatar: s.full_name.split(' ').map(n => n[0]).join('').toUpperCase(),
-          hireDate: new Date(s.created_at).toISOString().split('T')[0],
-        }));
-        setStaff(mappedStaff);
-      } catch (error) {
-        console.error('Error fetching staff:', error);
-        toast.error('Failed to load staff data');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchStaff();
-  }, []);
+  // Fetch active shifts using React Query
+  const {
+    data: activeShifts = [],
+    isLoading: isShiftsLoading,
+  } = useQuery({
+    queryKey: ['settings', 'activeShifts'],
+    queryFn: getAllActiveShifts,
+    staleTime: 60 * 1000, // 1 minute - shifts change more frequently
+  });
+
+  const invalidateStaffList = useInvalidateStaffList();
+
+  // Combine staff and shift data
+  const staff = useMemo(() => {
+    const onShiftStaffIds = new Set(activeShifts.map(s => s.staff_id));
+    return staffData.map((s): StaffMember => ({
+      id: s.user_id,
+      fullName: s.full_name,
+      email: s.email || '',
+      role: s.role,
+      status: s.is_active ? "Active" : "Approved",
+      onShift: onShiftStaffIds.has(s.user_id),
+      hourlyRate: s.hourly_rate ?? 0,
+      phone: s.phone || undefined,
+      avatar: s.full_name.split(' ').map(n => n[0]).join('').toUpperCase(),
+      hireDate: new Date(s.created_at).toISOString().split('T')[0],
+    }));
+  }, [staffData, activeShifts]);
+
+  const loading = isStaffLoading || isShiftsLoading;
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -121,13 +123,19 @@ export function StaffPage() {
     setIsProfileModalOpen(true);
   };
 
-  const handleDeactivate = (staffMember: StaffMember) => {
-    setStaff(prev => prev.map(member => 
-      member.id === staffMember.id 
-        ? { ...member, status: member.status === "Active" ? "Approved" : "Active" }
-        : member
-    ));
-    toast.success(`${staffMember.fullName} has been ${staffMember.status === "Active" ? "deactivated" : "activated"}`);
+  const handleDeactivate = async (staffMember: StaffMember) => {
+    try {
+      const newStatus = staffMember.status === "Active" ? false : true;
+      await updateStaffMember({
+        userId: staffMember.id,
+        isActive: newStatus,
+      });
+      invalidateStaffList();
+      toast.success(`${staffMember.fullName} has been ${staffMember.status === "Active" ? "deactivated" : "activated"}`);
+    } catch (error) {
+      console.error('Error updating staff status:', error);
+      toast.error('Failed to update staff status');
+    }
   };
 
   const handleResetPIN = (staffMember: StaffMember) => {
@@ -157,10 +165,8 @@ export function StaffPage() {
         phone: selectedStaff.phone,
       });
 
-      // Update local state
-      setStaff(prev => prev.map(member =>
-        member.id === selectedStaff.id ? selectedStaff : member
-      ));
+      // Invalidate cache to refetch updated staff list
+      invalidateStaffList();
       toast.success("Profile updated successfully");
       setIsProfileModalOpen(false);
     } catch (error: unknown) {
@@ -234,6 +240,15 @@ export function StaffPage() {
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Loading staff...
+                </TableCell>
+              </TableRow>
+            ) : isStaffError ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    <span>Failed to load staff data</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : filteredStaff.length === 0 ? (

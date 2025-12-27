@@ -58,10 +58,17 @@ interface UseStaffListOptions {
 
 /**
  * Hook for staff list with optional filtering
- * Used by: QueueTable (bulk assignment), StaffAssignmentModal, StaffPage, StaffAnalyticsPage
+ * Used by: QueueTable, StaffAssignmentModal, StaffPage, StaffAnalyticsPage, NewConversationModal
  *
  * Staff list changes rarely, so we use a longer staleTime (5 minutes)
  * Supports optional client-side store filtering (RPC doesn't filter by store)
+ *
+ * Note: Unlike useStorageLocations/useFlavours, useStaffList always fetches
+ * because staff data is needed immediately and has no conditional dependencies.
+ *
+ * Note: store is intentionally excluded from query key.
+ * We fetch all staff and filter client-side for cache efficiency.
+ * Multiple components with different store values share the same cache.
  */
 export function useStaffList(options: UseStaffListOptions = {}) {
   const { role = null, isActive = true, store } = options;
@@ -84,6 +91,17 @@ export function useStaffList(options: UseStaffListOptions = {}) {
     ...query,
     data: filteredData,
   };
+}
+
+/**
+ * Hook to invalidate staff list queries after mutations
+ * Used by: StaffPage after updating staff member
+ */
+export function useInvalidateStaffList() {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: [...settingsKeys.all(), 'staffList'] });
+  }, [queryClient]);
 }
 
 /**
