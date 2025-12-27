@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
-import { useCallback } from 'react';
-import { getStorageLocations, getFlavours } from '../lib/rpc-client';
+import { useCallback, useMemo } from 'react';
+import { getStorageLocations, getFlavours, getStaffList } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 /**
@@ -13,6 +13,9 @@ export const settingsKeys = {
     [...settingsKeys.all(), 'storageLocations', store ?? 'none'] as const,
   flavours: (store: Store | undefined) =>
     [...settingsKeys.all(), 'flavours', store ?? 'none'] as const,
+  staffList: (role: string | null, isActive: boolean) =>
+    [...settingsKeys.all(), 'staffList', role ?? 'all', isActive] as const,
+  activeShifts: () => [...settingsKeys.all(), 'activeShifts'] as const,
 };
 
 /**
@@ -43,6 +46,63 @@ export function useFlavours(store: Store | undefined) {
     queryFn: store ? () => getFlavours(store) : skipToken,
     staleTime: 5 * 60 * 1000, // 5 minutes - settings change rarely
   });
+}
+
+/**
+ * Options for useStaffList hook
+ */
+interface UseStaffListOptions {
+  role?: string | null;
+  isActive?: boolean;
+  store?: Store;
+}
+
+/**
+ * Hook for staff list with optional filtering
+ * Used by: QueueTable, StaffAssignmentModal, StaffPage, StaffAnalyticsPage, NewConversationModal
+ *
+ * Staff list changes rarely, so we use a longer staleTime (5 minutes)
+ * Supports optional client-side store filtering (RPC doesn't filter by store)
+ *
+ * Note: Unlike useStorageLocations/useFlavours, useStaffList always fetches
+ * because staff data is needed immediately and has no conditional dependencies.
+ *
+ * Note: store is intentionally excluded from query key.
+ * We fetch all staff and filter client-side for cache efficiency.
+ * Multiple components with different store values share the same cache.
+ */
+export function useStaffList(options: UseStaffListOptions = {}) {
+  const { role = null, isActive = true, store } = options;
+
+  const query = useQuery({
+    queryKey: settingsKeys.staffList(role, isActive),
+    queryFn: () => getStaffList(role, isActive),
+    staleTime: 5 * 60 * 1000, // 5 minutes - staff list changes rarely
+  });
+
+  // Client-side store filtering (staff can work at 'both' stores)
+  const filteredData = useMemo(() => {
+    if (!query.data || !store) return query.data;
+    return query.data.filter(
+      (staff) => staff.store === 'both' || staff.store === store
+    );
+  }, [query.data, store]);
+
+  return {
+    ...query,
+    data: filteredData,
+  };
+}
+
+/**
+ * Hook to invalidate staff list queries after mutations
+ * Used by: StaffPage after updating staff member
+ */
+export function useInvalidateStaffList() {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: [...settingsKeys.all(), 'staffList'] });
+  }, [queryClient]);
 }
 
 /**

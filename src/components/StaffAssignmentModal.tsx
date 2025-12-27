@@ -4,10 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
-import { Loader2, User, UserX } from "lucide-react";
+import { Loader2, User, UserX, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { getStaffList, type StaffMember } from "../lib/rpc-client";
 import { useAssignStaff, useUnassignStaff } from "../hooks/useQueueMutations";
+import { useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 
 interface QueueItem {
@@ -44,36 +44,26 @@ export function StaffAssignmentModal({
   store,
   onAssigned
 }: StaffAssignmentModalProps) {
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
-  const [staffLoading, setStaffLoading] = useState(false);
+
+  // Fetch staff list using React Query (filtered by store)
+  const {
+    data: staffList = [],
+    isLoading: staffLoading,
+    isError: isStaffError,
+  } = useStaffList({ store });
 
   // Use centralized mutation hooks for cache invalidation
   const assignMutation = useAssignStaff();
   const unassignMutation = useUnassignStaff();
   const loading = assignMutation.isPending || unassignMutation.isPending;
 
-  // Load staff list when modal opens
+  // Set current assignee when modal opens
   useEffect(() => {
     if (isOpen && order) {
-      loadStaffList();
-      // Set current assignee if any
       setSelectedStaffId(order.assigneeId || "");
     }
   }, [isOpen, order]);
-
-  const loadStaffList = async () => {
-    try {
-      setStaffLoading(true);
-      const staff = await getStaffList(null, true); // Get all active staff
-      setStaffList(staff);
-    } catch (error) {
-      console.error('Error loading staff list:', error);
-      toast.error('Failed to load staff list');
-    } finally {
-      setStaffLoading(false);
-    }
-  };
 
   const handleAssign = () => {
     if (!order || !selectedStaffId) return;
@@ -176,6 +166,11 @@ export function StaffAssignmentModal({
                 <Loader2 className="h-6 w-6 animate-spin mr-2" />
                 <span className="text-sm text-muted-foreground">Loading staff...</span>
               </div>
+            ) : isStaffError ? (
+              <div className="flex items-center justify-center p-4 text-destructive">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <span className="text-sm">Failed to load staff list</span>
+              </div>
             ) : (
               <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
                 <SelectTrigger>
@@ -239,9 +234,9 @@ export function StaffAssignmentModal({
           <Button variant="outline" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleAssign} 
-            disabled={loading || staffLoading || selectedStaffId === order.assigneeId}
+          <Button
+            onClick={handleAssign}
+            disabled={loading || staffLoading || isStaffError || selectedStaffId === order.assigneeId}
           >
             {loading ? (
               <>

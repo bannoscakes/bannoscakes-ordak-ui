@@ -12,17 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Clock, Search, X } from "lucide-react";
+import { Clock, Search, X, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
-import { useStorageLocations } from "../hooks/useSettingsQueries";
+import { useStorageLocations, useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/supabase";
 
@@ -62,7 +61,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
-  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
 
   // Use React Query hook for queue data
   const {
@@ -85,20 +83,16 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const { data: storageLocations = [] } = useStorageLocations(store);
 
   // Fetch staff list for bulk assignment (filtered by current store)
-  useEffect(() => {
-    async function fetchStaffList() {
-      try {
-        const staff = await getStaffList(null, true);
-        // Filter to only include staff for current store or staff that work at both stores
-        const filteredStaff = staff.filter(s => s.store === 'both' || s.store === store);
-        setStaffList(filteredStaff.map(s => ({ id: s.user_id, name: s.full_name })));
-      } catch (error) {
-        console.error('Failed to fetch staff list:', error);
-        toast.error('Failed to load staff list');
-      }
-    }
-    fetchStaffList();
-  }, [store]);
+  const {
+    data: staffData = [],
+    isLoading: isStaffLoading,
+    isError: isStaffError,
+    error: staffError,
+  } = useStaffList({ store });
+  const staffList = useMemo(
+    () => staffData.map(s => ({ id: s.user_id, name: s.full_name })),
+    [staffData]
+  );
 
   // Group orders by stage using useMemo for performance
   const queueData = useMemo(() => {
@@ -369,9 +363,25 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               <span className="text-sm">
                 {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
               </span>
-              <Select value={selectedStaff || "none"} onValueChange={(value) => setSelectedStaff(value === "none" ? null : value)}>
+              <Select
+                value={selectedStaff || "none"}
+                onValueChange={(value) => setSelectedStaff(value === "none" ? null : value)}
+                disabled={isStaffLoading || isStaffError}
+              >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select staff member" />
+                  {isStaffLoading ? (
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading staff...
+                    </span>
+                  ) : isStaffError ? (
+                    <span className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      Failed to load
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select staff member" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Select staff member</SelectItem>
@@ -380,6 +390,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {isStaffError && staffError && (
+                <span className="text-xs text-destructive" title={String(staffError)}>
+                  Unable to load staff list
+                </span>
+              )}
               <Button onClick={handleAssignToStaff} disabled={!selectedStaff || isAssigning}>
                 {isAssigning ? 'Assigning...' : 'Assign'}
               </Button>

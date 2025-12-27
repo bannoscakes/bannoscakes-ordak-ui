@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { getStaffList, getStaffMe, type StaffMember } from "../../lib/rpc-client";
+import { getStaffMe } from "../../lib/rpc-client";
+import { useStaffList } from "../../hooks/useSettingsQueries";
 import { toId } from "../../lib/messaging-adapters";
 
 interface StaffRow {
@@ -22,104 +23,54 @@ interface NewConversationModalProps {
 export function NewConversationModal({ open, onClose, onCreateConversation }: NewConversationModalProps) {
   const [isGroup, setIsGroup] = useState(false);
   const [search, setSearch] = useState("");
-  const [staff, setStaff] = useState<StaffRow[]>([]);
-  const [loadingStaff, setLoadingStaff] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Load staff once when opened (or when search changes if you support server-side filtering)
+  // Fetch staff list using React Query (auto-refreshes on window focus)
+  const { data: staffData = [], isLoading: loadingStaff, isError: isStaffError } = useStaffList();
+
+  // Fetch current user when modal opens
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    const run = async () => {
-      setLoadingStaff(true);
-      setErrorMsg(null);
-      try {
-        // Get current user and staff list in parallel with better error handling
-        const [me, rows] = await Promise.allSettled([
-          getStaffMe(),
-          getStaffList(null, true)
-        ]);
 
+    const fetchCurrentUser = async () => {
+      try {
+        const me = await getStaffMe();
         if (cancelled) return;
 
-        const currentUser = me.status === "fulfilled" ? me.value : null;
-        const list = rows.status === "fulfilled" ? rows.value : [];
-
-        const myUserId = toId(currentUser?.user_id);
+        const myUserId = toId(me?.user_id);
         setCurrentUserId(myUserId);
 
-        // If we couldn't get current user, show error and prevent conversation creation
         if (!myUserId) {
           setErrorMsg("Unable to identify current user. Please refresh and try again.");
-          return;
         }
-
-        // Map to a shape with user_id (UUID) — DO NOT pass email here
-        // EXCLUDE current user from the list
-        const mapped = (list || [])
-          .filter((r: StaffMember) => toId(r.user_id) !== myUserId) // Exclude self
-          .map((r: StaffMember) => ({
-            user_id: toId(r.user_id),
-            full_name: r.full_name ?? "Unknown",
-            role: r.role ?? "Staff",
-            email: r.email ?? null
-          })) as StaffRow[];
-        setStaff(mapped);
-      } catch (e: unknown) {
+      } catch (e) {
         if (!cancelled) {
-          console.error("Staff load error:", e);
-          setErrorMsg(e instanceof Error ? e.message : "Failed to load staff");
-          setStaff([]);
+          console.error("Failed to get current user:", e);
+          setErrorMsg("Unable to identify current user. Please refresh and try again.");
         }
-      } finally {
-        if (!cancelled) setLoadingStaff(false);
       }
     };
-    run();
+
+    fetchCurrentUser();
     return () => { cancelled = true; };
   }, [open]);
 
-  // Auto-refresh staff list when window regains focus
-  useEffect(() => {
-    if (!open) return;
-    
-    const onFocus = () => {
-      // Reload staff on window focus if modal is open
-      const run = async () => {
-        try {
-          const [me, rows] = await Promise.allSettled([
-            getStaffMe(),
-            getStaffList(null, true)
-          ]);
-
-          const currentUser = me.status === "fulfilled" ? me.value : null;
-          const list = rows.status === "fulfilled" ? rows.value : [];
-
-          const myUserId = toId(currentUser?.user_id);
-          setCurrentUserId(myUserId);
-
-          const mapped = (list || [])
-            .filter((r: StaffMember) => toId(r.user_id) !== myUserId)
-            .map((r: StaffMember) => ({
-              user_id: toId(r.user_id),
-              full_name: r.full_name ?? "Unknown",
-              role: r.role ?? "Staff",
-              email: r.email ?? null
-            })) as StaffRow[];
-          setStaff(mapped);
-        } catch (e) {
-          console.error("Staff refresh error:", e);
-        }
-      };
-      run();
-    };
-
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [open]);
+  // Map and filter staff data (exclude current user)
+  const staff = useMemo((): StaffRow[] => {
+    if (!currentUserId) return [];
+    return staffData
+      .filter(r => toId(r.user_id) !== currentUserId)
+      .map(r => ({
+        user_id: toId(r.user_id),
+        full_name: r.full_name ?? "Unknown",
+        role: r.role ?? "Staff",
+        email: r.email ?? null
+      }));
+  }, [staffData, currentUserId]);
 
   // Client-side filter
   const filtered = useMemo(() => {
@@ -158,10 +109,6 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
         setErrorMsg("Select at least two people for a group.");
         return;
       }
-
-      // DEBUG: make sure we pass UUIDs (and no self)
-      console.log("Creating conversation with IDs:", ids);
-      console.log("Current user ID (excluded):", currentUserId);
 
       await onCreateConversation(ids, isGroup); // parent awaits RPC + selects convo
       setSelected([]); // clear only after success
@@ -211,6 +158,8 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
           <div className="border rounded-lg h-64 overflow-y-auto">
             {loadingStaff ? (
               <div className="p-4 text-sm text-muted-foreground">Loading staff…</div>
+            ) : isStaffError ? (
+              <div className="p-10 text-center text-destructive">Failed to load staff list</div>
             ) : filtered.length === 0 ? (
               <div className="p-10 text-center text-muted-foreground">No staff available</div>
             ) : (
