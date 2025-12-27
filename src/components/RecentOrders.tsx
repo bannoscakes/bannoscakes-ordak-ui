@@ -6,6 +6,7 @@ import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { useRecentOrders } from "../hooks/useDashboardQueries";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
+import type { Priority } from "../types/db";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
@@ -33,7 +34,7 @@ interface DisplayOrder {
   product: string;
   quantity: number;
   status: string;
-  priority: string | null;
+  priority: Priority | null;
   dueDate: string | null;
   progress: number;
   shopify_order_id?: number;
@@ -52,6 +53,14 @@ interface RawOrderRow {
   shopify_order_id?: number;
   shopify_order_number?: number;
 }
+
+// Safely convert raw priority string to Priority type
+const toPriority = (value: string | null | undefined): Priority | null => {
+  if (value === 'High' || value === 'Medium' || value === 'Low') {
+    return value;
+  }
+  return null;
+};
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
@@ -80,7 +89,7 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   size: '', // Not available from dashboard data
   quantity: order.quantity,
   dueDate: order.dueDate,
-  priority: order.priority as 'High' | 'Medium' | 'Low' | null,
+  priority: order.priority,
   status: order.status as any,
   flavour: '', // Not available from dashboard data
   method: undefined, // Not available from dashboard data
@@ -123,7 +132,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
       product: order.product_title || '',
       quantity: order.item_qty || 1,
       status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
-      priority: order.priority || null,
+      priority: toPriority(order.priority),
       dueDate: order.due_date || null,
       progress: getProgressFromStage(order.stage),
       shopify_order_id: order.shopify_order_id,

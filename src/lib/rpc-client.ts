@@ -127,10 +127,13 @@ export interface ShippingAddress {
 }
 
 // =============================================
-// ORDER V2 TYPE (extended with shipping_address)
+// ORDER RESULT TYPES
 // =============================================
 
-export interface OrderV2Result {
+/**
+ * Base order fields returned by both get_order and get_order_v2 RPCs
+ */
+interface OrderBaseResult {
   id: string;
   shopify_order_id: number | null;
   shopify_order_number: number | null;
@@ -145,16 +148,31 @@ export interface OrderV2Result {
   product_image: string | null;
   delivery_method: string | null;
   due_date: string | null;
-  stage: string;
-  priority: string;
+  stage: Stage;
+  priority: Priority;
   storage: string | null;
   assignee_id: string | null;
   assignee_name: string | null;
-  store: 'bannos' | 'flourlane';
+  store: Store;
   currency: string | null;
   total_amount: number | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+/**
+ * Legacy order result from get_order RPC
+ * Does NOT include shipping_address or accessories
+ */
+export interface LegacyOrderResult extends OrderBaseResult {
+  // Legacy RPC does not return these fields
+}
+
+/**
+ * Extended order result from get_order_v2 RPC
+ * Includes shipping_address and accessories for packing slip
+ */
+export interface OrderV2Result extends OrderBaseResult {
   shipping_address: ShippingAddress | null;
   accessories: Array<{ title: string; quantity: number; price: string; variant_title?: string | null }> | null;
 }
@@ -509,14 +527,18 @@ export async function getUnassignedCounts(store?: Store | null) {
   return data || [];
 }
 
-export async function getOrder(orderId: string, store: Store) {
+/**
+ * Get order by ID (legacy RPC)
+ * Use getOrderV2 for extended data including shipping_address and accessories
+ */
+export async function getOrder(orderId: string, store: Store): Promise<LegacyOrderResult | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_order', {
     p_order_id: orderId,
     p_store: store,
   });
   if (error) throw error;
-  return data?.[0] || null;
+  return (data?.[0] as LegacyOrderResult) || null;
 }
 
 /**
