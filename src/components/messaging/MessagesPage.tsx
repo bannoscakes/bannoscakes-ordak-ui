@@ -11,6 +11,7 @@ import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
 import { NewConversationModal } from "./NewConversationModal";
 import { ErrorDisplay } from "../ErrorDisplay";
+import { safePushState } from "../../lib/safeNavigate";
 
 import { useErrorNotifications } from "../../lib/error-notifications";
 import { useRealtimeMessages } from "../../hooks/useRealtimeMessages";
@@ -355,10 +356,7 @@ export function MessagesPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  window.history.pushState({}, '', '/');
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                }}
+                onClick={() => safePushState('/')}
                 className="h-10 w-10 p-0 mr-2"
                 title="Back to Dashboard"
               >
