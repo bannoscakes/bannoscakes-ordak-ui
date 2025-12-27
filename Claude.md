@@ -40,5 +40,6 @@
 1. Create feature branch from `dev`
 2. One focused task per branch
 3. Open PR for review
-4. Squash and merge to `dev`
+4. **STOP - Wait for user to review and merge**
 5. Never push directly to `dev` or `main`
+6. Never merge PRs - that is the user's responsibility
