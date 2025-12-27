@@ -13,32 +13,13 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { toast } from "sonner";
 import { updateOrderCore } from "../lib/rpc-client";
 import { formatOrderNumber, formatDate as formatDateDisplay } from "../lib/format-utils";
+import type { QueueItem } from "../types/queue";
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
   bannos: 'bannos',
   flourlane: 'flour-lane',
 };
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  shopifyOrderId?: number;
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  writingOnCake?: string;
-  accessories?: string[];
-  notes?: string;
-}
 
 interface EditOrderDrawerProps {
   isOpen: boolean;
@@ -98,11 +79,15 @@ const getPriorityColor = (priority: string) => {
 export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: EditOrderDrawerProps) {
   const normalizedOrder = useMemo(() => {
     if (!order) return null;
+    // Map AccessoryItem[] to string[] for form display (extract titles)
+    const accessoryStrings = (order.accessories || []).map(acc =>
+      typeof acc === 'string' ? acc : acc.title
+    );
     return {
       ...order,
       deliveryDate: order.dueDate || "",
       writingOnCake: order.writingOnCake || "",
-      accessories: order.accessories || [],
+      accessories: accessoryStrings,
       notes: order.notes || "",
     };
   }, [order]);
@@ -217,16 +202,17 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         notes: formData.writingOnCake || undefined,
       });
 
-      // Create updated order for UI
-      const updatedOrder = {
-        ...normalizedOrder,
+      // Create updated order for UI (restore original accessories format)
+      // order is guaranteed to be non-null here since normalizedOrder check passed
+      const updatedOrder: QueueItem = {
+        ...order!,
         product: formData.product,
         size: formData.size,
         priority: calculatePriority(formData.dueDate),
         method: formData.method,
         flavour: formData.flavour || "Other",
         storage: formData.storage,
-        deliveryDate: formData.dueDate,
+        dueDate: formData.dueDate,
       };
 
       toast.success("Changes saved successfully");

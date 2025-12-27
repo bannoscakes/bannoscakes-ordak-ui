@@ -9,27 +9,7 @@ import { CameraScanner } from "./CameraScanner";
 import { getOrderForScan } from "../lib/rpc-client";
 import { useStageMutations } from "../hooks/useQueueMutations";
 import { formatOrderNumber } from "../lib/format-utils";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber?: string;
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store: 'bannos' | 'flourlane';
-  stage: string;
-  // Timestamps for stage tracking
-  covering_start_ts?: string | null;
-  decorating_start_ts?: string | null;
-}
+import type { QueueItem } from "../types/queue";
 
 interface ScannerOverlayProps {
   isOpen: boolean;

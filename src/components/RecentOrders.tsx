@@ -7,25 +7,10 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { useRecentOrders } from "../hooks/useDashboardQueries";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import type { Priority } from "../types/db";
+import type { QueueItem } from "../types/queue";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
-}
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  dueDate: string | null;
-  priority: 'High' | 'Medium' | 'Low' | null;
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavour: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
 }
 
 interface DisplayOrder {
@@ -80,7 +65,7 @@ const getProgressFromStage = (stage: string | undefined): number => {
 };
 
 // Convert dashboard order format to QueueItem format
-const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
+const convertToQueueItem = (order: DisplayOrder, store: 'bannos' | 'flourlane'): QueueItem => ({
   id: order.id,
   orderNumber: order.id,
   shopifyOrderNumber: order.shopify_order_number ? String(order.shopify_order_number) : '',
@@ -90,10 +75,12 @@ const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
   quantity: order.quantity,
   dueDate: order.dueDate,
   priority: order.priority,
-  status: order.status as any,
+  status: order.status as QueueItem['status'],
   flavour: '', // Not available from dashboard data
   method: undefined, // Not available from dashboard data
-  storage: undefined
+  storage: undefined,
+  store: store,
+  stage: order.status === 'Completed' ? 'Complete' : 'Filling', // Derive from status
 });
 
 const getStatusColor = (status: string) => {
@@ -141,7 +128,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
   }, [data]);
 
   const handleOpenOrder = (order: DisplayOrder) => {
-    const queueItem = convertToQueueItem(order);
+    const queueItem = convertToQueueItem(order, store);
     setSelectedOrder(queueItem);
     setDrawerOpen(true);
   };
@@ -242,7 +229,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                 </td>
                 <td className="py-4">
                   <OrderOverflowMenu
-                    item={order}
+                    item={convertToQueueItem(order, store)}
                     variant="dashboard"
                     onOpenOrder={() => handleOpenOrder(order)}
                     onViewDetails={() => handleViewDetails(order)}
