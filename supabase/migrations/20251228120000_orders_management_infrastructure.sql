@@ -61,14 +61,16 @@ BEGIN
     RAISE EXCEPTION 'Order not found: %', p_order_id;
   END IF;
 
-  -- Audit log
-  INSERT INTO public.audit_log (action, performed_by, source, meta)
-  VALUES (
-    'cancel_order',
-    v_user_id,
-    'rpc',
-    jsonb_build_object('order_id', p_order_id, 'store', p_store, 'reason', p_reason)
-  );
+  -- Audit log (only if user exists in public.users to avoid FK violation)
+  IF EXISTS (SELECT 1 FROM public.users WHERE id = v_user_id) THEN
+    INSERT INTO public.audit_log (action, performed_by, source, meta)
+    VALUES (
+      'cancel_order',
+      v_user_id,
+      'rpc',
+      jsonb_build_object('order_id', p_order_id, 'store', p_store, 'reason', p_reason)
+    );
+  END IF;
 
   RETURN true;
 END;
@@ -115,14 +117,16 @@ BEGIN
     RAISE EXCEPTION 'Order not found: %', p_order_id;
   END IF;
 
-  -- Audit log
-  INSERT INTO public.audit_log (action, performed_by, source, meta)
-  VALUES (
-    'mark_order_complete',
-    v_user_id,
-    'rpc',
-    jsonb_build_object('order_id', p_order_id, 'store', p_store)
-  );
+  -- Audit log (only if user exists in public.users to avoid FK violation)
+  IF EXISTS (SELECT 1 FROM public.users WHERE id = v_user_id) THEN
+    INSERT INTO public.audit_log (action, performed_by, source, meta)
+    VALUES (
+      'mark_order_complete',
+      v_user_id,
+      'rpc',
+      jsonb_build_object('order_id', p_order_id, 'store', p_store)
+    );
+  END IF;
 
   RETURN true;
 END;
