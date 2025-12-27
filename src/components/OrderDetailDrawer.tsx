@@ -84,6 +84,17 @@ const getStorageColor = () => {
   return "bg-purple-100 text-purple-700 border-purple-200";
 };
 
+const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' => {
+  switch (stage) {
+    case "Filling": return "In Production";
+    case "Covering": return "In Production";
+    case "Decorating": return "In Production";
+    case "Packing": return "Quality Check";
+    case "Complete": return "Completed";
+    default: return "Pending";
+  }
+};
+
 export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetailDrawerProps) {
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
@@ -102,17 +113,6 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
       toast.error('Failed to load order details');
     }
   }, [error]);
-
-  const mapStageToStatus = (stage: string) => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
-    }
-  };
 
   // Map fetched order to UI format, fallback to original order
   const realOrder = useMemo((): QueueItem | null => {
