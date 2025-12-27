@@ -43,6 +43,8 @@ export function useSupervisorQueue(userId: string | undefined) {
     enabled: !!userId,
     staleTime: QUEUE_REFETCH_INTERVAL,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
+    // Polling pauses when tab is hidden (saves RPC calls)
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 }
