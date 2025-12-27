@@ -6,7 +6,7 @@ import { queryClient } from "./lib/query-client";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import type { AuthUser } from "./lib/auth";
-import { safePushState } from "./lib/safeNavigate";
+import { safePushState, NAVIGATION_EVENT } from "./lib/safeNavigate";
 
 // ✅ Modern login page with Ordak branding
 import { ModernLoginPage } from "./components/Auth/ModernLoginPage";
@@ -172,35 +172,22 @@ function RootApp() {
 function RoleBasedRouter() {
   // ✅ All hooks declared unconditionally at the top
   const { user, signOut } = useAuth();
-  const [currentUrl, setCurrentUrl] = useState(window.location.href);
+  // State triggers re-render on URL change; value not read directly (we read window.location)
+  const [, setUrlTrigger] = useState(0);
 
-  // Listen for URL changes (including browser back/forward)
+  // Listen for URL changes (popstate for back/forward, custom event for programmatic navigation)
+  // Fixes #498: No longer patches pushState/replaceState - uses custom event from safePushState instead
   useEffect(() => {
     const handleUrlChange = () => {
-      setCurrentUrl(window.location.href);
+      setUrlTrigger(n => n + 1);
     };
 
-    // Listen for popstate events (browser back/forward)
     window.addEventListener('popstate', handleUrlChange);
-    
-    // Also listen for programmatic navigation (both pushState and replaceState)
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-    
-    window.history.pushState = function(...args) {
-      originalPushState.apply(window.history, args);
-      handleUrlChange();
-    };
-    
-    window.history.replaceState = function(...args) {
-      originalReplaceState.apply(window.history, args);
-      handleUrlChange();
-    };
+    window.addEventListener(NAVIGATION_EVENT, handleUrlChange);
 
     return () => {
       window.removeEventListener('popstate', handleUrlChange);
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
+      window.removeEventListener(NAVIGATION_EVENT, handleUrlChange);
     };
   }, []);
 
@@ -243,7 +230,7 @@ function RoleBasedRouter() {
     }
 
     console.log(`User ${(user as AuthUser).fullName} (${(user as AuthUser).role}) accessing single URL architecture`);
-  }, [user, currentUrl]); // Re-evaluate on user or URL changes
+  }, [user]); // Only re-evaluate on user changes, not URL (fixes #499)
 
   // ✅ Early returns AFTER all hooks have been declared
   if (!user) {

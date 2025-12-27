@@ -27,6 +27,10 @@ class AuthService {
   };
   private listeners: ((state: AuthState) => void)[] = [];
   private isRecoveringSession = false;
+  // Guard to prevent duplicate loadUserProfile calls for the same user (fixes #500)
+  private loadedUserId: string | null = null;
+  // Cache in-flight promises to deduplicate concurrent calls
+  private loadingPromises: Map<string, Promise<void>> = new Map();
 
   constructor() {
     this.initializeAuth();
@@ -63,11 +67,13 @@ class AuthService {
           return;
         }
 
-        // Handle token refresh
+        // Handle token refresh - just update session, don't re-fetch profile
         if (event === 'TOKEN_REFRESHED') {
           console.log('🔄 Token refreshed successfully');
-          if (session?.user) {
-            await this.loadUserProfile(session.user, session);
+          if (session && this.authState.user) {
+            // Update session without re-fetching profile from DB
+            // Keep loadedUserId as-is (user.id doesn't change on refresh)
+            this.updateAuthState({ session, loading: false });
           }
           return;
         }
@@ -140,24 +146,54 @@ class AuthService {
     }
   }
 
-  private async loadUserProfile(user: User, session: Session) {
+  private async loadUserProfile(user: User, session: Session): Promise<void> {
+    const userId = user.id;
+
+    // Guard: Skip if already loaded for this user
+    if (this.loadedUserId === userId) {
+      console.log('Skipping duplicate loadUserProfile for same user');
+      return;
+    }
+
+    // Check for in-flight promise to deduplicate concurrent calls
+    const existingPromise = this.loadingPromises.get(userId);
+    if (existingPromise) {
+      console.log('Awaiting existing loadUserProfile promise for user:', userId);
+      return existingPromise;
+    }
+
+    // Create and cache the loading promise
+    const loadPromise = this.executeLoadUserProfile(user, session, userId);
+    this.loadingPromises.set(userId, loadPromise);
+
     try {
-      console.log('Loading user profile for:', user.email, 'User ID:', user.id);
-      
+      await loadPromise;
+    } finally {
+      // Always clean up the promise cache
+      this.loadingPromises.delete(userId);
+    }
+  }
+
+  private async executeLoadUserProfile(user: User, session: Session, userId: string): Promise<void> {
+    try {
+      console.log('Loading user profile for:', user.email, 'User ID:', userId);
+
       // Check if user.id exists
-      if (!user.id) {
+      if (!userId) {
         console.error('User ID is null or undefined');
+        this.loadedUserId = null;
         this.updateAuthState({ user: null, session: null, loading: false });
         return;
       }
-      
+
       // Get user profile from staff_shared table using get_staff_member
       const { data, error } = await this.supabase.rpc('get_staff_member', {
-        p_user_id: user.id
+        p_user_id: userId
       });
-      
+
       if (error) {
         console.error('Error loading user profile:', error);
+        this.loadedUserId = null;
         this.updateAuthState({ user: null, session: null, loading: false });
         return;
       }
@@ -176,13 +212,16 @@ class AuthService {
         };
 
         console.log('Created auth user:', authUser);
+        this.loadedUserId = userId; // Mark as loaded on success
         this.updateAuthState({ user: authUser, session: session, loading: false });
       } else {
-        console.error('User profile not found in staff_shared table for user:', user.id);
+        console.error('User profile not found in staff_shared table for user:', userId);
+        this.loadedUserId = null;
         this.updateAuthState({ user: null, session: null, loading: false });
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
+      this.loadedUserId = null;
       this.updateAuthState({ user: null, session: null, loading: false });
     }
   }
@@ -248,12 +287,14 @@ class AuthService {
       
       // Update auth state - React will handle re-rendering
       console.log('Updating auth state to null...');
+      this.loadedUserId = null; // Reset guard for next login
       this.updateAuthState({ user: null, session: null, loading: false });
       console.log('✅ Sign out complete - state cleared');
       console.log('=== SIGNOUT DEBUG END ===');
-      
+
     } catch (error) {
       console.error('Sign out error:', error);
+      this.loadedUserId = null;
       this.updateAuthState({ user: null, session: null, loading: false });
     }
   }
@@ -323,11 +364,13 @@ class AuthService {
     return this.authState.user.store === 'both' || this.authState.user.store === store;
   }
 
-  subscribe(listener: (state: AuthState) => void): () => void {
+  subscribe(listener: (state: AuthState) => void, options?: { skipInitial?: boolean }): () => void {
     this.listeners.push(listener);
-    // Immediately call with current state
-    listener(this.authState);
-    
+    // Optionally skip immediate fire to prevent duplicate state updates during mount (fixes #501)
+    if (!options?.skipInitial) {
+      listener(this.authState);
+    }
+
     // Return unsubscribe function
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener);
