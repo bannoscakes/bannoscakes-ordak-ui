@@ -29,7 +29,7 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Fetch staff list using React Query (auto-refreshes on window focus)
-  const { data: staffData = [], isLoading: loadingStaff } = useStaffList();
+  const { data: staffData = [], isLoading: loadingStaff, isError: isStaffError } = useStaffList();
 
   // Fetch current user when modal opens
   useEffect(() => {
@@ -110,10 +110,6 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
         return;
       }
 
-      // DEBUG: make sure we pass UUIDs (and no self)
-      console.log("Creating conversation with IDs:", ids);
-      console.log("Current user ID (excluded):", currentUserId);
-
       await onCreateConversation(ids, isGroup); // parent awaits RPC + selects convo
       setSelected([]); // clear only after success
       onClose();
@@ -162,6 +158,8 @@ export function NewConversationModal({ open, onClose, onCreateConversation }: Ne
           <div className="border rounded-lg h-64 overflow-y-auto">
             {loadingStaff ? (
               <div className="p-4 text-sm text-muted-foreground">Loading staff…</div>
+            ) : isStaffError ? (
+              <div className="p-10 text-center text-destructive">Failed to load staff list</div>
             ) : filtered.length === 0 ? (
               <div className="p-10 text-center text-muted-foreground">No staff available</div>
             ) : (

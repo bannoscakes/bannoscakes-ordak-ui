@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
-import { getStorageLocations, getFlavours, getStaffList, type StaffMember } from '../lib/rpc-client';
+import { getStorageLocations, getFlavours, getStaffList } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 /**
@@ -15,6 +15,7 @@ export const settingsKeys = {
     [...settingsKeys.all(), 'flavours', store ?? 'none'] as const,
   staffList: (role: string | null, isActive: boolean) =>
     [...settingsKeys.all(), 'staffList', role ?? 'all', isActive] as const,
+  activeShifts: () => [...settingsKeys.all(), 'activeShifts'] as const,
 };
 
 /**
@@ -83,7 +84,7 @@ export function useStaffList(options: UseStaffListOptions = {}) {
   const filteredData = useMemo(() => {
     if (!query.data || !store) return query.data;
     return query.data.filter(
-      (staff: StaffMember) => staff.store === 'both' || staff.store === store
+      (staff) => staff.store === 'both' || staff.store === store
     );
   }, [query.data, store]);
 

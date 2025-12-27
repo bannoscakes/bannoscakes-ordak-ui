@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAllActiveShifts, updateStaffMember } from "../lib/rpc-client";
-import { useStaffList, useInvalidateStaffList } from "../hooks/useSettingsQueries";
+import { useStaffList, useInvalidateStaffList, settingsKeys } from "../hooks/useSettingsQueries";
 
 interface StaffMember {
   id: string;
@@ -56,7 +56,7 @@ export function StaffPage() {
     isLoading: isShiftsLoading,
     isError: isShiftsError,
   } = useQuery({
-    queryKey: ['settings', 'activeShifts'],
+    queryKey: settingsKeys.activeShifts(),
     queryFn: getAllActiveShifts,
     staleTime: 60 * 1000, // 1 minute - shifts change more frequently
   });

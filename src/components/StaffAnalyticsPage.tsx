@@ -119,8 +119,8 @@ export function StaffAnalyticsPage() {
   const isEnabled = useAnalyticsEnabled();
 
   // Fetch staff list using React Query
-  const { data: staffData = [], isLoading: isStaffLoading } = useStaffList();
-  const totalStaff = staffData.length;
+  const { data: staffData = [], isLoading: isStaffLoading, isError: isStaffError } = useStaffList();
+  const totalStaff = isStaffError ? null : staffData.length;
 
   // Fetch other analytics data
   useEffect(() => {
@@ -152,12 +152,12 @@ export function StaffAnalyticsPage() {
   const kpiMetricsWithRealData = [
     {
       title: "Total Staff",
-      value: isStaffLoading ? "..." : totalStaff.toString(),
+      value: isStaffLoading ? "..." : isStaffError ? "Error" : totalStaff?.toString() ?? "0",
       change: "",
       trend: "neutral" as const,
       icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-50"
+      color: isStaffError ? "text-destructive" : "text-blue-600",
+      bg: isStaffError ? "bg-red-50" : "bg-blue-50"
     },
     {
       title: "Avg Productivity",
