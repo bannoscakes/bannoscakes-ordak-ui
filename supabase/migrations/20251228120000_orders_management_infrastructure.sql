@@ -22,6 +22,10 @@ ALTER TABLE public.orders_flourlane
 COMMENT ON COLUMN public.orders_bannos.cancelled_at IS 'Timestamp when order was cancelled. NULL = not cancelled.';
 COMMENT ON COLUMN public.orders_flourlane.cancelled_at IS 'Timestamp when order was cancelled. NULL = not cancelled.';
 
+-- Index for filtering by cancellation status
+CREATE INDEX IF NOT EXISTS idx_orders_bannos_cancelled_at ON public.orders_bannos (cancelled_at);
+CREATE INDEX IF NOT EXISTS idx_orders_flourlane_cancelled_at ON public.orders_flourlane (cancelled_at);
+
 -- ============================================================================
 -- STEP 2: Create cancel_order RPC
 -- Sets stage='Complete' and cancelled_at=NOW()
