@@ -36,7 +36,7 @@ All navigation uses `/?page=X` or `/?view=X` query parameters on the root path `
 - **Admin** → `Dashboard` (full management)
 
 ### Data Flow
-```
+```plaintext
 Shopify → Webhook → Edge Function → work_queue table → queue-worker → orders_bannos/orders_flourlane
                                                                               ↓
                                                             Frontend ← get_queue RPC
