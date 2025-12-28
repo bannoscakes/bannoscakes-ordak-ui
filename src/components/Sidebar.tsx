@@ -1,6 +1,6 @@
-import { 
-  LayoutDashboard, 
-  Users, 
+import {
+  LayoutDashboard,
+  Users,
   Package,
   Settings,
   Clock,
@@ -8,7 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Cake,
-  AlertTriangle
+  AlertTriangle,
+  ClipboardList
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
@@ -23,6 +24,7 @@ interface SidebarProps {
 
 const navigationItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
+  { icon: ClipboardList, label: "Orders", id: "orders" },
   { icon: Cake, label: "Bannos Production", id: "bannos-production", isProduction: true },
   { icon: TallCakeIcon, label: "Flourlane Production", id: "flourlane-production", isProduction: true },
   { icon: Cake, label: "Bannos Monitor", id: "bannos-monitor", isMonitor: true },
@@ -73,11 +75,11 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           return true;
         }).map((item, index) => {
           const isActive = activeView === item.id;
-          const isClickable = item.id === "dashboard" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "time-payroll" || item.id === "inventory" || item.id === "barcode-test" || item.id === "error-test" || item.id === "bannos-settings" || item.id === "flourlane-settings";
+          const isClickable = item.id === "dashboard" || item.id === "orders" || item.id === "bannos-production" || item.id === "flourlane-production" || item.id === "bannos-monitor" || item.id === "flourlane-monitor" || item.id === "bannos-analytics" || item.id === "flourlane-analytics" || item.id === "staff-analytics" || item.id === "staff" || item.id === "time-payroll" || item.id === "inventory" || item.id === "barcode-test" || item.id === "error-test" || item.id === "bannos-settings" || item.id === "flourlane-settings";
           
           return (
             <div key={index} className="relative">
-              {item.isProduction && !collapsed && index > 0 && navigationItems[index - 1]?.id === "dashboard" && (
+              {item.isProduction && !collapsed && index > 0 && navigationItems[index - 1]?.id === "orders" && (
                 <div className="text-xs text-muted-foreground px-4 py-2 font-medium">
                   Production
                 </div>

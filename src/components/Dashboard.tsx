@@ -14,6 +14,7 @@ import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
 import { SettingsPage } from "./SettingsPage";
 import { TimePayrollPage } from "./TimePayrollPage";
 import { BarcodeTest } from "./BarcodeTest";
+import { OrdersPage } from "./OrdersPage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
@@ -98,6 +99,12 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const renderContent = () => {
     try {
       switch (activeView) {
+        case "orders":
+          return (
+            <ErrorBoundary>
+              <OrdersPage />
+            </ErrorBoundary>
+          );
         case "bannos-production":
           return (
             <ErrorBoundary>

@@ -1,0 +1,381 @@
+import { useState, useMemo } from "react";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { MoreHorizontal, Clock, Search, X } from "lucide-react";
+import { toast } from "sonner";
+import { EditOrderDrawer } from "./EditOrderDrawer";
+import { OrderDetailDrawer } from "./OrderDetailDrawer";
+import { useQueueByStore } from "../hooks/useQueueByStore";
+import { formatDate, formatOrderNumber } from "../lib/format-utils";
+import type { QueueItem } from "../types/queue";
+import type { GetQueueRow } from "../types/supabase";
+
+interface OrdersListViewProps {
+  store: "bannos" | "flourlane";
+}
+
+type OrderStatus = "in_production" | "completed" | "cancelled";
+
+function getOrderStatus(stage: string, cancelledAt: string | null): OrderStatus {
+  if (stage === "Complete" && cancelledAt) return "cancelled";
+  if (stage === "Complete") return "completed";
+  return "in_production";
+}
+
+function getStatusBadge(status: OrderStatus) {
+  switch (status) {
+    case "in_production":
+      return <Badge className="bg-yellow-100 text-yellow-800">In Production</Badge>;
+    case "completed":
+      return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+    case "cancelled":
+      return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+  }
+}
+
+function getDeliveryMethodBadge(method: string | undefined) {
+  if (method === "Pickup") {
+    return <Badge className="bg-cyan-100 text-cyan-800">Pickup</Badge>;
+  }
+  if (method === "Delivery") {
+    return <Badge className="bg-amber-100 text-amber-800">Delivery</Badge>;
+  }
+  return <Badge variant="secondary">-</Badge>;
+}
+
+export function OrdersListView({ store }: OrdersListViewProps) {
+  const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const {
+    data: orders = [],
+    isLoading,
+    error,
+    dataUpdatedAt,
+  } = useQueueByStore(store);
+
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
+
+  // Transform orders to include status
+  const orderItems = useMemo(() => {
+    return orders.map((order: GetQueueRow) => {
+      const item: QueueItem & { orderStatus: OrderStatus; cancelledAt: string | null } = {
+        id: order.id,
+        orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+        shopifyOrderNumber: String(order.shopify_order_number || ""),
+        shopifyOrderId: order.shopify_order_id || undefined,
+        customerName: order.customer_name || "",
+        product: order.product_title || "",
+        size: order.size || "",
+        quantity: order.item_qty || 1,
+        dueDate: order.due_date || null,
+        priority: order.priority || null,
+        status: order.assignee_id ? "In Production" : "Pending",
+        flavour: order.flavour || "",
+        method: (() => {
+          const normalized = order.delivery_method?.trim().toLowerCase();
+          if (normalized === "delivery") return "Delivery" as const;
+          if (normalized === "pickup") return "Pickup" as const;
+          return undefined;
+        })(),
+        storage: order.storage || "",
+        store: store,
+        stage: order.stage || "Filling",
+        orderStatus: getOrderStatus(order.stage || "Filling", (order as { cancelled_at?: string | null }).cancelled_at || null),
+        cancelledAt: (order as { cancelled_at?: string | null }).cancelled_at || null,
+      };
+      return item;
+    });
+  }, [orders, store]);
+
+  // Apply filters
+  const filteredItems = useMemo(() => {
+    return orderItems.filter((item) => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          item.orderNumber.toLowerCase().includes(query) ||
+          item.shopifyOrderNumber?.toLowerCase().includes(query) ||
+          item.customerName.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Status filter
+      if (statusFilter !== "all" && item.orderStatus !== statusFilter) {
+        return false;
+      }
+
+      // Date range filter
+      if (dateFrom && item.dueDate) {
+        const dueDate = new Date(item.dueDate);
+        const fromDate = new Date(dateFrom);
+        if (dueDate < fromDate) return false;
+      }
+      if (dateTo && item.dueDate) {
+        const dueDate = new Date(item.dueDate);
+        const toDate = new Date(dateTo);
+        if (dueDate > toDate) return false;
+      }
+
+      return true;
+    });
+  }, [orderItems, searchQuery, statusFilter, dateFrom, dateTo]);
+
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || dateFrom || dateTo;
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  const handleViewInShopify = (item: QueueItem) => {
+    const storeSlug = store === "bannos" ? "bannos" : "flour-lane";
+    if (item.shopifyOrderId) {
+      window.open(`https://admin.shopify.com/store/${storeSlug}/orders/${item.shopifyOrderId}`, "_blank");
+      return;
+    }
+    const orderNumber = item.shopifyOrderNumber?.trim();
+    if (orderNumber) {
+      window.open(`https://admin.shopify.com/store/${storeSlug}/orders?query=${encodeURIComponent(orderNumber)}`, "_blank");
+      return;
+    }
+    toast.error("No Shopify order information available");
+  };
+
+  const handleCancelOrder = (item: QueueItem) => {
+    // TODO: Wire up cancel_order RPC
+    toast.info(`Cancel order ${item.orderNumber} - coming soon`);
+  };
+
+  const handleMarkComplete = (item: QueueItem) => {
+    // TODO: Wire up mark_order_complete RPC
+    toast.info(`Mark complete ${item.orderNumber} - coming soon`);
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-48"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="p-6">
+        <div className="text-center text-destructive">
+          Failed to load orders. Please try again.
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        {/* Filters */}
+        <div className="p-4 border-b space-y-4">
+          <div className="flex flex-wrap gap-4">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search orders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Status filter */}
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatus | "all")}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="in_production">In Production</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date range */}
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-[140px]"
+                placeholder="From"
+              />
+              <span className="text-muted-foreground">to</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-[140px]"
+                placeholder="To"
+              />
+            </div>
+
+            {/* Clear filters */}
+            {hasActiveFilters && (
+              <Button variant="outline" size="sm" onClick={clearFilters} className="h-10">
+                <X className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* Results count */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              {filteredItems.length} of {orderItems.length} order{orderItems.length !== 1 ? "s" : ""}
+            </span>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              {lastUpdated ? `Updated: ${lastUpdated.toLocaleTimeString()}` : "Loading..."}
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left p-4 font-medium text-sm">Order #</th>
+                <th className="text-left p-4 font-medium text-sm">Order Type</th>
+                <th className="text-left p-4 font-medium text-sm">Customer</th>
+                <th className="text-left p-4 font-medium text-sm">Due Date</th>
+                <th className="text-left p-4 font-medium text-sm">Status</th>
+                <th className="text-right p-4 font-medium text-sm">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    {hasActiveFilters ? "No orders match your filters" : "No orders found"}
+                  </td>
+                </tr>
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="border-b hover:bg-muted/30">
+                    <td className="p-4">
+                      {formatOrderNumber(item.shopifyOrderNumber || item.orderNumber, store)}
+                    </td>
+                    <td className="p-4">{getDeliveryMethodBadge(item.method)}</td>
+                    <td className="p-4">{item.customerName}</td>
+                    <td className="p-4">{formatDate(item.dueDate)}</td>
+                    <td className="p-4">{getStatusBadge(item.orderStatus)}</td>
+                    <td className="p-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedOrder(item);
+                            setIsDetailOpen(true);
+                          }}>
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewInShopify(item)}>
+                            View in Shopify
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedOrder(item);
+                            setIsEditOpen(true);
+                          }}>
+                            Edit Order
+                          </DropdownMenuItem>
+                          {item.orderStatus === "in_production" && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleMarkComplete(item)}>
+                                Mark Complete
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleCancelOrder(item)}
+                                className="text-destructive"
+                              >
+                                Cancel Order
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Order Detail Drawer */}
+      <OrderDetailDrawer
+        order={selectedOrder}
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedOrder(null);
+        }}
+        store={store}
+      />
+
+      {/* Edit Order Drawer */}
+      <EditOrderDrawer
+        order={selectedOrder}
+        isOpen={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setSelectedOrder(null);
+        }}
+        onSaved={() => {
+          setIsEditOpen(false);
+          setSelectedOrder(null);
+        }}
+        store={store}
+      />
+    </div>
+  );
+}
