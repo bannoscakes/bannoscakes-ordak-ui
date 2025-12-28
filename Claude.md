@@ -44,7 +44,7 @@ Shopify → Webhook → Edge Function → work_queue table → queue-worker → 
 
 ### Key Patterns
 
-**RPC-Only Writes**: All database writes go through `SECURITY DEFINER` RPCs in `src/lib/rpc-client.ts`. No direct table writes from client.
+**RPC-Preferred Writes**: Most database writes go through `SECURITY DEFINER` RPCs in `src/lib/rpc-client.ts`. Some legacy writes (e.g., accessories) use direct table access with RLS.
 
 **React Query Hooks**: Data fetching uses TanStack Query. Hooks are in `src/hooks/`:
 - `useQueueByStore.ts` - Production queue data
