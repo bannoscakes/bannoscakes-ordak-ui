@@ -1,45 +1,105 @@
-# Claude Code Instructions
+# CLAUDE.md
 
-## CRITICAL DATABASE RULES
-1. NEVER use MCP to apply migrations or run CREATE/ALTER/DROP statements without explicit permission
-2. NEVER use supabase db push without explicit permission
-3. Create migration files ONLY in supabase/migrations/
-4. Tell me when migration is ready - I will review and deploy
-5. SELECT queries via MCP are OK for debugging
-6. Deploy ONLY when I explicitly say "deploy" or "supabase db push"
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+## Project Overview
 
-## Supabase Project Metadata
-**Project ID**: `iwavciibrspfjezujydc`
-**Project Name**: ordak-dev
-**Region**: ap-southeast-2
+**Ordak** is a production management system for Bannos Cakes bakery, built with React + Vite + Supabase. It manages cake orders through production stages (Filling → Covering → Decorating → Packing → Complete) for two stores: Bannos and Flourlane.
 
-**Note**: These are non-secret project identifiers only. Never commit project URLs, anon keys, or service_role keys to the repository. Use environment variables or a secrets manager for credentials.
+## Commands
 
----
+```bash
+# Development
+npm run dev              # Start Vite dev server
+npm run build            # Production build
+npm run type-check       # TypeScript validation (run before PR)
 
-## Database Changes Workflow
-- Always create feature branch first
-- Create migration file in supabase/migrations/
-- Never run `supabase db push` without approval
-- Never commit directly to dev
-- All database changes require PR review
+# Testing
+npm run test             # Run all tests with Vitest
+npm run test:e2e         # Playwright end-to-end tests
 
----
+# Database
+npm run gen:types        # Regenerate TypeScript types from Supabase schema
 
-## Migration Naming Convention
-- Always use full timestamp format: `YYYYMMDDHHMMSS_description.sql`
-- Example: `20251214193000_fix_something.sql`
-- Never use just date like `20251214_description.sql`
-- Reason: Prevents Supabase version ordering issues when multiple migrations are created on the same day
+# Edge Functions
+npm run fn:dev:bannos    # Serve Bannos webhook function locally
+npm run fn:dev:flourlane # Serve Flourlane webhook function locally
+npm run fn:dev:worker    # Serve queue worker locally
+```
 
----
+## Architecture
 
-## Development Workflow
-1. Create feature branch from `dev`
-2. One focused task per branch
-3. Open PR for review
-4. **STOP - Wait for user to review and merge**
+### Single URL Architecture
+All navigation uses `/?page=X` or `/?view=X` query parameters on the root path `/`. No separate routes exist. Role-based routing in `App.tsx` determines which workspace users see:
+- **Staff** → `StaffWorkspacePage` (mobile-optimized, scanner-first)
+- **Supervisor** → `SupervisorWorkspacePage` (queue oversight)
+- **Admin** → `Dashboard` (full management)
+
+### Data Flow
+```
+Shopify → Webhook → Edge Function → work_queue table → queue-worker → orders_bannos/orders_flourlane
+                                                                              ↓
+                                                            Frontend ← get_queue RPC
+```
+
+### Key Patterns
+
+**RPC-Only Writes**: All database writes go through `SECURITY DEFINER` RPCs in `src/lib/rpc-client.ts`. No direct table writes from client.
+
+**React Query Hooks**: Data fetching uses TanStack Query. Hooks are in `src/hooks/`:
+- `useQueueByStore.ts` - Production queue data
+- `useQueueMutations.ts` - Stage transitions, assignments
+- `useSettingsQueries.ts` - Staff, storage locations
+- `useInventoryQueries.ts` - Components, BOMs
+
+**Store Separation**: Two stores (bannos/flourlane) have separate tables (`orders_bannos`, `orders_flourlane`) but share UI components via the `store` prop pattern.
+
+**UI Components**: shadcn/ui components in `src/components/ui/`. Feature components use these primitives with Tailwind CSS.
+
+## Database Rules
+
+1. **Never apply migrations without explicit permission** - Create files in `supabase/migrations/`, then wait for review
+2. **Migration naming**: Use `YYYYMMDDHHMMSS_description.sql` (full timestamp, not just date)
+3. **SELECT queries are OK** for debugging via MCP
+4. **Never run `supabase db push`** without explicit approval
+
+## Workflow
+
+1. Create feature branch from `dev` (e.g., `feature/add-cancel-order`)
+2. One focused task per branch (~50 lines or less ideal)
+3. Run `npm run type-check` before committing
+4. Open PR for review - **never merge PRs yourself**
 5. Never push directly to `dev` or `main`
-6. Never merge PRs - that is the user's responsibility
+
+## PR Workflow Rules
+
+1. **Never auto-merge PRs** - Wait for explicit "merge" approval
+2. Run Code Guardian + PR Reviewer before requesting merge
+3. Fix ALL issues flagged by reviewers (not just critical)
+4. Chrome extension UI test for frontend changes
+
+## Supabase Project
+
+- **Project ID**: `iwavciibrspfjezujydc`
+- **Region**: ap-southeast-2
+- Generate types: `supabase gen types typescript --project-id iwavciibrspfjezujydc > src/types/supabase.ts`
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/App.tsx` | Role-based routing, auth flow |
+| `src/lib/rpc-client.ts` | All Supabase RPC wrappers |
+| `src/components/Dashboard.tsx` | Admin view router |
+| `src/components/QueueTable.tsx` | Production queue table (template for list views) |
+| `src/components/inventory-v2/` | Inventory management (template for tabbed pages) |
+| `supabase/migrations/` | Database migrations |
+| `supabase/functions/` | Edge functions (webhooks, workers) |
+
+## When Adding New Features
+
+1. **Copy existing components** - Start with verbatim copy of similar component, then modify only what's different
+2. **Use existing utilities** - `formatDate()`, `formatOrderNumber()`, existing badge styles
+3. **Use existing hooks** - Check `src/hooks/` before creating new ones
+4. **Match UI exactly** - Use same Card, Table, Badge, Tabs patterns from existing pages
+5. **RPC for writes** - Add new functions to `rpc-client.ts`, never write directly to tables
