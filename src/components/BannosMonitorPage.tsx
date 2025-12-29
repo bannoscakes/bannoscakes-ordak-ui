@@ -148,7 +148,7 @@ export function BannosMonitorPage() {
           days[dayIndex].orders.push({
             id: order.id,
             humanId: order.shopify_order_number
-              ? formatOrderNumber(String(order.shopify_order_number), 'bannos')
+              ? formatOrderNumber(String(order.shopify_order_number), 'bannos', order.id)
               : (order.human_id || order.id),
             stage: order.stage || 'Filling',
             dueDate: order.due_date

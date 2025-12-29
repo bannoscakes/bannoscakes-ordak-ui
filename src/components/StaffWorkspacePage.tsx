@@ -495,7 +495,7 @@ export function StaffWorkspacePage({
                       <div>
                         <p className="font-medium text-foreground">
                           {order.shopifyOrderNumber
-                            ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+                            ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
                             : order.orderNumber}
                         </p>
                       </div>

@@ -199,7 +199,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
               <tr key={order.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                 <td className="py-4 font-medium text-foreground">
                   {order.shopify_order_number
-                    ? formatOrderNumber(String(order.shopify_order_number), store)
+                    ? formatOrderNumber(String(order.shopify_order_number), store, order.id)
                     : order.id}
                 </td>
                 <td className="py-4 text-foreground">{order.customer}</td>

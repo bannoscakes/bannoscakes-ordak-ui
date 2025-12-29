@@ -446,7 +446,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           <div>
                             <p className="text-sm text-muted-foreground">Order</p>
                             <p>{item.shopifyOrderNumber
-                              ? formatOrderNumber(item.shopifyOrderNumber, store)
+                              ? formatOrderNumber(item.shopifyOrderNumber, store, item.id)
                               : item.orderNumber}</p>
                           </div>
                           

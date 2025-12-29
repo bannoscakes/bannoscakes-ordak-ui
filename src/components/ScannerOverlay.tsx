@@ -35,7 +35,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   // Get formatted order number for display
   const displayOrderNumber = order.shopifyOrderNumber
-    ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+    ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
     : order.orderNumber;
 
   // Determine if this scan will START or COMPLETE the stage
@@ -72,7 +72,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         setErrorMessage("");
       } else {
         setScanState('error');
-        const scannedDisplayNumber = formatOrderNumber(scannedOrder.shopify_order_number, scannedOrder.store);
+        const scannedDisplayNumber = formatOrderNumber(scannedOrder.shopify_order_number, scannedOrder.store, scannedOrder.id);
         setErrorMessage(`Wrong order scanned. Expected ${displayOrderNumber}, got ${scannedDisplayNumber}.`);
       }
     } catch (error) {

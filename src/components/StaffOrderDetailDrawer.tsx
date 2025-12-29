@@ -213,7 +213,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         extendedOrder.id
       );
       const displayOrderNumber = extendedOrder.shopifyOrderNumber
-        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
         : extendedOrder.orderNumber;
       toast.success(`Barcode printed for ${displayOrderNumber}`);
     } catch (error) {
@@ -241,7 +241,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const handlePrintPackingSlip = () => {
     try {
       const displayOrderNumber = extendedOrder.shopifyOrderNumber
-        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
         : extendedOrder.orderNumber;
       printPackingSlip({
         orderNumber: displayOrderNumber,
@@ -286,7 +286,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
                 orderId={extendedOrder.shopifyOrderNumber
-                  ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                  ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
                   : extendedOrder.orderNumber}
                 productTitle={extendedOrder.product}
                 dueDate={extendedOrder.deliveryDate}
@@ -318,7 +318,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             </div>
             <SheetDescription className="sr-only">
               Detailed view of order {extendedOrder.shopifyOrderNumber
-                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
                 : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
@@ -342,7 +342,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
-                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
                     : extendedOrder.orderNumber}
                 </p>
               </div>
