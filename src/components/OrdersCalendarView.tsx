@@ -30,9 +30,11 @@ interface CalendarOrder {
   queueItem: QueueItem;
 }
 
-interface WeekDay {
+interface CalendarDay {
   date: Date;
-  dayName: string;
+  day: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
   dateStr: string;
   orders: CalendarOrder[];
 }
@@ -43,31 +45,6 @@ const formatDateLocal = (date: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-};
-
-// Helper: Get Monday of a given week
-const getWeekStart = (date: Date): Date => {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
-// Helper: Get array of 7 dates starting from given Monday
-const getWeekDates = (startMonday: Date): WeekDay[] => {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return days.map((dayName, index) => {
-    const date = new Date(startMonday);
-    date.setDate(startMonday.getDate() + index);
-    return {
-      date,
-      dayName,
-      dateStr: formatDateLocal(date),
-      orders: [],
-    };
-  });
 };
 
 // Helper: Get order status from stage and cancelledAt
@@ -101,24 +78,61 @@ function getStatusBadge(status: OrderStatus) {
   }
 }
 
+// Helper: Get calendar grid for a month
+function getMonthGrid(year: number, month: number): CalendarDay[][] {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const today = new Date();
+  const todayStr = formatDateLocal(today);
+
+  // Get the Monday before or on the first day of the month
+  const startDay = new Date(firstDay);
+  const dayOfWeek = firstDay.getDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  startDay.setDate(firstDay.getDate() + diff);
+
+  const weeks: CalendarDay[][] = [];
+  const current = new Date(startDay);
+
+  for (let week = 0; week < 6; week++) {
+    const days: CalendarDay[] = [];
+    for (let day = 0; day < 7; day++) {
+      const dateStr = formatDateLocal(current);
+      const isCurrentMonth = current.getMonth() === month;
+      days.push({
+        date: new Date(current),
+        day: current.getDate(),
+        isCurrentMonth,
+        isToday: dateStr === todayStr,
+        dateStr,
+        orders: [],
+      });
+      current.setDate(current.getDate() + 1);
+    }
+    weeks.push(days);
+
+    // Stop if we've passed the last day of the month and completed the week
+    if (current > lastDay && current.getDay() === 1) break;
+  }
+
+  return weeks;
+}
+
 export function OrdersCalendarView({ store }: OrdersCalendarViewProps) {
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => getWeekStart(new Date()));
+  const [currentDate, setCurrentDate] = useState(() => new Date());
   const [editOrder, setEditOrder] = useState<QueueItem | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
 
   // Fetch orders
   const { data: orders = [], isLoading, isError, error, refetch } = useQueueByStore(store);
 
-  // Group orders by week day
-  const weekDays = useMemo(() => {
-    const days = getWeekDates(currentWeekStart);
-
-    // Calculate week's date range
-    const weekStart = currentWeekStart;
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    const weekStartStr = formatDateLocal(weekStart);
-    const weekEndStr = formatDateLocal(weekEnd);
+  // Build calendar grid with orders
+  const calendarGrid = useMemo(() => {
+    const grid = getMonthGrid(currentYear, currentMonth);
+    const ordersByDate = new Map<string, CalendarOrder[]>();
 
     // Group orders by due date
     orders.forEach((order: GetQueueRow) => {
@@ -127,88 +141,82 @@ export function OrdersCalendarView({ store }: OrdersCalendarViewProps) {
       const dueDate = new Date(order.due_date);
       if (Number.isNaN(dueDate.getTime())) return;
 
-      const orderDateLocal = formatDateLocal(dueDate);
+      const dateStr = formatDateLocal(dueDate);
+      const normalized = order.delivery_method?.trim().toLowerCase();
+      const method = normalized === "pickup" ? "Pickup" : normalized === "delivery" ? "Delivery" : undefined;
 
-      // Only process orders within the current week
-      if (orderDateLocal >= weekStartStr && orderDateLocal <= weekEndStr) {
-        const dayIndex = days.findIndex((d) => d.dateStr === orderDateLocal);
+      const calendarOrder: CalendarOrder = {
+        id: order.id,
+        orderNumber: formatOrderNumber(String(order.shopify_order_number || order.human_id || order.id), store),
+        customerName: order.customer_name || "",
+        method,
+        status: getOrderStatus(order.stage || "Filling", order.cancelled_at),
+        cancelledAt: order.cancelled_at,
+        queueItem: {
+          id: order.id,
+          orderNumber: String(order.human_id || order.shopify_order_number || order.id),
+          shopifyOrderNumber: String(order.shopify_order_number || ""),
+          shopifyOrderId: order.shopify_order_id || undefined,
+          customerName: order.customer_name || "",
+          product: order.product_title || "",
+          size: order.size || "",
+          quantity: order.item_qty || 1,
+          dueDate: order.due_date || null,
+          priority: order.priority || null,
+          status: order.assignee_id ? "In Production" : "Pending",
+          flavour: order.flavour || "",
+          method,
+          storage: order.storage || "",
+          store,
+          stage: order.stage || "Filling",
+        },
+      };
 
-        if (dayIndex !== -1) {
-          const normalized = order.delivery_method?.trim().toLowerCase();
-          const method = normalized === "pickup" ? "Pickup" : normalized === "delivery" ? "Delivery" : undefined;
-
-          days[dayIndex].orders.push({
-            id: order.id,
-            orderNumber: formatOrderNumber(String(order.shopify_order_number || order.human_id || order.id), store),
-            customerName: order.customer_name || "",
-            method,
-            status: getOrderStatus(order.stage || "Filling", order.cancelled_at),
-            cancelledAt: order.cancelled_at,
-            queueItem: {
-              id: order.id,
-              orderNumber: String(order.human_id || order.shopify_order_number || order.id),
-              shopifyOrderNumber: String(order.shopify_order_number || ""),
-              shopifyOrderId: order.shopify_order_id || undefined,
-              customerName: order.customer_name || "",
-              product: order.product_title || "",
-              size: order.size || "",
-              quantity: order.item_qty || 1,
-              dueDate: order.due_date || null,
-              priority: order.priority || null,
-              status: order.assignee_id ? "In Production" : "Pending",
-              flavour: order.flavour || "",
-              method,
-              storage: order.storage || "",
-              store,
-              stage: order.stage || "Filling",
-            },
-          });
-        }
-      }
+      const existing = ordersByDate.get(dateStr) || [];
+      existing.push(calendarOrder);
+      ordersByDate.set(dateStr, existing);
     });
 
-    return days;
-  }, [orders, currentWeekStart, store]);
+    // Assign orders to grid days
+    grid.forEach((week) => {
+      week.forEach((day) => {
+        day.orders = ordersByDate.get(day.dateStr) || [];
+      });
+    });
 
-  const navigateWeek = (direction: "prev" | "next") => {
-    setCurrentWeekStart((prev) => {
-      const newStart = new Date(prev);
-      newStart.setDate(prev.getDate() + (direction === "next" ? 7 : -7));
-      return newStart;
+    return grid;
+  }, [orders, currentYear, currentMonth, store]);
+
+  const navigateMonth = (direction: "prev" | "next") => {
+    setCurrentDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() + (direction === "next" ? 1 : -1));
+      return newDate;
     });
   };
 
   const goToToday = () => {
-    setCurrentWeekStart(getWeekStart(new Date()));
+    setCurrentDate(new Date());
   };
 
-  const getWeekRange = (): string => {
-    const start = currentWeekStart;
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-
-    const formatDate = (date: Date) => {
-      return date.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
-    };
-
-    if (start.getFullYear() === end.getFullYear()) {
-      return `${formatDate(start)} - ${formatDate(end)}, ${start.getFullYear()}`;
-    }
-    return `${formatDate(start)}, ${start.getFullYear()} - ${formatDate(end)}, ${end.getFullYear()}`;
-  };
+  const monthName = currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   const handleEdit = (order: CalendarOrder) => {
     setEditOrder(order.queueItem);
     setIsEditOpen(true);
   };
 
+  // Store-specific header color
+  const headerBg = store === "bannos" ? "bg-blue-50" : "bg-pink-50";
+  const headerText = store === "bannos" ? "text-blue-600" : "text-pink-600";
+
   if (isLoading) {
     return (
       <div className="animate-pulse">
         <div className="h-8 bg-muted rounded w-64 mb-6" />
-        <div className="grid grid-cols-7 gap-1">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="h-96 bg-muted rounded-lg" />
+        <div className="grid grid-cols-7 gap-px bg-muted">
+          {[...Array(35)].map((_, i) => (
+            <div key={i} className="h-32 bg-background" />
           ))}
         </div>
       </div>
@@ -221,91 +229,105 @@ export function OrdersCalendarView({ store }: OrdersCalendarViewProps) {
 
   return (
     <div className="space-y-4">
-      {/* Navigation - matches Monitor pattern */}
+      {/* Navigation */}
       <div className="flex items-center justify-between">
-        <span className="font-medium text-lg">{getWeekRange()}</span>
+        <h2 className="text-lg font-semibold">{monthName}</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goToToday}>
             Today
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigateWeek("prev")}>
+          <Button variant="ghost" size="sm" onClick={() => navigateMonth("prev")}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigateWeek("next")}>
+          <Button variant="ghost" size="sm" onClick={() => navigateMonth("next")}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Week Grid - matches Monitor pattern */}
-      <div className="grid grid-cols-7 gap-1">
-        {weekDays.map((day, index) => (
-          <div key={index} className="flex flex-col border-r last:border-r-0">
-            {/* Day Header - circular like Monitor (blue for Bannos, pink for Flourlane) */}
-            <div className="mb-4 text-center px-1">
-              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-2 ${
-                store === "bannos" ? "bg-blue-100" : "bg-pink-100"
-              }`}>
-                <div>
-                  <div className={`font-medium text-sm ${
-                    store === "bannos" ? "text-blue-600" : "text-pink-600"
-                  }`}>{day.dayName.toUpperCase()}</div>
-                  <div className={`text-xs ${
-                    store === "bannos" ? "text-blue-600" : "text-pink-600"
-                  }`}>{day.date.getDate()}</div>
+      {/* Monthly Calendar Grid */}
+      <div className="border rounded-lg overflow-hidden">
+        {/* Day Headers */}
+        <div className={`grid grid-cols-7 ${headerBg}`}>
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+            <div key={day} className={`p-2 text-center text-sm font-medium ${headerText} border-b border-r last:border-r-0`}>
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Weeks */}
+        {calendarGrid.map((week, weekIndex) => (
+          <div key={weekIndex} className="grid grid-cols-7">
+            {week.map((day, dayIndex) => (
+              <div
+                key={dayIndex}
+                className={`min-h-[140px] border-b border-r last:border-r-0 flex flex-col ${
+                  !day.isCurrentMonth ? "bg-muted/30" : "bg-background"
+                } ${day.isToday ? "ring-2 ring-inset ring-blue-500" : ""}`}
+              >
+                {/* Day Number */}
+                <div className="p-2 flex items-center justify-between">
+                  <span
+                    className={`text-sm font-medium ${
+                      !day.isCurrentMonth ? "text-muted-foreground" : ""
+                    } ${day.isToday ? "text-blue-600 font-bold" : ""}`}
+                  >
+                    {day.day}
+                  </span>
+                  {day.orders.length > 0 && (
+                    <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                      {day.orders.length}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Orders - scrollable, ALL visible */}
+                <div className="flex-1 overflow-y-auto px-1 pb-1 space-y-1">
+                  {day.orders.map((order) => {
+                    const colors = getPillColors(order.method, !!order.cancelledAt);
+                    return (
+                      <Popover key={order.id}>
+                        <PopoverTrigger asChild>
+                          <button
+                            className={`w-full flex items-center gap-1.5 px-2 py-1.5 ${colors.bg} border ${colors.border} rounded text-left hover:shadow-sm transition-shadow`}
+                          >
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${colors.dot}`} />
+                            <span className={`text-xs font-medium ${colors.text} truncate`}>
+                              {order.orderNumber}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3" align="start">
+                          <div className="space-y-2">
+                            <div className="font-semibold">{order.orderNumber}</div>
+                            <div className="text-sm text-muted-foreground">{order.customerName}</div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {order.method && (
+                                <Badge
+                                  variant="outline"
+                                  className={`border-transparent ${
+                                    order.method === "Pickup"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-amber-100 text-amber-800"
+                                  }`}
+                                >
+                                  {order.method}
+                                </Badge>
+                              )}
+                              {getStatusBadge(order.status)}
+                            </div>
+                            <Button size="sm" className="w-full mt-2" onClick={() => handleEdit(order)}>
+                              Edit Order
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <Badge variant="secondary" className="text-xs">
-                  {day.orders.length}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Orders List - scrollable, ALL visible */}
-            <div className="flex-1 space-y-2 overflow-y-auto max-h-[550px] px-1">
-              {day.orders.map((order) => {
-                const colors = getPillColors(order.method, !!order.cancelledAt);
-                return (
-                  <Popover key={order.id}>
-                    <PopoverTrigger asChild>
-                      <button
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 ${colors.bg} border ${colors.border} rounded-md hover:shadow-sm transition-all duration-200 text-left`}
-                      >
-                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`} />
-                        <span className={`text-[15px] font-medium ${colors.text} truncate`}>
-                          {order.orderNumber}
-                        </span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-3" align="start">
-                      <div className="space-y-2">
-                        <div className="font-semibold">{order.orderNumber}</div>
-                        <div className="text-sm text-muted-foreground">{order.customerName}</div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {order.method && (
-                            <Badge
-                              variant="outline"
-                              className={`border-transparent ${
-                                order.method === "Pickup"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
-                            >
-                              {order.method}
-                            </Badge>
-                          )}
-                          {getStatusBadge(order.status)}
-                        </div>
-                        <Button size="sm" className="w-full mt-2" onClick={() => handleEdit(order)}>
-                          Edit Order
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                );
-              })}
-            </div>
+            ))}
           </div>
         ))}
       </div>
