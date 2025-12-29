@@ -1,9 +1,7 @@
 -- Add p_cake_writing parameter to update_order_core RPC
 -- This fixes the bug where "Writing on Cake" was incorrectly saving to the notes field
 
--- Drop the old function signature (without p_cake_writing) to avoid overloading conflicts
-DROP FUNCTION IF EXISTS public.update_order_core(text, text, text, text, text, text, date, text, text, integer, text);
-
+-- Create the NEW function with p_cake_writing parameter (full implementation)
 CREATE OR REPLACE FUNCTION public.update_order_core(
   p_order_id text,
   p_store text,
@@ -147,5 +145,35 @@ BEGIN
   END IF;
 
   RETURN true;
+END;
+$function$;
+
+-- Recreate the OLD function signature (without p_cake_writing) for backwards compatibility
+-- This wrapper calls the new function, allowing existing code to work until updated
+CREATE OR REPLACE FUNCTION public.update_order_core(
+  p_order_id text,
+  p_store text,
+  p_customer_name text DEFAULT NULL::text,
+  p_product_title text DEFAULT NULL::text,
+  p_flavour text DEFAULT NULL::text,
+  p_notes text DEFAULT NULL::text,
+  p_due_date date DEFAULT NULL::date,
+  p_delivery_method text DEFAULT NULL::text,
+  p_size text DEFAULT NULL::text,
+  p_item_qty integer DEFAULT NULL::integer,
+  p_storage text DEFAULT NULL::text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+BEGIN
+  -- Call the new function with NULL for p_cake_writing
+  RETURN public.update_order_core(
+    p_order_id, p_store, p_customer_name, p_product_title, p_flavour,
+    p_notes, p_due_date, p_delivery_method, p_size, p_item_qty, p_storage,
+    NULL::text  -- p_cake_writing
+  );
 END;
 $function$;
