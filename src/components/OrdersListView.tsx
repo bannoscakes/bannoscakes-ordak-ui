@@ -54,20 +54,20 @@ function getOrderStatus(stage: string, cancelledAt: string | null): OrderStatus 
 function getStatusBadge(status: OrderStatus) {
   switch (status) {
     case "in_production":
-      return <Badge className="bg-yellow-100 text-yellow-800">In Production</Badge>;
+      return <Badge variant="outline" className="border-transparent bg-yellow-100 text-yellow-800">In Production</Badge>;
     case "completed":
-      return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+      return <Badge variant="outline" className="border-transparent bg-green-100 text-green-800">Completed</Badge>;
     case "cancelled":
-      return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+      return <Badge variant="outline" className="border-transparent bg-red-100 text-red-800">Cancelled</Badge>;
   }
 }
 
 function getDeliveryMethodBadge(method: string | undefined) {
   if (method === "Pickup") {
-    return <Badge className="bg-cyan-100 text-cyan-800">Pickup</Badge>;
+    return <Badge variant="outline" className="border-transparent bg-cyan-100 text-cyan-800">Pickup</Badge>;
   }
   if (method === "Delivery") {
-    return <Badge className="bg-amber-100 text-amber-800">Delivery</Badge>;
+    return <Badge variant="outline" className="border-transparent bg-amber-100 text-amber-800">Delivery</Badge>;
   }
   return null; // Hide unknown delivery method
 }
