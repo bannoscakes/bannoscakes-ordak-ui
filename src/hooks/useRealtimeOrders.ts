@@ -50,7 +50,7 @@ export function useRealtimeOrders(
         () => {
           // Invalidate all queue-related queries for this store
           queryClient.invalidateQueries({ queryKey: ['queue', store] });
-          queryClient.invalidateQueries({ queryKey: ['queueStats'] });
+          queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
         }
       )
       .subscribe((status) => {
