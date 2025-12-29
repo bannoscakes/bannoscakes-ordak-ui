@@ -227,7 +227,10 @@ export function SupervisorWorkspacePage({
   };
 
   const handlePrintBarcode = (order: SupervisorQueueItem) => {
-    toast.success(`Barcode for ${order.orderNumber} sent to printer`);
+    const displayNumber = order.shopifyOrderNumber
+      ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
+      : order.orderNumber;
+    toast.success(`Barcode for ${displayNumber} sent to printer`);
   };
 
   const handleOrderCompleted = async (_orderId: string) => {
@@ -451,7 +454,7 @@ export function SupervisorWorkspacePage({
                       <div>
                         <p className="font-medium text-foreground">
                           {order.shopifyOrderNumber
-                            ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+                            ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
                             : order.orderNumber}
                         </p>
                       </div>

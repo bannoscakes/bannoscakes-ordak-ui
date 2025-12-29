@@ -111,7 +111,7 @@ export function StaffAssignmentModal({
         <DialogHeader>
           <DialogTitle>Assign Order to Staff</DialogTitle>
           <DialogDescription>
-            Assign order {formatOrderNumber(order.shopifyOrderNumber || order.orderNumber, store)} for {order.customerName} to a staff member.
+            Assign order {formatOrderNumber(order.shopifyOrderNumber || order.orderNumber, store, order.id)} for {order.customerName} to a staff member.
           </DialogDescription>
         </DialogHeader>
 

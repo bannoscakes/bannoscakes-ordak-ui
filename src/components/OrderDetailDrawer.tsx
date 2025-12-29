@@ -158,7 +158,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
             </div>
             <SheetDescription className="sr-only">
               Detailed view of order {extendedOrder.shopifyOrderNumber
-                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store)
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store, extendedOrder.id)
                 : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
@@ -182,7 +182,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
-                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store)
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store, extendedOrder.id)
                     : extendedOrder.orderNumber}
                 </p>
               </div>

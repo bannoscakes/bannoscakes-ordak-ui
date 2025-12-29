@@ -198,7 +198,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
       { orderId: orderToCancel.id, store },
       {
         onSuccess: () => {
-          toast.success(`Order ${formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store)} cancelled`);
+          toast.success(`Order ${formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store, orderToCancel.id)} cancelled`);
           setOrderToCancel(null);
         },
         onError: (error) => {
@@ -220,7 +220,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
       { orderId: orderToComplete.id, store },
       {
         onSuccess: () => {
-          toast.success(`Order ${formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store)} marked complete`);
+          toast.success(`Order ${formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store, orderToComplete.id)} marked complete`);
           setOrderToComplete(null);
         },
         onError: (error) => {
@@ -357,7 +357,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                 filteredItems.map((item) => (
                   <tr key={item.id} className="border-b">
                     <td className="p-4">
-                      {formatOrderNumber(item.shopifyOrderNumber || item.orderNumber, store)}
+                      {formatOrderNumber(item.shopifyOrderNumber || item.orderNumber, store, item.id)}
                     </td>
                     <td className="p-4">{getDeliveryMethodBadge(item.method)}</td>
                     <td className="p-4">{item.customerName}</td>
@@ -459,7 +459,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will cancel order {orderToCancel && formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store)}.
+              This will cancel order {orderToCancel && formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store, orderToCancel.id)}.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -484,7 +484,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Mark Order Complete?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will mark order {orderToComplete && formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store)} as complete.
+              This will mark order {orderToComplete && formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store, orderToComplete.id)} as complete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

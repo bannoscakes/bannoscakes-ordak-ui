@@ -282,7 +282,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             </div>
             <SheetDescription className="sr-only">
               Edit order {normalizedOrder.shopifyOrderNumber
-                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store, normalizedOrder.id)
                 : normalizedOrder.orderNumber} for {normalizedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
@@ -297,7 +297,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             </p>
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Order:</span> {normalizedOrder.shopifyOrderNumber
-                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store, normalizedOrder.id)
                 : normalizedOrder.orderNumber}
             </p>
           </div>
