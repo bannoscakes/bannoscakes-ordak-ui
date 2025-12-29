@@ -69,7 +69,7 @@ function getDeliveryMethodBadge(method: string | undefined) {
   if (method === "Delivery") {
     return <Badge className="bg-amber-100 text-amber-800">Delivery</Badge>;
   }
-  return <Badge variant="secondary">-</Badge>;
+  return null; // Hide unknown delivery method
 }
 
 export function OrdersListView({ store }: OrdersListViewProps) {
@@ -77,6 +77,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<QueueItem | null>(null);
+  const [orderToComplete, setOrderToComplete] = useState<QueueItem | null>(null);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -208,11 +209,19 @@ export function OrdersListView({ store }: OrdersListViewProps) {
   };
 
   const handleMarkComplete = (item: QueueItem) => {
+    // Open confirmation dialog
+    setOrderToComplete(item);
+  };
+
+  const confirmMarkComplete = () => {
+    if (!orderToComplete) return;
+
     completeMutation.mutate(
-      { orderId: item.id, store },
+      { orderId: orderToComplete.id, store },
       {
         onSuccess: () => {
-          toast.success(`Order ${formatOrderNumber(item.shopifyOrderNumber || item.orderNumber, store)} marked complete`);
+          toast.success(`Order ${formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store)} marked complete`);
+          setOrderToComplete(null);
         },
         onError: (error) => {
           toast.error(`Failed to mark complete: ${error.message}`);
@@ -252,7 +261,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
       <Card>
         {/* Filters */}
         <div className="p-4 border-b space-y-4">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-4">
             {/* Search */}
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -266,7 +275,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
 
             {/* Status filter */}
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatus | "all")}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -283,7 +292,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-[140px]"
+                className="w-full sm:w-[140px]"
                 aria-label="Filter from date"
               />
               <span className="text-muted-foreground">to</span>
@@ -291,7 +300,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-[140px]"
+                className="w-full sm:w-[140px]"
                 aria-label="Filter to date"
               />
             </div>
@@ -334,7 +343,14 @@ export function OrdersListView({ store }: OrdersListViewProps) {
               {filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    {hasActiveFilters ? "No orders match your filters" : "No orders found"}
+                    <div className="space-y-2">
+                      <p>{hasActiveFilters ? "No orders match your filters" : "No orders found"}</p>
+                      {hasActiveFilters && (
+                        <Button variant="outline" size="sm" onClick={clearFilters}>
+                          Clear filters
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -359,30 +375,42 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(item);
-                            setIsDetailOpen(true);
-                          }}>
+                          <DropdownMenuItem
+                            className="min-h-[44px]"
+                            onClick={() => {
+                              setSelectedOrder(item);
+                              setIsDetailOpen(true);
+                            }}
+                          >
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleViewInShopify(item)}>
+                          <DropdownMenuItem
+                            className="min-h-[44px]"
+                            onClick={() => handleViewInShopify(item)}
+                          >
                             View in Shopify
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(item);
-                            setIsEditOpen(true);
-                          }}>
+                          <DropdownMenuItem
+                            className="min-h-[44px]"
+                            onClick={() => {
+                              setSelectedOrder(item);
+                              setIsEditOpen(true);
+                            }}
+                          >
                             Edit Order
                           </DropdownMenuItem>
                           {item.orderStatus === "in_production" && (
                             <>
-                              <DropdownMenuItem onClick={() => handleMarkComplete(item)}>
+                              <DropdownMenuItem
+                                className="min-h-[44px]"
+                                onClick={() => handleMarkComplete(item)}
+                              >
                                 Mark Complete
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                className="min-h-[44px] text-destructive"
                                 onClick={() => handleCancelOrder(item)}
-                                className="text-destructive"
                               >
                                 Cancel Order
                               </DropdownMenuItem>
@@ -445,6 +473,29 @@ export function OrdersListView({ store }: OrdersListViewProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {cancelMutation.isPending ? "Cancelling..." : "Cancel Order"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mark Complete Confirmation Dialog */}
+      <AlertDialog open={!!orderToComplete} onOpenChange={(open) => !open && setOrderToComplete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Order Complete?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark order {orderToComplete && formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store)} as complete.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={completeMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmMarkComplete}
+              disabled={completeMutation.isPending}
+            >
+              {completeMutation.isPending ? "Completing..." : "Mark Complete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
