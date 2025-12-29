@@ -53,7 +53,11 @@ export function useRealtimeOrders(
           queryClient.invalidateQueries({ queryKey: ['queueStats'] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('Realtime subscription error:', status);
+        }
+      });
 
     channelRef.current = channel;
 
