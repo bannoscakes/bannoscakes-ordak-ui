@@ -22,4 +22,7 @@ AS $function$
   END;
 $function$;
 
+-- Grant execute to authenticated users
+GRANT EXECUTE ON FUNCTION public.check_user_role(text) TO authenticated;
+
 COMMENT ON FUNCTION public.check_user_role(text) IS 'Check if current user has at least the specified role level (Admin > Supervisor > Staff)';
