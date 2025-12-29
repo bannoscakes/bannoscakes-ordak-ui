@@ -8,7 +8,9 @@
 import type { Database } from './supabase';
 
 // Queue RPC types
-export type GetQueueRow = Database['public']['Functions']['get_queue']['Returns'][number];
+// Override cancelled_at to be nullable (auto-generated type incorrectly says string)
+type GetQueueRowBase = Database['public']['Functions']['get_queue']['Returns'][number];
+export type GetQueueRow = Omit<GetQueueRowBase, 'cancelled_at'> & { cancelled_at: string | null };
 export type GetQueueStatsRow = Database['public']['Functions']['get_queue_stats']['Returns'][number];
 
 // Staff RPC types

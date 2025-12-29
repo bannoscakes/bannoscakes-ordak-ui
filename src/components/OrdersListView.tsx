@@ -123,8 +123,8 @@ export function OrdersListView({ store }: OrdersListViewProps) {
         storage: order.storage || "",
         store: store,
         stage: order.stage || "Filling",
-        orderStatus: getOrderStatus(order.stage || "Filling", (order as { cancelled_at?: string | null }).cancelled_at || null),
-        cancelledAt: (order as { cancelled_at?: string | null }).cancelled_at || null,
+        orderStatus: getOrderStatus(order.stage || "Filling", order.cancelled_at),
+        cancelledAt: order.cancelled_at,
       };
       return item;
     });
