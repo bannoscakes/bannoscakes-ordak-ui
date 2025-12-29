@@ -11,6 +11,7 @@ import {
 import { TallCakeIcon } from "./TallCakeIcon";
 import { useState, useMemo } from "react";
 import { useQueueForMonitor } from "../hooks/useQueueByStore";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/rpc-returns";
 
@@ -115,6 +116,9 @@ export function FlourlaneMonitorPage() {
     error,
     refetch,
   } = useQueueForMonitor('flourlane');
+
+  // Subscribe to real-time order updates
+  useRealtimeOrders('flourlane');
 
   // Group orders by week day using useMemo for performance
   const weekDays = useMemo(() => {
