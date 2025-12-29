@@ -12,6 +12,8 @@ import {
   startCovering,
   startDecorating,
   qcReturnToDecorating,
+  cancelOrder,
+  markOrderComplete,
 } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
@@ -387,4 +389,50 @@ export function useStageMutations() {
       completeDecorating.isPending ||
       completePacking.isPending,
   };
+}
+
+// =============================================
+// ORDER STATUS MUTATIONS
+// =============================================
+
+/**
+ * Hook to cancel an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store, reason? })` function
+ *
+ * @example
+ * const { mutate: cancel } = useCancelOrder();
+ * cancel({ orderId: '123', store: 'bannos', reason: 'Customer request' });
+ */
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ orderId, store, reason }: { orderId: string; store: Store; reason?: string }) =>
+      cancelOrder(orderId, store, reason),
+    onSuccess: () => {
+      invalidateAllQueueQueries(queryClient);
+    },
+  });
+}
+
+/**
+ * Hook to mark an order as complete
+ *
+ * @returns Mutation object with `mutate({ orderId, store })` function
+ *
+ * @example
+ * const { mutate: complete } = useMarkOrderComplete();
+ * complete({ orderId: '123', store: 'bannos' });
+ */
+export function useMarkOrderComplete() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ orderId, store }: { orderId: string; store: Store }) =>
+      markOrderComplete(orderId, store),
+    onSuccess: () => {
+      invalidateAllQueueQueries(queryClient);
+    },
+  });
 }

@@ -17,12 +17,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { MoreHorizontal, Clock, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { useQueueByStore } from "../hooks/useQueueByStore";
+import { useCancelOrder, useMarkOrderComplete } from "../hooks/useQueueMutations";
 import { formatDate, formatOrderNumber } from "../lib/format-utils";
 import type { QueueItem } from "../types/queue";
 import type { GetQueueRow } from "../types/supabase";
@@ -65,6 +76,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
   const [selectedOrder, setSelectedOrder] = useState<QueueItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<QueueItem | null>(null);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,6 +91,9 @@ export function OrdersListView({ store }: OrdersListViewProps) {
     dataUpdatedAt,
     refetch,
   } = useQueueByStore(store);
+
+  const cancelMutation = useCancelOrder();
+  const completeMutation = useMarkOrderComplete();
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
 
@@ -171,13 +186,39 @@ export function OrdersListView({ store }: OrdersListViewProps) {
   };
 
   const handleCancelOrder = (item: QueueItem) => {
-    // TODO: Wire up cancel_order RPC
-    toast.info(`Cancel order ${item.orderNumber} - coming soon`);
+    // Open confirmation dialog
+    setOrderToCancel(item);
+  };
+
+  const confirmCancelOrder = () => {
+    if (!orderToCancel) return;
+
+    cancelMutation.mutate(
+      { orderId: orderToCancel.id, store },
+      {
+        onSuccess: () => {
+          toast.success(`Order ${formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store)} cancelled`);
+          setOrderToCancel(null);
+        },
+        onError: (error) => {
+          toast.error(`Failed to cancel order: ${error.message}`);
+        },
+      }
+    );
   };
 
   const handleMarkComplete = (item: QueueItem) => {
-    // TODO: Wire up mark_order_complete RPC
-    toast.info(`Mark complete ${item.orderNumber} - coming soon`);
+    completeMutation.mutate(
+      { orderId: item.id, store },
+      {
+        onSuccess: () => {
+          toast.success(`Order ${formatOrderNumber(item.shopifyOrderNumber || item.orderNumber, store)} marked complete`);
+        },
+        onError: (error) => {
+          toast.error(`Failed to mark complete: ${error.message}`);
+        },
+      }
+    );
   };
 
   if (isLoading) {
@@ -383,6 +424,31 @@ export function OrdersListView({ store }: OrdersListViewProps) {
         }}
         store={store}
       />
+
+      {/* Cancel Order Confirmation Dialog */}
+      <AlertDialog open={!!orderToCancel} onOpenChange={(open) => !open && setOrderToCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will cancel order {orderToCancel && formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store)}.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelMutation.isPending}>
+              Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelOrder}
+              disabled={cancelMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel Order"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
