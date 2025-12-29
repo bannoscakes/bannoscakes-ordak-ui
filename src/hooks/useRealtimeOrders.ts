@@ -1,0 +1,67 @@
+import { useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { getSupabase } from '../lib/supabase';
+import type { Store } from '../types/db';
+
+/**
+ * Hook for real-time order updates via Supabase Realtime.
+ *
+ * Subscribes to INSERT, UPDATE, and DELETE events on the orders table
+ * for the specified store. When changes occur, invalidates React Query
+ * cache to trigger a refetch.
+ *
+ * @param store - The store to subscribe to ('bannos' or 'flourlane')
+ * @param options - Optional configuration
+ * @param options.enabled - Whether the subscription is active (default: true)
+ */
+export function useRealtimeOrders(
+  store: Store,
+  options?: {
+    enabled?: boolean;
+  }
+) {
+  const { enabled = true } = options || {};
+  const queryClient = useQueryClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const channelRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const supabase = getSupabase();
+    const tableName = `orders_${store}`;
+
+    // Clean up existing channel if any
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // Subscribe to all changes on the orders table
+    const channel = supabase
+      .channel(`orders-${store}-realtime`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: tableName,
+        },
+        () => {
+          // Invalidate all queue-related queries for this store
+          queryClient.invalidateQueries({ queryKey: ['queue', store] });
+          queryClient.invalidateQueries({ queryKey: ['queueStats'] });
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [store, enabled, queryClient]);
+}
