@@ -1,6 +1,9 @@
 -- Add p_cake_writing parameter to update_order_core RPC
 -- This fixes the bug where "Writing on Cake" was incorrectly saving to the notes field
 
+-- Drop the old function signature (without p_cake_writing) to avoid overloading conflicts
+DROP FUNCTION IF EXISTS public.update_order_core(text, text, text, text, text, text, date, text, text, integer, text);
+
 CREATE OR REPLACE FUNCTION public.update_order_core(
   p_order_id text,
   p_store text,
@@ -18,6 +21,7 @@ CREATE OR REPLACE FUNCTION public.update_order_core(
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $function$
 DECLARE
   v_table_name text;
@@ -128,13 +132,18 @@ BEGIN
     EXECUTE format('SELECT to_jsonb(o.*) FROM public.%I o WHERE o.id = $1', v_table_name)
     USING p_order_id INTO v_new_values;
 
-    -- Log the action
-    INSERT INTO public.audit_log (
-      table_name, record_id, action, old_values, new_values, actor_id, store, order_id
-    ) VALUES (
-      v_table_name, p_order_id, 'update_order_core',
-      v_old_values, v_new_values, v_user_id, p_store, p_order_id
-    );
+    -- Log the action (optional - don't fail if audit_log doesn't exist)
+    BEGIN
+      INSERT INTO public.audit_log (
+        table_name, record_id, action, old_values, new_values, actor_id, store, order_id
+      ) VALUES (
+        v_table_name, p_order_id, 'update_order_core',
+        v_old_values, v_new_values, v_user_id, p_store, p_order_id
+      );
+    EXCEPTION WHEN undefined_table THEN
+      -- audit_log table doesn't exist, skip logging
+      NULL;
+    END;
   END IF;
 
   RETURN true;
