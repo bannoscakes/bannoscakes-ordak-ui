@@ -64,7 +64,7 @@ function getStatusBadge(status: OrderStatus) {
 
 function getDeliveryMethodBadge(method: string | undefined) {
   if (method === "Pickup") {
-    return <Badge variant="outline" className="border-transparent bg-cyan-100 text-cyan-800">Pickup</Badge>;
+    return <Badge variant="outline" className="border-transparent bg-blue-100 text-blue-800">Pickup</Badge>;
   }
   if (method === "Delivery") {
     return <Badge variant="outline" className="border-transparent bg-amber-100 text-amber-800">Delivery</Badge>;
