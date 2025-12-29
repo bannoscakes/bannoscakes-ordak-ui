@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
 import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -76,7 +77,7 @@ export function QuickActions({ store }: QuickActionsProps) {
         const order = results[0];
         setSearchResult({
           store: order.store === 'bannos' ? 'Bannos' : 'Flourlane',
-          orderNumber: order.order_number?.toString() || order.id.slice(0, 8),
+          orderNumber: formatOrderNumber(order.order_number, order.store as 'bannos' | 'flourlane', order.id),
           storage: order.storage,
           stage: order.stage,
           productTitle: order.product_title,

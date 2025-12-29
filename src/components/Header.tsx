@@ -6,6 +6,7 @@ import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { findOrder } from "../lib/rpc-client";
 import { useInvalidateDashboard } from "../hooks/useDashboardQueries";
+import { formatOrderNumber } from "../lib/format-utils";
 
 interface HeaderProps {
   onSignOut?: () => void;
@@ -39,7 +40,7 @@ export function Header({ onSignOut }: HeaderProps) {
         const order = results[0];
         setSearchResult({
           store: order.store === 'bannos' ? 'Bannos' : 'Flourlane',
-          orderNumber: order.order_number?.toString() || order.id.slice(0, 8),
+          orderNumber: formatOrderNumber(order.order_number, order.store as 'bannos' | 'flourlane', order.id),
           storage: order.storage,
           stage: order.stage,
           productTitle: order.product_title,
