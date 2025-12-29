@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { QueueItem, QueueItemStatus, QueueItemStore } from '../types/queue';
-import type { GetQueueRow } from '../types/supabase';
+import type { GetQueueRow } from '../types/rpc-returns';
 
 /** Auto-refresh interval for queue hooks (30 seconds) */
 export const QUEUE_REFETCH_INTERVAL = 30_000;

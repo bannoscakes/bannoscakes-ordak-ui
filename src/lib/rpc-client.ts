@@ -13,7 +13,7 @@ import type {
   GetStaffTimesDetailRow,
   GetCompleteRow,
   FindOrderRow,
-} from '../types/supabase';
+} from '../types/rpc-returns';
 import { createError, handleError, logError, ErrorCode } from './error-handler';
 
 // =============================================

@@ -37,9 +37,10 @@ jobs:
         run: npm run lint 2>/dev/null || true
 
       # Quick security scan: forbid 'service_role' in sources
+      # Excludes src/types/supabase.ts (auto-generated, contains RPC function name 'app_is_service_role')
       - name: Security check - no service role keys in sources
         run: |
-          ! grep -r "service_role" --include="*.ts" --include="*.tsx" src/ || (echo "Found 'service_role' in sources" && exit 1)
+          ! grep -r "service_role" --include="*.ts" --include="*.tsx" --exclude-dir="types" src/ || (echo "Found 'service_role' in sources" && exit 1)
 
       # Build only on main
       - name: Build (main only)

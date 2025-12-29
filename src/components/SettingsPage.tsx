@@ -25,7 +25,7 @@ import {
   syncShopifyOrders
 } from "../lib/rpc-client";
 import { useInvalidateSettings } from "../hooks/useSettingsQueries";
-import type { GetSettingsRow } from "../types/supabase";
+import type { GetSettingsRow } from "../types/rpc-returns";
 
 interface SettingsPageProps {
   store: "bannos" | "flourlane";

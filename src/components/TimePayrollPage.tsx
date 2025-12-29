@@ -10,7 +10,7 @@ import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
 import { adjustStaffTime, getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
-import type { GetStaffTimesRow, GetStaffTimesDetailRow } from "../types/supabase";
+import type { GetStaffTimesRow, GetStaffTimesDetailRow } from "../types/rpc-returns";
 import { 
   Calendar,
   Search, 
