@@ -82,7 +82,11 @@ export function formatOrderNumber(
   if (idStr.startsWith('B') || idStr.startsWith('F')) {
     // Check if it looks like a prefixed order number (letter followed by digits, optional suffix)
     if (/^[BF]\d+(-[A-Z])?$/.test(idStr)) {
-      return `#${idStr}`;
+      // Check if already has suffix
+      if (/-[A-Z]$/.test(idStr)) {
+        return `#${idStr}`;
+      }
+      return `#${idStr}${suffix}`;
     }
   }
 
