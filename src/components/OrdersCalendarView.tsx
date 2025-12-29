@@ -206,9 +206,6 @@ export function OrdersCalendarView({ store }: OrdersCalendarViewProps) {
     setIsEditOpen(true);
   };
 
-  // Store-specific header color
-  const headerBg = store === "bannos" ? "bg-blue-50" : "bg-pink-50";
-  const headerText = store === "bannos" ? "text-blue-600" : "text-pink-600";
 
   if (isLoading) {
     return (
@@ -248,9 +245,9 @@ export function OrdersCalendarView({ store }: OrdersCalendarViewProps) {
       {/* Monthly Calendar Grid */}
       <div className="border rounded-lg overflow-hidden">
         {/* Day Headers */}
-        <div className={`grid grid-cols-7 ${headerBg}`}>
+        <div className="grid grid-cols-7 bg-muted/50">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-            <div key={day} className={`p-2 text-center text-sm font-medium ${headerText} border-b border-r last:border-r-0`}>
+            <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground border-b border-r last:border-r-0">
               {day}
             </div>
           ))}
