@@ -148,13 +148,13 @@ export function OrdersListView({ store }: OrdersListViewProps) {
         return false;
       }
 
-      // Date range filter - compare date strings directly to avoid timezone issues
+      // Date range filter - normalize to UTC to avoid timezone inconsistencies
       if (dateFrom || dateTo) {
         // Exclude orders without dueDate when date filter is set
         if (!item.dueDate) return false;
 
-        // Extract YYYY-MM-DD from dueDate for comparison
-        const dueDateStr = item.dueDate.slice(0, 10);
+        // Normalize dueDate to UTC date string for consistent comparison
+        const dueDateStr = new Date(item.dueDate).toISOString().slice(0, 10);
         if (dateFrom && dueDateStr < dateFrom) return false;
         if (dateTo && dueDateStr > dateTo) return false;
       }
