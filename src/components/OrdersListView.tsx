@@ -21,6 +21,7 @@ import { MoreHorizontal, Clock, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
+import { ErrorDisplay } from "./ErrorDisplay";
 import { useQueueByStore } from "../hooks/useQueueByStore";
 import { formatDate, formatOrderNumber } from "../lib/format-utils";
 import type { QueueItem } from "../types/queue";
@@ -33,7 +34,8 @@ interface OrdersListViewProps {
 type OrderStatus = "in_production" | "completed" | "cancelled";
 
 function getOrderStatus(stage: string, cancelledAt: string | null): OrderStatus {
-  if (stage === "Complete" && cancelledAt) return "cancelled";
+  // Check cancelledAt FIRST - cancelled orders may not have stage=Complete
+  if (cancelledAt) return "cancelled";
   if (stage === "Complete") return "completed";
   return "in_production";
 }
@@ -75,6 +77,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
     isLoading,
     error,
     dataUpdatedAt,
+    refetch,
   } = useQueueByStore(store);
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
@@ -129,16 +132,15 @@ export function OrdersListView({ store }: OrdersListViewProps) {
         return false;
       }
 
-      // Date range filter
-      if (dateFrom && item.dueDate) {
-        const dueDate = new Date(item.dueDate);
-        const fromDate = new Date(dateFrom);
-        if (dueDate < fromDate) return false;
-      }
-      if (dateTo && item.dueDate) {
-        const dueDate = new Date(item.dueDate);
-        const toDate = new Date(dateTo);
-        if (dueDate > toDate) return false;
+      // Date range filter - compare date strings directly to avoid timezone issues
+      if (dateFrom || dateTo) {
+        // Exclude orders without dueDate when date filter is set
+        if (!item.dueDate) return false;
+
+        // Extract YYYY-MM-DD from dueDate for comparison
+        const dueDateStr = item.dueDate.slice(0, 10);
+        if (dateFrom && dueDateStr < dateFrom) return false;
+        if (dateTo && dueDateStr > dateTo) return false;
       }
 
       return true;
@@ -195,11 +197,12 @@ export function OrdersListView({ store }: OrdersListViewProps) {
 
   if (error) {
     return (
-      <Card className="p-6">
-        <div className="text-center text-destructive">
-          Failed to load orders. Please try again.
-        </div>
-      </Card>
+      <ErrorDisplay
+        error={error}
+        title="Failed to Load Orders"
+        onRetry={() => refetch()}
+        variant="card"
+      />
     );
   }
 
@@ -240,7 +243,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
                 className="w-[140px]"
-                placeholder="From"
+                aria-label="Filter from date"
               />
               <span className="text-muted-foreground">to</span>
               <Input
@@ -248,7 +251,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
                 className="w-[140px]"
-                placeholder="To"
+                aria-label="Filter to date"
               />
             </div>
 
@@ -295,7 +298,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                 </tr>
               ) : (
                 filteredItems.map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-muted/30">
+                  <tr key={item.id} className="border-b">
                     <td className="p-4">
                       {formatOrderNumber(item.shopifyOrderNumber || item.orderNumber, store)}
                     </td>
@@ -306,8 +309,12 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                     <td className="p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button
+                            variant="ghost"
+                            className="h-12 w-12 p-0"
+                            aria-label="Order actions"
+                          >
+                            <MoreHorizontal className="h-5 w-5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
