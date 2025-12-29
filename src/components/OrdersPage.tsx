@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, List, Calendar } from "lucide-react";
 import { OrdersListView } from "./OrdersListView";
+import { OrdersCalendarView } from "./OrdersCalendarView";
 
 export function OrdersPage() {
   const [activeStore, setActiveStore] = useState<"bannos" | "flourlane">("bannos");
+  const [activeView, setActiveView] = useState<"list" | "calendar">("list");
 
   return (
     <div className="p-6 space-y-6">
@@ -17,6 +19,20 @@ export function OrdersPage() {
             <p className="text-sm text-muted-foreground">View and manage all orders</p>
           </div>
         </div>
+
+        {/* View toggle */}
+        <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "list" | "calendar")}>
+          <TabsList>
+            <TabsTrigger value="list" className="gap-2">
+              <List className="h-4 w-4" />
+              List
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Store selector - pill tabs like Dashboard */}
@@ -31,11 +47,19 @@ export function OrdersPage() {
         </TabsList>
 
         <TabsContent value="bannos" className="mt-6">
-          <OrdersListView store="bannos" />
+          {activeView === "list" ? (
+            <OrdersListView store="bannos" />
+          ) : (
+            <OrdersCalendarView store="bannos" />
+          )}
         </TabsContent>
 
         <TabsContent value="flourlane" className="mt-6">
-          <OrdersListView store="flourlane" />
+          {activeView === "list" ? (
+            <OrdersListView store="flourlane" />
+          ) : (
+            <OrdersCalendarView store="flourlane" />
+          )}
         </TabsContent>
       </Tabs>
     </div>
