@@ -241,12 +241,18 @@ export function OrdersCalendarView({ store }: OrdersCalendarViewProps) {
       <div className="grid grid-cols-7 gap-1">
         {weekDays.map((day, index) => (
           <div key={index} className="flex flex-col border-r last:border-r-0">
-            {/* Day Header - circular like Monitor */}
+            {/* Day Header - circular like Monitor (blue for Bannos, pink for Flourlane) */}
             <div className="mb-4 text-center px-1">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-2">
+              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-2 ${
+                store === "bannos" ? "bg-blue-100" : "bg-pink-100"
+              }`}>
                 <div>
-                  <div className="font-medium text-blue-600 text-sm">{day.dayName.toUpperCase()}</div>
-                  <div className="text-xs text-blue-600">{day.date.getDate()}</div>
+                  <div className={`font-medium text-sm ${
+                    store === "bannos" ? "text-blue-600" : "text-pink-600"
+                  }`}>{day.dayName.toUpperCase()}</div>
+                  <div className={`text-xs ${
+                    store === "bannos" ? "text-blue-600" : "text-pink-600"
+                  }`}>{day.date.getDate()}</div>
                 </div>
               </div>
               <div className="flex items-center justify-center">
