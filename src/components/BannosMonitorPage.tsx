@@ -12,7 +12,7 @@ import {
 import { useState, useMemo } from "react";
 import { useQueueForMonitor } from "../hooks/useQueueByStore";
 import { formatOrderNumber } from "../lib/format-utils";
-import type { GetQueueRow } from "../types/supabase";
+import type { GetQueueRow } from "../types/rpc-returns";
 
 interface OrderPill {
   id: string;

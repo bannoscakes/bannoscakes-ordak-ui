@@ -3022,12 +3022,3 @@ export const Constants = {
     },
   },
 } as const
-
-// Custom type aliases for RPC return types
-export type GetQueueRow = Database['public']['Functions']['get_queue']['Returns'][number];
-export type GetQueueStatsRow = Database['public']['Functions']['get_queue_stats']['Returns'][number];
-export type GetStaffTimesRow = Database['public']['Functions']['get_staff_times']['Returns'][number];
-export type GetStaffTimesDetailRow = Database['public']['Functions']['get_staff_times_detail']['Returns'][number];
-export type GetCompleteRow = Database['public']['Functions']['get_complete']['Returns'][number];
-export type FindOrderRow = Database['public']['Functions']['find_order']['Returns'][number];
-export type GetSettingsRow = Database['public']['Functions']['get_settings']['Returns'][number];

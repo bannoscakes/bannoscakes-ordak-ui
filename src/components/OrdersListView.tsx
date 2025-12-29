@@ -36,7 +36,7 @@ import { useQueueByStore } from "../hooks/useQueueByStore";
 import { useCancelOrder, useMarkOrderComplete } from "../hooks/useQueueMutations";
 import { formatDate, formatOrderNumber } from "../lib/format-utils";
 import type { QueueItem } from "../types/queue";
-import type { GetQueueRow } from "../types/supabase";
+import type { GetQueueRow } from "../types/rpc-returns";
 
 interface OrdersListViewProps {
   store: "bannos" | "flourlane";

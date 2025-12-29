@@ -23,7 +23,7 @@ import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
 import { useStorageLocations, useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber } from "../lib/format-utils";
-import type { GetQueueRow } from "../types/supabase";
+import type { GetQueueRow } from "../types/rpc-returns";
 import type { QueueItem } from "../types/queue";
 
 interface QueueTableProps {
