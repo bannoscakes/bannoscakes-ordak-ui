@@ -163,7 +163,7 @@ export function Header({ onSignOut }: HeaderProps) {
               <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium">Order #{searchResult.orderNumber}</div>
+                  <div className="text-sm font-medium">Order {searchResult.orderNumber}</div>
                   <div className="text-xs text-gray-600">{searchResult.productTitle}</div>
                   <div className="text-xs text-gray-600">{searchResult.customerName}</div>
                 </div>
