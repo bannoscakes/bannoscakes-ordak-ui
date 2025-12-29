@@ -649,6 +649,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
   size?: string;
   item_qty?: number;
   storage?: string;
+  cake_writing?: string;
 }) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('update_order_core', {
@@ -663,6 +664,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
     p_size: updates.size || null,
     p_item_qty: updates.item_qty || null,
     p_storage: updates.storage || null,
+    p_cake_writing: updates.cake_writing || null,
   });
   if (error) throw error;
   return data;
