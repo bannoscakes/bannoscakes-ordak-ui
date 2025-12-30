@@ -199,7 +199,8 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         flavour: formData.flavour || "Other",
         storage: formData.storage,
         due_date: formData.dueDate,
-        notes: formData.writingOnCake || undefined,
+        cake_writing: formData.writingOnCake || undefined,
+        notes: formData.notes || undefined,
       });
 
       // Create updated order for UI (restore original accessories format)
@@ -213,6 +214,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         flavour: formData.flavour || "Other",
         storage: formData.storage,
         dueDate: formData.dueDate,
+        cakeWriting: formData.writingOnCake,
+        writingOnCake: formData.writingOnCake,
+        notes: formData.notes,
       };
 
       toast.success("Changes saved successfully");
@@ -223,7 +227,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     } finally {
       setSaving(false);
     }
-  }, [formData, normalizedOrder, onSaved, store]);
+  }, [formData, normalizedOrder, onSaved, store, order]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {

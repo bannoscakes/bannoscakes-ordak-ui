@@ -1767,6 +1767,7 @@ export type Database = {
         Args: { p_order_id: string; p_reason?: string; p_store: string }
         Returns: boolean
       }
+      check_user_role: { Args: { p_role: string }; Returns: boolean }
       claim_inventory_sync_items: {
         Args: { p_limit?: number }
         Returns: {
@@ -2758,6 +2759,7 @@ export type Database = {
       test_rpc_call: { Args: never; Returns: string }
       update_order_core: {
         Args: {
+          p_cake_writing?: string
           p_customer_name?: string
           p_delivery_method?: string
           p_due_date?: string
