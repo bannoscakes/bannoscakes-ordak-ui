@@ -527,35 +527,7 @@ export type Database = {
             foreignKeyName: "inventory_txn_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "complete_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_txn_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
             referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_txn_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "queue_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_txn_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "vw_complete_minimal"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_txn_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "vw_queue_minimal"
             referencedColumns: ["id"]
           },
         ]
@@ -661,35 +633,7 @@ export type Database = {
             foreignKeyName: "order_photos_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "complete_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_photos_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
             referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_photos_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "queue_view"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_photos_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "vw_complete_minimal"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_photos_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "vw_queue_minimal"
             referencedColumns: ["id"]
           },
           {
@@ -1483,176 +1427,7 @@ export type Database = {
       }
     }
     Views: {
-      complete_view: {
-        Row: {
-          created_at: string | null
-          human_id: string | null
-          id: string | null
-          packing_complete_ts: string | null
-          storage_location: string | null
-          store: string | null
-          title: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          human_id?: string | null
-          id?: string | null
-          packing_complete_ts?: string | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          human_id?: string | null
-          id?: string | null
-          packing_complete_ts?: string | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Relationships: []
-      }
-      queue_view: {
-        Row: {
-          assignee_id: string | null
-          created_at: string | null
-          due_date: string | null
-          human_id: string | null
-          id: string | null
-          priority: Database["public"]["Enums"]["priority_lvl"] | null
-          stage: Database["public"]["Enums"]["stage"] | null
-          storage_location: string | null
-          store: string | null
-          title: string | null
-        }
-        Insert: {
-          assignee_id?: string | null
-          created_at?: string | null
-          due_date?: string | null
-          human_id?: string | null
-          id?: string | null
-          priority?: Database["public"]["Enums"]["priority_lvl"] | null
-          stage?: Database["public"]["Enums"]["stage"] | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Update: {
-          assignee_id?: string | null
-          created_at?: string | null
-          due_date?: string | null
-          human_id?: string | null
-          id?: string | null
-          priority?: Database["public"]["Enums"]["priority_lvl"] | null
-          stage?: Database["public"]["Enums"]["stage"] | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_assignee_id_fkey"
-            columns: ["assignee_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      unassigned_view: {
-        Row: {
-          count: number | null
-          stage: Database["public"]["Enums"]["stage"] | null
-          store: string | null
-        }
-        Relationships: []
-      }
-      vw_complete_minimal: {
-        Row: {
-          created_at: string | null
-          human_id: string | null
-          id: string | null
-          packing_complete_ts: string | null
-          storage_location: string | null
-          store: string | null
-          title: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          human_id?: string | null
-          id?: string | null
-          packing_complete_ts?: string | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          human_id?: string | null
-          id?: string | null
-          packing_complete_ts?: string | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Relationships: []
-      }
-      vw_queue_minimal: {
-        Row: {
-          assignee_id: string | null
-          created_at: string | null
-          due_date: string | null
-          human_id: string | null
-          id: string | null
-          priority: Database["public"]["Enums"]["priority_lvl"] | null
-          stage: Database["public"]["Enums"]["stage"] | null
-          storage_location: string | null
-          store: string | null
-          title: string | null
-        }
-        Insert: {
-          assignee_id?: string | null
-          created_at?: string | null
-          due_date?: string | null
-          human_id?: string | null
-          id?: string | null
-          priority?: Database["public"]["Enums"]["priority_lvl"] | null
-          stage?: Database["public"]["Enums"]["stage"] | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Update: {
-          assignee_id?: string | null
-          created_at?: string | null
-          due_date?: string | null
-          human_id?: string | null
-          id?: string | null
-          priority?: Database["public"]["Enums"]["priority_lvl"] | null
-          stage?: Database["public"]["Enums"]["stage"] | null
-          storage_location?: string | null
-          store?: string | null
-          title?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orders_assignee_id_fkey"
-            columns: ["assignee_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vw_unassigned_counts: {
-        Row: {
-          count: number | null
-          stage: Database["public"]["Enums"]["stage"] | null
-          store: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       _order_lock: { Args: { p_order_id: string }; Returns: undefined }
@@ -1989,24 +1764,6 @@ export type Database = {
           store: string
         }[]
       }
-      get_complete_minimal: {
-        Args: { p_limit?: number; p_store?: string }
-        Returns: {
-          created_at: string | null
-          human_id: string | null
-          id: string | null
-          packing_complete_ts: string | null
-          storage_location: string | null
-          store: string | null
-          title: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "vw_complete_minimal"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
       get_components: {
         Args: {
           p_active_only?: boolean
@@ -2247,27 +2004,6 @@ export type Database = {
           total_count: number
           updated_at: string
         }[]
-      }
-      get_queue_minimal: {
-        Args: { p_limit?: number; p_offset?: number; p_store?: string }
-        Returns: {
-          assignee_id: string | null
-          created_at: string | null
-          due_date: string | null
-          human_id: string | null
-          id: string | null
-          priority: Database["public"]["Enums"]["priority_lvl"] | null
-          stage: Database["public"]["Enums"]["stage"] | null
-          storage_location: string | null
-          store: string | null
-          title: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "vw_queue_minimal"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       get_queue_stats: {
         Args: { p_store: string }
@@ -2686,6 +2422,8 @@ export type Database = {
         Args: { default_value: boolean; k: string; ns: string }
         Returns: boolean
       }
+      soft_delete_accessory: { Args: { p_id: string }; Returns: boolean }
+      soft_delete_cake_topper: { Args: { p_id: string }; Returns: boolean }
       start_break: { Args: { p_staff_id?: string }; Returns: string }
       start_covering: {
         Args: { p_order_id: string; p_store: string }
