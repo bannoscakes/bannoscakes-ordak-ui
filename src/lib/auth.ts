@@ -55,7 +55,7 @@ class AuthService {
 
       // Listen for auth changes with explicit event handling
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('🔐 Auth event:', event, session?.user?.email || 'no user');
+        console.log('🔐 Auth event:', event);
         
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
@@ -176,7 +176,7 @@ class AuthService {
 
   private async executeLoadUserProfile(user: User, session: Session, userId: string): Promise<void> {
     try {
-      console.log('Loading user profile for:', user.email, 'User ID:', userId);
+      console.log('Loading user profile for user ID:', userId);
 
       // Check if user.id exists
       if (!userId) {

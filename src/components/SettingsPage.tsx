@@ -158,18 +158,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         const shopifyToken = allSettings?.find((s: GetSettingsRow) => s.key === 'shopifyToken')?.value;
         const inventoryTracking = allSettings?.find((s: GetSettingsRow) => s.key === 'inventory_tracking_enabled')?.value;
 
-        console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
-        console.log('Storage locations details:', { 
-          storage, 
-          isArray: Array.isArray(storage), 
-          type: typeof storage,
-          length: storage?.length 
-        });
-        console.log('Monitor density details:', { 
-          monitor, 
-          type: typeof monitor,
-          isString: typeof monitor === 'string'
-        });
+        // Debug logs removed - contained sensitive data (shopifyToken)
 
         // Update settings with real data
         // Use store-specific defaults to prevent cross-store contamination
