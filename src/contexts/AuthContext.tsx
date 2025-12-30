@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { useAuth, type AuthUser } from '../hooks/useAuth';
 import type { Session } from '@supabase/supabase-js';
 
@@ -35,39 +35,4 @@ export function useAuthContext() {
     throw new Error('useAuthContext must be used within an AuthProvider');
   }
   return context;
-}
-
-// Higher-order component for role-based access control
-interface WithAuthProps {
-  requiredRole?: 'Staff' | 'Supervisor' | 'Admin';
-  requiredStore?: 'bannos' | 'flourlane';
-  fallback?: ReactNode;
-}
-
-export function withAuth<P extends object>(
-  Component: React.ComponentType<P>,
-  options: WithAuthProps = {}
-) {
-  return function AuthenticatedComponent(props: P) {
-    const { user, loading, hasRole, canAccessStore } = useAuthContext();
-    const { requiredRole, requiredStore, fallback = <div>Access denied</div> } = options;
-
-    if (loading) {
-      return <div>Loading...</div>;
-    }
-
-    if (!user) {
-      return <div>Please sign in</div>;
-    }
-
-    if (requiredRole && !hasRole(requiredRole)) {
-      return <>{fallback}</>;
-    }
-
-    if (requiredStore && !canAccessStore(requiredStore)) {
-      return <>{fallback}</>;
-    }
-
-    return <Component {...props} />;
-  };
 }

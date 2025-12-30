@@ -9,11 +9,7 @@ import { QuickActions } from "./QuickActions";
 // import { EquipmentStatus } from "./EquipmentStatus"; // Hidden - not in use
 import { usePrefetchStore } from "../hooks/useDashboardQueries";
 
-interface DashboardContentProps {
-  onNavigateToSignup?: () => void;
-}
-
-export function DashboardContent({ onNavigateToSignup }: DashboardContentProps) {
+export function DashboardContent() {
   const [activeStore, setActiveStore] = useState("bannos");
   const prefetchStore = usePrefetchStore();
 
@@ -24,16 +20,6 @@ export function DashboardContent({ onNavigateToSignup }: DashboardContentProps) 
           <h1 className="text-2xl font-medium text-foreground">Production Overview</h1>
           <p className="text-sm text-muted-foreground">Monitor both store operations - Staff and Inventory available in sidebar</p>
         </div>
-        {onNavigateToSignup && (
-          <div className="flex gap-2">
-            <button
-              onClick={onNavigateToSignup}
-              className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
-            >
-              Create Account
-            </button>
-          </div>
-        )}
       </div>
 
       <Tabs value={activeStore} onValueChange={setActiveStore} className="w-full">
