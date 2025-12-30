@@ -1,19 +1,4 @@
-export const stageColorClasses: Record<string, string> = {
-  "Filling": "bg-blue-50 text-blue-700 border-blue-200",
-  "Covering": "bg-purple-50 text-purple-700 border-purple-200",
-  "Decorating": "bg-pink-50 text-pink-700 border-pink-200",
-  "Packing": "bg-orange-50 text-orange-700 border-orange-200",
-  "Complete": "bg-green-50 text-green-700 border-green-200",
-};
-
-export function getStageColorClass(stage: string, cancelledAt?: string | null): string {
-  if (cancelledAt) {
-    return "bg-red-100 text-red-800 border-red-200";
-  }
-  return stageColorClasses[stage] || "bg-gray-50 text-gray-700 border-gray-200";
-}
-
-// Extended color parts for Monitor pages that need individual classes
+// Single source of truth for stage colors
 export interface StageColorParts {
   bg: string;
   border: string;
@@ -60,6 +45,21 @@ const defaultColorParts: StageColorParts = {
   text: "text-gray-700",
   dot: "bg-gray-500",
 };
+
+const cancelledColorClass = "bg-red-100 text-red-800 border-red-200";
+
+// Derived from stageColorParts - single source of truth
+function partsToClass(parts: StageColorParts): string {
+  return `${parts.bg} ${parts.text} ${parts.border}`;
+}
+
+export function getStageColorClass(stage: string, cancelledAt?: string | null): string {
+  if (cancelledAt) {
+    return cancelledColorClass;
+  }
+  const parts = stageColorParts[stage] || defaultColorParts;
+  return partsToClass(parts);
+}
 
 export function getStageColorParts(stage: string): StageColorParts {
   return stageColorParts[stage] || defaultColorParts;
