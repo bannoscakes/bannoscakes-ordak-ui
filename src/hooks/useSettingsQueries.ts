@@ -11,8 +11,6 @@ export const settingsKeys = {
   all: () => ['settings'] as const,
   storageLocations: (store: Store | undefined) =>
     [...settingsKeys.all(), 'storageLocations', store ?? 'none'] as const,
-  flavours: (store: Store | undefined) =>
-    [...settingsKeys.all(), 'flavours', store ?? 'none'] as const,
   staffList: (role: string | null, isActive: boolean) =>
     [...settingsKeys.all(), 'staffList', role ?? 'all', isActive] as const,
   activeShifts: () => [...settingsKeys.all(), 'activeShifts'] as const,
