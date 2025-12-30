@@ -6,6 +6,7 @@
 
 import type { ShippingAddress } from './rpc-client';
 import { formatOrderNumber } from './format-utils';
+import type { AccessoryItem } from '../types/queue';
 
 /**
  * Escape HTML to prevent XSS
@@ -33,23 +34,15 @@ function formatDate(dateStr: string | null | undefined): string {
   return `${day}/${month}/${year}`;
 }
 
-
-interface AccessoryItem {
-  title: string;
-  quantity: number;
-  price: string;
-  variant_title?: string | null;
-}
-
 interface PackingSlipData {
   orderNumber: string;
   customerName: string;
-  dueDate: string;
+  dueDate: string | null;
   deliveryMethod: 'Delivery' | 'Pickup';
   product: string;
   size: string;
   quantity: number;
-  flavor?: string;
+  flavour?: string;
   cakeWriting?: string;
   accessories?: AccessoryItem[] | null;
   notes?: string;
@@ -142,13 +135,13 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
       `).join('')
     : '';
 
-  // Build properties list (cake writing, size, flavor) - with HTML escaping
+  // Build properties list (cake writing, size, flavour) - with HTML escaping
   const propertiesHTML: string[] = [];
   if (data.size && data.size !== 'Unknown') {
     propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Size:</strong> ${escapeHtml(data.size)}</small>`);
   }
-  if (data.flavor) {
-    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Flavour:</strong> ${escapeHtml(data.flavor)}</small>`);
+  if (data.flavour) {
+    propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Flavour:</strong> ${escapeHtml(data.flavour)}</small>`);
   }
   if (data.cakeWriting) {
     propertiesHTML.push(`<small style="font-size: 1.1em;"><strong>Writing On Cake:</strong> ${escapeHtml(data.cakeWriting)}</small>`);
@@ -157,7 +150,7 @@ export function generatePackingSlipHTML(data: PackingSlipData): string {
   // Format and escape user-provided content
   const formattedOrderNumber = formatOrderNumber(data.orderNumber, data.store);
   const safeOrderNumber = escapeHtml(formattedOrderNumber);
-  const safeDueDate = escapeHtml(formatDate(data.dueDate));
+  const safeDueDate = escapeHtml(data.dueDate ? formatDate(data.dueDate) : 'No date');
   const safeProduct = escapeHtml(data.product);
   const safeNotes = escapeHtml(data.notes);
   const safeCustomerName = escapeHtml(data.customerName);

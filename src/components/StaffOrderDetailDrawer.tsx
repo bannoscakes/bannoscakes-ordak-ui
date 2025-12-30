@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Bot, Printer, QrCode, ExternalLink, Package, RotateCcw } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -9,45 +9,23 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { getStorageLocations, getOrderV2, getOrder, type ShippingAddress } from "../lib/rpc-client";
 import { printBarcodeWorkflow } from "../lib/barcode-service";
 import { printPackingSlip } from "../lib/packing-slip-service";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { BarcodeGenerator } from "./BarcodeGenerator";
 import { useSetStorage, useQcReturnToDecorating } from "../hooks/useQueueMutations";
+import { useStorageLocations } from "../hooks/useSettingsQueries";
+import { useOrderDetail } from "../hooks/useOrderQueries";
+import type { QueueItem, AccessoryItem } from "../types/queue";
 
-interface AccessoryItem {
-  title: string;
-  quantity: number;
-  price: string;
-  variant_title?: string | null;
-}
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  shopifyOrderId?: number;  // Actual Shopify order ID for admin URLs
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store: 'bannos' | 'flourlane';
-  stage: string;
-  // Database fields for order details
-  cakeWriting?: string;
-  notes?: string;
-  productImage?: string | null;
-  accessories?: AccessoryItem[] | null;
-  shippingAddress?: ShippingAddress | null;  // For packing slip
-}
+// Fallback storage locations if fetch fails or store is undefined
+const DEFAULT_STORAGE_LOCATIONS = [
+  "Store Fridge",
+  "Store Freezer",
+  "Kitchen Coolroom",
+  "Kitchen Freezer",
+  "Basement Coolroom"
+];
 
 interface StaffOrderDetailDrawerProps {
   isOpen: boolean;
@@ -65,13 +43,13 @@ const getExtendedOrderData = (order: QueueItem | null) => {
   return {
     ...order,
     // Use real size from database (no mock override)
-    size: order.size || 'Unknown',
+    size: order.size || '',
     // Use real cake writing from database
     writingOnCake: order.cakeWriting || '',
     // Pass raw accessories for flexible rendering (not pre-formatted strings)
     accessories: order.accessories || [],
     // Use real due date
-    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
+    deliveryDate: order.dueDate || null,
     // Use real notes from database (null means no notes)
     notes: order.notes || '',
     // Use real product image from database
@@ -84,7 +62,7 @@ const getExtendedOrderData = (order: QueueItem | null) => {
   };
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | null) => {
   const colors = {
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -113,163 +91,70 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
   const [selectedStorage, setSelectedStorage] = useState("");
-  const [availableStorageLocations, setAvailableStorageLocations] = useState<string[]>([]);
-  const [storageLoading, setStorageLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
 
   // Use centralized mutation hooks for cache invalidation
   const setStorageMutation = useSetStorage();
   const qcReturnMutation = useQcReturnToDecorating();
 
-  // Fetch real order data when drawer opens
+  // Fetch storage locations using React Query (with fallback for errors/undefined store)
+  const { data: availableStorageLocations = DEFAULT_STORAGE_LOCATIONS, isLoading: storageLoading } = useStorageLocations(order?.store);
+
+  // Fetch order detail using React Query (handles race conditions automatically)
+  const { data: fetchedOrder, isLoading: loading, error } = useOrderDetail(
+    order?.id,
+    order?.store,
+    { enabled: isOpen && !!order }
+  );
+
+  // Show error toast when fetch fails
   useEffect(() => {
-    if (!isOpen || !order) return;
-
-    // Validate store type
-    if (order.store !== 'bannos' && order.store !== 'flourlane') {
-      console.error('Invalid store type:', order.store);
-      toast.error('Invalid store type');
-      return;
+    if (error) {
+      console.error('Error fetching order data:', error);
+      toast.error('Failed to load order details');
     }
+  }, [error]);
 
-    // Race condition protection - track if effect is still active
-    let cancelled = false;
-
-    const fetchRealOrderData = async () => {
-      try {
-        setLoading(true);
-
-        // Try getOrderV2 first (includes shipping_address), fallback to getOrder
-        let foundOrder;
-        try {
-          foundOrder = await getOrderV2(order.id, order.store);
-        } catch (err: unknown) {
-          // Only fallback to getOrder if the RPC function doesn't exist yet
-          // PostgreSQL error code 42883 = undefined_function
-          const errMessage = err instanceof Error ? err.message : '';
-          const isRpcNotFound =
-            (err && typeof err === 'object' && 'code' in err && err.code === '42883') ||
-            (errMessage.includes('function') && errMessage.includes('does not exist'));
-
-          if (isRpcNotFound) {
-            console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
-            foundOrder = await getOrder(order.id, order.store);
-          } else {
-            // Rethrow other errors (network, permission, data issues)
-            console.error('getOrderV2 failed with unexpected error', err);
-            throw err;
-          }
-        }
-
-        // Don't update state if effect was cancelled (order changed during fetch)
-        if (cancelled) return;
-
-        if (foundOrder) {
-          // Map database order to UI format
-          const mappedOrder: QueueItem = {
-            id: foundOrder.id,
-            orderNumber: foundOrder.human_id || String(foundOrder.shopify_order_number) || foundOrder.id,
-            shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
-            shopifyOrderId: foundOrder.shopify_order_id || undefined,
-            customerName: foundOrder.customer_name || "Unknown Customer",
-            product: foundOrder.product_title || "Unknown Product",
-            size: foundOrder.size || "Unknown",
-            quantity: foundOrder.item_qty || 1,
-            deliveryTime: foundOrder.due_date || new Date().toISOString(),
-            priority: foundOrder.priority === 'High' ? 'High' : foundOrder.priority === 'Medium' ? 'Medium' : 'Low',
-            status: mapStageToStatus(foundOrder.stage),
-            flavor: foundOrder.flavour || "",
-            dueTime: foundOrder.due_date || new Date().toISOString(),
-            method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
-            storage: foundOrder.storage || "",
-            store: foundOrder.store || order.store,
-            stage: foundOrder.stage || "Filling",
-            // Add real data from database
-            cakeWriting: foundOrder.cake_writing || '',
-            notes: foundOrder.notes || '',
-            productImage: foundOrder.product_image || null,
-            accessories: foundOrder.accessories || null,
-            // shipping_address only available from getOrderV2, use type guard
-            shippingAddress: 'shipping_address' in foundOrder ? (foundOrder.shipping_address as ShippingAddress | null) : null
-          };
-
-          setRealOrder(mappedOrder);
-        } else {
-          // Fallback to original order if not found in database
-          setRealOrder(order);
-        }
-      } catch (error) {
-        // Don't update state if effect was cancelled
-        if (cancelled) return;
-
-        console.error('Error fetching order data:', error);
-        toast.error('Failed to load order details');
-        // Fallback to original order
-        setRealOrder(order);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchRealOrderData();
-
-    // Cleanup: mark as cancelled when order changes or component unmounts
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, order]);
+  // Map fetched order to UI format, fallback to original order
+  const realOrder = useMemo((): QueueItem | null => {
+    if (fetchedOrder) {
+      return {
+        id: fetchedOrder.id,
+        orderNumber: fetchedOrder.human_id || String(fetchedOrder.shopify_order_number) || fetchedOrder.id,
+        shopifyOrderNumber: String(fetchedOrder.shopify_order_number || ''),
+        shopifyOrderId: fetchedOrder.shopify_order_id || undefined,
+        customerName: fetchedOrder.customer_name || '',
+        product: fetchedOrder.product_title || '',
+        size: fetchedOrder.size || '',
+        quantity: fetchedOrder.item_qty || 1,
+        dueDate: fetchedOrder.due_date || null,
+        priority: fetchedOrder.priority,
+        status: mapStageToStatus(fetchedOrder.stage),
+        flavour: fetchedOrder.flavour || "",
+        method: fetchedOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+        storage: fetchedOrder.storage || "",
+        store: fetchedOrder.store || order?.store || 'bannos',
+        stage: fetchedOrder.stage || "Filling",
+        cakeWriting: fetchedOrder.cake_writing || '',
+        notes: fetchedOrder.notes || '',
+        productImage: fetchedOrder.product_image || null,
+        accessories: fetchedOrder.accessories || null,
+        shippingAddress: fetchedOrder.shipping_address || null
+      };
+    }
+    return order || null;
+  }, [fetchedOrder, order]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order);
-  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
-  const isPackingStage = currentStage === "packing";
+  const currentStage = realOrder?.stage || order?.stage || "";
+  const isPackingStage = currentStage === "Packing";
   const storeName = extendedOrder?.store === "bannos" ? "Bannos" : "Flourlane";
 
-  // Load storage locations when component mounts or order changes
+  // Sync selectedStorage with order's current storage when order changes
   useEffect(() => {
-    if (!isOpen || !extendedOrder?.store) return;
-
-    // Race condition protection
-    let cancelled = false;
-
-    const loadStorageLocations = async () => {
-      try {
-        setStorageLoading(true);
-        const locations = await getStorageLocations(extendedOrder.store);
-
-        if (cancelled) return;
-
-        setAvailableStorageLocations(locations);
-        // Set current storage location
-        setSelectedStorage(extendedOrder.storage || "");
-      } catch (error) {
-        if (cancelled) return;
-
-        console.error('Error loading storage locations:', error);
-        toast.error('Failed to load storage locations');
-        // Fallback to default locations
-        setAvailableStorageLocations([
-          "Store Fridge",
-          "Store Freezer",
-          "Kitchen Coolroom",
-          "Kitchen Freezer",
-          "Basement Coolroom"
-        ]);
-      } finally {
-        if (!cancelled) {
-          setStorageLoading(false);
-        }
-      }
-    };
-
-    loadStorageLocations();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, extendedOrder?.store, extendedOrder?.storage]);
+    if (extendedOrder?.storage !== undefined) {
+      setSelectedStorage(extendedOrder.storage || "");
+    }
+  }, [extendedOrder?.storage]);
 
   // Early return after all hooks
   if (!extendedOrder) return null;
@@ -328,7 +213,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         extendedOrder.id
       );
       const displayOrderNumber = extendedOrder.shopifyOrderNumber
-        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
         : extendedOrder.orderNumber;
       toast.success(`Barcode printed for ${displayOrderNumber}`);
     } catch (error) {
@@ -356,7 +241,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const handlePrintPackingSlip = () => {
     try {
       const displayOrderNumber = extendedOrder.shopifyOrderNumber
-        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+        ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
         : extendedOrder.orderNumber;
       printPackingSlip({
         orderNumber: displayOrderNumber,
@@ -366,7 +251,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         product: extendedOrder.product,
         size: extendedOrder.size,
         quantity: extendedOrder.quantity,
-        flavor: extendedOrder.flavor,
+        flavour: extendedOrder.flavour,
         cakeWriting: extendedOrder.writingOnCake,
         accessories: extendedOrder.accessories,
         notes: extendedOrder.notes,
@@ -401,10 +286,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             <div className="w-full max-w-[320px]">
               <BarcodeGenerator
                 orderId={extendedOrder.shopifyOrderNumber
-                  ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                  ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
                   : extendedOrder.orderNumber}
                 productTitle={extendedOrder.product}
-                dueDate={extendedOrder.dueTime}
+                dueDate={extendedOrder.deliveryDate}
                 store={extendedOrder.store}
                 onPrint={handleBarcodePrint}
                 onDownload={handleBarcodeDownload}
@@ -433,7 +318,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             </div>
             <SheetDescription className="sr-only">
               Detailed view of order {extendedOrder.shopifyOrderNumber
-                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
                 : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
@@ -457,7 +342,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
-                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store)
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, extendedOrder.store, extendedOrder.id)
                     : extendedOrder.orderNumber}
                 </p>
               </div>
@@ -466,14 +351,14 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
                   <div className="mt-2">
                     <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                      {extendedOrder.priority}
+                      {extendedOrder.priority || '-'}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
-                  <p className="mt-2 text-foreground">
-                    {formatDate(extendedOrder.deliveryDate)}
+                  <p className={`mt-2 ${extendedOrder.deliveryDate ? 'text-foreground' : 'text-red-600 font-bold'}`}>
+                    {extendedOrder.deliveryDate ? formatDate(extendedOrder.deliveryDate) : 'No due date'}
                   </p>
                 </div>
                 <div>
@@ -516,7 +401,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
             </div>
 
             {/* Size + Flavour + Quantity (cake details together) */}
-            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-4 ${extendedOrder.flavour && extendedOrder.flavour !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Size
@@ -525,12 +410,12 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   {extendedOrder.size}
                 </p>
               </div>
-              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+              {extendedOrder.flavour && extendedOrder.flavour !== "Other" && (
                 <div>
                   <label className="text-sm font-medium text-foreground block mb-2">
                     Flavour
                   </label>
-                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                  <p className="text-sm text-foreground">{extendedOrder.flavour}</p>
                 </div>
               )}
               <div>

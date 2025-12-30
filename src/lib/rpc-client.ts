@@ -6,7 +6,25 @@
 
 import { getSupabase } from './supabase';
 import type { Stage, Store, Priority } from '../types/db';
+import type {
+  GetQueueRow,
+  GetQueueStatsRow,
+  GetStaffTimesRow,
+  GetStaffTimesDetailRow,
+  GetCompleteRow,
+  FindOrderRow,
+} from '../types/rpc-returns';
 import { createError, handleError, logError, ErrorCode } from './error-handler';
+
+// =============================================
+// ERROR TYPES
+// =============================================
+
+interface SupabaseError {
+  message?: string;
+  code?: string;
+  details?: string;
+}
 
 // =============================================
 // MESSAGING TYPES
@@ -109,10 +127,13 @@ export interface ShippingAddress {
 }
 
 // =============================================
-// ORDER V2 TYPE (extended with shipping_address)
+// ORDER RESULT TYPES
 // =============================================
 
-export interface OrderV2Result {
+/**
+ * Base order fields returned by both get_order and get_order_v2 RPCs
+ */
+interface OrderBaseResult {
   id: string;
   shopify_order_id: number | null;
   shopify_order_number: number | null;
@@ -127,16 +148,31 @@ export interface OrderV2Result {
   product_image: string | null;
   delivery_method: string | null;
   due_date: string | null;
-  stage: string;
-  priority: string;
+  stage: Stage;
+  priority: Priority;
   storage: string | null;
   assignee_id: string | null;
   assignee_name: string | null;
-  store: 'bannos' | 'flourlane';
+  store: Store;
   currency: string | null;
   total_amount: number | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+/**
+ * Legacy order result from get_order RPC
+ * Does NOT include shipping_address or accessories
+ */
+export interface LegacyOrderResult extends OrderBaseResult {
+  // Legacy RPC does not return these fields
+}
+
+/**
+ * Extended order result from get_order_v2 RPC
+ * Includes shipping_address and accessories for packing slip
+ */
+export interface OrderV2Result extends OrderBaseResult {
   shipping_address: ShippingAddress | null;
   accessories: Array<{ title: string; quantity: number; price: string; variant_title?: string | null }> | null;
 }
@@ -148,13 +184,17 @@ export interface OrderV2Result {
 /**
  * Check if error is related to JWT/auth token expiration
  */
-function isJWTError(error: any): boolean {
+function isJWTError(error: unknown): boolean {
   if (!error) return false;
-  
+
   const errorString = JSON.stringify(error).toLowerCase();
-  const message = error.message?.toLowerCase() || '';
-  const code = error.code?.toString() || '';
-  
+  const message = (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string')
+    ? error.message.toLowerCase()
+    : '';
+  const code = (error && typeof error === 'object' && 'code' in error)
+    ? String(error.code)
+    : '';
+
   return (
     code === '401' ||
     code === 'PGRST301' ||
@@ -172,7 +212,7 @@ function isJWTError(error: any): boolean {
  */
 async function withErrorHandling<T>(
   rpcCall: () => Promise<T>,
-  context: { operation: string; rpcName: string; params?: any; retryCount?: number }
+  context: { operation: string; rpcName: string; params?: object; retryCount?: number }
 ): Promise<T> {
   const startTime = Date.now();
   const maxRetries = 1; // Retry once on JWT errors
@@ -240,7 +280,7 @@ async function withErrorHandling<T>(
     
     if (error && typeof error === 'object' && 'code' in error) {
       // Supabase error
-      const supabaseError = error as any;
+      const supabaseError = error as SupabaseError;
       
       switch (supabaseError.code) {
         case '23505': // PostgreSQL unique constraint violation
@@ -442,7 +482,7 @@ export interface GetQueueParams {
   sort_order?: 'ASC' | 'DESC';
 }
 
-export async function getQueue(params: GetQueueParams = {}) {
+export async function getQueue(params: GetQueueParams = {}): Promise<GetQueueRow[]> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
@@ -459,7 +499,7 @@ export async function getQueue(params: GetQueueParams = {}) {
         p_sort_order: params.sort_order || 'DESC',
       });
       if (error) throw error;
-      return data || [];
+      return (data || []) as GetQueueRow[];
     },
     {
       operation: 'getQueue',
@@ -469,13 +509,13 @@ export async function getQueue(params: GetQueueParams = {}) {
   );
 }
 
-export async function getQueueStats(store?: Store | null) {
+export async function getQueueStats(store?: Store | null): Promise<GetQueueStatsRow | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_queue_stats', {
     p_store: store || null,
   });
   if (error) throw error;
-  return data?.[0] || null;
+  return (data?.[0] as GetQueueStatsRow) || null;
 }
 
 export async function getUnassignedCounts(store?: Store | null) {
@@ -487,14 +527,18 @@ export async function getUnassignedCounts(store?: Store | null) {
   return data || [];
 }
 
-export async function getOrder(orderId: string, store: Store) {
+/**
+ * Get order by ID (legacy RPC)
+ * Use getOrderV2 for extended data including shipping_address and accessories
+ */
+export async function getOrder(orderId: string, store: Store): Promise<LegacyOrderResult | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_order', {
     p_order_id: orderId,
     p_store: store,
   });
   if (error) throw error;
-  return data?.[0] || null;
+  return (data?.[0] as LegacyOrderResult) || null;
 }
 
 /**
@@ -605,6 +649,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
   size?: string;
   item_qty?: number;
   storage?: string;
+  cake_writing?: string;
 }) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('update_order_core', {
@@ -619,6 +664,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
     p_size: updates.size || null,
     p_item_qty: updates.item_qty || null,
     p_storage: updates.storage || null,
+    p_cake_writing: updates.cake_writing || null,
   });
   if (error) throw error;
   return data;
@@ -628,7 +674,7 @@ export async function updateOrderCore(orderId: string, store: Store, updates: {
 // SCANNER & STAGE MANAGEMENT
 // =============================================
 
-export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, any>) {
+export async function handlePrintBarcode(barcode: string, orderId: string, performedBy?: string, context?: Record<string, unknown>) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('handle_print_barcode', {
     p_barcode: barcode,
@@ -955,6 +1001,23 @@ export async function getBomByProduct(productTitle: string, store: string) {
   return data || [];
 }
 
+// Raw row type from get_bom_details RPC
+interface BomDetailsRow {
+  bom_id: string;
+  product_title: string;
+  store: 'bannos' | 'flourlane' | 'both';
+  description: string | null;
+  component_id: string | null;
+  component_sku: string | null;
+  component_name: string | null;
+  quantity_required: number | null;
+  unit: string | null;
+  current_stock: number | null;
+  is_optional: boolean;
+  notes: string | null;
+  stage_to_consume: 'Filling' | 'Decorating' | 'Packing' | null;
+}
+
 /**
  * Fetch BOM details including all items for a specific BOM
  * Use this when opening a BOM for editing to get the full item list
@@ -967,11 +1030,9 @@ export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
   if (error) throw error;
 
   // Transform flat RPC result to BOMItem array
-  // RPC returns: bom_id, product_title, store, description, component_id, component_sku,
-  //              component_name, quantity_required, unit, current_stock, is_optional, notes, stage_to_consume
   return (data || [])
-    .filter((row: any) => row.component_id !== null) // Filter out BOMs with no items
-    .map((row: any) => ({
+    .filter((row: BomDetailsRow) => row.component_id !== null) // Filter out BOMs with no items
+    .map((row: BomDetailsRow) => ({
       id: `${row.bom_id}-${row.component_id}`, // Composite ID for UI
       bom_id: row.bom_id,
       component_id: row.component_id,
@@ -1127,13 +1188,31 @@ export async function deleteBom(id: string): Promise<boolean> {
   return data as boolean;
 }
 
+// Deduction result from deduct_for_order RPC
+interface DeductionResult {
+  component_id: string;
+  component_name: string;
+  quantity_deducted: number;
+  previous_stock: number;
+  new_stock: number;
+}
+
+interface DeductForOrderResponse {
+  success: boolean;
+  error?: string;
+  bom_id?: string;
+  order_id?: string;
+  quantity?: number;
+  deductions?: DeductionResult[];
+}
+
 export async function deductForOrder(params: {
   order_id: string;
   product_title: string;
   store: string;
   quantity?: number;
   created_by?: string;
-}) {
+}): Promise<DeductForOrderResponse> {
   return withErrorHandling(
     async () => {
       const supabase = getSupabase();
@@ -1145,7 +1224,7 @@ export async function deductForOrder(params: {
         p_created_by: params.created_by || null,
       });
       if (error) throw error;
-      return data as { success: boolean; error?: string; bom_id?: string; order_id?: string; quantity?: number; deductions?: any[] };
+      return data as DeductForOrderResponse;
     },
     {
       operation: 'deductForOrder',
@@ -1231,14 +1310,19 @@ export async function adjustAccessoryStock(params: {
 }
 
 export async function deleteAccessory(id: string): Promise<void> {
-  const supabase = getSupabase();
-  // Soft delete: set is_active = false instead of hard delete
-  const { error } = await supabase
-    .from('accessories')
-    .update({ is_active: false })
-    .eq('id', id);
-
-  if (error) throw error;
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('soft_delete_accessory', { p_id: id });
+      if (error) throw error;
+      if (!data) throw new Error('Accessory not found or already deleted');
+    },
+    {
+      operation: 'deleteAccessory',
+      rpcName: 'soft_delete_accessory',
+      params: { id }
+    }
+  );
 }
 
 // =============================================
@@ -1260,9 +1344,12 @@ export interface CakeTopper {
   updated_at: string;
 }
 
+// Raw RPC result without computed fields
+type RawCakeTopper = Omit<CakeTopper, 'is_low_stock' | 'is_out_of_stock'>;
+
 export async function getCakeToppers(params: {
   activeOnly?: boolean;
-} = {}) {
+} = {}): Promise<CakeTopper[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_cake_toppers', {
     p_active_only: params.activeOnly ?? true,  // Default to showing active only
@@ -1270,11 +1357,11 @@ export async function getCakeToppers(params: {
   if (error) throw error;
 
   // Add computed fields
-  return (data || []).map((topper: any) => ({
+  return (data || []).map((topper: RawCakeTopper) => ({
     ...topper,
     is_low_stock: topper.current_stock < topper.min_stock && topper.current_stock > 0,
     is_out_of_stock: topper.current_stock === 0,
-  })) as CakeTopper[];
+  }));
 }
 
 export async function upsertCakeTopper(params: {
@@ -1329,14 +1416,19 @@ export async function adjustCakeTopperStock(params: {
 }
 
 export async function deleteCakeTopper(id: string): Promise<void> {
-  const supabase = getSupabase();
-  // Soft delete: set is_active = false instead of hard delete
-  const { error } = await supabase
-    .from('cake_toppers')
-    .update({ is_active: false })
-    .eq('id', id);
-
-  if (error) throw error;
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('soft_delete_cake_topper', { p_id: id });
+      if (error) throw error;
+      if (!data) throw new Error('Cake topper not found or already deleted');
+    },
+    {
+      operation: 'deleteCakeTopper',
+      rpcName: 'soft_delete_cake_topper',
+      params: { id }
+    }
+  );
 }
 
 // =============================================
@@ -1395,7 +1487,10 @@ export async function getSetting(store: Store, key: string) {
   return data;
 }
 
-export async function setSetting(store: Store, key: string, value: any) {
+// JSON-compatible value type for settings
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+export async function setSetting(store: Store, key: string, value: JsonValue) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_setting', {
     p_store: store,
@@ -1415,7 +1510,7 @@ export async function getPrintingSettings(store: Store) {
   return data;
 }
 
-export async function setPrintingSettings(store: Store, settings: any) {
+export async function setPrintingSettings(store: Store, settings: Record<string, JsonValue>) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_printing_settings', {
     p_store: store,
@@ -1565,7 +1660,7 @@ export async function getComplete(params: {
   limit?: number;
   sort_by?: 'completed_at' | 'due_date' | 'customer_name' | 'product_title';
   sort_order?: 'ASC' | 'DESC';
-} = {}) {
+} = {}): Promise<GetCompleteRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_complete', {
     p_store: params.store || null,
@@ -1578,20 +1673,20 @@ export async function getComplete(params: {
     p_sort_order: params.sort_order || 'DESC',
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as GetCompleteRow[];
 }
 
 // =============================================
 // UNIVERSAL ORDER SEARCH (ALL STAGES)
 // =============================================
 
-export async function findOrder(search: string) {
+export async function findOrder(search: string): Promise<FindOrderRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('find_order', {
     p_search: search,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as FindOrderRow[];
 }
 
 // =============================================
@@ -1725,7 +1820,7 @@ export async function getQCReviewQueue(store?: Store, qcStatus?: string) {
 // TIME & PAYROLL
 // =============================================
 
-export async function getStaffTimes(from: string, to: string, staffId?: string) {
+export async function getStaffTimes(from: string, to: string, staffId?: string): Promise<GetStaffTimesRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_staff_times', {
     p_from: from,
@@ -1733,10 +1828,10 @@ export async function getStaffTimes(from: string, to: string, staffId?: string) 
     p_staff_id: staffId || null,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as GetStaffTimesRow[];
 }
 
-export async function getStaffTimesDetail(staffId: string, from: string, to: string) {
+export async function getStaffTimesDetail(staffId: string, from: string, to: string): Promise<GetStaffTimesDetailRow[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_staff_times_detail', {
     p_staff_id: staffId,
@@ -1744,7 +1839,7 @@ export async function getStaffTimesDetail(staffId: string, from: string, to: str
     p_to: to,
   });
   if (error) throw error;
-  return data || [];
+  return (data || []) as GetStaffTimesDetailRow[];
 }
 
 export async function adjustStaffTime(
@@ -1825,6 +1920,16 @@ export async function cancelOrder(orderId: string, store: Store, reason?: string
     p_order_id: orderId,
     p_store: store,
     p_reason: reason || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function markOrderComplete(orderId: string, store: Store) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('mark_order_complete', {
+    p_order_id: orderId,
+    p_store: store,
   });
   if (error) throw error;
   return data;

@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQueueForMonitor } from "../hooks/useQueueByStore";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { formatOrderNumber } from "../lib/format-utils";
+import { getStageColorParts } from "../lib/stage-colors";
+import type { GetQueueRow } from "../types/rpc-returns";
 
 interface OrderPill {
   id: string;
@@ -61,47 +64,6 @@ const getWeekDates = (startMonday: Date): WeekDay[] => {
   });
 };
 
-// Helper: Get stage color classes for pills
-const getStageColorClasses = (stage: string) => {
-  const colorMap: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-    'Filling': {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      text: 'text-blue-700',
-      dot: 'bg-blue-500'
-    },
-    'Covering': {
-      bg: 'bg-purple-50',
-      border: 'border-purple-200',
-      text: 'text-purple-700',
-      dot: 'bg-purple-500'
-    },
-    'Decorating': {
-      bg: 'bg-pink-50',
-      border: 'border-pink-200',
-      text: 'text-pink-700',
-      dot: 'bg-pink-500'
-    },
-    'Packing': {
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
-      text: 'text-orange-700',
-      dot: 'bg-orange-500'
-    },
-    'Complete': {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      text: 'text-green-700',
-      dot: 'bg-green-500'
-    }
-  };
-  return colorMap[stage] || {
-    bg: 'bg-gray-50',
-    border: 'border-gray-200',
-    text: 'text-gray-700',
-    dot: 'bg-gray-500'
-  };
-};
 
 export function BannosMonitorPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getCurrentWeekStart());
@@ -114,6 +76,9 @@ export function BannosMonitorPage() {
     error,
     refetch,
   } = useQueueForMonitor('bannos');
+
+  // Subscribe to real-time order updates
+  useRealtimeOrders('bannos');
 
   // Group orders by week day using useMemo for performance
   const weekDays = useMemo(() => {
@@ -128,7 +93,7 @@ export function BannosMonitorPage() {
     const weekEndStr = formatDateLocal(weekEnd);
 
     // Group orders by due date - only include orders within the displayed week
-    orders.forEach((order: any) => {
+    orders.forEach((order: GetQueueRow) => {
       if (!order.due_date) return;
 
       // Convert order's due_date to local date string to match week boundaries
@@ -147,7 +112,7 @@ export function BannosMonitorPage() {
           days[dayIndex].orders.push({
             id: order.id,
             humanId: order.shopify_order_number
-              ? formatOrderNumber(String(order.shopify_order_number), 'bannos')
+              ? formatOrderNumber(String(order.shopify_order_number), 'bannos', order.id)
               : (order.human_id || order.id),
             stage: order.stage || 'Filling',
             dueDate: order.due_date
@@ -278,7 +243,7 @@ export function BannosMonitorPage() {
                 {/* Orders List */}
                 <div className="flex-1 space-y-2 overflow-y-auto max-h-[550px] px-1">
                   {day.orders.map((order) => {
-                    const colors = getStageColorClasses(order.stage);
+                    const colors = getStageColorParts(order.stage);
                     return (
                       <div
                         key={order.id}

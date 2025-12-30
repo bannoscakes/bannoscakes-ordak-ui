@@ -34,7 +34,7 @@ interface FormData {
   deliveryDate: Date | undefined;
   productTitle: string;
   cakeSize: string;
-  flavor: string;
+  flavour: string;
   writingOnCake: string;
   imageUrl: string;
   orderNotes: string;
@@ -47,7 +47,7 @@ const initialFormData: FormData = {
   deliveryDate: undefined,
   productTitle: "",
   cakeSize: "",
-  flavor: "",
+  flavour: "",
   writingOnCake: "",
   imageUrl: "",
   orderNotes: "",
@@ -76,7 +76,7 @@ export function CreateManualOrderModal({
     if (!formData.deliveryDate) return "Delivery date is required";
     if (!formData.productTitle.trim()) return "Product title is required";
     if (!formData.cakeSize.trim()) return "Cake size is required";
-    if (!formData.flavor.trim()) return "Flavor is required";
+    if (!formData.flavour.trim()) return "Flavour is required";
 
     // Validate order number format (B or F followed by exactly 5 digits)
     // Strip leading # if present
@@ -113,7 +113,7 @@ export function CreateManualOrderModal({
         customer_name: formData.customerName.trim(),
         product_title: formData.productTitle.trim(),
         size: formData.cakeSize.trim(),
-        flavour: formData.flavor.trim(),
+        flavour: formData.flavour.trim(),
         due_date: format(formData.deliveryDate!, "yyyy-MM-dd"),
         writing_on_cake: formData.writingOnCake.trim() || null,
         image_url: formData.imageUrl.trim() || null,
@@ -258,17 +258,17 @@ export function CreateManualOrderModal({
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="flavor">
-                Flavor <span className="text-red-500">*</span>
+              <Label htmlFor="flavour">
+                Flavour <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="flavor"
-                value={formData.flavor}
-                onChange={(e) => updateField("flavor", e.target.value)}
+                id="flavour"
+                value={formData.flavour}
+                onChange={(e) => updateField("flavour", e.target.value)}
                 placeholder="e.g., Choc with White Choc Ganache"
               />
               <p className="text-xs text-muted-foreground">
-                Can be detailed flavor combinations
+                Can be detailed flavour combinations
               </p>
             </div>
           </div>

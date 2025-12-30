@@ -6,30 +6,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  product: string;
-  size: 'S' | 'M' | 'L';
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-}
+import type { QueueItem } from "../types/queue";
 
 interface OrderOverflowMenuProps {
-  item: QueueItem | any;
+  item: QueueItem;
   variant: 'queue' | 'complete' | 'dashboard';
-  onAssignToStaff?: (item: QueueItem | any) => void;
-  onEditOrder?: (item: QueueItem | any) => void;
-  onOpenOrder: (item: QueueItem | any) => void;
-  onViewDetails: (item: QueueItem | any) => void;
+  onAssignToStaff?: (item: QueueItem) => void;
+  onEditOrder?: (item: QueueItem) => void;
+  onOpenOrder: (item: QueueItem) => void;
+  onViewDetails: (item: QueueItem) => void;
 }
 
 export function OrderOverflowMenu({ 

@@ -1,5 +1,27 @@
+/** Custom event name for programmatic navigation (fixes #498 - avoids duplicate pushState patching) */
+export const NAVIGATION_EVENT = 'app:navigation';
+
+/** Safe navigation for window.history.replaceState */
+export function safeReplaceState(url: string): void {
+  if (typeof url !== "string") {
+    console.warn("Blocked replaceState with non-string url:", { url, typeof: typeof url });
+    return;
+  }
+  if (url === "" || url === "false") {
+    console.warn("Blocked replaceState to suspicious url:", { url });
+    return;
+  }
+
+  try {
+    window.history.replaceState({}, '', url);
+    window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT, { detail: { path: url } }));
+  } catch (error) {
+    console.error("Error in safeReplaceState:", error);
+  }
+}
+
 /** Safe navigation for window.history.pushState (current architecture) */
-export function safePushState(path: string, title = '', state?: any) {
+export function safePushState(path: string, title = '', state?: unknown) {
   if (typeof path !== "string") {
     // eslint-disable-next-line no-console
     console.warn("Blocked pushState with non-string path:", {
@@ -13,9 +35,11 @@ export function safePushState(path: string, title = '', state?: any) {
     console.warn("Blocked pushState to suspicious path:", { path });
     return;
   }
-  
+
   try {
     window.history.pushState(state || {}, title, path);
+    // Dispatch custom event so components can react without patching pushState
+    window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT, { detail: { path } }));
   } catch (error) {
     console.error("Error in safePushState:", error);
   }

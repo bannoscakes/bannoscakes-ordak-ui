@@ -12,37 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Clock, Search, X } from "lucide-react";
+import { Clock, Search, X, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { EditOrderDrawer } from "./EditOrderDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
-import { getStorageLocations, getStaffList } from "../lib/rpc-client";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
-import { formatOrderNumber, formatDate } from "../lib/format-utils";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  shopifyOrderId?: number;
-  customerName: string;
-  product: string;
-  size: 'S' | 'M' | 'L';
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  assigneeId?: string;
-  assigneeName?: string;
-}
+import { useStorageLocations, useStaffList } from "../hooks/useSettingsQueries";
+import { formatOrderNumber } from "../lib/format-utils";
+import type { GetQueueRow } from "../types/rpc-returns";
+import type { QueueItem } from "../types/queue";
 
 interface QueueTableProps {
   store: "bannos" | "flourlane";
@@ -61,8 +43,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [storageFilter, setStorageFilter] = useState<string | null>(null);
-  const [storageLocations, setStorageLocations] = useState<string[]>([]);
-  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([]);
 
   // Use React Query hook for queue data
   const {
@@ -81,69 +61,46 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
   const bulkAssignMutation = useBulkAssignStaff();
   const isAssigning = bulkAssignMutation.isPending;
 
-  // Fetch storage locations for the current store
-  useEffect(() => {
-    async function fetchStorageLocations() {
-      try {
-        const locations = await getStorageLocations(store);
-        setStorageLocations(locations);
-      } catch (error) {
-        console.error('Failed to fetch storage locations:', error);
-        // Fallback to default locations if fetch fails
-        setStorageLocations([
-          "Store Fridge",
-          "Store Freezer",
-          "Kitchen Coolroom",
-          "Kitchen Freezer",
-          "Basement Coolroom"
-        ]);
-      }
-    }
-    fetchStorageLocations();
-  }, [store]);
+  // Fetch storage locations using React Query
+  const { data: storageLocations = [] } = useStorageLocations(store);
 
   // Fetch staff list for bulk assignment (filtered by current store)
-  useEffect(() => {
-    async function fetchStaffList() {
-      try {
-        const staff = await getStaffList(null, true);
-        // Filter to only include staff for current store or staff that work at both stores
-        const filteredStaff = staff.filter(s => s.store === 'both' || s.store === store);
-        setStaffList(filteredStaff.map(s => ({ id: s.user_id, name: s.full_name })));
-      } catch (error) {
-        console.error('Failed to fetch staff list:', error);
-        toast.error('Failed to load staff list');
-      }
-    }
-    fetchStaffList();
-  }, [store]);
+  const {
+    data: staffData = [],
+    isLoading: isStaffLoading,
+    isError: isStaffError,
+    error: staffError,
+  } = useStaffList({ store });
+  const staffList = useMemo(
+    () => staffData.map(s => ({ id: s.user_id, name: s.full_name })),
+    [staffData]
+  );
 
   // Group orders by stage using useMemo for performance
   const queueData = useMemo(() => {
     const grouped: { [key: string]: QueueItem[] } = {
       unassigned: [],
-      filling: [],
-      covering: [],
-      decorating: [],
-      packing: [],
-      complete: [],
+      Filling: [],
+      Covering: [],
+      Decorating: [],
+      Packing: [],
+      Complete: [],
     };
 
-    orders.forEach((order: any) => {
+    orders.forEach((order: GetQueueRow) => {
       const item: QueueItem = {
         id: order.id,
         orderNumber: String(order.human_id || order.shopify_order_number || order.id),
         shopifyOrderNumber: String(order.shopify_order_number || ''),
         shopifyOrderId: order.shopify_order_id || undefined,
-        customerName: order.customer_name || 'Unknown',
-        product: order.product_title || 'Unknown',
-        size: order.size || 'M',
+        customerName: order.customer_name || '',
+        product: order.product_title || '',
+        size: order.size || '',
         quantity: order.item_qty || 1,
-        deliveryTime: order.due_date || '',
-        priority: order.priority || 'Medium',
+        dueDate: order.due_date || null,
+        priority: order.priority || null,
         status: order.assignee_id ? 'In Production' : 'Pending',
-        flavor: order.flavour || '',
-        dueTime: order.due_date || '',
+        flavour: order.flavour || '',
         method: (() => {
           const normalized = order.delivery_method?.trim().toLowerCase();
           if (normalized === "delivery") return "Delivery" as const;
@@ -151,18 +108,20 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           return undefined;
         })(),
         storage: order.storage || '',
+        store: store,
+        stage: order.stage || 'Filling',
       };
 
-      // Group by stage
-      const stageKey = order.stage?.toLowerCase() || 'unassigned';
-      if (!order.assignee_id && stageKey === 'filling') {
+      // Group by stage (using PascalCase to match database enum)
+      const stage = order.stage || 'unassigned';
+      if (!order.assignee_id && stage === 'Filling') {
         grouped.unassigned.push(item);
-      } else if (stageKey === 'packing') {
-        grouped.packing.push(item);
-      } else if (stageKey === 'complete') {
-        grouped.complete.push(item);
-      } else if (grouped[stageKey]) {
-        grouped[stageKey].push(item);
+      } else if (stage === 'Packing') {
+        grouped.Packing.push(item);
+      } else if (stage === 'Complete') {
+        grouped.Complete.push(item);
+      } else if (grouped[stage]) {
+        grouped[stage].push(item);
       }
     });
 
@@ -178,11 +137,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const productionStages = [
     { value: "unassigned", label: "Unassigned", count: 0 },
-    { value: "filling", label: "Filling", count: 0 },
-    { value: "covering", label: "Covering", count: 0 },
-    { value: "decorating", label: "Decorating", count: 0 },
-    { value: "packing", label: "Packing", count: 0 },
-    { value: "complete", label: "Complete", count: 0 }
+    { value: "Filling", label: "Filling", count: 0 },
+    { value: "Covering", label: "Covering", count: 0 },
+    { value: "Decorating", label: "Decorating", count: 0 },
+    { value: "Packing", label: "Packing", count: 0 },
+    { value: "Complete", label: "Complete", count: 0 }
   ];
 
   const currentItems = queueData[selectedStage] || [];
@@ -202,7 +161,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     });
   }, [currentItems, searchQuery, priorityFilter, statusFilter, storageFilter]);
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | null) => {
     switch (priority) {
       case 'High': return 'bg-red-100 text-red-800';
       case 'Medium': return 'bg-yellow-100 text-yellow-800';
@@ -388,9 +347,25 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
               <span className="text-sm">
                 {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
               </span>
-              <Select value={selectedStaff || "none"} onValueChange={(value) => setSelectedStaff(value === "none" ? null : value)}>
+              <Select
+                value={selectedStaff || "none"}
+                onValueChange={(value) => setSelectedStaff(value === "none" ? null : value)}
+                disabled={isStaffLoading || isStaffError}
+              >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select staff member" />
+                  {isStaffLoading ? (
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading staff...
+                    </span>
+                  ) : isStaffError ? (
+                    <span className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      Failed to load
+                    </span>
+                  ) : (
+                    <SelectValue placeholder="Select staff member" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Select staff member</SelectItem>
@@ -399,6 +374,11 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {isStaffError && staffError && (
+                <span className="text-xs text-destructive" title={String(staffError)}>
+                  Unable to load staff list
+                </span>
+              )}
               <Button onClick={handleAssignToStaff} disabled={!selectedStaff || isAssigning}>
                 {isAssigning ? 'Assigning...' : 'Assign'}
               </Button>
@@ -466,7 +446,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                           <div>
                             <p className="text-sm text-muted-foreground">Order</p>
                             <p>{item.shopifyOrderNumber
-                              ? formatOrderNumber(item.shopifyOrderNumber, store)
+                              ? formatOrderNumber(item.shopifyOrderNumber, store, item.id)
                               : item.orderNumber}</p>
                           </div>
                           
@@ -480,15 +460,15 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                             <p className="truncate">{item.product}</p>
                           </div>
                           
-                          <div className="hidden lg:block">
-                            <p className="text-sm text-muted-foreground">Due Time</p>
-                            <p>{formatDate(item.dueTime)}</p>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Flavour</p>
+                            <p className="truncate">{item.flavour || '-'}</p>
                           </div>
                           
                           <div className="hidden md:block">
                             <p className="text-sm text-muted-foreground">Priority</p>
                             <Badge className={getPriorityColor(item.priority)} variant="secondary">
-                              {item.priority}
+                              {item.priority || '-'}
                             </Badge>
                           </div>
                           

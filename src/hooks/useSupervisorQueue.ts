@@ -14,6 +14,15 @@ export type SupervisorQueueItem = QueueItem;
  * - Auto-refreshes every 30 seconds
  * - Refetches on window focus
  * - Integrated with React Query cache invalidation
+ *
+ * @param userId - The supervisor's user ID. Query is disabled if undefined.
+ * @returns React Query result with `data` as array of {@link QueueItem}
+ *
+ * @example
+ * const { data: queue, isLoading } = useSupervisorQueue(user?.id);
+ *
+ * if (isLoading) return <Spinner />;
+ * return <QueueList items={queue} />;
  */
 export function useSupervisorQueue(userId: string | undefined) {
   return useQuery({
@@ -34,13 +43,23 @@ export function useSupervisorQueue(userId: string | undefined) {
     enabled: !!userId,
     staleTime: QUEUE_REFETCH_INTERVAL,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
+    // Polling pauses when tab is hidden (saves RPC calls)
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 }
 
 /**
- * Hook to invalidate and refetch supervisor queue
- * Use after mutations (complete order, etc.)
+ * Hook to invalidate and refetch the supervisor queue
+ *
+ * Use after mutations that affect queue state (e.g., completing an order).
+ *
+ * @returns Function that invalidates the `supervisorQueue` query key
+ *
+ * @example
+ * const invalidate = useInvalidateSupervisorQueue();
+ * await completeOrder(orderId);
+ * invalidate();
  */
 export function useInvalidateSupervisorQueue() {
   return useQueueInvalidator('supervisorQueue');

@@ -40,16 +40,16 @@ export enum ErrorCode {
 
 export class AppError extends Error {
   public readonly code: ErrorCode;
-  public readonly details?: any;
+  public readonly details?: unknown;
   public readonly correlationId: string;
   public readonly timestamp: string;
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
 
   constructor(
     code: ErrorCode,
     message: string,
-    details?: any,
-    context?: Record<string, any>
+    details?: unknown,
+    context?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'AppError';
@@ -159,8 +159,8 @@ export const ERROR_RECOVERY_ACTIONS: Record<ErrorCode, string[]> = {
 export const createError = (
   code: ErrorCode,
   message?: string,
-  details?: any,
-  context?: Record<string, any>
+  details?: unknown,
+  context?: Record<string, unknown>
 ): AppError => {
   const userMessage = message || ERROR_MESSAGES[code];
   return new AppError(code, userMessage, details, context);

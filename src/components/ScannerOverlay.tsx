@@ -9,28 +9,7 @@ import { CameraScanner } from "./CameraScanner";
 import { getOrderForScan } from "../lib/rpc-client";
 import { useStageMutations } from "../hooks/useQueueMutations";
 import { formatOrderNumber } from "../lib/format-utils";
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber?: string;
-  customerName: string;
-  product: string;
-  size: 'S' | 'M' | 'L';
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store: 'bannos' | 'flourlane';
-  stage: string;
-  // Timestamps for stage tracking
-  covering_start_ts?: string | null;
-  decorating_start_ts?: string | null;
-}
+import type { QueueItem } from "../types/queue";
 
 interface ScannerOverlayProps {
   isOpen: boolean;
@@ -56,7 +35,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   // Get formatted order number for display
   const displayOrderNumber = order.shopifyOrderNumber
-    ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+    ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
     : order.orderNumber;
 
   // Determine if this scan will START or COMPLETE the stage
@@ -93,7 +72,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         setErrorMessage("");
       } else {
         setScanState('error');
-        const scannedDisplayNumber = formatOrderNumber(scannedOrder.shopify_order_number, scannedOrder.store);
+        const scannedDisplayNumber = formatOrderNumber(scannedOrder.shopify_order_number, scannedOrder.store, scannedOrder.id);
         setErrorMessage(`Wrong order scanned. Expected ${displayOrderNumber}, got ${scannedDisplayNumber}.`);
       }
     } catch (error) {

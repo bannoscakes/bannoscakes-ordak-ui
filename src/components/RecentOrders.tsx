@@ -6,26 +6,11 @@ import { OrderDetailDrawer } from "./OrderDetailDrawer";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { useRecentOrders } from "../hooks/useDashboardQueries";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
+import type { Priority } from "../types/db";
+import type { QueueItem } from "../types/queue";
 
 interface RecentOrdersProps {
   store: "bannos" | "flourlane";
-}
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  customerName: string;
-  product: string;
-  size: 'S' | 'M' | 'L';
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
 }
 
 interface DisplayOrder {
@@ -34,12 +19,33 @@ interface DisplayOrder {
   product: string;
   quantity: number;
   status: string;
-  priority: string;
-  dueDate: string;
+  priority: Priority | null;
+  dueDate: string | null;
   progress: number;
   shopify_order_id?: number;
   shopify_order_number?: number;
 }
+
+// Raw order row from useRecentOrders hook
+interface RawOrderRow {
+  id: string;
+  customer_name?: string;
+  product_title?: string;
+  item_qty?: number;
+  stage?: string;
+  priority?: string | null;
+  due_date?: string | null;
+  shopify_order_id?: number;
+  shopify_order_number?: number;
+}
+
+// Safely convert raw priority string to Priority type
+const toPriority = (value: string | null | undefined): Priority | null => {
+  if (value === 'High' || value === 'Medium' || value === 'Low') {
+    return value;
+  }
+  return null;
+};
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
@@ -59,21 +65,22 @@ const getProgressFromStage = (stage: string | undefined): number => {
 };
 
 // Convert dashboard order format to QueueItem format
-const convertToQueueItem = (order: DisplayOrder): QueueItem => ({
+const convertToQueueItem = (order: DisplayOrder, store: 'bannos' | 'flourlane'): QueueItem => ({
   id: order.id,
   orderNumber: order.id,
   shopifyOrderNumber: order.shopify_order_number ? String(order.shopify_order_number) : '',
   customerName: order.customer,
   product: order.product,
-  size: 'M' as const, // Default size
+  size: '', // Not available from dashboard data
   quantity: order.quantity,
-  deliveryTime: order.dueDate,
-  priority: order.priority as 'High' | 'Medium' | 'Low',
-  status: order.status as any,
-  flavor: "Vanilla", // Default flavor
-  dueTime: "10:00 AM", // Default time
-  method: "Pickup" as const, // Default method
-  storage: order.status === "Completed" ? "Store Fridge" : undefined
+  dueDate: order.dueDate,
+  priority: order.priority,
+  status: order.status as QueueItem['status'],
+  flavour: '', // Not available from dashboard data
+  method: undefined, // Not available from dashboard data
+  storage: undefined,
+  store: store,
+  stage: order.status === 'Completed' ? 'Complete' : 'Filling', // Derive from status
 });
 
 const getStatusColor = (status: string) => {
@@ -87,7 +94,8 @@ const getStatusColor = (status: string) => {
   return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-700";
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | null) => {
+  if (!priority) return "bg-gray-100 text-gray-700 border-gray-200";
   const colors = {
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -105,14 +113,14 @@ export function RecentOrders({ store }: RecentOrdersProps) {
   const orders = useMemo<DisplayOrder[]>(() => {
     if (!data) return [];
     
-    return data.map((order: any): DisplayOrder => ({
+    return data.map((order: RawOrderRow): DisplayOrder => ({
       id: order.id,
-      customer: order.customer_name || 'Unknown',
-      product: order.product_title || 'Unknown',
+      customer: order.customer_name || '',
+      product: order.product_title || '',
       quantity: order.item_qty || 1,
       status: order.stage === 'Complete' ? 'Completed' : order.stage || 'Pending',
-      priority: order.priority || 'Medium',
-      dueDate: order.due_date || 'N/A',
+      priority: toPriority(order.priority),
+      dueDate: order.due_date || null,
       progress: getProgressFromStage(order.stage),
       shopify_order_id: order.shopify_order_id,
       shopify_order_number: order.shopify_order_number
@@ -120,7 +128,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
   }, [data]);
 
   const handleOpenOrder = (order: DisplayOrder) => {
-    const queueItem = convertToQueueItem(order);
+    const queueItem = convertToQueueItem(order, store);
     setSelectedOrder(queueItem);
     setDrawerOpen(true);
   };
@@ -191,7 +199,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
               <tr key={order.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                 <td className="py-4 font-medium text-foreground">
                   {order.shopify_order_number
-                    ? formatOrderNumber(String(order.shopify_order_number), store)
+                    ? formatOrderNumber(String(order.shopify_order_number), store, order.id)
                     : order.id}
                 </td>
                 <td className="py-4 text-foreground">{order.customer}</td>
@@ -204,10 +212,10 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                 </td>
                 <td className="py-4">
                   <Badge className={getPriorityColor(order.priority)}>
-                    {order.priority}
+                    {order.priority || '-'}
                   </Badge>
                 </td>
-                <td className="py-4 text-foreground">{order.dueDate === 'N/A' ? 'N/A' : formatDate(order.dueDate)}</td>
+                <td className="py-4 text-foreground">{order.dueDate ? formatDate(order.dueDate) : 'No date'}</td>
                 <td className="py-4">
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded-full h-2">
@@ -221,7 +229,7 @@ export function RecentOrders({ store }: RecentOrdersProps) {
                 </td>
                 <td className="py-4">
                   <OrderOverflowMenu
-                    item={order}
+                    item={convertToQueueItem(order, store)}
                     variant="dashboard"
                     onOpenOrder={() => handleOpenOrder(order)}
                     onViewDetails={() => handleViewDetails(order)}

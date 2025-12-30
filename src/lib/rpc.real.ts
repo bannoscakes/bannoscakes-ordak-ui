@@ -4,7 +4,27 @@ import { supabase } from "./supabase";
 const QUEUE_SOURCE =
   String(import.meta.env.VITE_QUEUE_SOURCE ?? "").trim() || "queue_view";
 
-export const get_queue = async (..._args: any[]) => {
+// Raw queue row from database view
+interface QueueViewRow {
+  id: string;
+  store: string | null;
+  stage: string;
+  title: string | null;
+  priority: number | null;
+  due_date: string | null;
+}
+
+// Normalized queue item (internal to this file to avoid collision with src/types/queue.ts)
+interface InternalQueueItem {
+  id: string;
+  store: string;
+  stage: string;
+  title: string;
+  priority: number;
+  due_date: string | null;
+}
+
+export const get_queue = async (..._args: unknown[]): Promise<InternalQueueItem[]> => {
   try {
     if (!supabase) return []; // no envs set → safe fallback
     // Adjust the view/columns to your schema; this is a conservative example.
@@ -15,14 +35,14 @@ export const get_queue = async (..._args: any[]) => {
 
     if (error || !data) return [];
 
-    const items = data.map((row: any) => ({
+    const items = data.map((row: QueueViewRow) => ({
       id: row.id,
       store: row.store ?? "bannos",
       stage: row.stage,
       title: row.title ?? "",
       priority: row.priority ?? 0,
       due_date: row.due_date ?? null,
-    })) as unknown as any[];
+    }));
 
     return items;
   } catch {
@@ -32,12 +52,12 @@ export const get_queue = async (..._args: any[]) => {
 };
 
 // keep these throwing until implemented
-export const get_order_for_scan = async (..._args: any[]) => {
+export const get_order_for_scan = async (..._args: unknown[]): Promise<never> => {
   throw new Error("rpc.real:get_order_for_scan not wired; leave VITE_USE_MOCKS=true");
 };
-export const advance_stage = async (..._args: any[]) => {
+export const advance_stage = async (..._args: unknown[]): Promise<never> => {
   throw new Error("rpc.real:advance_stage not wired; leave VITE_USE_MOCKS=true");
 };
-export const handle_print_barcode = async (..._args: any[]) => {
+export const handle_print_barcode = async (..._args: unknown[]): Promise<never> => {
   throw new Error("rpc.real:handle_print_barcode not wired; leave VITE_USE_MOCKS=true");
 };

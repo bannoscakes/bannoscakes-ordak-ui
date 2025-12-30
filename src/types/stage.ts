@@ -1,5 +1,5 @@
 export type Stage =
-  | "total" | "filling" | "covering" | "decorating" | "packing" | "complete" | "unassigned";
+  | "total" | "Filling" | "Covering" | "Decorating" | "Packing" | "Complete" | "unassigned";
 
 export type StoreKey = "bannos" | "flourlane";
 
@@ -9,20 +9,20 @@ export type StatsByStore = {
 };
 
 export const STAGES = [
-  "total","filling","covering","decorating","packing","complete","unassigned",
+  "total","Filling","Covering","Decorating","Packing","Complete","unassigned",
 ] as const satisfies readonly Stage[];
 
 export const STAGE_ORDER = [
-  "filling","covering","decorating","packing","complete",
+  "Filling","Covering","Decorating","Packing","Complete",
 ] as const satisfies readonly Stage[];
 
 /** Utility to create a zeroed stage counter map */
 export const makeEmptyCounts = (): Record<Stage, number> => ({
   total: 0,
-  filling: 0,
-  covering: 0,
-  decorating: 0,
-  packing: 0,
-  complete: 0,
+  Filling: 0,
+  Covering: 0,
+  Decorating: 0,
+  Packing: 0,
+  Complete: 0,
   unassigned: 0,
 });

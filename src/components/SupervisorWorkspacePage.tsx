@@ -148,9 +148,9 @@ export function SupervisorWorkspacePage({
       setElapsedTime("0h 0m");
       toast.success("Supervisor shift started");
       await loadCurrentShift();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting shift:", error);
-      toast.error(error?.message || "Failed to start shift");
+      toast.error(error instanceof Error ? error.message : "Failed to start shift");
     } finally {
       setShiftLoading(false);
     }
@@ -167,9 +167,9 @@ export function SupervisorWorkspacePage({
       setBreakStartTime(null);
       setElapsedTime("");
       toast.success("Supervisor shift ended");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error ending shift:", error);
-      toast.error(error?.message || "Failed to end shift");
+      toast.error(error instanceof Error ? error.message : "Failed to end shift");
     } finally {
       setShiftLoading(false);
     }
@@ -186,9 +186,9 @@ export function SupervisorWorkspacePage({
       setElapsedTime("0:00");
       toast.success("Break started");
       await loadCurrentShift();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error starting break:", error);
-      toast.error(error?.message || "Failed to start break");
+      toast.error(error instanceof Error ? error.message : "Failed to start break");
     } finally {
       setShiftLoading(false);
     }
@@ -204,9 +204,9 @@ export function SupervisorWorkspacePage({
       setBreakStartTime(null);
       toast.success("Break ended");
       await loadCurrentShift();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error ending break:", error);
-      toast.error(error?.message || "Failed to end break");
+      toast.error(error instanceof Error ? error.message : "Failed to end break");
     } finally {
       setShiftLoading(false);
     }
@@ -227,7 +227,10 @@ export function SupervisorWorkspacePage({
   };
 
   const handlePrintBarcode = (order: SupervisorQueueItem) => {
-    toast.success(`Barcode for ${order.orderNumber} sent to printer`);
+    const displayNumber = order.shopifyOrderNumber
+      ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
+      : order.orderNumber;
+    toast.success(`Barcode for ${displayNumber} sent to printer`);
   };
 
   const handleOrderCompleted = async (_orderId: string) => {
@@ -244,7 +247,7 @@ export function SupervisorWorkspacePage({
       : 'bg-pink-100 text-pink-700 border-pink-200';
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | null) => {
     const colors = {
       "High": "bg-red-100 text-red-700 border-red-200",
       "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -451,7 +454,7 @@ export function SupervisorWorkspacePage({
                       <div>
                         <p className="font-medium text-foreground">
                           {order.shopifyOrderNumber
-                            ? formatOrderNumber(order.shopifyOrderNumber, order.store)
+                            ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
                             : order.orderNumber}
                         </p>
                       </div>
@@ -464,17 +467,17 @@ export function SupervisorWorkspacePage({
                       {/* Size */}
                       <div>
                         <p className="text-sm text-muted-foreground">
-                          Size: {order.size || "Unknown"}
+                          Size: {order.size || '-'}
                         </p>
                       </div>
 
                       {/* Priority and Due Date */}
                       <div className="flex items-center justify-between">
                         <Badge className={`text-xs ${getPriorityColor(order.priority)}`}>
-                          {order.priority}
+                          {order.priority || '-'}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          Due: {formatDate(order.dueTime)}
+                        <span className={`text-xs ${order.dueDate ? 'text-muted-foreground' : 'text-red-600 font-bold'}`}>
+                          {order.dueDate ? `Due: ${formatDate(order.dueDate)}` : 'No due date'}
                         </span>
                       </div>
 

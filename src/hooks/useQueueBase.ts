@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import type { QueueItem, QueueItemStatus } from '../types/queue';
+import type { QueueItem, QueueItemStatus, QueueItemStore } from '../types/queue';
+import type { GetQueueRow } from '../types/rpc-returns';
 
 /** Auto-refresh interval for queue hooks (30 seconds) */
 export const QUEUE_REFETCH_INTERVAL = 30_000;
@@ -23,29 +24,36 @@ export function mapStageToStatus(stage: string): QueueItemStatus {
 }
 
 /**
+ * Validate store value, defaulting to 'bannos' if invalid
+ */
+function normalizeStore(store: string | null | undefined): QueueItemStore {
+  if (store === 'bannos' || store === 'flourlane') return store;
+  return 'bannos';
+}
+
+/**
  * Map database order to UI format
  */
-export function mapOrderToQueueItem(order: any): QueueItem {
+export function mapOrderToQueueItem(order: GetQueueRow): QueueItem {
   const normalizedMethod = order.delivery_method?.trim().toLowerCase();
 
   return {
     id: order.id,
     orderNumber: String(order.human_id || order.shopify_order_number || order.id),
     shopifyOrderNumber: String(order.shopify_order_number || ''),
-    customerName: order.customer_name || 'Unknown Customer',
-    product: order.product_title || 'Unknown Product',
-    size: order.size || 'M',
+    customerName: order.customer_name || '',
+    product: order.product_title || '',
+    size: order.size || '',
     quantity: order.item_qty || 1,
-    deliveryTime: order.due_date || new Date().toISOString(),
-    priority: order.priority || 'Medium',
+    dueDate: order.due_date || null,
+    priority: order.priority || null,
     status: mapStageToStatus(order.stage),
-    flavor: order.flavour || 'Unknown',
-    dueTime: order.due_date || new Date().toISOString(),
+    flavour: order.flavour || '',
     method: normalizedMethod === 'delivery' ? 'Delivery'
           : normalizedMethod === 'pickup' ? 'Pickup'
           : undefined,
-    storage: order.storage || 'Default',
-    store: order.store || 'bannos',
+    storage: order.storage || '',
+    store: normalizeStore(order.store),
     stage: order.stage || 'Filling',
     covering_start_ts: order.covering_start_ts ?? null,
     decorating_start_ts: order.decorating_start_ts ?? null,

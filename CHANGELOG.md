@@ -1,3 +1,113 @@
+## v0.19.0-beta — TypeScript Type Safety & React Query Migration (2025-12-23)
+
+### 🎯 Overview
+Major developer experience improvements with auto-generated TypeScript types from Supabase schema. All inventory tabs migrated to React Query. Touch targets and order card visibility improved for production floor.
+
+### ✨ New Features
+
+#### Supabase TypeScript Type Generation (PR #459, #464, #465, #467, #468)
+- **Auto-generated types**: `npm run gen:types` generates `src/types/supabase.ts` from live database schema
+- **RPC return types**: Key RPC functions now use generated return types instead of `any`
+- **Queue hooks typed**: `useQueue`, `useBannosQueue`, `useQueueRealtime` use generated types
+- **Component props typed**: Queue components use `Database['public']['Functions']` types
+- **Documentation**: README updated with type regeneration instructions
+
+#### Bulk Staff Assignment RPC (PR #450)
+- **New RPC**: `bulk_assign_staff` for assigning multiple orders at once
+- **Efficiency**: Single database call instead of multiple sequential updates
+
+#### Inventory React Query Migration (PR #439, #440, #441, #443)
+- **CakeToppersTab**: Migrated to React Query with proper cache invalidation
+- **AccessoriesTab**: Migrated to React Query
+- **ComponentsTab**: Migrated to React Query
+- **BOMsTab**: Migrated to React Query
+- **Removed**: Legacy `requestCache` and deprecated cached functions (PR #444)
+
+### 🐛 Bug Fixes
+
+#### Priority Calculation on Import (PR #453)
+- **Issue**: Shopify orders imported without priority calculation
+- **Fix**: Priority now calculated during import based on due date
+
+#### Remove Unused Urgent Priority (PR #456)
+- **Issue**: `priority_level` enum contained unused 'Urgent' value
+- **Fix**: Removed 'Urgent' from enum, keeping only Low/Medium/High/Critical
+
+#### Order Card Visibility (PR #447)
+- **Issue**: Order cards had no visible borders, hard to distinguish
+- **Fix**: Added subtle borders and shadow for better visual separation
+
+#### Touch Target Improvements (PR #445, #446)
+- **Base components**: Increased button/input heights to meet 44px minimum
+- **Explicit overrides**: Small button variants explicitly set to 44px
+
+#### Date Format Standardization (PR #434, #438)
+- **Format**: All dates now display as dd/mm/yyyy
+- **RecentOrders**: Fixed due date formatting in table
+
+#### Stale Time Constants (PR #448)
+- **Issue**: Magic numbers for staleTime in queue hooks
+- **Fix**: Centralized constants for consistent cache behavior
+
+### 🔧 Refactoring
+
+#### DRY Queue Hooks (PR #449)
+- **Shared types**: Common types extracted for queue hooks
+- **Utilities**: Shared utility functions reduce code duplication
+
+### 📋 PRs in This Release
+- PR #434: `feat: standardize date display format to dd/mm/yyyy`
+- PR #438: `fix: format due date in RecentOrders table`
+- PR #439: `feat: migrate CakeToppersTab to React Query`
+- PR #440: `feat: migrate AccessoriesTab to React Query`
+- PR #441: `feat: migrate ComponentsTab to React Query`
+- PR #443: `feat: migrate BOMsTab to React Query`
+- PR #444: `chore: remove requestCache and deprecated cached functions`
+- PR #445: `fix: increase touch target sizes for base UI components`
+- PR #446: `fix: increase explicit small button overrides`
+- PR #447: `fix: add visible borders and shadow to order cards`
+- PR #448: `fix: use constants for staleTime in queue hooks`
+- PR #449: `refactor: DRY up queue hooks with shared types`
+- PR #450: `feat: add bulk staff assignment RPC endpoint`
+- PR #453: `fix: calculate priority on Shopify order import`
+- PR #456: `fix: remove unused Urgent value from priority_level enum`
+- PR #459: `feat: add Supabase TypeScript type generation`
+- PR #464: `feat: add return types to key RPC functions`
+- PR #465: `feat: type queue hooks with generated Supabase types`
+- PR #467: `feat: type components with generated Supabase types`
+- PR #468: `docs: add type generation instructions to README`
+
+### 📁 Key Files Modified
+
+#### New Files
+- `src/types/supabase.ts` - Auto-generated database types
+
+#### Type System
+- `src/lib/rpc-client.ts` - RPC functions with generated return types
+- `src/hooks/useQueue.ts` - Typed with Supabase types
+- `src/hooks/useBannosQueue.ts` - Typed with Supabase types
+- `src/hooks/useQueueRealtime.ts` - Typed with Supabase types
+- `src/components/QueueTable.tsx` - Props typed with database types
+
+#### Inventory Components
+- `src/components/inventory/CakeToppersTab.tsx` - React Query
+- `src/components/inventory/AccessoriesTab.tsx` - React Query
+- `src/components/inventory/ComponentsTab.tsx` - React Query
+- `src/components/inventory/BOMsTab.tsx` - React Query
+
+### 🔧 Technical Notes
+
+#### Type Generation Workflow
+After database migrations, run `npm run gen:types` to regenerate TypeScript types. This ensures compile-time type checking for all database operations.
+
+#### React Query Benefits
+- Automatic cache invalidation
+- Background refetching
+- Loading/error states built-in
+- Devtools for debugging
+
+---
+
 ## v0.18.0-beta — Modern Login Page (2025-12-20)
 
 ### 🎯 Overview

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
  * Small, cancelable debounce hook.
  * Returns [debouncedFn, cancel].
  */
-export function useDebouncedCallback<T extends (...args: any[]) => void>(
+export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
   fn: T,
   delay: number
 ): [(...args: Parameters<T>) => void, () => void] {

@@ -35,7 +35,8 @@
     "fn:dev:flourlane": "supabase functions serve shopify-webhooks-flourlane --no-verify-jwt",
     "fn:deploy:flourlane": "supabase functions deploy shopify-webhooks-flourlane --no-verify-jwt",
     "fn:dev:worker": "supabase functions serve queue-worker --no-verify-jwt",
-    "fn:deploy:worker": "supabase functions deploy queue-worker --no-verify-jwt"
+    "fn:deploy:worker": "supabase functions deploy queue-worker --no-verify-jwt",
+    "gen:types": "supabase gen types typescript --project-id iwavciibrspfjezujydc > src/types/supabase.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",

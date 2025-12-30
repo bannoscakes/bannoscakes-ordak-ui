@@ -15,6 +15,15 @@ export type StaffQueueItem = QueueItem;
  * - Auto-refreshes every 30 seconds
  * - Refetches on window focus
  * - Integrated with React Query cache invalidation
+ *
+ * @param userId - The staff member's user ID. Query is disabled if undefined.
+ * @returns React Query result with `data` as array of {@link QueueItem}
+ *
+ * @example
+ * const { data: queue, isLoading } = useStaffQueue(user?.id);
+ *
+ * if (isLoading) return <Spinner />;
+ * return <QueueList items={queue} />;
  */
 export function useStaffQueue(userId: string | undefined) {
   return useQuery({
@@ -29,20 +38,30 @@ export function useStaffQueue(userId: string | undefined) {
 
       // Combine orders from both stores, excluding Complete stage
       const allOrders = [...bannosOrders, ...flourlaneOrders]
-        .filter((order: any) => order.stage !== 'Complete');
+        .filter((order) => order.stage !== 'Complete');
 
       return allOrders.map(mapOrderToQueueItem);
     },
     enabled: !!userId,
     staleTime: QUEUE_REFETCH_INTERVAL,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
+    // Polling pauses when tab is hidden (saves RPC calls)
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 }
 
 /**
- * Hook to invalidate and refetch staff queue
- * Use after mutations (complete order, etc.)
+ * Hook to invalidate and refetch the staff queue
+ *
+ * Use after mutations that affect queue state (e.g., completing an order).
+ *
+ * @returns Function that invalidates the `staffQueue` query key
+ *
+ * @example
+ * const invalidate = useInvalidateStaffQueue();
+ * await completeOrder(orderId);
+ * invalidate();
  */
 export function useInvalidateStaffQueue() {
   return useQueueInvalidator('staffQueue');

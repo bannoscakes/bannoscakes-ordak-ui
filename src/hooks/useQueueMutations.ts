@@ -12,12 +12,23 @@ import {
   startCovering,
   startDecorating,
   qcReturnToDecorating,
+  cancelOrder,
+  markOrderComplete,
 } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 /**
- * Invalidate all queue-related queries after a mutation
- * This ensures all views update consistently
+ * Invalidates all queue-related queries after a mutation to ensure UI consistency
+ *
+ * Invalidated query keys:
+ * - `staffQueue` - Staff workspace queue
+ * - `supervisorQueue` - Supervisor workspace queue
+ * - `queueStats` - Dashboard statistics
+ * - `unassignedCounts` - Unassigned order counts
+ * - `recentOrders` - Recent orders list
+ * - `queue` - Generic queue queries (QueueTable, etc.)
+ *
+ * @param queryClient - React Query client instance
  */
 function invalidateAllQueueQueries(queryClient: ReturnType<typeof useQueryClient>) {
   // Invalidate staff/supervisor workspace queues
@@ -37,6 +48,17 @@ function invalidateAllQueueQueries(queryClient: ReturnType<typeof useQueryClient
 // ASSIGNMENT MUTATIONS
 // =============================================
 
+/**
+ * Hook to assign a staff member to an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store, staffId })` function
+ *
+ * @example
+ * const { mutate: assign } = useAssignStaff();
+ * assign({ orderId: '123', store: 'bannos', staffId: 'user-456' });
+ *
+ * @sideeffect Invalidates all queue queries on success (staffQueue, supervisorQueue, queueStats, etc.)
+ */
 export function useAssignStaff() {
   const queryClient = useQueryClient();
 
@@ -49,6 +71,17 @@ export function useAssignStaff() {
   });
 }
 
+/**
+ * Hook to unassign a staff member from an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store })` function
+ *
+ * @example
+ * const { mutate: unassign } = useUnassignStaff();
+ * unassign({ orderId: '123', store: 'bannos' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useUnassignStaff() {
   const queryClient = useQueryClient();
 
@@ -61,6 +94,18 @@ export function useUnassignStaff() {
   });
 }
 
+/**
+ * Hook to bulk assign a staff member to multiple orders in a single atomic transaction
+ *
+ * @returns Mutation object with `mutate({ orderIds, store, staffId })` function.
+ *          The mutation's `data` property will contain `{ successCount, failCount, total }` on success.
+ *
+ * @example
+ * const { mutate: bulkAssign } = useBulkAssignStaff();
+ * bulkAssign({ orderIds: ['123', '456'], store: 'bannos', staffId: 'user-789' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useBulkAssignStaff() {
   const queryClient = useQueryClient();
 
@@ -82,6 +127,17 @@ export function useBulkAssignStaff() {
 // ORDER UPDATE MUTATIONS
 // =============================================
 
+/**
+ * Hook to set the storage location for an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store, storageLocation })` function
+ *
+ * @example
+ * const { mutate: setStorage } = useSetStorage();
+ * setStorage({ orderId: '123', store: 'bannos', storageLocation: 'Fridge A' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useSetStorage() {
   const queryClient = useQueryClient();
 
@@ -94,6 +150,17 @@ export function useSetStorage() {
   });
 }
 
+/**
+ * Hook to update the priority level of an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store, priority })` function
+ *
+ * @example
+ * const { mutate: updatePriority } = useUpdateOrderPriority();
+ * updatePriority({ orderId: '123', store: 'bannos', priority: 'High' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useUpdateOrderPriority() {
   const queryClient = useQueryClient();
 
@@ -110,6 +177,17 @@ export function useUpdateOrderPriority() {
 // STAGE PROGRESSION MUTATIONS
 // =============================================
 
+/**
+ * Hook to mark the Filling stage as complete and advance order to Covering
+ *
+ * @returns Mutation object with `mutate({ orderId, store, notes? })` function
+ *
+ * @example
+ * const { mutate: complete } = useCompleteFilling();
+ * complete({ orderId: '123', store: 'bannos', notes: 'Used vanilla sponge' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useCompleteFilling() {
   const queryClient = useQueryClient();
 
@@ -122,6 +200,17 @@ export function useCompleteFilling() {
   });
 }
 
+/**
+ * Hook to start the Covering stage for an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store })` function
+ *
+ * @example
+ * const { mutate: start } = useStartCovering();
+ * start({ orderId: '123', store: 'bannos' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useStartCovering() {
   const queryClient = useQueryClient();
 
@@ -134,6 +223,17 @@ export function useStartCovering() {
   });
 }
 
+/**
+ * Hook to mark the Covering stage as complete and advance order to Decorating
+ *
+ * @returns Mutation object with `mutate({ orderId, store, notes? })` function
+ *
+ * @example
+ * const { mutate: complete } = useCompleteCovering();
+ * complete({ orderId: '123', store: 'bannos', notes: 'White fondant' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useCompleteCovering() {
   const queryClient = useQueryClient();
 
@@ -146,6 +246,17 @@ export function useCompleteCovering() {
   });
 }
 
+/**
+ * Hook to start the Decorating stage for an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store })` function
+ *
+ * @example
+ * const { mutate: start } = useStartDecorating();
+ * start({ orderId: '123', store: 'bannos' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useStartDecorating() {
   const queryClient = useQueryClient();
 
@@ -158,6 +269,17 @@ export function useStartDecorating() {
   });
 }
 
+/**
+ * Hook to mark the Decorating stage as complete and advance order to Packing
+ *
+ * @returns Mutation object with `mutate({ orderId, store, notes? })` function
+ *
+ * @example
+ * const { mutate: complete } = useCompleteDecorating();
+ * complete({ orderId: '123', store: 'bannos', notes: 'Added gold leaf accents' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useCompleteDecorating() {
   const queryClient = useQueryClient();
 
@@ -170,6 +292,17 @@ export function useCompleteDecorating() {
   });
 }
 
+/**
+ * Hook to mark the Packing stage as complete and finalize the order
+ *
+ * @returns Mutation object with `mutate({ orderId, store, notes? })` function
+ *
+ * @example
+ * const { mutate: complete } = useCompletePacking();
+ * complete({ orderId: '123', store: 'bannos', notes: 'Packed in large box' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useCompletePacking() {
   const queryClient = useQueryClient();
 
@@ -186,6 +319,19 @@ export function useCompletePacking() {
 // QC MUTATIONS
 // =============================================
 
+/**
+ * Hook to return an order from QC back to the Decorating stage
+ *
+ * Used when quality control identifies issues that need to be fixed.
+ *
+ * @returns Mutation object with `mutate({ orderId, store, notes? })` function
+ *
+ * @example
+ * const { mutate: returnToDecorating } = useQcReturnToDecorating();
+ * returnToDecorating({ orderId: '123', store: 'bannos', notes: 'Icing needs touch-up' });
+ *
+ * @sideeffect Invalidates all queue queries on success
+ */
 export function useQcReturnToDecorating() {
   const queryClient = useQueryClient();
 
@@ -203,8 +349,21 @@ export function useQcReturnToDecorating() {
 // =============================================
 
 /**
- * Hook that provides all stage progression mutations
- * Useful for ScannerOverlay which needs to handle different stages
+ * Hook that provides all stage progression mutations in a single object
+ *
+ * Useful for components like ScannerOverlay that need to handle multiple stages
+ * and want a single hook to access all stage mutations.
+ *
+ * @returns Object containing all stage mutation hooks and an `isPending` flag
+ *
+ * @example
+ * const { completeFilling, startCovering, isPending } = useStageMutations();
+ *
+ * if (isPending) {
+ *   return <Spinner />;
+ * }
+ *
+ * completeFilling.mutate({ orderId, store });
  */
 export function useStageMutations() {
   const completeFilling = useCompleteFilling();
@@ -230,4 +389,50 @@ export function useStageMutations() {
       completeDecorating.isPending ||
       completePacking.isPending,
   };
+}
+
+// =============================================
+// ORDER STATUS MUTATIONS
+// =============================================
+
+/**
+ * Hook to cancel an order
+ *
+ * @returns Mutation object with `mutate({ orderId, store, reason? })` function
+ *
+ * @example
+ * const { mutate: cancel } = useCancelOrder();
+ * cancel({ orderId: '123', store: 'bannos', reason: 'Customer request' });
+ */
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ orderId, store, reason }: { orderId: string; store: Store; reason?: string }) =>
+      cancelOrder(orderId, store, reason),
+    onSuccess: () => {
+      invalidateAllQueueQueries(queryClient);
+    },
+  });
+}
+
+/**
+ * Hook to mark an order as complete
+ *
+ * @returns Mutation object with `mutate({ orderId, store })` function
+ *
+ * @example
+ * const { mutate: complete } = useMarkOrderComplete();
+ * complete({ orderId: '123', store: 'bannos' });
+ */
+export function useMarkOrderComplete() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ orderId, store }: { orderId: string; store: Store }) =>
+      markOrderComplete(orderId, store),
+    onSuccess: () => {
+      invalidateAllQueueQueries(queryClient);
+    },
+  });
 }

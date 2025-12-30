@@ -37,6 +37,8 @@ export function useQueueByStore(
       }),
     staleTime: QUEUE_STALE_TIME,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
+    // Polling pauses when tab is hidden (saves RPC calls)
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     enabled,
   });
@@ -65,6 +67,8 @@ export function useQueueForMonitor(
       }),
     staleTime: QUEUE_STALE_TIME,
     refetchInterval: QUEUE_REFETCH_INTERVAL,
+    // Polling pauses when tab is hidden (saves RPC calls)
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     enabled,
   });

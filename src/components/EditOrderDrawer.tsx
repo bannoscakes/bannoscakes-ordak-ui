@@ -13,34 +13,13 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { toast } from "sonner";
 import { updateOrderCore } from "../lib/rpc-client";
 import { formatOrderNumber, formatDate as formatDateDisplay } from "../lib/format-utils";
+import type { QueueItem } from "../types/queue";
 
 // Map internal store name to Shopify store slug
 const SHOPIFY_STORE_SLUGS: Record<string, string> = {
   bannos: 'bannos',
   flourlane: 'flour-lane',
 };
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  shopifyOrderId?: number;
-  customerName: string;
-  product: string;
-  size: string;
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  writingOnCake?: string;
-  accessories?: string[];
-  notes?: string;
-  deliveryDate?: string;
-}
 
 interface EditOrderDrawerProps {
   isOpen: boolean;
@@ -52,10 +31,10 @@ interface EditOrderDrawerProps {
 
 interface FormData {
   product: string;
-  dueDate: string;
+  dueDate: string | null;
   method: 'Delivery' | 'Pickup';
   size: string;
-  flavor: string;
+  flavour: string;
   priority: 'High' | 'Medium' | 'Low';
   storage: string;
   writingOnCake: string;
@@ -100,11 +79,15 @@ const getPriorityColor = (priority: string) => {
 export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: EditOrderDrawerProps) {
   const normalizedOrder = useMemo(() => {
     if (!order) return null;
+    // Map AccessoryItem[] to string[] for form display (extract titles)
+    const accessoryStrings = (order.accessories || []).map(acc =>
+      typeof acc === 'string' ? acc : acc.title
+    );
     return {
       ...order,
-      deliveryDate: order.deliveryDate || order.dueTime || order.deliveryTime || "",
+      deliveryDate: order.dueDate || "",
       writingOnCake: order.writingOnCake || "",
-      accessories: order.accessories || [],
+      accessories: accessoryStrings,
       notes: order.notes || "",
     };
   }, [order]);
@@ -115,7 +98,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     dueDate: "",
     method: "Pickup",
     size: "",
-    flavor: "",
+    flavour: "",
     priority: "Medium",
     storage: "",
     writingOnCake: "",
@@ -129,7 +112,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     dueDate: "",
     method: "Pickup",
     size: "",
-    flavor: "",
+    flavour: "",
     priority: "Medium",
     storage: "",
     writingOnCake: "",
@@ -151,11 +134,12 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     if (normalizedOrder) {
       const initialData: FormData = {
         product: normalizedOrder.product,
-        dueDate: formatDate(normalizedOrder.deliveryDate || new Date().toISOString()),
+        dueDate: normalizedOrder.deliveryDate ? formatDate(normalizedOrder.deliveryDate) : null,
         method: normalizedOrder.method || "Pickup",
         size: normalizedOrder.size,
-        flavor: normalizedOrder.flavor === "Other" ? "" : normalizedOrder.flavor,
-        priority: normalizedOrder.priority,
+        flavour: normalizedOrder.flavour === "Other" ? "" : normalizedOrder.flavour,
+        // Form needs a priority value - calculate from date or default to 'Low' when missing
+        priority: normalizedOrder.priority ?? (normalizedOrder.deliveryDate ? calculatePriority(normalizedOrder.deliveryDate) : 'Low'),
         storage: normalizedOrder.storage || "",
         writingOnCake: normalizedOrder.writingOnCake || "",
         accessories: [...normalizedOrder.accessories],
@@ -182,7 +166,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     }
   }, [isOpen, handleKeyDown]);
 
-  const updateField = useCallback((field: keyof FormData, value: any) => {
+  const updateField = useCallback((field: keyof FormData, value: FormData[keyof FormData]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Check if field is dirty
@@ -212,22 +196,27 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         product_title: formData.product,
         size: formData.size,
         delivery_method: formData.method.toLowerCase(),
-        flavour: formData.flavor || "Other",
+        flavour: formData.flavour || "Other",
         storage: formData.storage,
         due_date: formData.dueDate,
-        notes: formData.writingOnCake || undefined,
+        cake_writing: formData.writingOnCake || undefined,
+        notes: formData.notes || undefined,
       });
 
-      // Create updated order for UI
-      const updatedOrder = {
-        ...normalizedOrder,
+      // Create updated order for UI (restore original accessories format)
+      // order is guaranteed to be non-null here since normalizedOrder check passed
+      const updatedOrder: QueueItem = {
+        ...order!,
         product: formData.product,
         size: formData.size,
         priority: calculatePriority(formData.dueDate),
         method: formData.method,
-        flavor: formData.flavor || "Other",
+        flavour: formData.flavour || "Other",
         storage: formData.storage,
-        deliveryDate: formData.dueDate,
+        dueDate: formData.dueDate,
+        cakeWriting: formData.writingOnCake,
+        writingOnCake: formData.writingOnCake,
+        notes: formData.notes,
       };
 
       toast.success("Changes saved successfully");
@@ -238,7 +227,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
     } finally {
       setSaving(false);
     }
-  }, [formData, normalizedOrder, onSaved, store]);
+  }, [formData, normalizedOrder, onSaved, store, order]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges) {
@@ -297,7 +286,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             </div>
             <SheetDescription className="sr-only">
               Edit order {normalizedOrder.shopifyOrderNumber
-                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store, normalizedOrder.id)
                 : normalizedOrder.orderNumber} for {normalizedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
@@ -312,7 +301,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
             </p>
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Order:</span> {normalizedOrder.shopifyOrderNumber
-                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store)
+                ? formatOrderNumber(normalizedOrder.shopifyOrderNumber, store, normalizedOrder.id)
                 : normalizedOrder.orderNumber}
             </p>
           </div>
@@ -449,22 +438,22 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 <label className="text-sm font-medium text-foreground">
                   Flavour
                 </label>
-                {dirtyFields.flavor && (
+                {dirtyFields.flavour && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-10 w-10 p-0"
-                    onClick={() => resetField('flavor')}
+                    onClick={() => resetField('flavour')}
                   >
                     <RotateCcw className="h-3 w-3" />
                   </Button>
                 )}
               </div>
               <Input
-                value={formData.flavor}
-                onChange={(e) => updateField('flavor', e.target.value)}
+                value={formData.flavour}
+                onChange={(e) => updateField('flavour', e.target.value)}
                 placeholder="Enter flavour..."
-                className={dirtyFields.flavor ? 'border-orange-300 bg-orange-50' : ''}
+                className={dirtyFields.flavour ? 'border-orange-300 bg-orange-50' : ''}
               />
             </div>
 
@@ -474,8 +463,8 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 Priority (Auto-calculated from due date)
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <Badge className={`text-xs ${getPriorityColor(calculatePriority(formData.dueDate))}`}>
-                  {calculatePriority(formData.dueDate)}
+                <Badge className={`text-xs ${formData.dueDate ? getPriorityColor(calculatePriority(formData.dueDate)) : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                  {formData.dueDate ? calculatePriority(formData.dueDate) : '-'}
                 </Badge>
                 <p className="text-xs text-muted-foreground mt-1">
                   Priority is automatically calculated based on due date:

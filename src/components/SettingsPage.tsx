@@ -10,20 +10,22 @@ import { Badge } from "./ui/badge";
 import { AlertCircle, Eye, EyeOff, Plus, X, GripVertical, TestTube, ArrowLeft } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { toast } from "sonner";
-import { 
-  getSettings, 
-  setSetting, 
-  getFlavours, 
-  setFlavours, 
-  getStorageLocations, 
-  setStorageLocations, 
-  getPrintingSettings, 
-  setPrintingSettings, 
-  getMonitorDensity, 
+import {
+  getSettings,
+  setSetting,
+  getFlavours,
+  setFlavours,
+  getStorageLocations,
+  setStorageLocations,
+  getPrintingSettings,
+  setPrintingSettings,
+  getMonitorDensity,
   setMonitorDensity,
   testAdminToken,
   syncShopifyOrders
 } from "../lib/rpc-client";
+import { useInvalidateSettings } from "../hooks/useSettingsQueries";
+import type { GetSettingsRow } from "../types/rpc-returns";
 
 interface SettingsPageProps {
   store: "bannos" | "flourlane";
@@ -114,7 +116,10 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [newBlackoutDate, setNewBlackoutDate] = useState("");
   const [loading, setLoading] = useState(true);
-  
+
+  // Hook to invalidate React Query cache when settings are saved
+  const invalidateSettings = useInvalidateSettings();
+
   // Track current store to prevent race conditions with in-flight requests
   const currentStoreRef = useRef(store);
 
@@ -146,12 +151,12 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         ]);
 
         // Extract specific settings from the allSettings array
-        const dueDateDefault = allSettings?.find((s: any) => s.key === 'dueDates.defaultDue')?.value;
-        const dueDateDays = allSettings?.find((s: any) => s.key === 'dueDates.allowedDays')?.value;
-        const dueDateBlackouts = allSettings?.find((s: any) => s.key === 'dueDates.blackoutDates')?.value;
-        const autoRefresh = allSettings?.find((s: any) => s.key === 'monitor.autoRefresh')?.value;
-        const shopifyToken = allSettings?.find((s: any) => s.key === 'shopifyToken')?.value;
-        const inventoryTracking = allSettings?.find((s: any) => s.key === 'inventory_tracking_enabled')?.value;
+        const dueDateDefault = allSettings?.find((s: GetSettingsRow) => s.key === 'dueDates.defaultDue')?.value;
+        const dueDateDays = allSettings?.find((s: GetSettingsRow) => s.key === 'dueDates.allowedDays')?.value;
+        const dueDateBlackouts = allSettings?.find((s: GetSettingsRow) => s.key === 'dueDates.blackoutDates')?.value;
+        const autoRefresh = allSettings?.find((s: GetSettingsRow) => s.key === 'monitor.autoRefresh')?.value;
+        const shopifyToken = allSettings?.find((s: GetSettingsRow) => s.key === 'shopifyToken')?.value;
+        const inventoryTracking = allSettings?.find((s: GetSettingsRow) => s.key === 'inventory_tracking_enabled')?.value;
 
         console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
         console.log('Storage locations details:', { 
@@ -216,11 +221,12 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
     fetchSettings();
   }, [store]);
 
-  const handleSettingsChange = (path: string, value: any) => {
+  const handleSettingsChange = (path: string, value: unknown) => {
     setSettings(prev => {
       const keys = path.split('.');
       const newSettings = { ...prev };
-      let current: any = newSettings;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let current: Record<string, any> = newSettings;
       
       for (let i = 0; i < keys.length - 1; i++) {
         current[keys[i]] = { ...current[keys[i]] };
@@ -394,6 +400,10 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
 
       console.log('Settings saved successfully');
       setHasUnsavedChanges(false);
+
+      // Invalidate React Query cache so other components get fresh data
+      invalidateSettings();
+
       toast.success("Settings saved successfully");
     } catch (error) {
       console.error('Error saving settings:', error);

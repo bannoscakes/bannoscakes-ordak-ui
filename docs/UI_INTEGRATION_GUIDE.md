@@ -201,7 +201,6 @@ const locations = await getStorageLocations('bannos');
 
 ### **Inventory**
 - [ ] `InventoryPage.tsx` - Use `getComponents()`
-- [ ] `InventoryOverview.tsx` - Add low stock alerts
 - [ ] Add inventory value display
 
 ### **Settings**

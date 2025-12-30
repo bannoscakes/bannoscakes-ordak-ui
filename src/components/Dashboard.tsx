@@ -14,10 +14,11 @@ import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
 import { SettingsPage } from "./SettingsPage";
 import { TimePayrollPage } from "./TimePayrollPage";
 import { BarcodeTest } from "./BarcodeTest";
+import { OrdersPage } from "./OrdersPage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
-import { safePushState } from "@/lib/safeNavigate";
+import { safePushState, NAVIGATION_EVENT } from "@/lib/safeNavigate";
 
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const { user } = useAuth();
@@ -86,31 +87,24 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     
     // Listen for browser back/forward navigation
     window.addEventListener('popstate', handleUrlChange);
-    
-    // Hook into programmatic navigation (pushState/replaceState)
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-    
-    window.history.pushState = function(...args) {
-      originalPushState.apply(window.history, args);
-      handleUrlChange();
-    };
-    
-    window.history.replaceState = function(...args) {
-      originalReplaceState.apply(window.history, args);
-      handleUrlChange();
-    };
-    
+    // Listen for programmatic navigation via custom event (fixes #498 - no more pushState patching)
+    window.addEventListener(NAVIGATION_EVENT, handleUrlChange);
+
     return () => {
       window.removeEventListener('popstate', handleUrlChange);
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
+      window.removeEventListener(NAVIGATION_EVENT, handleUrlChange);
     };
   }, []);
 
   const renderContent = () => {
     try {
       switch (activeView) {
+        case "orders":
+          return (
+            <ErrorBoundary>
+              <OrdersPage />
+            </ErrorBoundary>
+          );
         case "bannos-production":
           return (
             <ErrorBoundary>
@@ -175,7 +169,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           return (
             <ErrorBoundary>
               <SettingsPage store="bannos" onBack={() => {
-                window.history.pushState({}, '', '/');
+                safePushState('/');
                 setActiveView("dashboard");
               }} />
             </ErrorBoundary>
@@ -184,7 +178,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           return (
             <ErrorBoundary>
               <SettingsPage store="flourlane" onBack={() => {
-                window.history.pushState({}, '', '/');
+                safePushState('/');
                 setActiveView("dashboard");
               }} />
             </ErrorBoundary>
@@ -198,10 +192,10 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         case "time-payroll":
           return (
             <ErrorBoundary>
-              <TimePayrollPage 
+              <TimePayrollPage
                 initialStaffFilter={staffFilter || undefined}
                 onBack={() => {
-                  window.history.pushState({}, '', '/');
+                  safePushState('/');
                   setActiveView("dashboard");
                 }}
               />

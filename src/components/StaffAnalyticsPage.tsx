@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { 
-  Users, 
-  Clock, 
+import {
+  Users,
+  Clock,
   Target,
   Calendar,
   Star,
@@ -14,10 +14,11 @@ import {
   Activity
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { getStaffList, getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance, getStaffStagePerformance, type StaffStagePerformance } from "../lib/rpc-client";
+import { getStaffAttendanceRate, getStaffAvgProductivity, getDepartmentPerformance, getStaffStagePerformance, type StaffStagePerformance } from "../lib/rpc-client";
 import { toast } from "sonner";
 import ChartContainer from "@/components/analytics/ChartContainer";
 import { useAnalyticsEnabled } from "@/hooks/useAnalyticsEnabled";
+import { useStaffList } from "@/hooks/useSettingsQueries";
 import KpiValue from "@/components/analytics/KpiValue";
 import { toNumberOrNull } from "@/lib/metrics";
 
@@ -111,27 +112,28 @@ const shiftDistribution = [
 
 export function StaffAnalyticsPage() {
   const [loading, setLoading] = useState(true);
-  const [totalStaff, setTotalStaff] = useState(0);
   const [avgProductivity, setAvgProductivity] = useState<number | null>(null);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const [departmentPerformanceData, setDepartmentPerformanceData] = useState<any[]>([]);
   const [staffStageData, setStaffStageData] = useState<StaffStagePerformance[]>([]);
   const isEnabled = useAnalyticsEnabled();
-  
-  // Fetch real staff analytics data
+
+  // Fetch staff list using React Query
+  const { data: staffData = [], isLoading: isStaffLoading, isError: isStaffError } = useStaffList();
+  const totalStaff = isStaffError ? null : staffData.length;
+
+  // Fetch other analytics data
   useEffect(() => {
     async function fetchStaffStats() {
       try {
         // Fetch all metrics in parallel
-        const [staffList, productivityData, attendanceData, deptData, stageData] = await Promise.all([
-          getStaffList(null, true), // Get all active staff
+        const [productivityData, attendanceData, deptData, stageData] = await Promise.all([
           getStaffAvgProductivity(30), // Last 30 days
           getStaffAttendanceRate(30), // Last 30 days
           getDepartmentPerformance(30), // Last 30 days
           getStaffStagePerformance(30) // Last 30 days
         ]);
 
-        setTotalStaff(staffList.length);
         setAvgProductivity(productivityData?.avg_productivity || null);
         setAttendanceRate(attendanceData?.attendance_rate || null);
         setDepartmentPerformanceData(deptData || []);
@@ -150,12 +152,12 @@ export function StaffAnalyticsPage() {
   const kpiMetricsWithRealData = [
     {
       title: "Total Staff",
-      value: loading ? "..." : totalStaff.toString(),
+      value: isStaffLoading ? "..." : isStaffError ? "Error" : totalStaff?.toString() ?? "0",
       change: "",
       trend: "neutral" as const,
       icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-50"
+      color: isStaffError ? "text-destructive" : "text-blue-600",
+      bg: isStaffError ? "bg-red-50" : "bg-blue-50"
     },
     {
       title: "Avg Productivity",

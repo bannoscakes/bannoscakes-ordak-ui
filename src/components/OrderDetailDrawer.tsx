@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Bot, Printer, QrCode } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -8,39 +8,9 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { getOrder } from "../lib/rpc-client";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
-
-interface AccessoryItem {
-  title: string;
-  quantity: number;
-  price: string;
-  variant_title?: string | null;
-}
-
-interface QueueItem {
-  id: string;
-  orderNumber: string;
-  shopifyOrderNumber: string;
-  customerName: string;
-  product: string;
-  size: string; // Real sizes from database (e.g., "Medium", "Large", "Small Tall")
-  quantity: number;
-  deliveryTime: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled';
-  flavor: string;
-  dueTime: string;
-  method?: 'Delivery' | 'Pickup';
-  storage?: string;
-  store?: 'bannos' | 'flourlane';
-  stage?: string;
-  // Database fields for order details
-  cakeWriting?: string;
-  notes?: string;
-  productImage?: string | null;
-  accessories?: AccessoryItem[] | null;
-}
+import { useOrderDetail } from "../hooks/useOrderQueries";
+import type { QueueItem } from "../types/queue";
 
 interface OrderDetailDrawerProps {
   isOpen: boolean;
@@ -57,13 +27,13 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
   return {
     ...order,
     // Use real size from database (no mock override)
-    size: order.size || 'Unknown',
+    size: order.size || '',
     // Use real cake writing from database
     writingOnCake: order.cakeWriting || '',
     // Pass raw accessories for flexible rendering (not pre-formatted strings)
     accessories: order.accessories || [],
     // Use real due date
-    deliveryDate: order.dueTime || order.deliveryTime || new Date().toISOString().split('T')[0],
+    deliveryDate: order.dueDate || null,
     // Use real notes from database (null means no notes)
     notes: order.notes || '',
     // Use real product image from database
@@ -72,7 +42,7 @@ const getExtendedOrderData = (order: QueueItem | null, _store: "bannos" | "flour
   };
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | null) => {
   const colors = {
     "High": "bg-red-100 text-red-700 border-red-200",
     "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -85,84 +55,67 @@ const getStorageColor = () => {
   return "bg-purple-100 text-purple-700 border-purple-200";
 };
 
+const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' => {
+  switch (stage) {
+    case "Filling": return "In Production";
+    case "Covering": return "In Production";
+    case "Decorating": return "In Production";
+    case "Packing": return "Quality Check";
+    case "Complete": return "Completed";
+    default: return "Pending";
+  }
+};
+
 export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetailDrawerProps) {
   const [qcIssue, setQcIssue] = useState("None");
   const [qcComments, setQcComments] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [realOrder, setRealOrder] = useState<QueueItem | null>(null);
-  
-  // Fetch real order data when drawer opens
-  useEffect(() => {
-    if (isOpen && order) {
-      fetchRealOrderData();
-    }
-  }, [isOpen, order, store]);
 
-  const fetchRealOrderData = async () => {
-    if (!order) return;
-    
-    try {
-      setLoading(true);
-      
-      // Fetch the specific order using getOrder RPC
-      const foundOrder = await getOrder(order.id, store);
-      
-      if (foundOrder) {
-        // Map database order to UI format
-        const mappedOrder: QueueItem = {
-          id: foundOrder.id,
-          orderNumber: foundOrder.human_id || foundOrder.shopify_order_number || foundOrder.id,
-          shopifyOrderNumber: String(foundOrder.shopify_order_number || ''),
-          customerName: foundOrder.customer_name || "Unknown Customer",
-          product: foundOrder.product_title || "Unknown Product",
-          size: foundOrder.size || "Unknown",
-          quantity: foundOrder.item_qty || 1,
-          deliveryTime: foundOrder.due_date || new Date().toISOString(),
-          priority: foundOrder.priority === 1 ? "High" : foundOrder.priority === 0 ? "Medium" : "Low",
-          status: mapStageToStatus(foundOrder.stage),
-          flavor: foundOrder.flavour || "",
-          dueTime: foundOrder.due_date || new Date().toISOString(),
-          // Fix case-insensitive check for delivery_method
-          method: foundOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
-          storage: foundOrder.storage || "Default",
-          store: foundOrder.store || store,
-          stage: foundOrder.stage || "Filling",
-          // Add real data from database
-          cakeWriting: foundOrder.cake_writing || '',
-          notes: foundOrder.notes || '',
-          productImage: foundOrder.product_image || null,
-          accessories: foundOrder.accessories || null
-        };
-        
-        setRealOrder(mappedOrder);
-      } else {
-        // Fallback to original order if not found in database
-        setRealOrder(order);
-      }
-    } catch (error) {
+  // Fetch order detail using React Query
+  const { data: fetchedOrder, isLoading: loading, error } = useOrderDetail(
+    order?.id,
+    store,
+    { enabled: isOpen && !!order }
+  );
+
+  // Show error toast when fetch fails
+  useEffect(() => {
+    if (error) {
       console.error('Error fetching order data:', error);
       toast.error('Failed to load order details');
-      // Fallback to original order
-      setRealOrder(order);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [error]);
 
-  const mapStageToStatus = (stage: string) => {
-    switch (stage) {
-      case "Filling": return "In Production";
-      case "Covering": return "In Production";
-      case "Decorating": return "In Production";
-      case "Packing": return "Quality Check";
-      case "Complete": return "Completed";
-      default: return "Pending";
+  // Map fetched order to UI format, fallback to original order
+  const realOrder = useMemo((): QueueItem | null => {
+    if (fetchedOrder) {
+      return {
+        id: fetchedOrder.id,
+        orderNumber: fetchedOrder.human_id || String(fetchedOrder.shopify_order_number) || fetchedOrder.id,
+        shopifyOrderNumber: String(fetchedOrder.shopify_order_number || ''),
+        customerName: fetchedOrder.customer_name || '',
+        product: fetchedOrder.product_title || '',
+        size: fetchedOrder.size || '',
+        quantity: fetchedOrder.item_qty || 1,
+        dueDate: fetchedOrder.due_date || null,
+        priority: fetchedOrder.priority,
+        status: mapStageToStatus(fetchedOrder.stage),
+        flavour: fetchedOrder.flavour || "",
+        method: fetchedOrder.delivery_method?.toLowerCase() === "delivery" ? "Delivery" : "Pickup",
+        storage: fetchedOrder.storage || '',
+        store: fetchedOrder.store || store,
+        stage: fetchedOrder.stage || "Filling",
+        cakeWriting: fetchedOrder.cake_writing || '',
+        notes: fetchedOrder.notes || '',
+        productImage: fetchedOrder.product_image || null,
+        accessories: fetchedOrder.accessories || null
+      };
     }
-  };
+    return order || null;
+  }, [fetchedOrder, order, store]);
 
   const extendedOrder = getExtendedOrderData(realOrder || order, store);
-  const currentStage = (realOrder?.stage || order?.stage || "").toLowerCase();
-  const isPackingStage = currentStage === "packing";
+  const currentStage = realOrder?.stage || order?.stage || "";
+  const isPackingStage = currentStage === "Packing";
   const storeName = store === "bannos" ? "Bannos" : "Flourlane";
   
   if (!extendedOrder) return null;
@@ -205,7 +158,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
             </div>
             <SheetDescription className="sr-only">
               Detailed view of order {extendedOrder.shopifyOrderNumber
-                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store)
+                ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store, extendedOrder.id)
                 : extendedOrder.orderNumber} for {extendedOrder.customerName}
             </SheetDescription>
           </SheetHeader>
@@ -229,7 +182,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Order:</span> {extendedOrder.shopifyOrderNumber
-                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store)
+                    ? formatOrderNumber(extendedOrder.shopifyOrderNumber, store, extendedOrder.id)
                     : extendedOrder.orderNumber}
                 </p>
               </div>
@@ -238,14 +191,14 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Priority</p>
                   <div className="mt-2">
                     <Badge className={`text-xs ${getPriorityColor(extendedOrder.priority)}`}>
-                      {extendedOrder.priority}
+                      {extendedOrder.priority || '-'}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
-                  <p className="mt-2 text-foreground">
-                    {formatDate(extendedOrder.deliveryDate)}
+                  <p className={`mt-2 ${extendedOrder.deliveryDate ? 'text-foreground' : 'text-red-600 font-bold'}`}>
+                    {extendedOrder.deliveryDate ? formatDate(extendedOrder.deliveryDate) : 'No due date'}
                   </p>
                 </div>
                 <div>
@@ -288,7 +241,7 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
             </div>
 
             {/* Size + Flavour + Quantity (cake details together) */}
-            <div className={`grid gap-4 ${extendedOrder.flavor && extendedOrder.flavor !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-4 ${extendedOrder.flavour && extendedOrder.flavour !== "Other" ? "grid-cols-3" : "grid-cols-2"}`}>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-2">
                   Size
@@ -297,12 +250,12 @@ export function OrderDetailDrawer({ isOpen, onClose, order, store }: OrderDetail
                   {extendedOrder.size}
                 </p>
               </div>
-              {extendedOrder.flavor && extendedOrder.flavor !== "Other" && (
+              {extendedOrder.flavour && extendedOrder.flavour !== "Other" && (
                 <div>
                   <label className="text-sm font-medium text-foreground block mb-2">
                     Flavour
                   </label>
-                  <p className="text-sm text-foreground">{extendedOrder.flavor}</p>
+                  <p className="text-sm text-foreground">{extendedOrder.flavour}</p>
                 </div>
               )}
               <div>
