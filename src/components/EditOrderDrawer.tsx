@@ -214,6 +214,9 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
         flavour: formData.flavour || "Other",
         storage: formData.storage,
         dueDate: formData.dueDate,
+        cakeWriting: formData.writingOnCake,
+        writingOnCake: formData.writingOnCake,
+        notes: formData.notes,
       };
 
       toast.success("Changes saved successfully");
