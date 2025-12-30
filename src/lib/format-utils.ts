@@ -21,29 +21,6 @@ export function formatDate(date: string | Date | null | undefined): string {
 }
 
 /**
- * Format a date to Australian format with 24-hour time (dd/mm/yyyy HH:mm).
- * Uses UTC getters to avoid timezone shift issues with ISO datetime strings.
- * @param date - Date string, Date object, or null/undefined
- * @returns Formatted date-time string (e.g., "25/12/2024 14:30") or empty string if invalid
- */
-export function formatDateTime(date: string | Date | null | undefined): string {
-  if (!date) return '';
-
-  const d = typeof date === 'string' ? new Date(date) : date;
-
-  // Check for invalid date
-  if (isNaN(d.getTime())) return '';
-
-  const day = d.getUTCDate().toString().padStart(2, '0');
-  const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
-  const year = d.getUTCFullYear();
-  const hours = d.getUTCHours().toString().padStart(2, '0');
-  const minutes = d.getUTCMinutes().toString().padStart(2, '0');
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-}
-
-/**
  * Format an order number with the appropriate store prefix.
  *
  * **Split Order Convention:**
