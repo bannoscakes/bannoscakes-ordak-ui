@@ -1311,12 +1311,7 @@ export async function adjustAccessoryStock(params: {
 
 export async function deleteAccessory(id: string): Promise<void> {
   const supabase = getSupabase();
-  // Soft delete: set is_active = false instead of hard delete
-  const { error } = await supabase
-    .from('accessories')
-    .update({ is_active: false })
-    .eq('id', id);
-
+  const { error } = await supabase.rpc('soft_delete_accessory', { p_id: id });
   if (error) throw error;
 }
 
@@ -1412,12 +1407,7 @@ export async function adjustCakeTopperStock(params: {
 
 export async function deleteCakeTopper(id: string): Promise<void> {
   const supabase = getSupabase();
-  // Soft delete: set is_active = false instead of hard delete
-  const { error } = await supabase
-    .from('cake_toppers')
-    .update({ is_active: false })
-    .eq('id', id);
-
+  const { error } = await supabase.rpc('soft_delete_cake_topper', { p_id: id });
   if (error) throw error;
 }
 
