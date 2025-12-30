@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useQuery, skipToken } from '@tanstack/react-query';
 import { getOrderV2, getOrder, type OrderV2Result, type LegacyOrderResult } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
@@ -35,13 +34,12 @@ async function fetchOrderWithFallback(orderId: string, store: Store): Promise<Or
     return await getOrderV2(orderId, store);
   } catch (err: unknown) {
     // Fallback to getOrder if getOrderV2 RPC doesn't exist (PostgreSQL error 42883)
-    const errMessage = err instanceof Error ? err.message : '';
+    // Only check for the specific error code to avoid false positives
     const isRpcNotFound =
-      (err && typeof err === 'object' && 'code' in err && err.code === '42883') ||
-      (errMessage.includes('function') && errMessage.includes('does not exist'));
+      err && typeof err === 'object' && 'code' in err && err.code === '42883';
 
     if (isRpcNotFound) {
-      console.warn('getOrderV2 RPC not available, falling back to getOrder', err);
+      console.warn('getOrderV2 RPC not available, falling back to getOrder');
       const legacyOrder = await getOrder(orderId, store);
       // Convert legacy order to V2 format with null for V2-specific fields
       return legacyOrder ? legacyToV2Order(legacyOrder) : null;
@@ -72,24 +70,4 @@ export function useOrderDetail(
     staleTime: 0, // Always fetch fresh when drawer opens
     enabled,
   });
-}
-
-/**
- * Hook to invalidate order detail queries after mutations
- * Used by: Components that modify order data
- */
-export function useInvalidateOrderDetail() {
-  const queryClient = useQueryClient();
-  return useCallback(
-    (orderId?: string, store?: Store) => {
-      if (orderId && store) {
-        // Invalidate specific order
-        queryClient.invalidateQueries({ queryKey: orderKeys.detail(orderId, store) });
-      } else {
-        // Invalidate all order details
-        queryClient.invalidateQueries({ queryKey: orderKeys.all() });
-      }
-    },
-    [queryClient]
-  );
 }
