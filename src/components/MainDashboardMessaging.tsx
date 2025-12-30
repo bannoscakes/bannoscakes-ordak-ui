@@ -305,7 +305,6 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
 
   const handleCreateConversation = async (participants: string[], isGroup: boolean) => {
     try {
-      console.log("onCreateConversation participants:", participants); // should be UUIDs, not emails
       const id = await createConversation(
         participants,
         isGroup ? "Group Chat" : undefined,

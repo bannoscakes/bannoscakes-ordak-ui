@@ -220,13 +220,6 @@ async function withErrorHandling<T>(
   
   try {
     const result = await rpcCall();
-    const duration = Date.now() - startTime;
-    
-    // Log successful operations in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`RPC ${context.rpcName} completed in ${duration}ms`);
-    }
-    
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -241,7 +234,6 @@ async function withErrorHandling<T>(
         const { data, error: refreshError } = await supabase.auth.refreshSession();
         
         if (!refreshError && data.session) {
-          console.log('✅ Session refreshed successfully, retrying RPC call');
           // Session refreshed, retry the RPC call
           return withErrorHandling(rpcCall, { ...context, retryCount: retryCount + 1 });
         } else {
@@ -1521,7 +1513,6 @@ export async function setPrintingSettings(store: Store, settings: Record<string,
 }
 
 export async function getMonitorDensity(store: Store) {
-  console.log('getMonitorDensity called for store:', store);
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_monitor_density', {
     p_store: store
@@ -1530,7 +1521,6 @@ export async function getMonitorDensity(store: Store) {
     console.error('getMonitorDensity error:', error);
     throw error;
   }
-  console.log('getMonitorDensity raw data:', data);
   return data;
 }
 
@@ -1565,7 +1555,6 @@ export async function getFlavours(store: Store): Promise<string[]> {
 }
 
 export async function getStorageLocations(store: Store): Promise<string[]> {
-  console.log('getStorageLocations called for store:', store);
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_storage_locations', {
     p_store: store,
@@ -1574,18 +1563,13 @@ export async function getStorageLocations(store: Store): Promise<string[]> {
     console.error('getStorageLocations error:', error);
     throw error;
   }
-  
-  console.log('getStorageLocations raw data:', data);
-  
+
   // Handle different return formats
   if (Array.isArray(data)) {
-    console.log('getStorageLocations returning array:', data);
     return data;
   } else if (data && typeof data === 'object' && data.data && Array.isArray(data.data)) {
-    console.log('getStorageLocations returning data.data:', data.data);
     return data.data;
   } else if (data && typeof data === 'object' && Array.isArray(data.locations)) {
-    console.log('getStorageLocations returning data.locations:', data.locations);
     return data.locations;
   } else {
     console.warn('Unexpected storage locations data format:', data);
@@ -1604,7 +1588,6 @@ export async function setFlavours(store: Store, flavours: string[]) {
 }
 
 export async function setStorageLocations(store: Store, locations: string[]) {
-  console.log('setStorageLocations called with:', { store, locations });
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_storage_locations', {
     p_store: store,
@@ -1614,7 +1597,6 @@ export async function setStorageLocations(store: Store, locations: string[]) {
     console.error('setStorageLocations error:', error);
     throw error;
   }
-  console.log('setStorageLocations result:', data);
   return data;
 }
 

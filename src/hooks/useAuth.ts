@@ -45,29 +45,15 @@ export function useRequireAuth(requiredRole?: 'Staff' | 'Supervisor' | 'Admin') 
     if (!auth.loading) {
       if (!auth.user) {
         // Redirect to login or show login modal
-        console.log('User not authenticated');
         return;
       }
 
       if (requiredRole && !auth.hasRole(requiredRole)) {
         // Redirect to unauthorized page or show error
-        console.log(`User lacks required role: ${requiredRole}`);
         return;
       }
     }
   }, [auth.loading, auth.user, requiredRole]);
-
-  return auth;
-}
-
-export function useRequireStore(store: 'bannos' | 'flourlane') {
-  const auth = useAuth();
-
-  useEffect(() => {
-    if (!auth.loading && auth.user && !auth.canAccessStore(store)) {
-      console.log(`User cannot access store: ${store}`);
-    }
-  }, [auth.loading, auth.user, store]);
 
   return auth;
 }

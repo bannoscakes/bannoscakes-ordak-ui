@@ -83,7 +83,6 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   };
 
   const handleCameraScan = (result: string) => {
-    console.log('Camera scan result:', result);
     handleScan(result);
   };
 

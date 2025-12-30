@@ -17,21 +17,17 @@ export function ProtectedRoute({
   fallback,
   userType = 'staff'
 }: ProtectedRouteProps) {
-  const { user, loading, hasRole, canAccessStore } = useAuthContext();
-
-  console.log('ProtectedRoute - loading:', loading, 'user:', user, 'requiredRole:', requiredRole);
+  const { user, hasRole, canAccessStore } = useAuthContext();
 
   // Skip loading check - App.tsx handles initial auth load
   // Only show loading during first initialization, not during transitions
   // This prevents flashing loading states when switching between auth states
 
   if (!user) {
-    console.log('ProtectedRoute - no user, showing login form');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <LoginForm onSuccess={() => {
           // Auth state will update and trigger re-render - no reload needed
-          console.log('✅ Login successful - auth state will update');
         }} userType={userType} />
       </div>
     );

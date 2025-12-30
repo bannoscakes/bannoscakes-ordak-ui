@@ -40,7 +40,7 @@ class AuthService {
     try {
       // Get initial session
       const { data: { session }, error } = await this.supabase.auth.getSession();
-      
+
       if (error) {
         console.error('Error getting session:', error);
         this.updateAuthState({ user: null, session: null, loading: false });
@@ -55,11 +55,8 @@ class AuthService {
 
       // Listen for auth changes with explicit event handling
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log('🔐 Auth event:', event, session?.user?.email || 'no user');
-        
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
-          console.log('🚪 Explicit sign out detected');
           // Clear React Query cache to prevent stale data bleeding between user sessions
           // This handles sign-outs from other tabs or session invalidations
           queryClient.clear();
@@ -69,7 +66,6 @@ class AuthService {
 
         // Handle token refresh - just update session, don't re-fetch profile
         if (event === 'TOKEN_REFRESHED') {
-          console.log('🔄 Token refreshed successfully');
           if (session && this.authState.user) {
             // Update session without re-fetching profile from DB
             // Keep loadedUserId as-is (user.id doesn't change on refresh)
@@ -80,10 +76,9 @@ class AuthService {
 
         // Handle initial session with no data - try to recover
         if (event === 'INITIAL_SESSION' && !session) {
-          console.warn('⚠️ INITIAL_SESSION with no session data - attempting recovery');
+          console.warn('INITIAL_SESSION with no session data - attempting recovery');
           const recovered = await this.recoverSession();
           if (!recovered) {
-            console.log('❌ Session recovery failed - logging out');
             this.updateAuthState({ user: null, session: null, loading: false });
           }
           return;
@@ -91,7 +86,6 @@ class AuthService {
 
         // Handle signed in event
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log('✅ Sign in successful');
           await this.loadUserProfile(session.user, session);
           return;
         }
@@ -113,33 +107,28 @@ class AuthService {
    */
   private async recoverSession(): Promise<boolean> {
     if (this.isRecoveringSession) {
-      console.log('⏳ Session recovery already in progress');
       return false;
     }
 
     this.isRecoveringSession = true;
 
     try {
-      console.log('🔧 Attempting session recovery...');
-      
       // Try to get session again
       const { data: { session }, error } = await this.supabase.auth.getSession();
-      
+
       if (error) {
-        console.error('❌ Session recovery failed:', error);
+        console.error('Session recovery failed:', error);
         return false;
       }
 
       if (session?.user) {
-        console.log('✅ Session recovered successfully');
         await this.loadUserProfile(session.user, session);
         return true;
       }
 
-      console.log('❌ No session found during recovery');
       return false;
     } catch (error) {
-      console.error('❌ Session recovery error:', error);
+      console.error('Session recovery error:', error);
       return false;
     } finally {
       this.isRecoveringSession = false;
@@ -151,14 +140,12 @@ class AuthService {
 
     // Guard: Skip if already loaded for this user
     if (this.loadedUserId === userId) {
-      console.log('Skipping duplicate loadUserProfile for same user');
       return;
     }
 
     // Check for in-flight promise to deduplicate concurrent calls
     const existingPromise = this.loadingPromises.get(userId);
     if (existingPromise) {
-      console.log('Awaiting existing loadUserProfile promise for user:', userId);
       return existingPromise;
     }
 
@@ -176,8 +163,6 @@ class AuthService {
 
   private async executeLoadUserProfile(user: User, session: Session, userId: string): Promise<void> {
     try {
-      console.log('Loading user profile for:', user.email, 'User ID:', userId);
-
       // Check if user.id exists
       if (!userId) {
         console.error('User ID is null or undefined');
@@ -198,8 +183,6 @@ class AuthService {
         return;
       }
 
-      console.log('User profile data:', data);
-
       if (data && data.length > 0) {
         const profile = data[0];
         const authUser: AuthUser = {
@@ -211,7 +194,6 @@ class AuthService {
           isActive: profile.is_active
         };
 
-        console.log('Created auth user:', authUser);
         this.loadedUserId = userId; // Mark as loaded on success
         this.updateAuthState({ user: authUser, session: session, loading: false });
       } else {
@@ -251,46 +233,32 @@ class AuthService {
 
   async signOut(): Promise<void> {
     try {
-      console.log('=== SIGNOUT DEBUG START ===');
-      console.log('Current auth state before signout:', this.authState);
-      console.log('Supabase session before signout:', await this.supabase.auth.getSession());
-      
-      console.log('Calling supabase.auth.signOut()...');
       const { error } = await this.supabase.auth.signOut();
-      
+
       if (error) {
         console.error('Supabase signOut error:', error);
         throw error;
       }
-      
-      console.log('Supabase signOut successful');
-      console.log('Supabase session after signout:', await this.supabase.auth.getSession());
 
       // Clear React Query cache to prevent stale data bleeding between user sessions
-      console.log('Clearing React Query cache...');
       queryClient.clear();
 
       // Clear any persisted auth storage regardless of current config, since
       // a previous session may have been stored before persistence was
       // disabled.
       if (typeof window !== 'undefined') {
-        console.log('Clearing persisted auth storage...');
         clearSupabaseAuthStorage();
 
         // Clear URL params to prevent stale routing on next login
         // (e.g., supervisor logging in with leftover ?page= from previous session)
         if (window.location.search) {
-          console.log('Clearing URL params...');
           window.history.replaceState({}, '', '/');
         }
       }
-      
+
       // Update auth state - React will handle re-rendering
-      console.log('Updating auth state to null...');
       this.loadedUserId = null; // Reset guard for next login
       this.updateAuthState({ user: null, session: null, loading: false });
-      console.log('✅ Sign out complete - state cleared');
-      console.log('=== SIGNOUT DEBUG END ===');
 
     } catch (error) {
       console.error('Sign out error:', error);
@@ -349,7 +317,7 @@ class AuthService {
 
   hasRole(requiredRole: 'Staff' | 'Supervisor' | 'Admin'): boolean {
     if (!this.authState.user) return false;
-    
+
     const roleHierarchy = {
       'Staff': 1,
       'Supervisor': 2,
