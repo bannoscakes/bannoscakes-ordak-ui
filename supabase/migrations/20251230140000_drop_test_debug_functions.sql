@@ -4,5 +4,5 @@
 
 DROP FUNCTION IF EXISTS public.test_auth();
 DROP FUNCTION IF EXISTS public.test_rpc_call();
-DROP FUNCTION IF EXISTS public.get_messages_debug();
-DROP FUNCTION IF EXISTS public.get_messages_temp_test();
+DROP FUNCTION IF EXISTS public.get_messages_debug(uuid);
+DROP FUNCTION IF EXISTS public.get_messages_temp_test(uuid, integer, integer);
