@@ -247,7 +247,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       
       // Check if user switched stores while request was in-flight
       if (currentStoreRef.current !== requestStore) {
-        console.log('Store changed during token test - ignoring result');
         return;
       }
       
@@ -285,7 +284,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       
       // Check if user switched stores while request was in-flight
       if (currentStoreRef.current !== requestStore) {
-        console.log('Store changed during sync - ignoring result');
         return;
       }
       
@@ -366,10 +364,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const handleSave = async () => {
     try {
       setLoading(true);
-      
-      console.log('Saving settings for store:', store);
-      console.log('Storage locations to save:', settings.storage);
-      
+
       // Save all settings to database
       await Promise.all([
         setFlavours(store, settings.flavours),
@@ -387,7 +382,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         setSetting(store, 'shopifyToken', settings.shopifyToken)
       ]);
 
-      console.log('Settings saved successfully');
       setHasUnsavedChanges(false);
 
       // Invalidate React Query cache so other components get fresh data

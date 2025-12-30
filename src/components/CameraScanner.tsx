@@ -44,7 +44,6 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
         (result, error) => {
           if (result) {
             const text = result.getText();
-            console.log('Barcode detected:', text);
             onScan(text);
             stopScanning();
           }
