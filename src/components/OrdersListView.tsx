@@ -35,6 +35,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { useQueueByStore } from "../hooks/useQueueByStore";
 import { useCancelOrder, useMarkOrderComplete } from "../hooks/useQueueMutations";
 import { formatDate, formatOrderNumber } from "../lib/format-utils";
+import { getStageColorClass } from "../lib/stage-colors";
 import type { QueueItem } from "../types/queue";
 import type { GetQueueRow } from "../types/rpc-returns";
 
@@ -52,18 +53,9 @@ function getOrderStatus(stage: string, cancelledAt: string | null): OrderStatus 
 }
 
 function getStageBadge(stage: string, cancelledAt: string | null) {
-  if (cancelledAt) {
-    return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
-  }
-  const stageColors: Record<string, string> = {
-    "Filling": "bg-blue-50 text-blue-700 border-blue-200",
-    "Covering": "bg-purple-50 text-purple-700 border-purple-200",
-    "Decorating": "bg-pink-50 text-pink-700 border-pink-200",
-    "Packing": "bg-orange-50 text-orange-700 border-orange-200",
-    "Complete": "bg-green-50 text-green-700 border-green-200",
-  };
-  const colorClass = stageColors[stage] || "bg-gray-50 text-gray-700 border-gray-200";
-  return <Badge variant="outline" className={colorClass}>{stage}</Badge>;
+  const colorClass = getStageColorClass(stage, cancelledAt);
+  const label = cancelledAt ? "Cancelled" : stage;
+  return <Badge variant="outline" className={colorClass}>{label}</Badge>;
 }
 
 function getDeliveryMethodBadge(method: string | undefined) {
