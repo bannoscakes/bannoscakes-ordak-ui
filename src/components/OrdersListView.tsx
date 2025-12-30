@@ -35,6 +35,7 @@ import { ErrorDisplay } from "./ErrorDisplay";
 import { useQueueByStore } from "../hooks/useQueueByStore";
 import { useCancelOrder, useMarkOrderComplete } from "../hooks/useQueueMutations";
 import { formatDate, formatOrderNumber } from "../lib/format-utils";
+import { getStageColorClass } from "../lib/stage-colors";
 import type { QueueItem } from "../types/queue";
 import type { GetQueueRow } from "../types/rpc-returns";
 
@@ -51,15 +52,10 @@ function getOrderStatus(stage: string, cancelledAt: string | null): OrderStatus 
   return "in_production";
 }
 
-function getStatusBadge(status: OrderStatus) {
-  switch (status) {
-    case "in_production":
-      return <Badge variant="outline" className="border-transparent bg-yellow-100 text-yellow-800">In Production</Badge>;
-    case "completed":
-      return <Badge variant="outline" className="border-transparent bg-green-100 text-green-800">Completed</Badge>;
-    case "cancelled":
-      return <Badge variant="outline" className="border-transparent bg-red-100 text-red-800">Cancelled</Badge>;
-  }
+function getStageBadge(stage: string, cancelledAt: string | null) {
+  const colorClass = getStageColorClass(stage, cancelledAt);
+  const label = cancelledAt ? "Cancelled" : stage;
+  return <Badge variant="outline" className={colorClass}>{label}</Badge>;
 }
 
 function getDeliveryMethodBadge(method: string | undefined) {
@@ -362,7 +358,7 @@ export function OrdersListView({ store }: OrdersListViewProps) {
                     <td className="p-4">{getDeliveryMethodBadge(item.method)}</td>
                     <td className="p-4">{item.customerName}</td>
                     <td className="p-4">{formatDate(item.dueDate)}</td>
-                    <td className="p-4">{getStatusBadge(item.orderStatus)}</td>
+                    <td className="p-4">{getStageBadge(item.stage, item.cancelledAt)}</td>
                     <td className="p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

@@ -13,6 +13,7 @@ import { useState, useMemo } from "react";
 import { useQueueForMonitor } from "../hooks/useQueueByStore";
 import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { formatOrderNumber } from "../lib/format-utils";
+import { getStageColorParts } from "../lib/stage-colors";
 import type { GetQueueRow } from "../types/rpc-returns";
 
 interface OrderPill {
@@ -63,47 +64,6 @@ const getWeekDates = (startMonday: Date): WeekDay[] => {
   });
 };
 
-// Helper: Get stage color classes for pills
-const getStageColorClasses = (stage: string) => {
-  const colorMap: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-    'Filling': {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      text: 'text-blue-700',
-      dot: 'bg-blue-500'
-    },
-    'Covering': {
-      bg: 'bg-purple-50',
-      border: 'border-purple-200',
-      text: 'text-purple-700',
-      dot: 'bg-purple-500'
-    },
-    'Decorating': {
-      bg: 'bg-pink-50',
-      border: 'border-pink-200',
-      text: 'text-pink-700',
-      dot: 'bg-pink-500'
-    },
-    'Packing': {
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
-      text: 'text-orange-700',
-      dot: 'bg-orange-500'
-    },
-    'Complete': {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      text: 'text-green-700',
-      dot: 'bg-green-500'
-    }
-  };
-  return colorMap[stage] || {
-    bg: 'bg-gray-50',
-    border: 'border-gray-200',
-    text: 'text-gray-700',
-    dot: 'bg-gray-500'
-  };
-};
 
 export function FlourlaneMonitorPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getCurrentWeekStart());
@@ -283,7 +243,7 @@ export function FlourlaneMonitorPage() {
                 {/* Orders List */}
                 <div className="flex-1 space-y-2 overflow-y-auto max-h-[550px] px-1">
                   {day.orders.map((order) => {
-                    const colors = getStageColorClasses(order.stage);
+                    const colors = getStageColorParts(order.stage);
                     return (
                       <div
                         key={order.id}
