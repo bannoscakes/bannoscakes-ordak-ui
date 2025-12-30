@@ -58,13 +58,8 @@ export function useRequireAuth(requiredRole?: 'Staff' | 'Supervisor' | 'Admin') 
   return auth;
 }
 
-export function useRequireStore(store: 'bannos' | 'flourlane') {
+export function useRequireStore(_store: 'bannos' | 'flourlane') {
   const auth = useAuth();
-
-  useEffect(() => {
-    // Store access check handled by canAccessStore
-  }, [auth.loading, auth.user, store]);
-
   return auth;
 }
 

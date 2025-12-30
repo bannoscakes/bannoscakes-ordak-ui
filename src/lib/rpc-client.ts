@@ -220,11 +220,6 @@ async function withErrorHandling<T>(
   
   try {
     const result = await rpcCall();
-    const duration = Date.now() - startTime;
-    
-    // RPC completed successfully
-    void duration; // Used for debugging if needed
-    
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
