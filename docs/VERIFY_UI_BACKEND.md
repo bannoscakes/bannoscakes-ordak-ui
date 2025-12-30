@@ -114,15 +114,15 @@ where table_schema='public' and table_name='vw_queue_minimal';
 select proname from pg_proc p
 join pg_namespace n on n.oid=p.pronamespace
 where n.nspname='public' and proname in (
-  'get_staff','get_staff_stats','assign_staff_to_order'
+  'get_staff_list','get_staff_stats','assign_staff'
 );
 ```
 
-- [x] get_staff() - **ADDED via migration 20250115_staff_surface.sql**
+- [x] get_staff_list() - replaces deprecated get_staff()
 - [x] get_staff_stats() - **ADDED via migration 20250115_staff_surface.sql**
-- [x] assign_staff_to_order() (or equivalent)
+- [x] assign_staff() - replaces deprecated assign_staff_to_order()
 
-**✅ Result:** All staff RPCs exist (2 added via forward-fix migration)
+**✅ Result:** All staff RPCs exist (using current function names)
 
 ### 2.3 Inventory
 ```sql
@@ -156,7 +156,7 @@ where n.nspname='public'
 
 ### 3.1 QueueTable / Dashboard
 
-- [x] src/components/QueueTable.tsx calls only RPCs (get_queue, assign_staff_to_order)
+- [x] src/components/QueueTable.tsx calls only RPCs (get_queue, assign_staff)
 - [x] No direct .from().insert|update|delete (guarded by CI, but double-check):
 ```bash
 git grep -nE "\.from\(['\"].+['\"]\)\.(insert|update|delete)\(" src
@@ -175,9 +175,9 @@ git grep -nE "\.from\(['\"].+['\"]\)\.(insert|update|delete)\(" src
 
 ### 3.4 Staff pages / analytics
 
-- [x] Staff list from get_staff()
+- [x] Staff list from get_staff_list()
 - [x] Analytics numbers from get_staff_stats()
-- [x] Any "Assign" action hits assign_staff_to_order RPC
+- [x] Any "Assign" action hits assign_staff RPC
 
 ### 3.5 Inventory components
 
@@ -222,7 +222,7 @@ Record anything missing or mismatched here with action:
 
 | Area | Missing/Issue | Action | Owner | PR | Status |
 |------|---------------|--------|-------|-----|--------|
-| Staff RPCs | get_staff, get_staff_stats missing | Forward-fix migration 20250115_staff_surface.sql | ✅ | fa41ce3 | ✅ FIXED |
+| Staff RPCs | get_staff_list, get_staff_stats added | Forward-fix migration 20250115_staff_surface.sql | ✅ | fa41ce3 | ✅ FIXED |
 | Inventory RPC | record_component_txn missing | Forward-fix migration 20250115_inventory_txn.sql | ✅ | fa41ce3 | ✅ FIXED |
 | Queue RPC | get_recent_orders not found | Assess if needed in UI | TBD | - | ⚠️ OPTIONAL |
 
