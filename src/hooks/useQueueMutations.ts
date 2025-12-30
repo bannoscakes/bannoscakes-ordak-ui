@@ -4,7 +4,6 @@ import {
   assignStaffBulk,
   unassignStaff,
   setStorage,
-  updateOrderPriority,
   completeFilling,
   completeCovering,
   completeDecorating,
@@ -144,29 +143,6 @@ export function useSetStorage() {
   return useMutation({
     mutationFn: ({ orderId, store, storageLocation }: { orderId: string; store: Store; storageLocation: string }) =>
       setStorage(orderId, store, storageLocation),
-    onSuccess: () => {
-      invalidateAllQueueQueries(queryClient);
-    },
-  });
-}
-
-/**
- * Hook to update the priority level of an order
- *
- * @returns Mutation object with `mutate({ orderId, store, priority })` function
- *
- * @example
- * const { mutate: updatePriority } = useUpdateOrderPriority();
- * updatePriority({ orderId: '123', store: 'bannos', priority: 'High' });
- *
- * @sideeffect Invalidates all queue queries on success
- */
-export function useUpdateOrderPriority() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ orderId, store, priority }: { orderId: string; store: Store; priority: 'High' | 'Medium' | 'Low' }) =>
-      updateOrderPriority(orderId, store, priority),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },

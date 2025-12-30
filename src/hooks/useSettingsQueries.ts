@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
-import { getStorageLocations, getFlavours, getStaffList } from '../lib/rpc-client';
+import { getStorageLocations, getStaffList } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 /**
@@ -34,21 +34,6 @@ export function useStorageLocations(store: Store | undefined) {
 }
 
 /**
- * Hook for flavours by store
- * TODO: Will be used by EditOrderDrawer and CreateManualOrderModal
- *
- * Settings change rarely, so we use a longer staleTime (5 minutes)
- * Uses skipToken pattern for type-safe conditional fetching
- */
-export function useFlavours(store: Store | undefined) {
-  return useQuery({
-    queryKey: settingsKeys.flavours(store),
-    queryFn: store ? () => getFlavours(store) : skipToken,
-    staleTime: 5 * 60 * 1000, // 5 minutes - settings change rarely
-  });
-}
-
-/**
  * Options for useStaffList hook
  */
 interface UseStaffListOptions {
@@ -64,7 +49,7 @@ interface UseStaffListOptions {
  * Staff list changes rarely, so we use a longer staleTime (5 minutes)
  * Supports optional client-side store filtering (RPC doesn't filter by store)
  *
- * Note: Unlike useStorageLocations/useFlavours, useStaffList always fetches
+ * Note: Unlike useStorageLocations, useStaffList always fetches
  * because staff data is needed immediately and has no conditional dependencies.
  *
  * Note: store is intentionally excluded from query key.

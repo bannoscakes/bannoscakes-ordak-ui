@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient, skipToken } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useQuery, skipToken } from '@tanstack/react-query';
 import { getOrderV2, getOrder, type OrderV2Result, type LegacyOrderResult } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
@@ -72,24 +71,4 @@ export function useOrderDetail(
     staleTime: 0, // Always fetch fresh when drawer opens
     enabled,
   });
-}
-
-/**
- * Hook to invalidate order detail queries after mutations
- * Used by: Components that modify order data
- */
-export function useInvalidateOrderDetail() {
-  const queryClient = useQueryClient();
-  return useCallback(
-    (orderId?: string, store?: Store) => {
-      if (orderId && store) {
-        // Invalidate specific order
-        queryClient.invalidateQueries({ queryKey: orderKeys.detail(orderId, store) });
-      } else {
-        // Invalidate all order details
-        queryClient.invalidateQueries({ queryKey: orderKeys.all() });
-      }
-    },
-    [queryClient]
-  );
 }
