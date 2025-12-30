@@ -1,6 +1,25 @@
 -- Add p_cake_writing parameter to update_order_core RPC
 -- This fixes the bug where "Writing on Cake" was incorrectly saving to the notes field
 
+-- First, ensure check_user_role has proper hierarchy (Admin > Supervisor > Staff)
+-- This must come BEFORE update_order_core which depends on it
+CREATE OR REPLACE FUNCTION public.check_user_role(p_role text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $function$
+SELECT
+  CASE
+    WHEN public.app_role() = 'Admin' THEN true
+    WHEN public.app_role() = 'Supervisor' AND p_role IN ('Supervisor', 'Staff') THEN true
+    WHEN public.app_role() = 'Staff' AND p_role = 'Staff' THEN true
+    WHEN public.app_role() = p_role THEN true
+    ELSE false
+  END;
+$function$;
+
 -- Drop any existing overloaded versions to avoid ambiguity
 DROP FUNCTION IF EXISTS public.update_order_core(text, text, text, text, text, text, date, text, text, integer, text);
 
@@ -123,22 +142,4 @@ BEGIN
 
   RETURN true;
 END;
-$function$;
-
--- Ensure check_user_role function exists with proper hierarchy
-CREATE OR REPLACE FUNCTION public.check_user_role(p_role text)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $function$
-SELECT
-  CASE
-    WHEN public.app_role() = 'Admin' THEN true
-    WHEN public.app_role() = 'Supervisor' AND p_role IN ('Supervisor', 'Staff') THEN true
-    WHEN public.app_role() = 'Staff' AND p_role = 'Staff' THEN true
-    WHEN public.app_role() = p_role THEN true
-    ELSE false
-  END;
 $function$;
