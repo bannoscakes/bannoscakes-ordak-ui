@@ -8,7 +8,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   UPDATE public.accessories SET is_active = false WHERE id = p_id;
-  RETURN true;
+  RETURN FOUND;
 END;
 $$;
 
@@ -21,7 +21,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   UPDATE public.cake_toppers SET is_active = false WHERE id = p_id;
-  RETURN true;
+  RETURN FOUND;
 END;
 $$;
 
