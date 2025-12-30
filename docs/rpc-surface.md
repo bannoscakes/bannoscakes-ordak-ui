@@ -81,8 +81,7 @@ Shopify / Ingest
 test_storefront_token(p_store text)
 connect_catalog(p_store text, p_payload jsonb)
 sync_shopify_orders(p_store text, p_since timestamptz default null) — Admin only; advisory lock to prevent concurrent runs
-Edge functions: orders_create_bannos / orders_create_flourlane → HMAC verify → ingest_order(p_store, payload)
-ingest_order(p_store text, p_payload jsonb) → inserts order, sets stage/priority, calls deduct_on_order_create
+Edge functions: shopify-webhooks-bannos / shopify-webhooks-flourlane → HMAC verify → webhook_inbox table → process_webhook_order_split
 
 Inventory / BOM
 create_component(p_payload jsonb)

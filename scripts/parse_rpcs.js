@@ -42,11 +42,11 @@ const categories = {
     file: '041_staff_management.sql',
     description: 'Staff and user management RPCs',
     functions: [
-      'get_staff',
       'get_staff_list',
       'get_staff_me',
       'get_staff_member'
       // Note: get_staff_stats moved to queue_orders due to orders table dependency
+      // Note: get_staff() dropped - unused, replaced by get_staff_list
     ]
   },
   queue_orders: {
@@ -59,7 +59,6 @@ const categories = {
       'get_complete_minimal',
       'get_order_for_scan',
       'get_unassigned_counts',
-      'admin_delete_order',
       'assign_staff',
       'update_order_core',
       'get_staff_stats'  // Moved from staff_management due to orders table dependency
@@ -73,8 +72,6 @@ const categories = {
       'complete_covering',
       'complete_decorating',
       'complete_packing',
-      'assign_staff_to_order',
-      'move_to_filling_with_assignment',
       'qc_return_to_decorating',
       'handle_print_barcode',
       'start_packing'
@@ -150,7 +147,6 @@ const categories = {
     functions: [
       'process_webhook_order_split',
       'process_kitchen_task_create',
-      'ingest_order',
       'is_cake_item'
     ]
   },

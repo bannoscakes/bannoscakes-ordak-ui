@@ -197,7 +197,7 @@ Complete implementation of all RPC functions as defined in `rpc-surface.md`. Eac
 - [ ] `test_storefront_token` - Test Shopify connection
 - [ ] `connect_catalog` - Connect product catalog
 - [ ] `sync_shopify_orders` - Sync orders from Shopify
-- [ ] Enhanced `ingest_order` with more fields
+- [x] Webhook inbox pattern (replaces ingest_order)
 - [ ] HMAC verification for webhooks
 - [ ] Test all Shopify operations
 - [ ] Update webhook handling

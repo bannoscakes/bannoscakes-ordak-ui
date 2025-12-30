@@ -23,7 +23,7 @@ alwaysApply: true
 
 ## Database & writes
 - All DB writes go through SECURITY DEFINER RPCs. No direct table writes from client.
-- No soft-deletes in scripts. Use `admin_delete_order` RPC if a delete is required.
+- No soft-deletes in scripts. Use `cancel_order` or `soft_delete_order` RPCs for order removal.
 
 ## Local checks before PR
 - `npm ci`
