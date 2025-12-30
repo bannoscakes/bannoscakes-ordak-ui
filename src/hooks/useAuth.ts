@@ -38,24 +38,4 @@ export function useAuth() {
   };
 }
 
-export function useRequireAuth(requiredRole?: 'Staff' | 'Supervisor' | 'Admin') {
-  const auth = useAuth();
-
-  useEffect(() => {
-    if (!auth.loading) {
-      if (!auth.user) {
-        // Redirect to login or show login modal
-        return;
-      }
-
-      if (requiredRole && !auth.hasRole(requiredRole)) {
-        // Redirect to unauthorized page or show error
-        return;
-      }
-    }
-  }, [auth.loading, auth.user, requiredRole]);
-
-  return auth;
-}
-
 export type { AuthUser, AuthState };
