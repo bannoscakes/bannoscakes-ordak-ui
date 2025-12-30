@@ -1310,14 +1310,19 @@ export async function adjustAccessoryStock(params: {
 }
 
 export async function deleteAccessory(id: string): Promise<void> {
-  const supabase = getSupabase();
-  // Soft delete: set is_active = false instead of hard delete
-  const { error } = await supabase
-    .from('accessories')
-    .update({ is_active: false })
-    .eq('id', id);
-
-  if (error) throw error;
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('soft_delete_accessory', { p_id: id });
+      if (error) throw error;
+      if (!data) throw new Error('Accessory not found or already deleted');
+    },
+    {
+      operation: 'deleteAccessory',
+      rpcName: 'soft_delete_accessory',
+      params: { id }
+    }
+  );
 }
 
 // =============================================
@@ -1411,14 +1416,19 @@ export async function adjustCakeTopperStock(params: {
 }
 
 export async function deleteCakeTopper(id: string): Promise<void> {
-  const supabase = getSupabase();
-  // Soft delete: set is_active = false instead of hard delete
-  const { error } = await supabase
-    .from('cake_toppers')
-    .update({ is_active: false })
-    .eq('id', id);
-
-  if (error) throw error;
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('soft_delete_cake_topper', { p_id: id });
+      if (error) throw error;
+      if (!data) throw new Error('Cake topper not found or already deleted');
+    },
+    {
+      operation: 'deleteCakeTopper',
+      rpcName: 'soft_delete_cake_topper',
+      params: { id }
+    }
+  );
 }
 
 // =============================================
