@@ -63,7 +63,19 @@ BEGIN
 END $$;
 
 -- ============================================
--- Also drop the rls_bypass() function if no longer needed
+-- rls_bypass() function status
 -- ============================================
--- Note: Keeping rls_bypass() for now as it may be used elsewhere.
--- It's a harmless helper function that doesn't cause performance issues.
+-- After this migration, rls_bypass() is orphaned from RLS policies.
+-- Codebase search shows it only appears in:
+-- - supabase/migrations/040_core_auth_helpers.sql (definition)
+-- - src/types/supabase.ts (auto-generated TypeScript types)
+-- - scripts/production_rpcs.json (RPC export snapshot)
+-- - scripts/parse_rpcs.js (explicitly filtered from frontend exposure)
+--
+-- The function is safe to drop but keeping it for now because:
+-- 1. Dropping functions in the same migration that removes their usage is risky
+-- 2. It's a stable, harmless helper with no performance impact
+-- 3. Dropping it would require regenerating TypeScript types
+--
+-- TODO: Consider dropping rls_bypass() in a future cleanup PR after
+-- verifying no Edge Functions or SECURITY DEFINER RPCs depend on it.
