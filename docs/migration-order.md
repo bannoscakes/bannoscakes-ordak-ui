@@ -106,57 +106,60 @@ Create **SECURITY DEFINER** functions (no direct writes):
 1. **Apply**
    ```bash
    npx supabase migration up
-Verify
+   ```
 
-select exists(select 1 from pg_type where typname='stage_type');
+2. **Verify**
+   ```sql
+   select exists(select 1 from pg_type where typname='stage_type');
+   ```
+   - Sanity selects on new columns / tables
+   - RPCs: call no-op paths to confirm permissions
 
-Sanity selects on new columns / tables.
+3. **Post**
+   - Re-enable webhooks if paused
+   - Run quick smoke: ingest order → barcode print → complete Filling → Packing start/complete
 
-RPCs: call no-op paths to confirm permissions.
+---
 
-Post
+## Rollback Strategy
 
-Re-enable webhooks if paused.
-
-Run quick smoke: ingest order → barcode print → complete Filling → Packing start/complete.
-
-Rollback Strategy
-If a migration fails mid-flight: npx supabase migration up will stop—fix SQL and re-apply.
+If a migration fails mid-flight: `npx supabase migration up` will stop—fix SQL and re-apply.
 
 If a release must be reverted:
+1. `git revert` the app code
+2. If schema-breaking, run the paired `down.sql`; if not available, apply a compensating migration (add back dropped columns with nulls)
+3. Verify RPCs and re-enable webhooks
 
-git revert the app code,
+> Always prefer compensating forward migrations over destructive down migrations in production.
 
-if schema-breaking, run the paired down.sql; if not available, apply a compensating migration (add back dropped columns with nulls),
+---
 
-verify RPCs and re-enable webhooks.
+## Seed Data (dev only)
 
-Always prefer compensating forward migrations over destructive down migrations in production.
+- Minimal staff rows, 1–2 inventory items, one fake order per store
+- Use a dedicated `seed_dev.sql`; never run in staging/prod
 
-Seed Data (dev only)
-Minimal staff rows, 1–2 inventory items, one fake order per store.
+---
 
-Use a dedicated seed_dev.sql; never run in staging/prod.
+## Example Sequence (first time setup)
 
-Example Sequence (first time setup)
-M0_core → core tables, enum, triggers, RLS, indexes
-
-M2_shopify → tokens/sync_runs & webhook skeleton
-
-M3_inventory_bom → inventory + work_queue
-
-M5_workflows → RPC surface
-
-(optional) M6_messaging, M7_media_qc, M8_time_payroll
+1. `M0_core` → core tables, enum, triggers, RLS, indexes
+2. `M2_shopify` → tokens/sync_runs & webhook skeleton
+3. `M3_inventory_bom` → inventory + work_queue
+4. `M5_workflows` → RPC surface
+5. (optional) `M6_messaging`, `M7_media_qc`, `M8_time_payroll`
 
 Tag release when staging is green:
 
-bash
-Copy code
+```bash
 git tag v0.1.0 && git push --tags
-Notes
-Keep RPCs the only write path.
+```
 
-Don’t add “pending/in_progress” tables—assignment is assignee_id IS NULL.
+---
 
-Update indexes based on real queries; revisit after load tests.
+## Notes
+
+- Keep RPCs the only write path.
+
+- Don't add "pending/in_progress" tables—assignment is `assignee_id IS NULL`.
+- Update indexes based on real queries; revisit after load tests.
