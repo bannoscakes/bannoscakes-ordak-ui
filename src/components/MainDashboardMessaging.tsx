@@ -1,7 +1,5 @@
 // components/MainDashboardMessaging.tsx
 import { useState, useEffect, useCallback, useRef } from "react";
-import { v4 as uuid } from "uuid";
-import { toast } from "sonner";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -16,11 +14,11 @@ import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { useErrorNotifications } from "../lib/error-notifications";
 import { useRealtimeMessages } from "../hooks/useRealtimeMessages";
+import { useOptimisticSendMessage } from "../hooks/useOptimisticSendMessage";
 
 import {
   getConversations,
   getMessages,
-  sendMessage,
   markMessagesRead,
   getUnreadCount,
   createConversation,
@@ -34,11 +32,9 @@ import {
   toUIMessage,
   toId,
   CURRENT_USER_SENTINEL,
-  isOptimisticUIMessage,
   type UIConversation as Conversation,
   type UIMessage as Message,
   type DisplayMessage,
-  type OptimisticUIMessage,
 } from "../lib/messaging-adapters";
 
 import type { RealtimeMessageRow } from "../lib/messaging-types";
@@ -231,75 +227,21 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     setIsExpanded(true);
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!selectedConversation || !text.trim() || !currentUserId) return;
-    const body = text.trim();
-
-    // 1) Add optimistic bubble with clientId
-    const clientId = uuid();
-    const createdAt = new Date().toISOString();
-
-    const optimisticMessage: OptimisticUIMessage = {
-      id: clientId,
-      text: body,
-      timestamp: createdAt,
-      senderId: CURRENT_USER_SENTINEL,
-      senderName: "You",
-      read: true,
-      clientId,
-      optimistic: true,
-      conversationId: selectedConversation,
-      authorId: currentUserId,
-      body,
-      createdAt,
-    };
-
-    setMessages((prev) => [...prev, optimisticMessage]);
-
-    try {
-      // 2) RPC — return inserted id
-      const messageId = await sendMessage(selectedConversation, body);
-
-      // 3) Reconcile optimistic with server copy
-      // Note: We use the client-side createdAt timestamp rather than fetching
-      // the server's timestamp. This is a deliberate trade-off:
-      // - Pro: Instant reconciliation without additional RPC call
-      // - Con: Slight clock skew possible (typically <1s, imperceptible)
-      // The timestamp corrects on next conversation load or page refresh.
-      setMessages((prev) =>
-        prev.map((m): DisplayMessage => {
-          // Use type guard to check if this is an optimistic message with matching clientId
-          if (isOptimisticUIMessage(m) && m.clientId === clientId) {
-            // Return confirmed message (no longer optimistic)
-            return {
-              id: String(messageId),
-              text: body,
-              timestamp: createdAt,
-              senderId: CURRENT_USER_SENTINEL,
-              senderName: "You",
-              read: true,
-            };
-          }
-          return m;
-        })
-      );
-
-      // 4) Lightweight refresh for last-message preview (no spinner)
+  const handleSendMessage = useOptimisticSendMessage({
+    selectedConversation,
+    currentUserId,
+    setMessages,
+    onSuccess: () => {
       loadConversations({ background: true });
       loadUnreadCount({ background: true });
-    } catch (err) {
-      console.error("Failed to send message:", err);
-      // Remove optimistic on failure
-      setMessages((prev) =>
-        prev.filter((m) => !(isOptimisticUIMessage(m) && m.clientId === clientId))
-      );
-      toast.error("Failed to send message");
+    },
+    onError: (err) => {
       showError(err, {
         title: "Failed to Send Message",
         showRecoveryActions: true,
       });
-    }
-  };
+    },
+  });
 
   const handleCreateConversation = async (participants: string[], isGroup: boolean) => {
     try {
