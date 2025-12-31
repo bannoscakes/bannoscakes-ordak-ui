@@ -53,7 +53,7 @@ npm run build
 
 ## Project Structure
 
-```
+```text
 src/
 ├── components/       # React components (51 files)
 │   ├── inventory-v2/ # Inventory management tabs
