@@ -2377,7 +2377,6 @@ export type Database = {
             Args: { p_conversation_id: string; p_user_id: string }
             Returns: boolean
           }
-      rls_bypass: { Args: never; Returns: boolean }
       safe_audit_log: {
         Args: { p_action: string; p_meta: Json; p_source: string }
         Returns: undefined
