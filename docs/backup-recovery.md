@@ -146,9 +146,9 @@ What worked / what didn’t
 
 Concrete follow-ups (owners + dates)
 
-Quick Commands / Checks
-sql
-Copy code
+## Quick Commands / Checks
+
+```sql
 -- Orders present?
 select count(*) from public.orders_bannos;
 select count(*) from public.orders_flourlane;
@@ -159,4 +159,6 @@ select max(created_at) from public.orders_flourlane;
 
 -- Work queue health:
 select status, count(*) from public.work_queue group by status;
-See docs/operations.md for day-to-day ops and incident response details.
+```
+
+See `docs/operations.md` for day-to-day ops and incident response details.

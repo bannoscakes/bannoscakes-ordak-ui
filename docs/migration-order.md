@@ -151,12 +151,15 @@ M5_workflows → RPC surface
 
 Tag release when staging is green:
 
-bash
-Copy code
+```bash
 git tag v0.1.0 && git push --tags
-Notes
-Keep RPCs the only write path.
+```
 
-Don’t add “pending/in_progress” tables—assignment is assignee_id IS NULL.
+---
 
-Update indexes based on real queries; revisit after load tests.
+## Notes
+
+- Keep RPCs the only write path.
+
+- Don't add "pending/in_progress" tables—assignment is `assignee_id IS NULL`.
+- Update indexes based on real queries; revisit after load tests.

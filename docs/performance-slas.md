@@ -50,15 +50,20 @@ create table if not exists public.api_logs (
   meta jsonb default '{}'::jsonb
 );
 create index if not exists idx_api_logs_route_time on public.api_logs (route, at desc);
+```
+
 Compute latency quickly:
 
-sql
-Copy code
+```sql
 -- p95 today for queue route
 select percentile_cont(0.95) within group (order by t_ms)
 from public.api_logs
 where route='GET /queue' and at::date = current_date;
-Alert Thresholds (Slack)
+```
+
+---
+
+## Alert Thresholds (Slack)
 Queue p95 > 300ms for 5 min
 
 Webhook 5xx > 1% over 10 min or consecutive failures for one store
@@ -121,9 +126,9 @@ Weekly: email/post a short perf summary (top slow endpoints, action items).
 
 Monthly: SLA report (uptime, error budget burn, incidents).
 
-Quick SQL Snippets
-sql
-Copy code
+## Quick SQL Snippets
+
+```sql
 -- Worker backlog by status
 select status, count(*) from public.work_queue group by status;
 
@@ -135,7 +140,11 @@ from public.work_queue where status='pending';
 select 100.0*avg(case when ok then 1 else 0 end) as success_pct
 from public.api_logs
 where route='POST /webhook/orders/create' and at > now() - interval '10 minutes';
-Uptime Budget Reference
+```
+
+---
+
+## Uptime Budget Reference
 Availability	Allowed downtime / month
 99.9%	43.8 minutes
 99.95%	21.9 minutes
