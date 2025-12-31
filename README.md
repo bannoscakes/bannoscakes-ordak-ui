@@ -1,184 +1,110 @@
-# Supabase CLI
+# Ordak Order Management
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+Production floor order tracking system for Bannos Cakes bakery with barcode scanning, real-time queue management, and multi-store support.
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+## Overview
 
-This repository contains all the functionality for Supabase CLI.
+Ordak manages cake orders through production stages (Filling → Covering → Decorating → Packing → Complete) for two stores:
+- **Bannos Cakes** - Main bakery
+- **Flour Lane** - Second location
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+## Tech Stack
 
-## Getting started
+- **Frontend**: React 18 + Vite + TypeScript
+- **Styling**: Tailwind CSS v4 + shadcn/ui
+- **Backend**: Supabase (PostgreSQL, Auth, Row Level Security, Edge Functions)
+- **Integrations**: Shopify Admin API (orders, products, inventory sync)
 
-### Install the CLI
+## Key Features
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+| Feature | Description |
+|---------|-------------|
+| **Production Queue** | Real-time order queue with stage filtering and assignment |
+| **Barcode Scanning** | Camera-based scanning for stage transitions |
+| **Staff Management** | Shifts, breaks, time tracking, performance metrics |
+| **Inventory** | Components, BOMs, Accessories, Cake Toppers with stock tracking |
+| **Analytics** | Store performance, revenue, staff productivity dashboards |
+| **Messaging** | Internal team conversations with unread tracking |
+| **Monitor Display** | TV-optimized queue view for production floor |
 
-```bash
-npm i supabase --save-dev
-```
+## Role-Based Access
 
-To install the beta release channel:
+| Role | Access |
+|------|--------|
+| **Staff** | Personal queue, scanner, stage transitions |
+| **Supervisor** | Full queue view, assignments, monitor display |
+| **Admin** | All features + settings, staff management, analytics |
 
-```bash
-npm i supabase@beta --save-dev
-```
-
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
-
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
-
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
-
-<details>
-  <summary><b>macOS</b></summary>
-
-  Available via [Homebrew](https://brew.sh). To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Windows</b></summary>
-
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
+## Quick Start
 
 ```bash
-supabase bootstrap
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Type check
+npm run type-check
+
+# Build for production
+npm run build
 ```
 
-Or using npx:
+## Project Structure
 
-```bash
-npx supabase bootstrap
+```
+src/
+├── components/       # React components (51 files)
+│   ├── inventory-v2/ # Inventory management tabs
+│   ├── messaging/    # Chat components
+│   └── ui/           # shadcn/ui primitives
+├── hooks/            # React Query hooks (13 files)
+├── lib/              # Utilities and RPC client (20 files)
+└── types/            # TypeScript definitions
+
+supabase/
+├── migrations/       # Database migrations (125 files)
+└── functions/        # Edge Functions (10 functions)
 ```
 
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+## Database
 
-## Docs
+All writes go through `SECURITY DEFINER` RPCs for security. Direct table access is blocked by RLS policies.
 
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+Key tables:
+- `orders_bannos` / `orders_flourlane` - Order data per store
+- `staff_shared` - Staff profiles and roles
+- `components` / `boms` / `accessories` - Inventory
+- `conversations` / `messages` - Messaging
 
-## Breaking changes
+## Edge Functions
 
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+| Function | Purpose |
+|----------|---------|
+| `shopify-webhooks-bannos` | Receive Bannos webhook orders |
+| `shopify-webhooks-flourlane` | Receive Flourlane webhook orders |
+| `queue-worker` | Process background job queue |
+| `sync-inventory-to-shopify` | Push stock levels to Shopify |
 
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+## Documentation
 
-## Developing
+See `/docs` for detailed documentation:
+- `overview.md` - System architecture
+- `schema-and-rls.md` - Database schema
+- `runbook.md` - Operations guide
+- `DEPLOY_PRODUCTION.md` - Deployment guide
 
-To run from source:
+## Environment Variables
 
-```sh
-# Go >= 1.22
-go run . help
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
-# Testing permanent staff_shared fix
+
+## Contributing
+
+1. Create feature branch from `dev`
+2. Run `npm run type-check` before committing
+3. Open PR for review - never merge directly
+4. Never push to `main` without approval
