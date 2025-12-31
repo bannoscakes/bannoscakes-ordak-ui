@@ -287,6 +287,42 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
 
   if (loading) {
+    // Show two-column skeleton in dialog mode to match the expanded layout
+    if (isDialogMode) {
+      return (
+        <div className="flex h-full overflow-hidden rounded-2xl border">
+          {/* Sidebar skeleton */}
+          <div className="w-72 min-w-[18rem] border-r bg-card p-4 animate-pulse">
+            <div className="h-6 bg-muted rounded w-32 mb-4"></div>
+            <div className="h-10 bg-muted rounded w-full mb-4"></div>
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-muted rounded-full"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-24"></div>
+                    <div className="h-3 bg-muted rounded w-32"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Chat area skeleton */}
+          <div className="flex-1 bg-background p-4 animate-pulse flex flex-col">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+              <div className="h-10 w-10 bg-muted rounded-full"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded w-24"></div>
+                <div className="h-3 bg-muted rounded w-16"></div>
+              </div>
+            </div>
+            <div className="flex-1"></div>
+            <div className="h-10 bg-muted rounded w-full mt-auto"></div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <Card className="p-4">
         <div className="animate-pulse space-y-4">
@@ -406,13 +442,20 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
           <aside className="flex-none w-72 min-w-[18rem] h-full border-r bg-card flex flex-col">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-medium">Conversations</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium">Conversations</h4>
+                  {/* Connection status - visible in both dialog and non-dialog expanded mode */}
+                  <div
+                    className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                    title={isConnected ? 'Connected' : 'Disconnected'}
+                  />
+                </div>
                 <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setShowNewConversation(true)} className="h-8 w-8 p-0" aria-label="New conversation">
+                  <Button size="sm" variant="ghost" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0" aria-label="New conversation">
                     <Plus className="h-4 w-4" />
                   </Button>
                   {!isDialogMode && (
-                    <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-8 w-8 p-0">
+                    <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-10 w-10 p-0" aria-label="Collapse messaging">
                       <X className="h-4 w-4" />
                     </Button>
                   )}

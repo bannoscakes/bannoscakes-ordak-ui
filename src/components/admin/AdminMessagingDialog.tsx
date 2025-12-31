@@ -17,7 +17,7 @@ export function AdminMessagingDialog({ open, onOpenChange, initialConversationId
         // Do not refactor to Tailwind classes without testing thoroughly.
         forceMount
         className="p-0 overflow-hidden rounded-2xl flex flex-col"
-        style={{ width: '800px', maxWidth: '90vw', height: '500px', maxHeight: '70vh' }}
+        style={{ width: '800px', maxWidth: '90vw', minWidth: '600px', height: '600px', maxHeight: '80vh' }}
       >
         <DialogHeader className="px-4 py-3 border-b bg-white">
           <DialogTitle>Messages</DialogTitle>
