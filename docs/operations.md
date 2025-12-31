@@ -11,33 +11,33 @@ This document is essential for production readiness and developer collaboration.
 ## Environment Variables
 
 ### Development (`.env.local`)
+
+```shell
 VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 VITE_APP_URL=http://localhost:5173
-
-shell
-Copy code
+```
 
 ### Production (provider env, e.g., Vercel)
+
+```shell
 VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 VITE_APP_URL=https://ordak.example.com
 VITE_SENTRY_DSN=<sentry-dsn>
 VITE_POSTHOG_KEY=<posthog-key>
-
-shell
-Copy code
+```
 
 ### Edge Functions (Supabase secrets or local `.env`)
+
+```shell
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 SHOPIFY_BANNOS_TOKEN=<admin-api-token>
 SHOPIFY_FLOURLANE_TOKEN=<admin-api-token>
 SLACK_WEBHOOK_URL=<slack-webhook-url>
+```
 
 **Note:** HMAC verification has been removed. No webhook secrets needed.
-
-markdown
-Copy code
 
 **Notes**
 - Frontend **only** uses the anon key.  
