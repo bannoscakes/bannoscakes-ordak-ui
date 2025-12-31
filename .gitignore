@@ -31,3 +31,9 @@ dist/
 /OLD_LOVABLE_WEBHOOK_CODE.txt
 supabase/.temp/
 .mcp.json
+
+# Test files that may contain credentials
+test_*.mjs
+test_*.js
+!test_*.test.js
+!test_*.spec.js
