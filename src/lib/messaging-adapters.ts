@@ -64,12 +64,12 @@ export const toId = (v: unknown) => (v == null ? '' : String(v));
 export const CURRENT_USER_SENTINEL = 'current-user';
 
 export function toUIMessage(msg: RPCMessage, currentUserId?: string): UIMessage {
-  const isOwn = Boolean(msg.is_own_message) || Boolean(currentUserId && msg.authorId === currentUserId);
+  const isOwn = Boolean(msg.is_own_message) || Boolean(currentUserId && msg.sender_id === currentUserId);
   return {
     id: toId(msg.id),
     text: msg.body ?? '',
-    timestamp: msg.createdAt,
-    senderId: isOwn ? CURRENT_USER_SENTINEL : toId(msg.authorId),
+    timestamp: msg.created_at,
+    senderId: isOwn ? CURRENT_USER_SENTINEL : toId(msg.sender_id),
     senderName: msg.sender_name || 'Unknown',
     read: isOwn,
   };
