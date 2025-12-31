@@ -12,7 +12,7 @@
 
 **Location:** Supabase Dashboard → Edge Functions → Settings
 
-- [ ] `SUPABASE_URL` is set to: `https://iwavciibrspfjezujydc.supabase.co`
+- [ ] `SUPABASE_URL` is set to: `https://<project-id>.supabase.co`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` is set (for RPC calls)
 - [ ] `SUPABASE_ANON_KEY` is set
 
@@ -114,7 +114,7 @@ AND routine_name IN ('deduct_on_order_create', 'enqueue_order_split');
 ### Webhook: Order Creation
 - [ ] Event: `orders/create` is configured
 - [ ] Format: JSON
-- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos`
+- [ ] URL: `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-bannos`
 - [ ] API Version: 2024-10 (or later)
 - [ ] Status: Active/Connected
 - [ ] Recent deliveries (last 10) show 200 responses
@@ -135,7 +135,7 @@ AND routine_name IN ('deduct_on_order_create', 'enqueue_order_split');
 ### Webhook: Order Creation
 - [ ] Event: `orders/create` is configured
 - [ ] Format: JSON
-- [ ] URL: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane`
+- [ ] URL: `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-flourlane`
 - [ ] API Version: 2024-10 (or later)
 - [ ] Status: Active/Connected
 - [ ] Recent deliveries (last 10) show 200 responses
@@ -155,7 +155,7 @@ AND routine_name IN ('deduct_on_order_create', 'enqueue_order_split');
 
 ### Test 1: Bannos GET Request (Health Check)
 ```bash
-curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos
+curl -i https://<project-id>.supabase.co/functions/v1/shopify-webhooks-bannos
 ```
 
 - [ ] Response status: 200 OK
@@ -164,7 +164,7 @@ curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-b
 
 ### Test 2: Flourlane GET Request (Health Check)
 ```bash
-curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane
+curl -i https://<project-id>.supabase.co/functions/v1/shopify-webhooks-flourlane
 ```
 
 - [ ] Response status: 200 OK
