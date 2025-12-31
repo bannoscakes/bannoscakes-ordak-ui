@@ -1,4 +1,13 @@
 // lib/messaging-adapters.ts
+// =============================================================================
+// UI LAYER MESSAGE TYPES & ADAPTERS
+// =============================================================================
+// These types represent messages at the UI layer - transformed for display
+// with fields like senderName, read status, etc.
+//
+// For domain/RPC layer types (raw database shapes), see: src/types/messages.ts
+// =============================================================================
+
 import type { Message as RPCMessage, Conversation as RPCConversation } from './rpc-client';
 
 export interface UIMessage {

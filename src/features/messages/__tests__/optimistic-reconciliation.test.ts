@@ -1,7 +1,12 @@
 // src/features/messages/__tests__/optimistic-reconciliation.test.ts
+// Tests for domain-layer message reconciliation logic.
+// Uses types from types/messages.ts (RPC/domain layer).
 import { describe, it, expect } from 'vitest';
-import type { OptimisticMessage, ServerMessage } from '../../../types/messages';
-import { isOptimistic } from '../utils';
+import type { OptimisticMessage, ServerMessage, Message } from '../../../types/messages';
+
+/** Type guard for domain-layer optimistic messages */
+const isOptimistic = (m: Message): m is OptimisticMessage =>
+  m != null && 'optimistic' in m && m.optimistic === true;
 
 // Test-only type for mock message data
 interface TestMessage {
@@ -54,7 +59,7 @@ describe('Optimistic Message Reconciliation', () => {
     expect(messages).toHaveLength(2);
     expect((messages[1] as ServerMessage).id).toBe(serverId);
     expect(messages[1].body).toBe('Hello world');
-    expect(isOptimistic(messages[1] as ServerMessage)).toBe(false);
+    expect(isOptimistic(messages[1] as Message)).toBe(false);
   });
 
   it('should remove optimistic message on failure', () => {
