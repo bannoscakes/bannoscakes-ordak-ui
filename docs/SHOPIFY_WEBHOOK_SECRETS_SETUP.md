@@ -8,7 +8,7 @@
 
 The following secrets should be set in Supabase Edge Functions:
 
-- ✅ `SUPABASE_URL` - Should be: `https://iwavciibrspfjezujydc.supabase.co`
+- ✅ `SUPABASE_URL` - Should be: `https://<project-id>.supabase.co`
 - ✅ `SUPABASE_SERVICE_ROLE_KEY` - For RPC calls
 - ✅ `SUPABASE_ANON_KEY` - For API calls
 
@@ -43,7 +43,7 @@ Each store has its own dedicated webhook endpoint (no query parameters needed).
 2. Configure:
    - **Event:** `orders/create`
    - **Format:** JSON
-   - **URL:** `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos`
+   - **URL:** `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-bannos`
    - **API Version:** 2024-10 (or later)
 3. Click **Save**
 
@@ -55,7 +55,7 @@ Each store has its own dedicated webhook endpoint (no query parameters needed).
 2. Configure:
    - **Event:** `orders/create`
    - **Format:** JSON
-   - **URL:** `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane`
+   - **URL:** `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-flourlane`
    - **API Version:** 2024-10 (or later)
 3. Click **Save**
 
@@ -67,10 +67,10 @@ Run these commands to verify endpoints are responding:
 
 ```bash
 # Test Bannos endpoint
-curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos
+curl -i https://<project-id>.supabase.co/functions/v1/shopify-webhooks-bannos
 
 # Test Flourlane endpoint
-curl -i https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane
+curl -i https://<project-id>.supabase.co/functions/v1/shopify-webhooks-flourlane
 ```
 
 Expected response: `200 OK` with body `ok`

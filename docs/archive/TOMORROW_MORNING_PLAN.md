@@ -1,7 +1,7 @@
 # Tomorrow Morning - UI Integration Plan
 **Date:** October 2, 2025  
 **Status:** Ready to Continue  
-**Database:** `iwavciibrspfjezujydc` (All set up and ready!)
+**Database:** `<project-id>` (All set up and ready!)
 
 ---
 
@@ -85,7 +85,7 @@
 ## 📝 **Quick Reference - What's Working Now**
 
 ### **Database Connection:**
-- ✅ Database: `iwavciibrspfjezujydc`
+- ✅ Database: `<project-id>`
 - ✅ `.env.local` configured correctly
 - ✅ Dev server: `npm run dev` → http://localhost:3000
 

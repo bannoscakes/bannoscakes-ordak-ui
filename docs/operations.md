@@ -94,13 +94,13 @@ Each store has its own dedicated webhook endpoint:
 
 ### Bannos Store
 - **Event**: `orders/create`  
-- **URL**: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos`  
+- **URL**: `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-bannos`  
 - **Format**: JSON  
 - **API Version**: `2024-10` (or later)
 
 ### Flourlane Store
 - **Event**: `orders/create`  
-- **URL**: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane`  
+- **URL**: `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-flourlane`  
 - **Format**: JSON  
 - **API Version**: `2024-10` (or later)
 

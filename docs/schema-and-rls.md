@@ -1,25 +1,27 @@
-# Schema & RLS (Final)
-**Version:** 1.0.0  
-**Last Updated:** 2025-01-16  
+# Schema & RLS
+**Version:** 2.0.0
+**Last Updated:** 2025-12-31
 **Status:** Production
 
-Authoritative reference for database schema, enums, triggers, RLS patterns, and indexes.  
+Authoritative reference for database schema, enums, triggers, RLS patterns, and indexes.
 All writes go through **SECURITY DEFINER** RPCs. Client never writes tables directly.
 
 ---
 
 ## Ground Rules
-- **RLS enabled** on all tables (default deny on writes).  
-- **No direct client writes**; all inserts/updates/deletes go through RPCs.  
-- **Buckets** use **signed URLs** only (no public access).  
-- **Timestamps**: `created_at` defaults to `now()`, `updated_at` maintained by trigger.  
-- **Due dates** are date-only; **priority** is derived (High / Medium / Low).  
-- Stage model: **Filling → Covering → Decorating → Packing → Complete** (single enum).  
+
+- **RLS enabled** on all tables (default deny on writes).
+- **No direct client writes**; all inserts/updates/deletes go through RPCs.
+- **Buckets** use **signed URLs** only (no public access).
+- **Timestamps**: `created_at` defaults to `now()`, `updated_at` maintained by trigger.
+- **Due dates** are date-only; **priority** is derived (High / Medium / Low).
+- Stage model: **Filling → Covering → Decorating → Packing → Complete** (single enum).
   Filling **starts** at barcode print; scan **completes** Filling.
 
 ---
 
 ## Prerequisites
+
 ```sql
 create extension if not exists pgcrypto;
 
@@ -29,34 +31,52 @@ begin
   new.updated_at := now();
   return new;
 end $$;
-Enums
-sql
-Copy code
+```
+
+---
+
+## Enums
+
+```sql
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'stage_type') then
     create type stage_type as enum ('Filling','Covering','Decorating','Packing','Complete');
   end if;
 end$$;
-Staff (shared) — create first (FK target)
-sql
-Copy code
+```
+
+---
+
+## Staff (shared) — create first (FK target)
+
+```sql
 create table if not exists public.staff_shared (
   row_id       uuid primary key default gen_random_uuid(),
   user_id      uuid unique,                 -- supabase auth id
   full_name    text,
   role         text check (role in ('Admin','Supervisor','Staff')) default 'Staff',
+  store        text check (store in ('bannos','flourlane','both')) default 'both',
+  email        text,
+  phone        text,
+  hourly_rate  numeric(10,2),
   is_active    boolean default true,
-  created_at   timestamptz default now()
+  approved     boolean default true,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
 );
 
 create index if not exists idx_staff_active_role
   on public.staff_shared (is_active, role);
-Orders (per store)
-Two identical tables, one per store. assignee_id references staff_shared(user_id).
+```
 
-sql
-Copy code
+---
+
+## Orders (per store)
+
+Two identical tables, one per store. `assignee_id` references `staff_shared(user_id)`.
+
+```sql
 -- Bannos
 create table if not exists public.orders_bannos (
   row_id                 uuid primary key default gen_random_uuid(),
@@ -64,23 +84,30 @@ create table if not exists public.orders_bannos (
   shopify_order_id       bigint,                        -- numeric id
   shopify_order_gid      text,                          -- GraphQL GID (for dedupe)
   shopify_order_number   int,
+  human_id               text,                          -- display ID
   customer_name          text,
   product_title          text,
   flavour                text,
+  size                   text,
+  item_qty               int default 1,
   notes                  text,
+  cake_writing           text,
+  product_image          text,
+  delivery_method        text,
   currency               char(3),
   total_amount           numeric(12,2),
   order_json             jsonb,
   stage                  stage_type not null default 'Filling',
-  priority               smallint not null default 0,
+  priority               text check (priority in ('HIGH','MEDIUM','LOW')) default 'LOW',
   assignee_id            uuid references public.staff_shared(user_id) on delete set null,
   storage                text,
   due_date               date not null,
-  size                   text,                          -- e.g. S|M|L
   -- operational timestamps
   filling_start_ts       timestamptz,
   filling_complete_ts    timestamptz,
+  covering_start_ts      timestamptz,
   covering_complete_ts   timestamptz,
+  decorating_start_ts    timestamptz,
   decorating_complete_ts timestamptz,
   packing_start_ts       timestamptz,
   packing_complete_ts    timestamptz,
@@ -88,7 +115,7 @@ create table if not exists public.orders_bannos (
   updated_at             timestamptz not null default now()
 );
 
--- Flourlane
+-- Flourlane (identical structure)
 create table if not exists public.orders_flourlane (like public.orders_bannos including all);
 
 -- Updated-at triggers
@@ -101,9 +128,13 @@ drop trigger if exists trg_orders_fl_updated on public.orders_flourlane;
 create trigger trg_orders_fl_updated
 before update on public.orders_flourlane
 for each row execute procedure set_updated_at();
-Indexes (orders)
-sql
-Copy code
+```
+
+---
+
+## Indexes (orders)
+
+```sql
 -- Queue ordering (incomplete only)
 create index if not exists idx_orders_bannos_queue
   on public.orders_bannos (priority desc, due_date asc, size asc, shopify_order_number asc)
@@ -139,15 +170,19 @@ create index if not exists idx_orders_bannos_due_date
 create index if not exists idx_orders_flourlane_due_date
   on public.orders_flourlane (due_date, stage)
   where stage <> 'Complete';
-Stage Events (audit trail, recommended)
-sql
-Copy code
+```
+
+---
+
+## Stage Events (audit trail)
+
+```sql
 create table if not exists public.stage_events (
   id            bigserial primary key,
   order_id      text not null,
-  store         text not null check (store in ('Bannos','Flourlane')),
+  store         text not null check (store in ('bannos','flourlane')),
   stage         stage_type,
-  action        text not null,              -- e.g. filling_print | filling_complete | start_packing | qc_return
+  action        text not null,              -- e.g. filling_print | filling_complete | qc_return
   performed_by  uuid,
   meta          jsonb default '{}'::jsonb,
   at            timestamptz not null default now()
@@ -155,37 +190,113 @@ create table if not exists public.stage_events (
 
 create index if not exists idx_stage_events_order_time
   on public.stage_events (order_id, at desc);
-Inventory & BOM
-Minimal shape to support holds + sync; BOM optional.
+```
 
-sql
-Copy code
--- Items
-create table if not exists public.inventory_items (
-  sku        text primary key,
-  title      text,
-  uom        text,
-  ats        numeric(12,3) default 0,       -- available to sell
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+---
+
+## Inventory
+
+> **Note:** Inventory tables (`components`, `accessories`, `cake_toppers`) have `updated_at` columns but rely on RPC-level timestamp management rather than database triggers. The `upsert_*` and `adjust_*_stock` RPCs explicitly set `updated_at = now()` when modifying records. This differs from `orders_*` tables which use the `set_updated_at()` trigger.
+
+### Components
+
+```sql
+create table if not exists public.components (
+  id            uuid primary key default gen_random_uuid(),
+  sku           text unique not null,
+  name          text not null,
+  description   text,
+  category      text default 'other',
+  unit          text default 'each',
+  current_stock numeric(12,3) default 0,
+  min_stock     numeric(12,3) default 0,
+  is_active     boolean default true,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
 );
-drop trigger if exists trg_inv_items_updated on public.inventory_items;
-create trigger trg_inv_items_updated
-before update on public.inventory_items
-for each row execute procedure set_updated_at();
+```
 
--- Transactions
-create table if not exists public.inventory_txn (
-  id         bigserial primary key,
-  sku        text references public.inventory_items(sku),
-  qty        numeric(12,3) not null,
-  reason     text,                          -- order_create | manual_adjust | reconcile | restock
-  ref_id     text,                          -- order id / external ref
-  created_at timestamptz default now()
+### Accessories
+
+```sql
+create table if not exists public.accessories (
+  id            uuid primary key default gen_random_uuid(),
+  sku           text unique not null,
+  name          text not null,
+  category      text check (category in ('topper','balloon','candle','other')) default 'other',
+  product_match text,
+  current_stock int default 0,
+  min_stock     int default 5,
+  is_active     boolean default true,
+  needs_sync    boolean default false,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
 );
-create index if not exists idx_inv_txn_sku_time on public.inventory_txn (sku, created_at desc);
+```
 
--- Work queue for Shopify ATS/OOS pushes
+### Cake Toppers
+
+```sql
+create table if not exists public.cake_toppers (
+  id                   uuid primary key default gen_random_uuid(),
+  name_1               text not null,
+  name_2               text,
+  current_stock        int default 0,
+  min_stock            int default 5,
+  shopify_product_id_1 text,
+  shopify_product_id_2 text,
+  is_active            boolean default true,
+  created_at           timestamptz default now(),
+  updated_at           timestamptz default now()
+);
+```
+
+### BOMs
+
+> **Design Note:** BOMs reference `components` only, not `accessories` or `cake_toppers`. This is intentional—components represent raw materials consumed during cake production (flour, fondant, boards), while accessories and toppers are finished goods sold alongside cakes. Accessories are matched to orders via `accessory_keywords` pattern matching on product titles, not through BOM relationships.
+
+```sql
+create table if not exists public.boms (
+  id                 uuid primary key default gen_random_uuid(),
+  product_title      text not null,
+  store              text check (store in ('bannos','flourlane','both')) default 'both',
+  description        text,
+  shopify_product_id text,
+  is_active          boolean default true,
+  created_at         timestamptz default now(),
+  updated_at         timestamptz default now()
+);
+
+create table if not exists public.bom_items (
+  id                uuid primary key default gen_random_uuid(),
+  bom_id            uuid references public.boms(id) on delete cascade,
+  component_id      uuid references public.components(id),
+  quantity_required numeric(12,3) not null,
+  stage             stage_type,
+  created_at        timestamptz default now()
+);
+```
+
+### Stock Transactions (audit log)
+
+```sql
+create table if not exists public.stock_transactions (
+  id            uuid primary key default gen_random_uuid(),
+  table_name    text not null,              -- 'components' | 'accessories' | 'cake_toppers'
+  item_id       uuid not null,
+  change_amount numeric(12,3) not null,
+  stock_before  numeric(12,3) not null,
+  stock_after   numeric(12,3) not null,
+  reason        text,
+  reference     text,
+  created_by    uuid,
+  created_at    timestamptz default now()
+);
+```
+
+### Work Queue
+
+```sql
 create table if not exists public.work_queue (
   id            bigserial primary key,
   topic         text not null,              -- inventory_push | reconcile | order_ingest_retry
@@ -201,40 +312,20 @@ create table if not exists public.work_queue (
   last_error    text,
   created_at    timestamptz default now()
 );
-create index if not exists idx_work_queue_scan on public.work_queue (status, priority, next_retry_at);
 
--- (Optional) reservation holds & BOM
-create table if not exists public.reservation_holds (
-  id         bigserial primary key,
-  sku        text references public.inventory_items(sku),
-  qty        numeric(12,3) not null,
-  order_id   text,
-  expires_at timestamptz
-);
+create index if not exists idx_work_queue_scan
+  on public.work_queue (status, priority, next_retry_at);
+```
 
-create table if not exists public.bom_header (
-  id         bigserial primary key,
-  product_id text,
-  version    int,
-  created_at timestamptz default now()
-);
+---
 
-create table if not exists public.bom_item (
-  id            bigserial primary key,
-  header_id     bigint references public.bom_header(id) on delete cascade,
-  component_sku text references public.inventory_items(sku),
-  qty           numeric(12,3) not null
-);
+## Messaging
 
-create table if not exists public.product_requirements (
-  product_id    text primary key,
-  requirements  jsonb not null
-);
-Messaging (optional)
-sql
-Copy code
+```sql
 create table if not exists public.conversations (
   id          uuid primary key default gen_random_uuid(),
+  name        text,
+  type        text check (type in ('direct','group','broadcast')) default 'direct',
   created_by  uuid,
   created_at  timestamptz default now()
 );
@@ -253,130 +344,271 @@ create table if not exists public.messages (
   body            text,
   created_at      timestamptz default now()
 );
-create index if not exists idx_messages_conv_time on public.messages (conversation_id, created_at desc);
-Media (optional)
-sql
-Copy code
-create table if not exists public.order_photos (
-  id         bigserial primary key,
-  order_id   text not null,
-  stage      stage_type,
-  url        text not null,
-  created_at timestamptz default now()
+
+create table if not exists public.message_reads (
+  message_id      bigint references public.messages(id) on delete cascade,
+  user_id         uuid,
+  read_at         timestamptz default now(),
+  primary key (message_id, user_id)
 );
--- Storage: use signed URLs; restrict read by store/staff in policies.
-Time (optional)
-sql
-Copy code
+
+create index if not exists idx_messages_conv_time
+  on public.messages (conversation_id, created_at desc);
+```
+
+---
+
+## Time & Payroll
+
+```sql
 create table if not exists public.shifts (
-  id        bigserial primary key,
-  staff_id  uuid not null,
+  id        uuid primary key default gen_random_uuid(),
+  staff_id  uuid not null references public.staff_shared(user_id),
+  store     text check (store in ('bannos','flourlane')),
   start_ts  timestamptz not null,
-  end_ts    timestamptz
+  end_ts    timestamptz,
+  note      text,
+  created_at timestamptz default now()
 );
 
 create table if not exists public.breaks (
-  id        bigserial primary key,
+  id        uuid primary key default gen_random_uuid(),
+  shift_id  uuid references public.shifts(id) on delete cascade,
   staff_id  uuid not null,
   start_ts  timestamptz not null,
   end_ts    timestamptz
 );
-RLS Strategy
-Goal: clients can read; cannot write directly. All writes via RPCs.
+```
 
-sql
-Copy code
--- Orders
-alter table public.orders_bannos    enable row level security;
-alter table public.orders_flourlane enable row level security;
+---
 
-drop policy if exists p_read_orders_bannos on public.orders_bannos;
-create policy p_read_orders_bannos
-on public.orders_bannos for select to authenticated using (true);
+## RLS Strategy
 
-drop policy if exists p_read_orders_fl on public.orders_flourlane;
-create policy p_read_orders_fl
-on public.orders_flourlane for select to authenticated using (true);
+**Goal:** Clients can read; cannot write directly. All writes via RPCs.
 
--- Stage events
-alter table public.stage_events enable row level security;
-drop policy if exists p_read_stage_events on public.stage_events;
-create policy p_read_stage_events
-on public.stage_events for select to authenticated using (true);
+### RLS Helper Functions
 
--- Staff / Inventory / Work queue / Messages: read-only pattern
-alter table public.inventory_items enable row level security;
-drop policy if exists p_read_inv_items on public.inventory_items;
-create policy p_read_inv_items
-on public.inventory_items for select to authenticated using (true);
+```sql
+-- Cached role lookup for RLS policies (optimized with auth_rls_initplan)
+create or replace function current_user_role()
+returns text
+language sql stable security definer
+set search_path = public
+as $$
+  select role from staff_shared where user_id = (select auth.uid()) limit 1;
+$$;
 
-alter table public.inventory_txn enable row level security;
-drop policy if exists p_read_inv_txn on public.inventory_txn;
-create policy p_read_inv_txn
-on public.inventory_txn for select to authenticated using (true);
+-- Conversation participant check
+create or replace function is_conversation_participant(p_conversation_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists(
+    select 1 from conversation_participants
+    where conversation_id = p_conversation_id
+      and user_id = (select auth.uid())
+  );
+$$;
+```
 
-alter table public.work_queue enable row level security;
-drop policy if exists p_read_wq on public.work_queue;
-create policy p_read_wq
-on public.work_queue for select to authenticated using (true);
+### RLS Pattern: `(select auth.uid())`
 
-alter table public.conversations enable row level security;
-alter table public.conversation_participants enable row level security;
-alter table public.messages enable row level security;
--- (Add participant-scoped policies when wiring messaging feature)
-Grants (belt & suspenders)
-sql
-Copy code
-revoke all on all tables    in schema public from anon, authenticated;
-revoke all on all sequences in schema public from anon, authenticated;
+**IMPORTANT:** All RLS policies use `(select auth.uid())` instead of `auth.uid()` directly.
 
-grant select on
-  public.orders_bannos, public.orders_flourlane,
-  public.stage_events, public.inventory_items, public.inventory_txn,
-  public.conversations, public.conversation_participants, public.messages
-to authenticated;
-RPC Write Pattern (example)
-sql
-Copy code
-create or replace function public.handle_print_barcode(p_id text, p_user uuid, p_ctx jsonb default '{}'::jsonb)
-returns jsonb language plpgsql security definer as $$
-declare _tbl text;
+This subquery pattern enables PostgreSQL to cache the auth.uid() result and reuse it across row evaluations, improving query performance significantly. The Supabase Performance Advisor checks for this via `auth_rls_initplan`.
+
+```sql
+-- GOOD: Uses subquery - auth.uid() cached
+create policy "staff_select_own_or_admin" on staff_shared
+  for select to authenticated
+  using (
+    user_id = (select auth.uid())
+    or current_user_role() = 'Admin'
+  );
+
+-- BAD: Direct call - evaluated per row
+create policy "staff_select_bad" on staff_shared
+  for select to authenticated
+  using (user_id = auth.uid());  -- No caching!
+```
+
+### Policy Consolidation (Dec 2025)
+
+Multiple permissive policies on the same action cause PostgreSQL to evaluate all of them. We consolidated:
+
+1. **Replaced FOR ALL policies** with individual SELECT/INSERT/UPDATE/DELETE policies
+2. **Dropped redundant service_only policies** (service_role bypasses RLS anyway)
+3. **Dropped legacy public role policies** (kept authenticated versions)
+4. **Dropped rls_bypass() function** (no longer needed)
+
+Current RLS warnings: **0 security, 0 performance**
+
+---
+
+## RLS Policies by Table
+
+### Orders (orders_bannos, orders_flourlane)
+
+```sql
+-- SELECT: Role-based access
+create policy "orders_select_by_role" on orders_bannos
+  for select to authenticated
+  using (
+    current_user_role() in ('Admin', 'Supervisor')
+    or assignee_id = (select auth.uid())
+  );
+
+-- INSERT/UPDATE/DELETE: Blocked (use RPCs)
+create policy "orders_block_insert" on orders_bannos
+  for insert to authenticated with check (false);
+create policy "orders_block_update" on orders_bannos
+  for update to authenticated using (false);
+create policy "orders_block_delete" on orders_bannos
+  for delete to authenticated using (false);
+```
+
+### Staff
+
+```sql
+-- SELECT: Own record or Admin
+create policy "staff_select_own_or_admin" on staff_shared
+  for select to authenticated
+  using (
+    user_id = (select auth.uid())
+    or current_user_role() = 'Admin'
+  );
+
+-- INSERT/UPDATE/DELETE: Admin only
+create policy "staff_insert_admin_only" on staff_shared
+  for insert to authenticated with check (current_user_role() = 'Admin');
+create policy "staff_update_admin_only" on staff_shared
+  for update to authenticated using (current_user_role() = 'Admin');
+create policy "staff_delete_admin_only" on staff_shared
+  for delete to authenticated using (current_user_role() = 'Admin');
+```
+
+### Inventory (components, accessories, boms)
+
+```sql
+-- SELECT: All authenticated
+create policy "components_select_authenticated" on components
+  for select to authenticated using (true);
+
+-- INSERT/UPDATE/DELETE: Via RPCs only (blocked)
+create policy "components_block_insert" on components
+  for insert to authenticated with check (false);
+```
+
+### Messaging
+
+```sql
+-- conversations: SELECT if participant or Admin
+create policy "conversations_select_participant" on conversations
+  for select to authenticated
+  using (
+    is_conversation_participant(id)
+    or current_user_role() = 'Admin'
+  );
+
+-- messages: SELECT if conversation participant
+create policy "messages_select_participant" on messages
+  for select to authenticated
+  using (is_conversation_participant(conversation_id));
+```
+
+### System Tables (work_queue, dead_letter, webhooks)
+
+```sql
+-- SELECT: Admin only
+create policy "work_queue_admin_only" on work_queue
+  for select to authenticated
+  using (current_user_role() = 'Admin');
+
+-- INSERT/UPDATE/DELETE: Blocked (service_role only)
+create policy "work_queue_block_insert" on work_queue
+  for insert to authenticated with check (false);
+create policy "work_queue_block_update" on work_queue
+  for update to authenticated using (false);
+create policy "work_queue_block_delete" on work_queue
+  for delete to authenticated using (false);
+```
+
+---
+
+## RPC Write Pattern
+
+All writes go through SECURITY DEFINER RPCs with role validation:
+
+```sql
+create or replace function public.complete_filling(
+  p_order_id text,
+  p_store text,
+  p_notes text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _tbl text;
+  _role text;
 begin
-  _tbl := case
-    when p_id like 'bannos-%'    then 'public.orders_bannos'
-    when p_id like 'flourlane-%' then 'public.orders_flourlane'
-    else raise exception 'BAD_INPUT';
+  -- Role check
+  _role := current_user_role();
+  if _role is null then
+    raise exception 'UNAUTHORIZED';
+  end if;
+
+  -- Route to correct table
+  _tbl := case p_store
+    when 'bannos' then 'orders_bannos'
+    when 'flourlane' then 'orders_flourlane'
+    else null
   end;
 
-  execute format($f$ update %I
-                   set filling_start_ts = coalesce(filling_start_ts, now())
-                 where id = %L $f$, _tbl, p_id);
+  if _tbl is null then
+    raise exception 'INVALID_STORE';
+  end if;
 
-  insert into public.stage_events(order_id, store, action, performed_by, meta)
-  values (p_id,
-          case when p_id like 'bannos-%' then 'Bannos' else 'Flourlane' end,
-          'filling_print', p_user, coalesce(p_ctx,'{}'::jsonb));
+  -- Update order
+  execute format($f$
+    update %I
+    set filling_complete_ts = now(),
+        stage = 'Covering'::stage_type,
+        notes = coalesce(%L, notes)
+    where id = %L
+      and stage = 'Filling'
+  $f$, _tbl, p_notes, p_order_id);
 
-  return jsonb_build_object('success', true, 'message', null, 'data', jsonb_build_object('id', p_id), 'error_code', null);
+  -- Audit log
+  insert into stage_events(order_id, store, stage, action, performed_by)
+  values (p_order_id, p_store, 'Filling', 'filling_complete', (select auth.uid()));
+
+  return jsonb_build_object('success', true);
 end $$;
-Indexes Recap
-Orders queue: (priority, due_date, size, shopify_order_number) partial where stage <> 'Complete'
+```
 
-Orders assignee: (assignee_id, stage, due_date)
+---
 
-Orders GID & due_date: GID partial; (due_date, stage) partial
+## Indexes Recap
 
-Stage events: (order_id, at desc)
+| Table | Index | Purpose |
+|-------|-------|---------|
+| orders_* | `(priority, due_date, size, shopify_order_number)` | Queue ordering (partial: stage <> 'Complete') |
+| orders_* | `(stage, priority, shopify_order_number)` | Unassigned queries (partial: assignee_id IS NULL) |
+| orders_* | `(shopify_order_gid)` | Webhook dedupe (partial: gid IS NOT NULL) |
+| orders_* | `(due_date, stage)` | Date range queries |
+| stage_events | `(order_id, at desc)` | Order history lookup |
+| work_queue | `(status, priority, next_retry_at)` | Job processing |
+| messages | `(conversation_id, created_at desc)` | Message retrieval |
 
-Work queue ready: (status, priority, next_retry_at)
+---
 
-Messages: (conversation_id, created_at desc)
+## Notes
 
-Notes
-Keep stage logic inside RPCs (validation, timestamps, idempotency, QC returns).
-
-Do not add “pending/in_progress” tables — assignment is derived (assignee_id is null).
-
-Add/adjust indexes based on real query plans (EXPLAIN ANALYZE).
-
-Backups: daily PITR (7 days). See backup-recovery.md.
+- Keep stage logic inside RPCs (validation, timestamps, idempotency, QC returns).
+- Do not add "pending/in_progress" tables — assignment is derived (`assignee_id IS NULL`).
+- Add/adjust indexes based on real query plans (`EXPLAIN ANALYZE`).
+- Backups: daily PITR (7 days). See `backup-recovery.md`.
