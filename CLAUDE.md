@@ -80,9 +80,8 @@ Shopify → Webhook → Edge Function → work_queue table → queue-worker → 
 
 ## Supabase Project
 
-- **Project ID**: `iwavciibrspfjezujydc`
 - **Region**: ap-southeast-2
-- Generate types: `supabase gen types typescript --project-id iwavciibrspfjezujydc > src/types/supabase.ts`
+- Generate types: `npm run gen:types` (project ID configured in package.json)
 
 ## Key Files
 
