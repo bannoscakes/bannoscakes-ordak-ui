@@ -54,7 +54,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(!!onClose); // Force expanded in dialog mode
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
 
   const { showError, showErrorWithRetry } = useErrorNotifications();
@@ -147,12 +147,12 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         setSelectedConversation(initialConversationId);
         setIsExpanded(true);
       }
-    } else {
-      // Reset selected conversation when initialConversationId is null
+    } else if (!onClose) {
+      // Only reset to compact view if NOT in dialog mode
       setSelectedConversation(null);
       setIsExpanded(false);
     }
-  }, [initialConversationId, conversations.length]);
+  }, [initialConversationId, conversations.length, onClose]);
 
   // Realtime handlers
   const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
@@ -315,30 +315,27 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      {/* Status and Actions Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="text-xs">
-              {unreadCount} unread
-            </Badge>
-          )}
-          <div
-            className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
-            title={isConnected ? 'Connected' : 'Disconnected'}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0">
-            <Plus className="h-4 w-4" />
-          </Button>
-          {onClose && (
-            <Button size="sm" variant="ghost" onClick={onClose} className="h-10 w-10 p-0">
-              <X className="h-4 w-4" />
+      {/* Status and Actions Header - only show in non-dialog mode */}
+      {!onClose && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {unreadCount} unread
+              </Badge>
+            )}
+            <div
+              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+              title={isConnected ? 'Connected' : 'Disconnected'}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0">
+              <Plus className="h-4 w-4" />
             </Button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {!isExpanded ? (
         // Compact view - conversation list only
@@ -401,15 +398,22 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         </Card>
       ) : (
         // Expanded view - full messaging interface
-        <div className="flex h-full w-full overflow-hidden rounded-2xl border flex-1 min-h-0">
+        <div className="flex w-full overflow-hidden rounded-2xl border flex-1 min-h-0">
           {/* Conversations Sidebar */}
-          <aside className="flex-none w-72 min-w-[18rem] border-r bg-card flex flex-col">
+          <aside className="flex-none w-72 min-w-[18rem] h-full border-r bg-card flex flex-col">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">Conversations</h4>
-                <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-10 w-10 p-0">
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setShowNewConversation(true)} className="h-8 w-8 p-0">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  {!onClose && (
+                    <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-8 w-8 p-0">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="relative">
@@ -463,7 +467,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
           </aside>
 
           {/* Chat Area */}
-          <section className="flex-1 min-w-0 bg-background flex flex-col">
+          <section className="flex-1 min-w-0 h-full bg-background flex flex-col">
             {selectedConversation && selectedConv ? (
               <ChatWindow conversation={selectedConv} messages={messages} onSendMessage={handleSendMessage} />
             ) : (
