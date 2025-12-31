@@ -5,7 +5,7 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Send, MessageSquare } from "lucide-react";
 import { cn } from "../ui/utils";
-import type { UIConversation, UIMessage } from "../../lib/messaging-adapters";
+import type { UIConversation, DisplayMessage } from "../../lib/messaging-adapters";
 import { CURRENT_USER_SENTINEL } from "../../lib/messaging-adapters";
 import {
   groupMessagesByDate,
@@ -16,7 +16,7 @@ import {
 
 interface ChatWindowProps {
   conversation: UIConversation;
-  messages: UIMessage[];
+  messages: DisplayMessage[];
   onSendMessage: (message: string) => void;
 }
 

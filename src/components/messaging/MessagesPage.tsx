@@ -33,16 +33,17 @@ import {
   toUIMessage,
   toId,
   CURRENT_USER_SENTINEL,
+  isOptimisticUIMessage,
   type UIConversation as Conversation,
   type UIMessage as Message,
+  type DisplayMessage,
+  type OptimisticUIMessage,
 } from "../../lib/messaging-adapters";
-
-import type { OptimisticMessage } from "../../types/messages";
 import type { RealtimeMessageRow } from "../../lib/messaging-types";
 
 export function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewConversation, setShowNewConversation] = useState(false);
@@ -209,53 +210,48 @@ export function MessagesPage() {
 
     // 1) Add optimistic bubble with clientId
     const clientId = uuid();
-    const optimistic: OptimisticMessage = {
+    const createdAt = new Date().toISOString();
+
+    const optimisticMessage: OptimisticUIMessage = {
+      id: clientId,
+      text: body,
+      timestamp: createdAt,
+      senderId: CURRENT_USER_SENTINEL,
+      senderName: "You",
+      read: true,
       clientId,
       optimistic: true,
       conversationId: selectedConversation,
       authorId: currentUserId,
       body,
-      createdAt: new Date().toISOString(),
+      createdAt,
     };
 
-    // Add to messages as any to maintain compatibility with UIMessage
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: clientId,
-        text: body,
-        timestamp: optimistic.createdAt,
-        senderId: CURRENT_USER_SENTINEL,
-        senderName: "You",
-        read: true,
-        conversationId: selectedConversation,
-        authorId: currentUserId,
-        body: body,
-        createdAt: optimistic.createdAt,
-      } as any,
-    ]);
+    setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
       // 2) RPC — return inserted id
       const messageId = await sendMessage(selectedConversation, body);
 
       // 3) Reconcile optimistic with server copy
+      // Note: We use the client-side createdAt timestamp rather than fetching
+      // the server's timestamp. This is a deliberate trade-off:
+      // - Pro: Instant reconciliation without additional RPC call
+      // - Con: Slight clock skew possible (typically <1s, imperceptible)
+      // The timestamp corrects on next conversation load or page refresh.
       setMessages((prev) =>
-        prev.map((m) => {
-          // Check if this is our optimistic message
-          if ((m as any).id === clientId) {
+        prev.map((m): DisplayMessage => {
+          // Use type guard to check if this is an optimistic message with matching clientId
+          if (isOptimisticUIMessage(m) && m.clientId === clientId) {
+            // Return confirmed message (no longer optimistic)
             return {
               id: String(messageId),
               text: body,
-              timestamp: optimistic.createdAt,
+              timestamp: createdAt,
               senderId: CURRENT_USER_SENTINEL,
               senderName: "You",
               read: true,
-              conversationId: selectedConversation,
-              authorId: currentUserId,
-              body: body,
-              createdAt: optimistic.createdAt,
-            } as any;
+            };
           }
           return m;
         })
@@ -267,7 +263,9 @@ export function MessagesPage() {
     } catch (err) {
       console.error("Failed to send message:", err);
       // Remove optimistic on failure
-      setMessages((prev) => prev.filter((m) => (m as any).id !== clientId));
+      setMessages((prev) =>
+        prev.filter((m) => !(isOptimisticUIMessage(m) && m.clientId === clientId))
+      );
       toast.error("Failed to send message");
       showError(err, {
         title: "Failed to Send Message",
