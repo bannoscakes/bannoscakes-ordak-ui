@@ -212,9 +212,9 @@ sequenceDiagram
 
   FILLING         COVERING        DECORATING         PACKING
   --------        --------        ----------         -------
-  • Print         • Scan          • Scan             • Scan start
-    barcode         complete        complete         • QC check
-  • Scan                                             • Set storage
+  • Print         • Scan start    • Scan start       • Scan start
+    barcode       • Scan          • Scan             • QC check
+  • Scan            complete        complete         • Set storage
     complete                                         • Print slip
                                                      • Scan complete
 ```
@@ -224,8 +224,8 @@ sequenceDiagram
 | Stage | Start Action | End Action | Timestamps |
 |-------|--------------|------------|------------|
 | **Filling** | Print barcode | Scan complete | `filling_start_ts`, `filling_complete_ts` |
-| **Covering** | (auto) | Scan complete | `covering_complete_ts` |
-| **Decorating** | (auto) | Scan complete | `decorating_complete_ts` |
+| **Covering** | Scan start | Scan complete | `covering_start_ts`, `covering_complete_ts` |
+| **Decorating** | Scan start | Scan complete | `decorating_start_ts`, `decorating_complete_ts` |
 | **Packing** | Scan start | Scan complete | `packing_start_ts`, `packing_complete_ts` |
 | **Complete** | - | - | `completed_at` |
 
@@ -236,9 +236,11 @@ sequenceDiagram
    - Scan complete → sets `filling_complete_ts`, advances to Covering
 
 2. **Covering**
+   - Scan start → sets `covering_start_ts`
    - Scan complete → sets `covering_complete_ts`, advances to Decorating
 
 3. **Decorating**
+   - Scan start → sets `decorating_start_ts`
    - Scan complete → sets `decorating_complete_ts`, advances to Packing
 
 4. **Packing**
