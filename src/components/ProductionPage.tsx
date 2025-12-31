@@ -1,1 +1,0 @@
-// This component is deprecated - use BannosProductionPage and FlourlaneProductionPage instead
