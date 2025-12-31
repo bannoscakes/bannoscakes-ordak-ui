@@ -165,7 +165,7 @@ sequenceDiagram
 
 ## Security Model
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     Frontend (Browser)                       │
 │  • Anon key only (VITE_SUPABASE_ANON_KEY)                   │
@@ -199,7 +199,7 @@ sequenceDiagram
 
 ## Production Stage Flow
 
-```
+```text
 ┌──────────┐    ┌──────────┐    ┌────────────┐    ┌─────────┐    ┌──────────┐
 │ Filling  │───▶│ Covering │───▶│ Decorating │───▶│ Packing │───▶│ Complete │
 └──────────┘    └──────────┘    └────────────┘    └─────────┘    └──────────┘
