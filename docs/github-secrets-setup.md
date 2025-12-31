@@ -21,7 +21,7 @@ To enable CI builds, you must add the following secrets to your GitHub repositor
 
 | Secret Name | Example Value | Description |
 |-------------|---------------|-------------|
-| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Your Supabase project URL (from Project Settings → API) |
+| `VITE_SUPABASE_URL` | `https://<project-id>.supabase.co` | Your Supabase project URL (from Project Settings → API) |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` | Your Supabase anonymous key (from Project Settings → API) |
 | `VITE_APP_URL` | `http://localhost:3000` | Application URL |
 
