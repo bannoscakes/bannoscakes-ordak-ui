@@ -31,7 +31,7 @@ flowchart TB
         subgraph DB["PostgreSQL Database"]
             Orders["orders_bannos<br/>orders_flourlane"]
             Staff_DB["staff_shared"]
-            Inventory["inventory_items<br/>bom"]
+            Inventory["inventory_txn<br/>bom_headers/bom_items"]
             WorkQueue["work_queue"]
             Messaging["conversations<br/>messages"]
         end
