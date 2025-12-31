@@ -1,3 +1,197 @@
+## v0.20.0-beta — Orders Management, Security Hardening & Dead Code Cleanup (2025-12-31)
+
+### 🎯 Overview
+Major release introducing the Orders Management page with list view and real-time monitor updates. Comprehensive security hardening removes sensitive console.log statements, test database functions, and hardcoded credentials. Performance improvements optimize RLS policies using `(select auth.uid())` pattern. Dead code cleanup removes ~2,500 lines of unused code across 6 issues.
+
+### ✨ New Features
+
+#### Orders Management Page (PR #515, #518)
+- **Database Infrastructure**: New `cancel_order` and `mark_order_complete` RPCs, updated `get_queue` to include `cancelled_at` field
+- **List View**: Full orders management page with search, filters, and pagination
+- **Stage Badge Colors**: Production stages display with color-coded badges
+
+#### Real-time Monitor Updates (PR #523)
+- **Live Updates**: Monitor pages now receive real-time order updates via Supabase subscriptions
+- **Reduced Polling**: Eliminates need for manual refresh on supervisor dashboards
+
+#### Split Order Display (PR #522)
+- **Order Suffix**: Split orders now display suffix (-A, -B, etc.) for clear identification
+
+### 🐛 Bug Fixes
+
+#### Edit Order Field Mapping (PR #525)
+- **Issue**: `cake_writing` field mapped incorrectly to `notes` in edit form
+- **Fix**: Corrected field mapping to preserve cake writing instructions
+
+#### Orders List Stage Display (PR #526)
+- **Issue**: Orders list showed generic status instead of production stage
+- **Fix**: Display actual production stages (Filling, Covering, Decorating, Packing, Complete)
+
+#### Auth & Navigation Fixes (PR #510)
+- **Multiple Issues**: Resolved auth flow bugs and navigation state issues (#498, #499, #500, #501)
+
+#### Mock Data Removal (PR #511)
+- **Issue**: QuickActions and SchedulePage contained mock data
+- **Fix**: Removed mock data, components now use real data sources (#489, #490)
+
+#### Dashboard Background Polling (PR #509)
+- **Issue**: Dashboard continued polling when browser tab was inactive
+- **Fix**: Polling stops when tab loses focus, resumes on focus (#502)
+
+### 🔒 Security
+
+#### Console.log Sensitive Data Removal (PR #529)
+- **Risk**: Console statements logged potentially sensitive order/user data
+- **Fix**: Removed or sanitized all console.log statements with sensitive data
+
+#### Drop Test/Debug Database Functions (PR #538)
+- **Risk**: Test functions (`test_order_soft_delete`, `debug_check_user_role`, etc.) left in production
+- **Fix**: Dropped 7 test/debug functions that should never exist in production
+
+#### Remove Hardcoded Credentials (PR #553)
+- **Risk**: Test files contained hardcoded Supabase credentials
+- **Fix**: Deleted `test_messaging_simple.js`, `test_connection.mjs`, `archive/test-sql/apply_schema.mjs`
+- **Prevention**: Added `.gitignore` patterns for `test_*.mjs` and `test_*.js`
+
+### ⚡ Performance
+
+#### RLS Policy Optimization (PR #546)
+- **Issue**: 22 RLS policies used `auth.uid()` causing repeated function calls
+- **Fix**: Changed to `(select auth.uid())` pattern for single evaluation per query
+
+#### Policy Consolidation (PR #547)
+- **Issue**: Multiple permissive policies on same table caused performance warnings
+- **Fix**: Consolidated into single policies per table using OR conditions
+
+#### Drop Redundant Policies (PR #548)
+- **Issue**: 15 `service_only` policies duplicated service-role access
+- **Fix**: Dropped redundant policies (service role bypasses RLS by default)
+
+#### Duplicate Index Removal (PR #545)
+- **Issue**: `work_queue` table had duplicate index on `status` column
+- **Fix**: Dropped redundant index, keeping the original
+
+### 🔧 Refactoring
+
+#### Direct Writes → RPCs (PR #527)
+- **Change**: Replaced direct table writes with SECURITY DEFINER RPCs
+- **Affected**: Soft delete operations now use `rpc_soft_delete_order`
+- **Benefit**: Consistent security model, audit trail via RPC layer
+
+#### Consolidate QueueItem Types (PR #513)
+- **Issue**: Duplicate `QueueItem` interfaces in multiple files (#491)
+- **Fix**: Extracted shared type to `src/types/queue.ts`
+
+#### Add search_path to Functions (PR #544)
+- **Issue**: Functions missing explicit `search_path` declaration
+- **Fix**: Added `search_path = 'public'` to affected functions
+
+### 🗑️ Dead Code Cleanup (~2,500 lines removed)
+
+#### Drop Unused Views (PR #530)
+- Removed 4 unused SECURITY DEFINER views and their supporting code
+- Views: `dashboard_metrics`, `active_orders_by_stage`, `staff_assignments`, `recent_activity`
+
+#### Delete Dead Code Files (PR #539)
+- Removed 12 confirmed unused component/page files
+- Total: ~800 lines of dead code
+
+#### Remove Unused Auth Components (PR #540)
+- Removed legacy auth components replaced by ModernLoginPage
+- Files: `BadgeScanner.tsx`, `PinEntry.tsx`, legacy login components
+
+#### Remove Unused Hooks (PR #541)
+- Removed 8 hooks with zero imports
+- Hooks: `useLocalStorage`, `useDebounce`, `useMediaQuery`, etc.
+
+#### Drop Unused Database Functions (PR #542)
+- Dropped 15 RPC functions with no frontend callers
+- Functions: `get_dashboard_metrics`, `get_staff_workload`, etc.
+
+#### Remove Unused RPC Wrappers (PR #543)
+- Removed TypeScript wrappers for dropped database functions
+- Cleaned up unused config exports
+
+### 📚 Documentation
+
+#### README & Overview Updates (PR #549)
+- **README.md**: Added architecture diagram, improved quick start
+- **docs/overview.md**: Updated system overview with current state
+
+#### CLAUDE.md Improvements (PR #516)
+- **Architecture**: Added data flow diagram
+- **Workflow**: Clarified PR process and review requirements
+
+#### Placeholder Standardization (PR #551, #554, #555)
+- **Format**: All docs now use `<angle-bracket>` placeholder style
+- **Security**: Removed hardcoded project ID from CLAUDE.md
+
+### 📋 PRs in This Release
+- PR #509: `fix: stop dashboard polling when tab is in background`
+- PR #510: `fix: resolve auth/navigation bugs`
+- PR #511: `fix: remove mock data from QuickActions and SchedulePage`
+- PR #512: `docs: clarify that Claude should not merge PRs`
+- PR #513: `chore: consolidate duplicate QueueItem interfaces`
+- PR #515: `feat: Orders Management - Phase 1 (Database Infrastructure)`
+- PR #516: `docs: improve CLAUDE.md with architecture and workflow guidance`
+- PR #518: `feat: add Orders Management page with list view`
+- PR #522: `fix: display order suffix (-A, -B) for split orders`
+- PR #523: `feat: add real-time updates to Monitor pages`
+- PR #525: `fix: correct field mapping for edit order`
+- PR #526: `fix: Orders List shows actual production stages`
+- PR #527: `fix: replace direct table writes with SECURITY DEFINER RPCs`
+- PR #529: `fix: remove sensitive data from console.log statements`
+- PR #530: `fix: drop unused SECURITY DEFINER views and dead code`
+- PR #538: `fix: drop test/debug database functions (security)`
+- PR #539: `fix: delete confirmed dead code files`
+- PR #540: `fix: remove unused auth components`
+- PR #541: `fix: remove unused hooks`
+- PR #542: `fix: drop unused database functions`
+- PR #543: `fix: remove unused RPC wrappers and config exports`
+- PR #544: `fix: add search_path to functions missing it`
+- PR #545: `fix: drop duplicate index on work_queue table`
+- PR #546: `perf: fix auth_rls_initplan warnings in 22 RLS policies`
+- PR #547: `perf: consolidate multiple permissive RLS policies`
+- PR #548: `fix: drop redundant service_only policies`
+- PR #549: `docs: update README and overview documentation`
+- PR #551: `docs: standardize placeholder format`
+- PR #553: `fix: remove test files with hardcoded credentials`
+- PR #554: `docs: remove hardcoded project ID from CLAUDE.md`
+- PR #555: `docs: standardize all placeholders`
+
+### 📁 Key Files Modified
+
+#### New Files
+- `src/components/OrdersPage.tsx` - Orders management list view
+- `src/types/queue.ts` - Shared QueueItem type
+
+#### Database
+- `supabase/migrations/` - 15+ migrations for RLS optimization and cleanup
+
+#### Security
+- `.gitignore` - Added patterns to prevent credential exposure
+
+### 🔧 Technical Notes
+
+#### RLS Optimization Pattern
+Changed from:
+```sql
+auth.uid() = user_id
+```
+To:
+```sql
+(select auth.uid()) = user_id
+```
+This evaluates `auth.uid()` once per query instead of once per row.
+
+#### Dead Code Identification Process
+Used combination of:
+1. LSP findReferences for zero-import detection
+2. Database query for RPC call counts
+3. Grep for string-based function calls
+
+---
+
 ## v0.19.0-beta — TypeScript Type Safety & React Query Migration (2025-12-23)
 
 ### 🎯 Overview
