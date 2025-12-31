@@ -314,9 +314,9 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   }
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-4 h-full flex flex-col min-h-0 overflow-hidden">
       {/* Status and Actions Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Badge variant="destructive" className="text-xs">
