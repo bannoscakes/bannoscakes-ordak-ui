@@ -9,7 +9,7 @@ All RPCs are **SECURITY DEFINER** and include role validation, input guards, and
 
 ## Conventions
 
-- **Roles:** `Admin` | `Supervisor` | `Staff` (checked via `current_user_role()` helper)
+- **Roles:** `Admin` | `Supervisor` | `Staff` (checked via `current_user_role()` helper; see [schema-and-rls.md](schema-and-rls.md#rls-helper-functions) for implementation)
 - **Stores:** `'bannos'` | `'flourlane'`
 - **Stages:** `Filling → Covering → Decorating → Packing → Complete`
 - **Filling starts** at barcode print; scan **completes** Filling
@@ -250,6 +250,8 @@ All RPCs are **SECURITY DEFINER** and include role validation, input guards, and
 ---
 
 ## Analytics
+
+> **Note:** Analytics RPCs compute results on-the-fly from `orders_*`, `shifts`, `breaks`, and `stage_events` tables. There are no materialized views or caching layers—queries aggregate data at request time. This keeps analytics always current but may be slower for large date ranges.
 
 ### Store Analytics
 

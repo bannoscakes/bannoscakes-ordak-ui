@@ -196,6 +196,8 @@ create index if not exists idx_stage_events_order_time
 
 ## Inventory
 
+> **Note:** Inventory tables (`components`, `accessories`, `cake_toppers`) have `updated_at` columns but rely on RPC-level timestamp management rather than database triggers. The `upsert_*` and `adjust_*_stock` RPCs explicitly set `updated_at = now()` when modifying records. This differs from `orders_*` tables which use the `set_updated_at()` trigger.
+
 ### Components
 
 ```sql
@@ -250,6 +252,8 @@ create table if not exists public.cake_toppers (
 ```
 
 ### BOMs
+
+> **Design Note:** BOMs reference `components` only, not `accessories` or `cake_toppers`. This is intentional—components represent raw materials consumed during cake production (flour, fondant, boards), while accessories and toppers are finished goods sold alongside cakes. Accessories are matched to orders via `accessory_keywords` pattern matching on product titles, not through BOM relationships.
 
 ```sql
 create table if not exists public.boms (
