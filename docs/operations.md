@@ -227,13 +227,13 @@ Each store has its own dedicated webhook endpoint:
 - Document changes (Dev Change Report)
 
 **Commands**
+
+```bash
 npm install
 npm run dev
 npm test
 npm run build
-
-yaml
-Copy code
+```
 
 ---
 
