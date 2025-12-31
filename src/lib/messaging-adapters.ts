@@ -1,4 +1,13 @@
 // lib/messaging-adapters.ts
+// =============================================================================
+// UI LAYER MESSAGE TYPES & ADAPTERS
+// =============================================================================
+// These types represent messages at the UI layer - transformed for display
+// with fields like senderName, read status, etc.
+//
+// For domain/RPC layer types (raw database shapes), see: src/types/messages.ts
+// =============================================================================
+
 import type { Message as RPCMessage, Conversation as RPCConversation } from './rpc-client';
 
 export interface UIMessage {
@@ -8,6 +17,34 @@ export interface UIMessage {
   senderId: string;
   senderName: string;
   read: boolean;
+}
+
+/**
+ * Extended UIMessage for optimistic updates.
+ * Includes fields needed for reconciliation with server responses.
+ *
+ * Note: createdAt duplicates timestamp - both are needed because:
+ * - timestamp: used for UI display (inherited from UIMessage)
+ * - createdAt: used for RPC message structure compatibility
+ */
+export interface OptimisticUIMessage extends UIMessage {
+  clientId: string;
+  optimistic: true;
+  conversationId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+}
+
+/** A message that can be displayed - either confirmed or optimistic */
+export type DisplayMessage = UIMessage | OptimisticUIMessage;
+
+/**
+ * Type guard to check if a message is an optimistic update.
+ * Uses the 'optimistic' discriminating property to narrow the type.
+ */
+export function isOptimisticUIMessage(msg: DisplayMessage): msg is OptimisticUIMessage {
+  return 'optimistic' in msg && msg.optimistic === true;
 }
 
 export interface UIConversation {
@@ -27,7 +64,7 @@ export const toId = (v: unknown) => (v == null ? '' : String(v));
 export const CURRENT_USER_SENTINEL = 'current-user';
 
 export function toUIMessage(msg: RPCMessage, currentUserId?: string): UIMessage {
-  const isOwn = Boolean((msg as any).is_own_message) || Boolean(currentUserId && msg.authorId === currentUserId);
+  const isOwn = Boolean(msg.is_own_message) || Boolean(currentUserId && msg.authorId === currentUserId);
   return {
     id: toId(msg.id),
     text: msg.body ?? '',

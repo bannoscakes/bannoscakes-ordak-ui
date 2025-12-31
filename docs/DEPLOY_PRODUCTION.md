@@ -10,15 +10,15 @@ Ensure all required environment variables are configured in your production envi
 
 ```bash
 # Core Application
-VITE_APP_URL=https://your-production-domain.com
+VITE_APP_URL=https://<your-domain>
 VITE_DEV_PORT=3000
 
 # Supabase Configuration
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
 
 # Error Monitoring (Optional)
-VITE_SENTRY_DSN=your-sentry-dsn
+VITE_SENTRY_DSN=<sentry-dsn>
 
 # Demo/Development Flags (MUST be disabled in production)
 VITE_ENABLE_DEMO_MODE=false
@@ -304,7 +304,7 @@ For less critical issues:
 
 ```bash
 # Check application health
-curl -f https://your-domain.com/health || echo "Health check failed"
+curl -f https://<your-domain>/health || echo "Health check failed"
 
 # Verify environment variables
 printenv | grep VITE_

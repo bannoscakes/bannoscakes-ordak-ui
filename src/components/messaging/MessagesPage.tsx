@@ -1,7 +1,5 @@
 // components/messaging/MessagesPage.tsx
 import { useEffect, useState, useCallback, useRef } from "react";
-import { v4 as uuid } from "uuid";
-import { toast } from "sonner";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -15,11 +13,11 @@ import { safePushState } from "../../lib/safeNavigate";
 
 import { useErrorNotifications } from "../../lib/error-notifications";
 import { useRealtimeMessages } from "../../hooks/useRealtimeMessages";
+import { useOptimisticSendMessage } from "../../hooks/useOptimisticSendMessage";
 
 import {
   getConversations,
   getMessages,
-  sendMessage,
   markMessagesRead,
   getUnreadCount,
   createConversation,
@@ -35,14 +33,13 @@ import {
   CURRENT_USER_SENTINEL,
   type UIConversation as Conversation,
   type UIMessage as Message,
+  type DisplayMessage,
 } from "../../lib/messaging-adapters";
-
-import type { OptimisticMessage } from "../../types/messages";
 import type { RealtimeMessageRow } from "../../lib/messaging-types";
 
 export function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewConversation, setShowNewConversation] = useState(false);
@@ -203,82 +200,24 @@ export function MessagesPage() {
     setSelectedConversation(toId(conversationId));
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!selectedConversation || !text.trim() || !currentUserId) return;
-    const body = text.trim();
-
-    // 1) Add optimistic bubble with clientId
-    const clientId = uuid();
-    const optimistic: OptimisticMessage = {
-      clientId,
-      optimistic: true,
-      conversationId: selectedConversation,
-      authorId: currentUserId,
-      body,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Add to messages as any to maintain compatibility with UIMessage
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: clientId,
-        text: body,
-        timestamp: optimistic.createdAt,
-        senderId: CURRENT_USER_SENTINEL,
-        senderName: "You",
-        read: true,
-        conversationId: selectedConversation,
-        authorId: currentUserId,
-        body: body,
-        createdAt: optimistic.createdAt,
-      } as any,
-    ]);
-
-    try {
-      // 2) RPC — return inserted id
-      const messageId = await sendMessage(selectedConversation, body);
-
-      // 3) Reconcile optimistic with server copy
-      setMessages((prev) =>
-        prev.map((m) => {
-          // Check if this is our optimistic message
-          if ((m as any).id === clientId) {
-            return {
-              id: String(messageId),
-              text: body,
-              timestamp: optimistic.createdAt,
-              senderId: CURRENT_USER_SENTINEL,
-              senderName: "You",
-              read: true,
-              conversationId: selectedConversation,
-              authorId: currentUserId,
-              body: body,
-              createdAt: optimistic.createdAt,
-            } as any;
-          }
-          return m;
-        })
-      );
-
-      // 4) Lightweight refresh for last-message preview (no spinner)
+  const handleSendMessage = useOptimisticSendMessage({
+    selectedConversation,
+    currentUserId,
+    setMessages,
+    onSuccess: () => {
       loadConversations({ background: true });
       loadUnreadCount({ background: true });
-    } catch (err) {
-      console.error("Failed to send message:", err);
-      // Remove optimistic on failure
-      setMessages((prev) => prev.filter((m) => (m as any).id !== clientId));
-      toast.error("Failed to send message");
+    },
+    onError: (err) => {
       showError(err, {
         title: "Failed to Send Message",
         showRecoveryActions: true,
       });
-    }
-  };
+    },
+  });
 
   const handleCreateConversation = async (participants: string[], isGroup: boolean) => {
     try {
-      console.log("onCreateConversation participants:", participants); // should be UUIDs, not emails
       const id = await createConversation(
         participants,
         isGroup ? "Group Chat" : undefined,

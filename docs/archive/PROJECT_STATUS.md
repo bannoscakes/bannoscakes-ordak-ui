@@ -242,7 +242,7 @@ All environment variables must be prefixed with `VITE_` to be accessible in the 
 
 ```bash
 # Supabase Configuration (Required)
-VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Application Configuration (Required)

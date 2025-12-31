@@ -185,7 +185,6 @@ const locations = await getStorageLocations('bannos');
 ### **Production Pages**
 - [ ] `BannosProductionPage.tsx` - Use `getQueue()` with store filter
 - [ ] `FlourlaneProductionPage.tsx` - Use `getQueue()` with store filter
-- [ ] `ProductionPage.tsx` - Use `getQueue()` without store filter (all stores)
 - [ ] `QueueTable.tsx` - Update to use new queue data structure
 - [ ] `MetricCards.tsx` - Use `getQueueStats()` for real-time counts
 

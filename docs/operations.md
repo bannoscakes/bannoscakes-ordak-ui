@@ -11,33 +11,33 @@ This document is essential for production readiness and developer collaboration.
 ## Environment Variables
 
 ### Development (`.env.local`)
-VITE_SUPABASE_URL=https://[PROJECT_ID].supabase.co
-VITE_SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
-VITE_APP_URL=http://localhost:5173
 
-shell
-Copy code
+```shell
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+VITE_APP_URL=http://localhost:5173
+```
 
 ### Production (provider env, e.g., Vercel)
-VITE_SUPABASE_URL=https://[PROJECT_ID].supabase.co
-VITE_SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
-VITE_APP_URL=https://ordak.example.com
-VITE_SENTRY_DSN=[YOUR_SENTRY_DSN]
-VITE_POSTHOG_KEY=[YOUR_POSTHOG_KEY]
 
-shell
-Copy code
+```shell
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+VITE_APP_URL=https://ordak.example.com
+VITE_SENTRY_DSN=<sentry-dsn>
+VITE_POSTHOG_KEY=<posthog-key>
+```
 
 ### Edge Functions (Supabase secrets or local `.env`)
-SUPABASE_SERVICE_ROLE_KEY=[SERVICE_ROLE]
-SHOPIFY_BANNOS_TOKEN=[ADMIN_API_TOKEN]
-SHOPIFY_FLOURLANE_TOKEN=[ADMIN_API_TOKEN]
-SLACK_WEBHOOK_URL=[SLACK_WEBHOOK]
+
+```shell
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+SHOPIFY_BANNOS_TOKEN=<admin-api-token>
+SHOPIFY_FLOURLANE_TOKEN=<admin-api-token>
+SLACK_WEBHOOK_URL=<slack-webhook-url>
+```
 
 **Note:** HMAC verification has been removed. No webhook secrets needed.
-
-markdown
-Copy code
 
 **Notes**
 - Frontend **only** uses the anon key.  
@@ -94,13 +94,13 @@ Each store has its own dedicated webhook endpoint:
 
 ### Bannos Store
 - **Event**: `orders/create`  
-- **URL**: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-bannos`  
+- **URL**: `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-bannos`  
 - **Format**: JSON  
 - **API Version**: `2024-10` (or later)
 
 ### Flourlane Store
 - **Event**: `orders/create`  
-- **URL**: `https://iwavciibrspfjezujydc.supabase.co/functions/v1/shopify-webhooks-flourlane`  
+- **URL**: `https://<project-id>.supabase.co/functions/v1/shopify-webhooks-flourlane`  
 - **Format**: JSON  
 - **API Version**: `2024-10` (or later)
 
@@ -227,13 +227,13 @@ Each store has its own dedicated webhook endpoint:
 - Document changes (Dev Change Report)
 
 **Commands**
+
+```bash
 npm install
 npm run dev
 npm test
 npm run build
-
-yaml
-Copy code
+```
 
 ---
 

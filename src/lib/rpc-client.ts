@@ -220,13 +220,6 @@ async function withErrorHandling<T>(
   
   try {
     const result = await rpcCall();
-    const duration = Date.now() - startTime;
-    
-    // Log successful operations in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`RPC ${context.rpcName} completed in ${duration}ms`);
-    }
-    
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -241,7 +234,6 @@ async function withErrorHandling<T>(
         const { data, error: refreshError } = await supabase.auth.refreshSession();
         
         if (!refreshError && data.session) {
-          console.log('✅ Session refreshed successfully, retrying RPC call');
           // Session refreshed, retry the RPC call
           return withErrorHandling(rpcCall, { ...context, retryCount: retryCount + 1 });
         } else {
@@ -766,16 +758,6 @@ export async function completeDecorating(orderId: string, store: string, notes?:
   return data;
 }
 
-export async function startPacking(orderId: string, performedBy?: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('start_packing', {
-    p_order_id: orderId,
-    p_performed_by: performedBy || null,
-  });
-  if (error) throw error;
-  return data;
-}
-
 export async function completePacking(orderId: string, store: string, notes?: string) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('complete_packing', {
@@ -991,61 +973,6 @@ export async function getBoms(store?: string | null, activeOnly: boolean = true,
   return (data || []) as BOM[];
 }
 
-export async function getBomByProduct(productTitle: string, store: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_bom_by_product', {
-    p_product_title: productTitle,
-    p_store: store,
-  });
-  if (error) throw error;
-  return data || [];
-}
-
-// Raw row type from get_bom_details RPC
-interface BomDetailsRow {
-  bom_id: string;
-  product_title: string;
-  store: 'bannos' | 'flourlane' | 'both';
-  description: string | null;
-  component_id: string | null;
-  component_sku: string | null;
-  component_name: string | null;
-  quantity_required: number | null;
-  unit: string | null;
-  current_stock: number | null;
-  is_optional: boolean;
-  notes: string | null;
-  stage_to_consume: 'Filling' | 'Decorating' | 'Packing' | null;
-}
-
-/**
- * Fetch BOM details including all items for a specific BOM
- * Use this when opening a BOM for editing to get the full item list
- */
-export async function getBomDetails(bomId: string): Promise<BOMItem[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_bom_details', {
-    p_bom_id: bomId,
-  });
-  if (error) throw error;
-
-  // Transform flat RPC result to BOMItem array
-  return (data || [])
-    .filter((row: BomDetailsRow) => row.component_id !== null) // Filter out BOMs with no items
-    .map((row: BomDetailsRow) => ({
-      id: `${row.bom_id}-${row.component_id}`, // Composite ID for UI
-      bom_id: row.bom_id,
-      component_id: row.component_id,
-      component_name: row.component_name,
-      component_sku: row.component_sku,
-      quantity_per_unit: row.quantity_required, // Map to UI field name
-      stage: row.stage_to_consume as 'Filling' | 'Decorating' | 'Packing' | undefined,
-      is_optional: row.is_optional,
-      created_at: new Date().toISOString(), // Not returned by RPC
-      updated_at: new Date().toISOString(), // Not returned by RPC
-    }));
-}
-
 export async function upsertBom(params: {
   id?: string;
   product_title: string;
@@ -1065,58 +992,6 @@ export async function upsertBom(params: {
   });
   if (error) throw error;
   return data as string; // Returns the BOM ID
-}
-
-export async function addBomComponent(params: {
-  bom_id: string;
-  component_id: string;
-  quantity_required: number;
-  unit?: string;
-  is_optional?: boolean;
-  notes?: string;
-  stage?: string;
-}): Promise<void> {
-  return withErrorHandling(
-    async () => {
-      const supabase = getSupabase();
-      const { error } = await supabase.rpc('add_bom_component', {
-        p_bom_id: params.bom_id,
-        p_component_id: params.component_id,
-        p_quantity_required: params.quantity_required,
-        p_unit: params.unit || 'each',
-        p_is_optional: params.is_optional || false,
-        p_notes: params.notes || null,
-        p_stage: params.stage || null,
-      });
-      if (error) throw error;
-    },
-    {
-      operation: 'addBomComponent',
-      rpcName: 'add_bom_component',
-      params
-    }
-  );
-}
-
-export async function removeBomComponent(params: {
-  bom_id: string;
-  component_id: string;
-}): Promise<void> {
-  return withErrorHandling(
-    async () => {
-      const supabase = getSupabase();
-      const { error } = await supabase.rpc('remove_bom_component', {
-        p_bom_id: params.bom_id,
-        p_component_id: params.component_id,
-      });
-      if (error) throw error;
-    },
-    {
-      operation: 'removeBomComponent',
-      rpcName: 'remove_bom_component',
-      params
-    }
-  );
 }
 
 // =============================================
@@ -1186,52 +1061,6 @@ export async function deleteBom(id: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('delete_bom', { p_id: id });
   if (error) throw error;
   return data as boolean;
-}
-
-// Deduction result from deduct_for_order RPC
-interface DeductionResult {
-  component_id: string;
-  component_name: string;
-  quantity_deducted: number;
-  previous_stock: number;
-  new_stock: number;
-}
-
-interface DeductForOrderResponse {
-  success: boolean;
-  error?: string;
-  bom_id?: string;
-  order_id?: string;
-  quantity?: number;
-  deductions?: DeductionResult[];
-}
-
-export async function deductForOrder(params: {
-  order_id: string;
-  product_title: string;
-  store: string;
-  quantity?: number;
-  created_by?: string;
-}): Promise<DeductForOrderResponse> {
-  return withErrorHandling(
-    async () => {
-      const supabase = getSupabase();
-      const { data, error } = await supabase.rpc('deduct_for_order', {
-        p_order_id: params.order_id,
-        p_product_title: params.product_title,
-        p_store: params.store,
-        p_quantity: params.quantity || 1,
-        p_created_by: params.created_by || null,
-      });
-      if (error) throw error;
-      return data as DeductForOrderResponse;
-    },
-    {
-      operation: 'deductForOrder',
-      rpcName: 'deduct_for_order',
-      params
-    }
-  );
 }
 
 // =============================================
@@ -1521,7 +1350,6 @@ export async function setPrintingSettings(store: Store, settings: Record<string,
 }
 
 export async function getMonitorDensity(store: Store) {
-  console.log('getMonitorDensity called for store:', store);
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_monitor_density', {
     p_store: store
@@ -1530,7 +1358,6 @@ export async function getMonitorDensity(store: Store) {
     console.error('getMonitorDensity error:', error);
     throw error;
   }
-  console.log('getMonitorDensity raw data:', data);
   return data;
 }
 
@@ -1565,7 +1392,6 @@ export async function getFlavours(store: Store): Promise<string[]> {
 }
 
 export async function getStorageLocations(store: Store): Promise<string[]> {
-  console.log('getStorageLocations called for store:', store);
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_storage_locations', {
     p_store: store,
@@ -1574,18 +1400,13 @@ export async function getStorageLocations(store: Store): Promise<string[]> {
     console.error('getStorageLocations error:', error);
     throw error;
   }
-  
-  console.log('getStorageLocations raw data:', data);
-  
+
   // Handle different return formats
   if (Array.isArray(data)) {
-    console.log('getStorageLocations returning array:', data);
     return data;
   } else if (data && typeof data === 'object' && data.data && Array.isArray(data.data)) {
-    console.log('getStorageLocations returning data.data:', data.data);
     return data.data;
   } else if (data && typeof data === 'object' && Array.isArray(data.locations)) {
-    console.log('getStorageLocations returning data.locations:', data.locations);
     return data.locations;
   } else {
     console.warn('Unexpected storage locations data format:', data);
@@ -1604,7 +1425,6 @@ export async function setFlavours(store: Store, flavours: string[]) {
 }
 
 export async function setStorageLocations(store: Store, locations: string[]) {
-  console.log('setStorageLocations called with:', { store, locations });
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('set_storage_locations', {
     p_store: store,
@@ -1614,7 +1434,6 @@ export async function setStorageLocations(store: Store, locations: string[]) {
     console.error('setStorageLocations error:', error);
     throw error;
   }
-  console.log('setStorageLocations result:', data);
   return data;
 }
 
@@ -1635,16 +1454,6 @@ export async function getDueDateSettings(store: Store): Promise<DueDateSettings>
   });
   if (error) throw error;
   return data as DueDateSettings;
-}
-
-export async function setDueDateSettings(store: Store, settings: DueDateSettings) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('set_due_date_settings', {
-    p_store: store,
-    p_settings: settings,
-  });
-  if (error) throw error;
-  return data;
 }
 
 // =============================================
@@ -1806,16 +1615,6 @@ export async function getOrderPhotos(orderId: string, store: Store) {
   return data || [];
 }
 
-export async function getQCReviewQueue(store?: Store, qcStatus?: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_qc_review_queue', {
-    p_store: store || null,
-    p_qc_status: qcStatus || null,
-  });
-  if (error) throw error;
-  return data || [];
-}
-
 // =============================================
 // TIME & PAYROLL
 // =============================================
@@ -1883,16 +1682,6 @@ export async function getStaffAvgProductivity(days: number = 30) {
 export async function getDepartmentPerformance(days: number = 30) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('get_department_performance', {
-    p_days: days,
-  });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function getStoreProductionEfficiency(store: Store, days: number = 30) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_store_production_efficiency', {
-    p_store: store,
     p_days: days,
   });
   if (error) throw error;

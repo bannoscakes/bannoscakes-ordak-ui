@@ -1,7 +1,5 @@
 // components/MainDashboardMessaging.tsx
 import { useState, useEffect, useCallback, useRef } from "react";
-import { v4 as uuid } from "uuid";
-import { toast } from "sonner";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -16,11 +14,11 @@ import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { useErrorNotifications } from "../lib/error-notifications";
 import { useRealtimeMessages } from "../hooks/useRealtimeMessages";
+import { useOptimisticSendMessage } from "../hooks/useOptimisticSendMessage";
 
 import {
   getConversations,
   getMessages,
-  sendMessage,
   markMessagesRead,
   getUnreadCount,
   createConversation,
@@ -36,9 +34,8 @@ import {
   CURRENT_USER_SENTINEL,
   type UIConversation as Conversation,
   type UIMessage as Message,
+  type DisplayMessage,
 } from "../lib/messaging-adapters";
-
-import type { OptimisticMessage } from "../types/messages";
 
 import type { RealtimeMessageRow } from "../lib/messaging-types";
 import { ChatWindow } from "./messaging/ChatWindow";
@@ -49,15 +46,18 @@ interface MainDashboardMessagingProps {
 }
 
 export function MainDashboardMessaging({ onClose, initialConversationId }: MainDashboardMessagingProps) {
+  // Dialog mode is determined by presence of onClose callback (passed from AdminMessagingDialog)
+  const isDialogMode = !!onClose;
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(isDialogMode); // Force expanded in dialog mode
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
 
   const { showError, showErrorWithRetry } = useErrorNotifications();
@@ -150,12 +150,12 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         setSelectedConversation(initialConversationId);
         setIsExpanded(true);
       }
-    } else {
-      // Reset selected conversation when initialConversationId is null
+    } else if (!isDialogMode) {
+      // Only reset to compact view if NOT in dialog mode
       setSelectedConversation(null);
       setIsExpanded(false);
     }
-  }, [initialConversationId, conversations.length]);
+  }, [initialConversationId, conversations.length, isDialogMode]);
 
   // Realtime handlers
   const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
@@ -230,82 +230,24 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     setIsExpanded(true);
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!selectedConversation || !text.trim() || !currentUserId) return;
-    const body = text.trim();
-
-    // 1) Add optimistic bubble with clientId
-    const clientId = uuid();
-    const optimistic: OptimisticMessage = {
-      clientId,
-      optimistic: true,
-      conversationId: selectedConversation,
-      authorId: currentUserId,
-      body,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Add to messages as any to maintain compatibility with UIMessage
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: clientId,
-        text: body,
-        timestamp: optimistic.createdAt,
-        senderId: CURRENT_USER_SENTINEL,
-        senderName: "You",
-        read: true,
-        conversationId: selectedConversation,
-        authorId: currentUserId,
-        body: body,
-        createdAt: optimistic.createdAt,
-      } as any,
-    ]);
-
-    try {
-      // 2) RPC — return inserted id
-      const messageId = await sendMessage(selectedConversation, body);
-
-      // 3) Reconcile optimistic with server copy
-      setMessages((prev) =>
-        prev.map((m) => {
-          // Check if this is our optimistic message
-          if ((m as any).id === clientId) {
-            return {
-              id: String(messageId),
-              text: body,
-              timestamp: optimistic.createdAt,
-              senderId: CURRENT_USER_SENTINEL,
-              senderName: "You",
-              read: true,
-              conversationId: selectedConversation,
-              authorId: currentUserId,
-              body: body,
-              createdAt: optimistic.createdAt,
-            } as any;
-          }
-          return m;
-        })
-      );
-
-      // 4) Lightweight refresh for last-message preview (no spinner)
+  const handleSendMessage = useOptimisticSendMessage({
+    selectedConversation,
+    currentUserId,
+    setMessages,
+    onSuccess: () => {
       loadConversations({ background: true });
       loadUnreadCount({ background: true });
-    } catch (err) {
-      console.error("Failed to send message:", err);
-      // Remove optimistic on failure
-      setMessages((prev) => prev.filter((m) => (m as any).id !== clientId));
-      toast.error("Failed to send message");
+    },
+    onError: (err) => {
       showError(err, {
         title: "Failed to Send Message",
         showRecoveryActions: true,
       });
-    }
-  };
+    },
+  });
 
   const handleCreateConversation = async (participants: string[], isGroup: boolean) => {
     try {
-      console.log("onCreateConversation participants:", participants); // should be UUIDs, not emails
       const id = await createConversation(
         participants,
         isGroup ? "Group Chat" : undefined,
@@ -345,6 +287,42 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
 
   if (loading) {
+    // Show two-column skeleton in dialog mode to match the expanded layout
+    if (isDialogMode) {
+      return (
+        <div className="flex h-full overflow-hidden rounded-2xl border">
+          {/* Sidebar skeleton */}
+          <div className="w-72 min-w-[18rem] border-r bg-card p-4 animate-pulse">
+            <div className="h-6 bg-muted rounded w-32 mb-4"></div>
+            <div className="h-10 bg-muted rounded w-full mb-4"></div>
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-10 w-10 bg-muted rounded-full"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-24"></div>
+                    <div className="h-3 bg-muted rounded w-32"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Chat area skeleton */}
+          <div className="flex-1 bg-background p-4 animate-pulse flex flex-col">
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+              <div className="h-10 w-10 bg-muted rounded-full"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded w-24"></div>
+                <div className="h-3 bg-muted rounded w-16"></div>
+              </div>
+            </div>
+            <div className="flex-1"></div>
+            <div className="h-10 bg-muted rounded w-full mt-auto"></div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <Card className="p-4">
         <div className="animate-pulse space-y-4">
@@ -376,30 +354,27 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      {/* Status and Actions Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="text-xs">
-              {unreadCount} unread
-            </Badge>
-          )}
-          <div
-            className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} 
-            title={isConnected ? 'Connected' : 'Disconnected'}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0">
-            <Plus className="h-4 w-4" />
-          </Button>
-          {onClose && (
-            <Button size="sm" variant="ghost" onClick={onClose} className="h-10 w-10 p-0">
-              <X className="h-4 w-4" />
+      {/* Status and Actions Header - only show in non-dialog mode */}
+      {!isDialogMode && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {unreadCount} unread
+              </Badge>
+            )}
+            <div
+              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+              title={isConnected ? 'Connected' : 'Disconnected'}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0">
+              <Plus className="h-4 w-4" />
             </Button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {!isExpanded ? (
         // Compact view - conversation list only
@@ -462,15 +437,29 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         </Card>
       ) : (
         // Expanded view - full messaging interface
-        <div className="flex h-full w-full overflow-hidden rounded-2xl border flex-1 min-h-0">
+        <div className="flex w-full overflow-hidden rounded-2xl border flex-1 min-h-0">
           {/* Conversations Sidebar */}
-          <aside className="flex-none w-72 min-w-[18rem] border-r bg-card flex flex-col">
+          <aside className="flex-none w-72 min-w-[18rem] h-full border-r bg-card flex flex-col">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-medium">Conversations</h4>
-                <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-10 w-10 p-0">
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium">Conversations</h4>
+                  {/* Connection status - visible in both dialog and non-dialog expanded mode */}
+                  <div
+                    className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                    title={isConnected ? 'Connected' : 'Disconnected'}
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setShowNewConversation(true)} className="h-10 w-10 p-0" aria-label="New conversation">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  {!isDialogMode && (
+                    <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-10 w-10 p-0" aria-label="Collapse messaging">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="relative">
@@ -524,7 +513,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
           </aside>
 
           {/* Chat Area */}
-          <section className="flex-1 min-w-0 bg-background flex flex-col">
+          <section className="flex-1 min-w-0 h-full bg-background flex flex-col">
             {selectedConversation && selectedConv ? (
               <ChatWindow conversation={selectedConv} messages={messages} onSendMessage={handleSendMessage} />
             ) : (

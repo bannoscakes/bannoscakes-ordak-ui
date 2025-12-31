@@ -5,7 +5,7 @@
  * - Message clustering for consecutive messages
  */
 
-import type { UIMessage } from './messaging-adapters';
+import type { DisplayMessage } from './messaging-adapters';
 
 // ============================================
 // Date Grouping
@@ -14,7 +14,7 @@ import type { UIMessage } from './messaging-adapters';
 export interface MessageGroup {
   date: string; // ISO date string (YYYY-MM-DD)
   label: string; // Display label (e.g., "Today", "Yesterday", "Dec 5")
-  messages: UIMessage[];
+  messages: DisplayMessage[];
 }
 
 /**
@@ -30,10 +30,10 @@ function getLocalDateKey(date: Date): string {
 /**
  * Group messages by date for display with date separators
  */
-export function groupMessagesByDate(messages: UIMessage[]): MessageGroup[] {
+export function groupMessagesByDate(messages: DisplayMessage[]): MessageGroup[] {
   if (!messages.length) return [];
 
-  const groups: Map<string, UIMessage[]> = new Map();
+  const groups: Map<string, DisplayMessage[]> = new Map();
 
   for (const msg of messages) {
     // Handle invalid timestamps gracefully - use local date for grouping
@@ -101,28 +101,6 @@ export function getAvatarColorHex(name: string): string {
   return AVATAR_COLORS_HEX[hash % AVATAR_COLORS_HEX.length];
 }
 
-// Keep Tailwind classes for backwards compatibility
-const AVATAR_COLORS = [
-  'bg-blue-500',
-  'bg-green-500',
-  'bg-purple-500',
-  'bg-pink-500',
-  'bg-orange-500',
-  'bg-teal-500',
-  'bg-indigo-500',
-  'bg-rose-500',
-] as const;
-
-/**
- * Generate consistent avatar background color (Tailwind class) from name
- * @deprecated Use getAvatarColorHex for more reliable styling
- */
-export function getAvatarColor(name: string): string {
-  if (!name) return AVATAR_COLORS[0];
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-
 // ============================================
 // Message Clustering
 // ============================================
@@ -132,8 +110,8 @@ export function getAvatarColor(name: string): string {
  * Used to hide avatar and reduce spacing for consecutive messages
  */
 export function shouldGroupWithPrevious(
-  current: UIMessage,
-  previous: UIMessage | undefined
+  current: DisplayMessage,
+  previous: DisplayMessage | undefined
 ): boolean {
   if (!previous) return false;
   if (current.senderId !== previous.senderId) return false;

@@ -163,17 +163,6 @@ export function printBarcode(data: BarcodeData): void {
 }
 
 /**
- * Download barcode as PNG image
- */
-export function downloadBarcode(data: BarcodeData): void {
-  const barcodeDataUrl = generateBarcodeDataUrl(data.orderId);
-  const link = document.createElement('a');
-  link.download = `barcode-${data.orderId}.png`;
-  link.href = barcodeDataUrl;
-  link.click();
-}
-
-/**
  * Complete barcode printing workflow:
  * 1. Calls print_barcode RPC (logs to stage_events, sets filling_start_ts)
  * 2. Uses returned data to trigger browser print dialog

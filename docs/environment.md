@@ -50,7 +50,7 @@ See `.env.example` at the repo root for a complete list of all environment varia
 **Local example** (`.env.local`):
 ```dotenv
 # --- Required ---
-VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_APP_URL=http://localhost:3000
 
@@ -61,102 +61,106 @@ VITE_USE_MOCKS=false
 
 # --- Production Only ---
 VITE_SENTRY_DSN=
-Edge Functions (server-only) variables
-Do not expose these to the client.
+```
 
-SUPABASE_SERVICE_ROLE_KEY
+---
 
-SHOPIFY_BANNOS_TOKEN
+## Edge Functions (server-only) variables
 
-SHOPIFY_FLOURLANE_TOKEN
+> Do not expose these to the client.
 
-SLACK_WEBHOOK_URL
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SHOPIFY_BANNOS_TOKEN`
+- `SHOPIFY_FLOURLANE_TOKEN`
+- `SLACK_WEBHOOK_URL`
+- `LOG_LEVEL` (optional) - `info` or `debug`
 
-(optional) LOG_LEVEL=info|debug
+**Local example** (`supabase/functions/.env` or via `supabase secrets set`):
 
-Local example (supabase/functions/.env or via supabase secrets set):
-
-dotenv
-Copy code
+```dotenv
 # --- Edge Functions (server-only) ---
 SUPABASE_SERVICE_ROLE_KEY=
 SHOPIFY_BANNOS_TOKEN=
 SHOPIFY_FLOURLANE_TOKEN=
 SLACK_WEBHOOK_URL=
 LOG_LEVEL=info
-Deploying secrets to Supabase (recommended):
+```
 
-bash
-Copy code
+**Deploying secrets to Supabase** (recommended):
+
+```bash
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=... SHOPIFY_BANNOS_TOKEN=... SHOPIFY_FLOURLANE_TOKEN=... SLACK_WEBHOOK_URL=...
-Store mapping (informational)
-Bannos: uses SHOPIFY_BANNOS_TOKEN
+```
 
-Flourlane: uses SHOPIFY_FLOURLANE_TOKEN
+---
+
+## Store Mapping
+
+- **Bannos**: uses `SHOPIFY_BANNOS_TOKEN`
+- **Flourlane**: uses `SHOPIFY_FLOURLANE_TOKEN`
 
 Each store has its own dedicated webhook Edge Function.
 
-Quick verification
-Frontend (in app code):
+---
 
-ts
-Copy code
+## Quick Verification
+
+**Frontend** (in app code):
+
+```typescript
 console.log(import.meta.env.VITE_SUPABASE_URL) // should print your URL
-Edge Functions:
+```
 
-ts
-Copy code
+**Edge Functions**:
+
+```typescript
 // Deno / Supabase Edge
 console.log(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))
-Healthcheck ideas
+```
 
-Add /edge/health that returns { up: true, db_ms: <ping> }.
+---
 
-On boot, log which store tokens are present (never log their values).
+## Healthcheck Ideas
 
-Rotations & hygiene
+- Add `/edge/health` that returns `{ up: true, db_ms: <ping> }`
+- On boot, log which store tokens are present (never log their values)
+
+---
+
+## Rotations & Hygiene
+
 Rotate service role, Shopify tokens, and Slack webhook every 90 days or on staff change.
 
-After rotation:
+**After rotation:**
+- Update secrets in Supabase and your deploy provider
+- Redeploy Edge Functions and frontend
+- Replay any failed Shopify webhooks (Shopify Admin)
+- Keep a secure notes record (who rotated, when, where updated)
 
-Update secrets in Supabase and your deploy provider.
+---
 
-Redeploy Edge Functions and frontend.
+## Gotchas
 
-Replay any failed Shopify webhooks (Shopify Admin).
+- Vite only exposes envs with the `VITE_` prefix
+- Don't reference `service_role` keys in the browser
+- If webhooks fail: check Supabase Edge Function logs and verify `SUPABASE_SERVICE_ROLE_KEY` is set
+- If the app can't read from DB locally: verify `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` and that RLS allows select
 
-Keep a secure notes record (who rotated, when, where updated).
+---
 
-Gotchas
-Vite only exposes envs with the VITE_ prefix.
+## Checklist (per environment)
 
-Don't reference service_role keys in the browser.
+### Dev
+- [ ] `.env.local` present with `VITE_*`
+- [ ] Edge `.env` or `supabase secrets set`
+- [ ] `npm run dev` works; `/edge/health` is up
 
-If webhooks fail: check Supabase Edge Function logs and verify SUPABASE_SERVICE_ROLE_KEY is set.
+### Staging
+- [ ] Project env has `VITE_*`
+- [ ] Supabase secrets set for Edge
+- [ ] Migrations applied; smoke test order → print → scan flows
 
-If the app can't read from DB locally: verify VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY and that RLS allows select.
-
-Checklist (per environment)
-Dev
-
-.env.local present with VITE_*
-
-Edge .env or supabase secrets set
-
-npm run dev works; /edge/health is up
-
-Staging
-
-Project env has VITE_*
-
-Supabase secrets set for Edge
-
-Migrations applied; smoke test order → print → scan flows
-
-Production
-
-Secrets present & recently rotated
-
-Monitoring keys set (Sentry/PostHog)
-
-Health checks green; backups (PITR) enabled
+### Production
+- [ ] Secrets present & recently rotated
+- [ ] Monitoring keys set (Sentry/PostHog)
+- [ ] Health checks green; backups (PITR) enabled

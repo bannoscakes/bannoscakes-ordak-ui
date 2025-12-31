@@ -220,7 +220,6 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
           },
           onError: (error) => {
             console.error('Failed to assign staff:', error);
-            toast.error('Failed to assign orders');
           }
         }
       );

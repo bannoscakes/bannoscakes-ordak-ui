@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   assignStaff,
   assignStaffBulk,
   unassignStaff,
   setStorage,
-  updateOrderPriority,
   completeFilling,
   completeCovering,
   completeDecorating,
@@ -68,6 +68,12 @@ export function useAssignStaff() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
+    onError: (error: unknown) => {
+      console.error('Failed to assign staff:', error);
+      toast.error('Failed to assign staff', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    },
   });
 }
 
@@ -90,6 +96,12 @@ export function useUnassignStaff() {
       unassignStaff(orderId, store),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
+    },
+    onError: (error: unknown) => {
+      console.error('Failed to unassign staff:', error);
+      toast.error('Failed to unassign staff', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }
@@ -120,6 +132,12 @@ export function useBulkAssignStaff() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
+    onError: (error: unknown) => {
+      console.error('Failed to bulk assign staff:', error);
+      toast.error('Failed to bulk assign staff', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    },
   });
 }
 
@@ -147,28 +165,11 @@ export function useSetStorage() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
-  });
-}
-
-/**
- * Hook to update the priority level of an order
- *
- * @returns Mutation object with `mutate({ orderId, store, priority })` function
- *
- * @example
- * const { mutate: updatePriority } = useUpdateOrderPriority();
- * updatePriority({ orderId: '123', store: 'bannos', priority: 'High' });
- *
- * @sideeffect Invalidates all queue queries on success
- */
-export function useUpdateOrderPriority() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ orderId, store, priority }: { orderId: string; store: Store; priority: 'High' | 'Medium' | 'Low' }) =>
-      updateOrderPriority(orderId, store, priority),
-    onSuccess: () => {
-      invalidateAllQueueQueries(queryClient);
+    onError: (error: unknown) => {
+      console.error('Failed to set storage location:', error);
+      toast.error('Failed to set storage location', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }
@@ -197,6 +198,12 @@ export function useCompleteFilling() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
+    onError: (error: unknown) => {
+      console.error('Failed to complete filling stage:', error);
+      toast.error('Failed to complete filling stage', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    },
   });
 }
 
@@ -219,6 +226,12 @@ export function useStartCovering() {
       startCovering(orderId, store),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
+    },
+    onError: (error: unknown) => {
+      console.error('Failed to start covering stage:', error);
+      toast.error('Failed to start covering stage', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }
@@ -243,6 +256,12 @@ export function useCompleteCovering() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
+    onError: (error: unknown) => {
+      console.error('Failed to complete covering stage:', error);
+      toast.error('Failed to complete covering stage', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    },
   });
 }
 
@@ -265,6 +284,12 @@ export function useStartDecorating() {
       startDecorating(orderId, store),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
+    },
+    onError: (error: unknown) => {
+      console.error('Failed to start decorating stage:', error);
+      toast.error('Failed to start decorating stage', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }
@@ -289,6 +314,12 @@ export function useCompleteDecorating() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
+    onError: (error: unknown) => {
+      console.error('Failed to complete decorating stage:', error);
+      toast.error('Failed to complete decorating stage', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    },
   });
 }
 
@@ -311,6 +342,12 @@ export function useCompletePacking() {
       completePacking(orderId, store, notes),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
+    },
+    onError: (error: unknown) => {
+      console.error('Failed to complete packing stage:', error);
+      toast.error('Failed to complete packing stage', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }
@@ -340,6 +377,12 @@ export function useQcReturnToDecorating() {
       qcReturnToDecorating(orderId, store, notes),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
+    },
+    onError: (error: unknown) => {
+      console.error('Failed to return order to decorating:', error);
+      toast.error('Failed to return order to decorating', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }
@@ -413,6 +456,12 @@ export function useCancelOrder() {
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
     },
+    onError: (error: unknown) => {
+      console.error('Failed to cancel order:', error);
+      toast.error('Failed to cancel order', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    },
   });
 }
 
@@ -433,6 +482,12 @@ export function useMarkOrderComplete() {
       markOrderComplete(orderId, store),
     onSuccess: () => {
       invalidateAllQueueQueries(queryClient);
+    },
+    onError: (error: unknown) => {
+      console.error('Failed to mark order complete:', error);
+      toast.error('Failed to mark order complete', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
     },
   });
 }

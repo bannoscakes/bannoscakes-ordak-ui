@@ -162,7 +162,6 @@ export const ErrorTest: React.FC = () => {
               error={testError}
               title="Test Error"
               onRetry={() => {
-                console.log('Retry clicked');
                 clearError();
               }}
               onDismiss={clearError}

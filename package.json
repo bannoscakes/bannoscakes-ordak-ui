@@ -94,12 +94,14 @@
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.10.1",
     "@playwright/test": "^1.56.0",
+    "@testing-library/react": "^16.3.1",
     "@types/node": "^20.10.0",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "conventional-changelog-cli": "^3.0.0",
     "eslint": "^9.35.0",
+    "jsdom": "^26.1.0",
     "typescript": "^5.9.2",
     "vite": "6.3.5",
     "vitest": "^2.1.9"

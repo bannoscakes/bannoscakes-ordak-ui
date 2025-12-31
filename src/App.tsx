@@ -5,7 +5,6 @@ import { queryClient } from "./lib/query-client";
 // ✅ real auth system (from the audit)
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
-import type { AuthUser } from "./lib/auth";
 import { safePushState, NAVIGATION_EVENT } from "./lib/safeNavigate";
 
 // ✅ Modern login page with Ordak branding
@@ -229,7 +228,6 @@ function RoleBasedRouter() {
       redirectToRoleLanding();
     }
 
-    console.log(`User ${(user as AuthUser).fullName} (${(user as AuthUser).role}) accessing single URL architecture`);
   }, [user]); // Only re-evaluate on user changes, not URL (fixes #499)
 
   // ✅ Early returns AFTER all hooks have been declared

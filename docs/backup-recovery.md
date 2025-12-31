@@ -108,47 +108,51 @@ If using Supabase **Storage** for `order_photos` or media:
 
 If the database is healthy but a **release** broke behavior:
 
-1. Roll back app:  
+1. Roll back app:
    ```bash
    git revert <bad-commit-or-tag>
    npm run deploy:prod
-If a migration was involved but can be left in place → deploy a code-only revert that is compatible.
+   ```
+2. If a migration was involved but can be left in place → deploy a code-only revert that is compatible.
+3. Monitor Sentry and Slack.
 
-Monitor Sentry and Slack.
+---
 
-Exercises / Drills
-Quarterly DR drill (recommended): simulate DB loss, restore to a new project, point staging, run smoke tests; measure RTO.
+## Exercises / Drills
 
-Monthly: verify PITR window and the ability to create a restore project.
+- **Quarterly DR drill** (recommended): simulate DB loss, restore to a new project, point staging, run smoke tests; measure RTO.
+- **Monthly**: verify PITR window and the ability to create a restore project.
 
-Roles & Responsibilities
-Primary on-call: <add name/contact>
+---
 
-Secondary/backup: <add name/contact>
+## Roles & Responsibilities
 
-Escalation channel: <add Slack channel>
+- **Primary on-call**: `<add name/contact>`
+- **Secondary/backup**: `<add name/contact>`
+- **Escalation channel**: `<add Slack channel>`
 
-Data Retention (suggested)
-PITR: 7 days (managed).
+---
 
-Cold exports (optional): Weekly for 4 weeks, Monthly for 6 months.
+## Data Retention (suggested)
 
-Logs: App logs in provider default window; export critical audit logs if required.
+- **PITR**: 7 days (managed)
+- **Cold exports** (optional): Weekly for 4 weeks, Monthly for 6 months
+- **Logs**: App logs in provider default window; export critical audit logs if required
 
-After-Action (Postmortem)
+---
+
+## After-Action (Postmortem)
+
 Within 48 hours of a real incident:
 
-Timeline of events
+1. Timeline of events
+2. Root cause
+3. What worked / what didn't
+4. Concrete follow-ups (owners + dates)
 
-Root cause
+## Quick Commands / Checks
 
-What worked / what didn’t
-
-Concrete follow-ups (owners + dates)
-
-Quick Commands / Checks
-sql
-Copy code
+```sql
 -- Orders present?
 select count(*) from public.orders_bannos;
 select count(*) from public.orders_flourlane;
@@ -159,4 +163,6 @@ select max(created_at) from public.orders_flourlane;
 
 -- Work queue health:
 select status, count(*) from public.work_queue group by status;
-See docs/operations.md for day-to-day ops and incident response details.
+```
+
+See `docs/operations.md` for day-to-day ops and incident response details.

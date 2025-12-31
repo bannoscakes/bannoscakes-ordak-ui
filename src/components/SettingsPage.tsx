@@ -158,18 +158,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         const shopifyToken = allSettings?.find((s: GetSettingsRow) => s.key === 'shopifyToken')?.value;
         const inventoryTracking = allSettings?.find((s: GetSettingsRow) => s.key === 'inventory_tracking_enabled')?.value;
 
-        console.log('Fetched settings:', { flavours, storage, printing, monitor, allSettings, dueDateDefault, dueDateDays, dueDateBlackouts, autoRefresh, shopifyToken });
-        console.log('Storage locations details:', { 
-          storage, 
-          isArray: Array.isArray(storage), 
-          type: typeof storage,
-          length: storage?.length 
-        });
-        console.log('Monitor density details:', { 
-          monitor, 
-          type: typeof monitor,
-          isString: typeof monitor === 'string'
-        });
+        // Debug logs removed - contained sensitive data (shopifyToken)
 
         // Update settings with real data
         // Use store-specific defaults to prevent cross-store contamination
@@ -258,7 +247,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       
       // Check if user switched stores while request was in-flight
       if (currentStoreRef.current !== requestStore) {
-        console.log('Store changed during token test - ignoring result');
         return;
       }
       
@@ -296,7 +284,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
       
       // Check if user switched stores while request was in-flight
       if (currentStoreRef.current !== requestStore) {
-        console.log('Store changed during sync - ignoring result');
         return;
       }
       
@@ -377,10 +364,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
   const handleSave = async () => {
     try {
       setLoading(true);
-      
-      console.log('Saving settings for store:', store);
-      console.log('Storage locations to save:', settings.storage);
-      
+
       // Save all settings to database
       await Promise.all([
         setFlavours(store, settings.flavours),
@@ -398,7 +382,6 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
         setSetting(store, 'shopifyToken', settings.shopifyToken)
       ]);
 
-      console.log('Settings saved successfully');
       setHasUnsavedChanges(false);
 
       // Invalidate React Query cache so other components get fresh data

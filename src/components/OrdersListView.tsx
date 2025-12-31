@@ -197,9 +197,6 @@ export function OrdersListView({ store }: OrdersListViewProps) {
           toast.success(`Order ${formatOrderNumber(orderToCancel.shopifyOrderNumber || orderToCancel.orderNumber, store, orderToCancel.id)} cancelled`);
           setOrderToCancel(null);
         },
-        onError: (error) => {
-          toast.error(`Failed to cancel order: ${error.message}`);
-        },
       }
     );
   };
@@ -218,9 +215,6 @@ export function OrdersListView({ store }: OrdersListViewProps) {
         onSuccess: () => {
           toast.success(`Order ${formatOrderNumber(orderToComplete.shopifyOrderNumber || orderToComplete.orderNumber, store, orderToComplete.id)} marked complete`);
           setOrderToComplete(null);
-        },
-        onError: (error) => {
-          toast.error(`Failed to mark complete: ${error.message}`);
         },
       }
     );
