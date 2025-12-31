@@ -55,12 +55,12 @@ npm run build
 
 ```text
 src/
-├── components/       # React components (51 files)
+├── components/       # React components (100+ files)
 │   ├── inventory-v2/ # Inventory management tabs
 │   ├── messaging/    # Chat components
 │   └── ui/           # shadcn/ui primitives
 ├── hooks/            # React Query hooks (13 files)
-├── lib/              # Utilities and RPC client (20 files)
+├── lib/              # Utilities and RPC client (19 files)
 └── types/            # TypeScript definitions
 
 supabase/
@@ -84,8 +84,14 @@ Key tables:
 |----------|---------|
 | `shopify-webhooks-bannos` | Receive Bannos webhook orders |
 | `shopify-webhooks-flourlane` | Receive Flourlane webhook orders |
+| `process-inbox` | Process webhook inbox queue |
 | `queue-worker` | Process background job queue |
+| `sync-shopify-orders` | Manual order sync from Shopify |
+| `sync-shopify-products` | Sync product catalog from Shopify |
 | `sync-inventory-to-shopify` | Push stock levels to Shopify |
+| `flip-shopify-oos` | Toggle out-of-stock status in Shopify |
+| `test-shopify-token` | Validate Shopify Admin API token |
+| `order-monitor` | Order status monitoring alerts |
 
 ## Documentation
 
