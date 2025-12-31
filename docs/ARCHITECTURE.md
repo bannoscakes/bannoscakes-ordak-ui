@@ -204,20 +204,19 @@ sequenceDiagram
 
 ```text
 ┌──────────┐    ┌──────────┐    ┌────────────┐    ┌─────────┐    ┌──────────┐
-│ Filling  │───>│ Covering │───>│ Decorating │───>│ Packing │───>│ Complete │
+│ Filling  │--->│ Covering │--->│ Decorating │--->│ Packing │--->│ Complete │
 └──────────┘    └──────────┘    └────────────┘    └─────────┘    └──────────┘
-     │               │                │                │
-     ▼               ▼                ▼                ▼
-• Print barcode  • Scan         • Scan              • Scan start
-  (starts ts)      complete       complete           • QC check
-• Scan complete       ▲               ▲              • Set storage
-                      │               │              • Print slip
-                      │               │              • Scan complete
-                      │               │
-                      │          QC Return
-                      │       (if issues found)
-                      │               │
-                      └───────────────┘
+                                       ^                |
+                                       |    QC Return   |
+                                       +----------------+
+
+  FILLING         COVERING        DECORATING         PACKING
+  --------        --------        ----------         -------
+  • Print         • Scan          • Scan             • Scan start
+    barcode         complete        complete         • QC check
+  • Scan                                             • Set storage
+    complete                                         • Print slip
+                                                     • Scan complete
 ```
 
 ### Stage Details
