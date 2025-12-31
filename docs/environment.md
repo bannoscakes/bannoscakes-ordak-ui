@@ -50,7 +50,7 @@ See `.env.example` at the repo root for a complete list of all environment varia
 **Local example** (`.env.local`):
 ```dotenv
 # --- Required ---
-VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 VITE_APP_URL=http://localhost:3000
 

@@ -66,8 +66,8 @@ Create a local script that calls the Edge Function periodically:
 
 # Load environment variables (never hardcode production URLs!)
 # Set these in your environment or .env file:
-# export SUPABASE_URL="https://your-project.supabase.co"
-# export SUPABASE_ANON_KEY="your-anon-key"
+# export SUPABASE_URL="https://<project-id>.supabase.co"
+# export SUPABASE_ANON_KEY="<anon-key>"
 
 if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
   echo "Error: SUPABASE_URL and SUPABASE_ANON_KEY must be set"
