@@ -37,6 +37,7 @@ export interface Message {
   createdAt: string;
   conversationId: string;
   is_own_message: boolean;
+  sender_name?: string;
 }
 
 export interface Conversation {

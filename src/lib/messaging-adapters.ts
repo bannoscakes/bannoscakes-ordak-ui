@@ -70,7 +70,7 @@ export function toUIMessage(msg: RPCMessage, currentUserId?: string): UIMessage 
     text: msg.body ?? '',
     timestamp: msg.createdAt,
     senderId: isOwn ? CURRENT_USER_SENTINEL : toId(msg.authorId),
-    senderName: msg.authorId || 'Unknown',
+    senderName: msg.sender_name || 'Unknown',
     read: isOwn,
   };
 }
