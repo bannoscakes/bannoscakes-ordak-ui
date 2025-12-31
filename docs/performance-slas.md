@@ -145,7 +145,9 @@ where route='POST /webhook/orders/create' and at > now() - interval '10 minutes'
 ---
 
 ## Uptime Budget Reference
-Availability	Allowed downtime / month
-99.9%	43.8 minutes
-99.95%	21.9 minutes
-99.99%	4.4 minutes
+
+| Availability | Allowed downtime / month |
+|--------------|--------------------------|
+| 99.9%        | 43.8 minutes             |
+| 99.95%       | 21.9 minutes             |
+| 99.99%       | 4.4 minutes              |
