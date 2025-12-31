@@ -124,7 +124,7 @@ sequenceDiagram
 
 ## Component Details
 
-### Edge Functions
+### Key Edge Functions
 
 | Function | Trigger | Purpose |
 |----------|---------|---------|
@@ -132,6 +132,9 @@ sequenceDiagram
 | `shopify-webhooks-flourlane` | Shopify webhook | Receive Flourlane orders |
 | `process-inbox` | Database webhook / cron | Parse orders, create records |
 | `queue-worker` | Scheduled | Process inventory holds |
+| `sync-inventory-to-shopify` | Scheduled | Push inventory levels to Shopify |
+
+> See `supabase/functions/` for complete list of Edge Functions.
 
 ### Database Tables (Key)
 
@@ -139,8 +142,8 @@ sequenceDiagram
 |-------|---------|
 | `orders_bannos` / `orders_flourlane` | Order records per store |
 | `staff_shared` | Staff profiles & roles |
-| `inventory_items` | Component stock levels |
-| `bom` | Bill of Materials |
+| `bom_headers` / `bom_items` | Bill of Materials |
+| `inventory_txn` | Inventory transactions |
 | `work_queue` | Async job queue |
 | `conversations` / `messages` | Messaging system |
 
@@ -201,18 +204,20 @@ sequenceDiagram
 
 ```text
 ┌──────────┐    ┌──────────┐    ┌────────────┐    ┌─────────┐    ┌──────────┐
-│ Filling  │───▶│ Covering │───▶│ Decorating │───▶│ Packing │───▶│ Complete │
+│ Filling  │───>│ Covering │───>│ Decorating │───>│ Packing │───>│ Complete │
 └──────────┘    └──────────┘    └────────────┘    └─────────┘    └──────────┘
      │               │                │                │
      ▼               ▼                ▼                ▼
-• Print barcode  • Scan start    • Scan start    • Scan start
-  (starts ts)    • Scan complete • Scan complete • QC check
-• Scan complete                        ▲          • Set storage
-                                       │          • Print packing slip
-                                       │          • Scan complete
-                                       │
-                                  QC Return
-                               (if issues found)
+• Print barcode  • Scan         • Scan              • Scan start
+  (starts ts)      complete       complete           • QC check
+• Scan complete       ▲               ▲              • Set storage
+                      │               │              • Print slip
+                      │               │              • Scan complete
+                      │               │
+                      │          QC Return
+                      │       (if issues found)
+                      │               │
+                      └───────────────┘
 ```
 
 ### Stage Details
@@ -220,8 +225,8 @@ sequenceDiagram
 | Stage | Start Action | End Action | Timestamps |
 |-------|--------------|------------|------------|
 | **Filling** | Print barcode | Scan complete | `filling_start_ts`, `filling_complete_ts` |
-| **Covering** | Scan start | Scan complete | `covering_start_ts`, `covering_complete_ts` |
-| **Decorating** | Scan start | Scan complete | `decorating_start_ts`, `decorating_complete_ts` |
+| **Covering** | (auto) | Scan complete | `covering_complete_ts` |
+| **Decorating** | (auto) | Scan complete | `decorating_complete_ts` |
 | **Packing** | Scan start | Scan complete | `packing_start_ts`, `packing_complete_ts` |
 | **Complete** | - | - | `completed_at` |
 
@@ -232,11 +237,9 @@ sequenceDiagram
    - Scan complete → sets `filling_complete_ts`, advances to Covering
 
 2. **Covering**
-   - Scan start → sets `covering_start_ts`
    - Scan complete → sets `covering_complete_ts`, advances to Decorating
 
 3. **Decorating**
-   - Scan start → sets `decorating_start_ts`
    - Scan complete → sets `decorating_complete_ts`, advances to Packing
 
 4. **Packing**
@@ -258,3 +261,13 @@ sequenceDiagram
 - QC can return orders from Packing → Decorating
 - All transitions logged with timestamps
 - RPCs are idempotent (re-scanning returns `already_done: true`)
+
+---
+
+## See Also
+
+- [Overview](overview.md) - System overview and concepts
+- [Data Flows](data-flows.md) - Detailed data flow documentation
+- [RPC Surface](rpc-surface.md) - Complete RPC function reference
+- [Schema & RLS](schema-and-rls.md) - Database schema and security policies
+- [Security Audit Report](security-audit-report.md) - Security model details
