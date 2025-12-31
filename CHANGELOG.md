@@ -6,7 +6,7 @@ Major release introducing the Orders Management page with list view and real-tim
 ### ✨ New Features
 
 #### Orders Management Page (PR #515, #518)
-- **Database Infrastructure**: New `order_view_all` RPC for unified order listing across stores
+- **Database Infrastructure**: New `cancel_order` and `mark_order_complete` RPCs, updated `get_queue` to include `cancelled_at` field
 - **List View**: Full orders management page with search, filters, and pagination
 - **Stage Badge Colors**: Production stages display with color-coded badges
 
@@ -162,7 +162,7 @@ Major release introducing the Orders Management page with list view and real-tim
 ### 📁 Key Files Modified
 
 #### New Files
-- `src/pages/OrdersPage.tsx` - Orders management list view
+- `src/components/OrdersPage.tsx` - Orders management list view
 - `src/types/queue.ts` - Shared QueueItem type
 
 #### Database
