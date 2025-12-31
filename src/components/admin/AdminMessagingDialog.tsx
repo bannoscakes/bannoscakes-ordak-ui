@@ -19,7 +19,7 @@ export function AdminMessagingDialog({ open, onOpenChange, initialConversationId
         className="p-0 overflow-hidden rounded-2xl flex flex-col"
         style={{ width: '800px', maxWidth: '90vw', minWidth: '600px', height: '600px', maxHeight: '80vh' }}
       >
-        <DialogHeader className="px-4 py-3 border-b bg-white">
+        <DialogHeader className="px-4 py-3 border-b bg-background">
           <DialogTitle>Messages</DialogTitle>
         </DialogHeader>
 
