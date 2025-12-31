@@ -36,10 +36,10 @@ export function getSupabase(): SupabaseClient {
 
 // Back-compat: export an instance-like object that lazily initializes on first property access
 export const supabase = new Proxy({} as SupabaseClient, {
-  get(_t, prop) {
+  get(_t, prop: string | symbol) {
     const c = getSupabase();
-    // @ts-ignore
-    const v = c[prop];
+    // Dynamic property access on the client - safe because Proxy forwards all calls to the real client
+    const v = (c as unknown as Record<string | symbol, unknown>)[prop];
     return typeof v === 'function' ? v.bind(c) : v;
   }
 }) as SupabaseClient;
