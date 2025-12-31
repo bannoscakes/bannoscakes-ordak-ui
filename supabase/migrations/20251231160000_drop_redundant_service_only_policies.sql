@@ -36,21 +36,27 @@ DROP POLICY IF EXISTS "participants_select" ON public.conversation_participants;
 
 -- ============================================
 -- Tables without warnings (cleanup for consistency)
+-- These tables may not exist in preview, so use conditional blocks
 -- ============================================
 
--- api_logs: no authenticated policies exist, so no warning, but still redundant
-DROP POLICY IF EXISTS "api_logs_service_only" ON public.api_logs;
-
--- bom_headers: no authenticated policies exist, so no warning, but still redundant
-DROP POLICY IF EXISTS "bom_headers_service_only" ON public.bom_headers;
-
--- inventory_txn: no authenticated policies exist, so no warning, but still redundant
-DROP POLICY IF EXISTS "inventory_txn_service_only" ON public.inventory_txn;
-
--- orders: drop service_only (service_role bypasses RLS anyway)
--- Conditional: orders table may not exist in preview
 DO $$
 BEGIN
+  -- api_logs: no authenticated policies exist, so no warning, but still redundant
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'api_logs') THEN
+    DROP POLICY IF EXISTS "api_logs_service_only" ON public.api_logs;
+  END IF;
+
+  -- bom_headers: no authenticated policies exist, so no warning, but still redundant
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'bom_headers') THEN
+    DROP POLICY IF EXISTS "bom_headers_service_only" ON public.bom_headers;
+  END IF;
+
+  -- inventory_txn: no authenticated policies exist, so no warning, but still redundant
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'inventory_txn') THEN
+    DROP POLICY IF EXISTS "inventory_txn_service_only" ON public.inventory_txn;
+  END IF;
+
+  -- orders: drop service_only (service_role bypasses RLS anyway)
   IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'orders') THEN
     DROP POLICY IF EXISTS "orders_modify_service_only" ON public.orders;
   END IF;
