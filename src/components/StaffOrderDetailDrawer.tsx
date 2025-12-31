@@ -171,7 +171,6 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         },
         onError: (error) => {
           console.error('Error updating storage location:', error);
-          toast.error('Failed to update storage location');
         }
       }
     );
@@ -195,7 +194,6 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         },
         onError: (error) => {
           console.error('Failed to return order to decorating:', error);
-          toast.error('Failed to return order to decorating stage');
         }
       }
     );

@@ -68,7 +68,6 @@ export function StaffAssignmentModal({
           },
           onError: (error) => {
             console.error('Error unassigning staff:', error);
-            toast.error('Failed to unassign order');
           }
         }
       );
@@ -91,7 +90,6 @@ export function StaffAssignmentModal({
           },
           onError: (error) => {
             console.error('Error assigning staff:', error);
-            toast.error('Failed to assign staff');
           }
         }
       );
