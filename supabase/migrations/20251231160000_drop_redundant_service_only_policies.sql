@@ -30,8 +30,12 @@ DROP POLICY IF EXISTS "work_queue_service_only" ON public.work_queue;
 DROP POLICY IF EXISTS "order_photos_modify_service_only" ON public.order_photos;
 
 -- conversation_participants: drop duplicate SELECT policy
--- Keep conversation_participants_select_own (authenticated, comprehensive with Admin check)
--- Drop participants_select (public, simpler version)
+-- Note: Unlike the *_service_only policies above which use rls_bypass(),
+-- participants_select uses auth.uid() logic. Still safe to drop because
+-- conversation_participants_select_own (authenticated) covers the same access
+-- with additional Admin role check.
+-- Keep: conversation_participants_select_own (authenticated, comprehensive)
+-- Drop: participants_select (public, subset of above)
 DROP POLICY IF EXISTS "participants_select" ON public.conversation_participants;
 
 -- ============================================
