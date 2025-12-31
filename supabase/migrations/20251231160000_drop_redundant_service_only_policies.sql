@@ -67,19 +67,14 @@ BEGIN
 END $$;
 
 -- ============================================
--- rls_bypass() function status
+-- Drop orphaned rls_bypass() function
 -- ============================================
--- After this migration, rls_bypass() is orphaned from RLS policies.
--- Codebase search shows it only appears in:
+-- After dropping the policies above, rls_bypass() has no remaining callers.
+-- Codebase search confirmed it only appeared in:
 -- - supabase/migrations/040_core_auth_helpers.sql (definition)
--- - src/types/supabase.ts (auto-generated TypeScript types)
--- - scripts/production_rpcs.json (RPC export snapshot)
--- - scripts/parse_rpcs.js (explicitly filtered from frontend exposure)
+-- - src/types/supabase.ts (auto-generated, will be regenerated)
+-- - scripts/production_rpcs.json (snapshot, will be updated)
+-- - scripts/parse_rpcs.js (was already filtered from frontend exposure)
 --
--- The function is safe to drop but keeping it for now because:
--- 1. Dropping functions in the same migration that removes their usage is risky
--- 2. It's a stable, harmless helper with no performance impact
--- 3. Dropping it would require regenerating TypeScript types
---
--- TODO: Consider dropping rls_bypass() in a future cleanup PR after
--- verifying no Edge Functions or SECURITY DEFINER RPCs depend on it.
+-- No Edge Functions or SECURITY DEFINER RPCs depend on it.
+DROP FUNCTION IF EXISTS public.rls_bypass();
