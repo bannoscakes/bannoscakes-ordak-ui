@@ -13,7 +13,6 @@ import { FlourlaneAnalyticsPage } from "./FlourlaneAnalyticsPage";
 import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
 import { SettingsPage } from "./SettingsPage";
 import { TimePayrollPage } from "./TimePayrollPage";
-import { BarcodeTest } from "./BarcodeTest";
 import { OrdersPage } from "./OrdersPage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -181,12 +180,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                 safePushState('/');
                 setActiveView("dashboard");
               }} />
-            </ErrorBoundary>
-          );
-        case "barcode-test":
-          return (
-            <ErrorBoundary>
-              <BarcodeTest />
             </ErrorBoundary>
           );
         case "time-payroll":
