@@ -1,5 +1,9 @@
 // src/hooks/__tests__/useOptimisticSendMessage.test.ts
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import { useOptimisticSendMessage, type UseOptimisticSendMessageOptions } from '../useOptimisticSendMessage';
 import { sendMessage } from '../../lib/rpc-client';
 import { isOptimisticUIMessage } from '../../lib/messaging-adapters';
@@ -14,40 +18,25 @@ vi.mock('uuid', () => ({
   v4: () => 'mock-uuid-123',
 }));
 
-// Mock React hooks
-const mockCallback = vi.fn();
-vi.mock('react', async () => {
-  const actual = await vi.importActual('react');
-  return {
-    ...actual,
-    useCallback: (fn: (...args: unknown[]) => unknown) => {
-      mockCallback.mockImplementation(fn);
-      return mockCallback;
-    },
-    useRef: (initial: unknown) => ({ current: initial }),
-    useEffect: (fn: () => void) => fn(),
-  };
-});
-
 describe('useOptimisticSendMessage', () => {
   let mockSetMessages: Mock;
   let mockOnSuccess: Mock;
   let mockOnError: Mock;
-  let options: UseOptimisticSendMessageOptions;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockSetMessages = vi.fn();
     mockOnSuccess = vi.fn();
     mockOnError = vi.fn();
+  });
 
-    options = {
-      selectedConversation: 'conv-123',
-      currentUserId: 'user-456',
-      setMessages: mockSetMessages,
-      onSuccess: mockOnSuccess,
-      onError: mockOnError,
-    };
+  const createOptions = (overrides?: Partial<UseOptimisticSendMessageOptions>): UseOptimisticSendMessageOptions => ({
+    selectedConversation: 'conv-123',
+    currentUserId: 'user-456',
+    setMessages: mockSetMessages,
+    onSuccess: mockOnSuccess,
+    onError: mockOnError,
+    ...overrides,
   });
 
   describe('exports', () => {
@@ -68,29 +57,39 @@ describe('useOptimisticSendMessage', () => {
 
   describe('validation', () => {
     it('should return early if selectedConversation is null', async () => {
-      options.selectedConversation = null;
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions({ selectedConversation: null }))
+      );
 
-      await mockCallback('Hello');
+      await act(async () => {
+        await result.current('Hello');
+      });
 
       expect(mockSetMessages).not.toHaveBeenCalled();
       expect(sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return early if currentUserId is undefined', async () => {
-      options.currentUserId = undefined;
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions({ currentUserId: undefined }))
+      );
 
-      await mockCallback('Hello');
+      await act(async () => {
+        await result.current('Hello');
+      });
 
       expect(mockSetMessages).not.toHaveBeenCalled();
       expect(sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return early if text is empty', async () => {
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('   ');
+      await act(async () => {
+        await result.current('   ');
+      });
 
       expect(mockSetMessages).not.toHaveBeenCalled();
       expect(sendMessage).not.toHaveBeenCalled();
@@ -100,19 +99,23 @@ describe('useOptimisticSendMessage', () => {
   describe('optimistic update', () => {
     it('should add optimistic message before RPC call', async () => {
       (sendMessage as Mock).mockResolvedValue(999);
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('Hello world');
+      await act(async () => {
+        await result.current('Hello world');
+      });
 
       // Check that setMessages was called to add optimistic message
       expect(mockSetMessages).toHaveBeenCalled();
 
       // Get the updater function from first call
       const firstCall = mockSetMessages.mock.calls[0][0];
-      const result = firstCall([]);
+      const addedMessages = firstCall([]);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({
+      expect(addedMessages).toHaveLength(1);
+      expect(addedMessages[0]).toMatchObject({
         id: 'mock-uuid-123',
         text: 'Hello world',
         clientId: 'mock-uuid-123',
@@ -126,9 +129,13 @@ describe('useOptimisticSendMessage', () => {
   describe('reconciliation', () => {
     it('should replace optimistic message with server response on success', async () => {
       (sendMessage as Mock).mockResolvedValue(999);
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('Hello world');
+      await act(async () => {
+        await result.current('Hello world');
+      });
 
       // setMessages should be called twice: once for optimistic, once for reconciliation
       expect(mockSetMessages).toHaveBeenCalledTimes(2);
@@ -152,18 +159,22 @@ describe('useOptimisticSendMessage', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
       } as DisplayMessage;
 
-      const result = reconcileCall([optimisticMsg]);
+      const result2 = reconcileCall([optimisticMsg]);
 
       // Should replace with confirmed message (id from server)
-      expect(result[0].id).toBe('999');
-      expect((result[0] as any).optimistic).toBeUndefined();
+      expect(result2[0].id).toBe('999');
+      expect((result2[0] as Record<string, unknown>).optimistic).toBeUndefined();
     });
 
     it('should call onSuccess after successful send', async () => {
       (sendMessage as Mock).mockResolvedValue(999);
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('Hello world');
+      await act(async () => {
+        await result.current('Hello world');
+      });
 
       expect(mockOnSuccess).toHaveBeenCalled();
     });
@@ -173,9 +184,13 @@ describe('useOptimisticSendMessage', () => {
     it('should remove optimistic message on failure', async () => {
       const error = new Error('Network error');
       (sendMessage as Mock).mockRejectedValue(error);
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('Hello world');
+      await act(async () => {
+        await result.current('Hello world');
+      });
 
       // setMessages should be called twice: once for optimistic, once for removal
       expect(mockSetMessages).toHaveBeenCalledTimes(2);
@@ -194,29 +209,65 @@ describe('useOptimisticSendMessage', () => {
         id: 'other-msg',
       } as DisplayMessage;
 
-      const result = filterCall([optimisticMsg, otherMsg]);
+      const result2 = filterCall([optimisticMsg, otherMsg]);
 
       // Should filter out the optimistic message
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('other-msg');
+      expect(result2).toHaveLength(1);
+      expect(result2[0].id).toBe('other-msg');
     });
 
     it('should call onError with the error on failure', async () => {
       const error = new Error('Network error');
       (sendMessage as Mock).mockRejectedValue(error);
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('Hello world');
+      await act(async () => {
+        await result.current('Hello world');
+      });
 
       expect(mockOnError).toHaveBeenCalledWith(error);
     });
 
     it('should not call onSuccess on failure', async () => {
       (sendMessage as Mock).mockRejectedValue(new Error('fail'));
-      useOptimisticSendMessage(options);
+      const { result } = renderHook(() =>
+        useOptimisticSendMessage(createOptions())
+      );
 
-      await mockCallback('Hello world');
+      await act(async () => {
+        await result.current('Hello world');
+      });
 
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('callback stability', () => {
+    it('should maintain stable reference when callbacks change', async () => {
+      (sendMessage as Mock).mockResolvedValue(999);
+      const newOnSuccess = vi.fn();
+
+      const { result, rerender } = renderHook(
+        (props: UseOptimisticSendMessageOptions) => useOptimisticSendMessage(props),
+        { initialProps: createOptions() }
+      );
+
+      const initialRef = result.current;
+
+      // Rerender with a new callback
+      rerender(createOptions({ onSuccess: newOnSuccess }));
+
+      // Function reference should be stable
+      expect(result.current).toBe(initialRef);
+
+      // But the new callback should be called
+      await act(async () => {
+        await result.current('Test message');
+      });
+
+      expect(newOnSuccess).toHaveBeenCalled();
       expect(mockOnSuccess).not.toHaveBeenCalled();
     });
   });
