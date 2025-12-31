@@ -11,7 +11,7 @@ This document is essential for production readiness and developer collaboration.
 ## Environment Variables
 
 ### Development (`.env.local`)
-VITE_SUPABASE_URL=https://[PROJECT_ID].supabase.co
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
 VITE_APP_URL=http://localhost:5173
 
@@ -19,7 +19,7 @@ shell
 Copy code
 
 ### Production (provider env, e.g., Vercel)
-VITE_SUPABASE_URL=https://[PROJECT_ID].supabase.co
+VITE_SUPABASE_URL=https://<project-id>.supabase.co
 VITE_SUPABASE_ANON_KEY=[YOUR_ANON_KEY]
 VITE_APP_URL=https://ordak.example.com
 VITE_SENTRY_DSN=[YOUR_SENTRY_DSN]
