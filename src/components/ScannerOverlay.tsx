@@ -76,9 +76,10 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         setErrorMessage(`Wrong order scanned. Expected ${displayOrderNumber}, got ${scannedDisplayNumber}.`);
       }
     } catch (error) {
+      console.error('Scan failed:', error);
       setIsScanLookupPending(false);
       setScanState('error');
-      setErrorMessage(`Scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorMessage('Scan failed. Please try again.');
     }
   };
 
@@ -120,10 +121,10 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       }, 1500);
     };
 
-    const onError = (error: Error) => {
+    const onError = (error: unknown) => {
       console.error('Error processing stage:', error);
       setScanState('error');
-      setErrorMessage(`Failed to process ${order.stage} stage: ${error.message}`);
+      setErrorMessage(`Failed to process ${order.stage} stage. Please try again.`);
     };
 
     switch (order.stage) {
