@@ -12,9 +12,12 @@ export function AdminMessagingDialog({ open, onOpenChange, initialConversationId
     <Dialog open={open} onOpenChange={onOpenChange} modal>
       <DialogContent
         // Portal -> <body>, no Quick Actions constraints
+        // IMPORTANT: Inline styles used intentionally - Tailwind class merging in cn() prevents
+        // height/width classes from overriding base dialog.tsx styles due to CSS specificity.
+        // Do not refactor to Tailwind classes without testing thoroughly.
         forceMount
         className="p-0 overflow-hidden rounded-2xl flex flex-col"
-        style={{ width: '800px', maxWidth: '90vw', height: '500px', maxHeight: '60vh' }}
+        style={{ width: '800px', maxWidth: '90vw', height: '500px', maxHeight: '70vh' }}
       >
         <DialogHeader className="px-4 py-3 border-b bg-white">
           <DialogTitle>Messages</DialogTitle>

@@ -46,6 +46,9 @@ interface MainDashboardMessagingProps {
 }
 
 export function MainDashboardMessaging({ onClose, initialConversationId }: MainDashboardMessagingProps) {
+  // Dialog mode is determined by presence of onClose callback (passed from AdminMessagingDialog)
+  const isDialogMode = !!onClose;
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -54,7 +57,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(!!onClose); // Force expanded in dialog mode
+  const [isExpanded, setIsExpanded] = useState(isDialogMode); // Force expanded in dialog mode
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
 
   const { showError, showErrorWithRetry } = useErrorNotifications();
@@ -147,12 +150,12 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
         setSelectedConversation(initialConversationId);
         setIsExpanded(true);
       }
-    } else if (!onClose) {
+    } else if (!isDialogMode) {
       // Only reset to compact view if NOT in dialog mode
       setSelectedConversation(null);
       setIsExpanded(false);
     }
-  }, [initialConversationId, conversations.length, onClose]);
+  }, [initialConversationId, conversations.length, isDialogMode]);
 
   // Realtime handlers
   const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
@@ -316,7 +319,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
   return (
     <div className="space-y-4 h-full flex flex-col">
       {/* Status and Actions Header - only show in non-dialog mode */}
-      {!onClose && (
+      {!isDialogMode && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
@@ -405,10 +408,10 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">Conversations</h4>
                 <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setShowNewConversation(true)} className="h-8 w-8 p-0">
+                  <Button size="sm" variant="ghost" onClick={() => setShowNewConversation(true)} className="h-8 w-8 p-0" aria-label="New conversation">
                     <Plus className="h-4 w-4" />
                   </Button>
-                  {!onClose && (
+                  {!isDialogMode && (
                     <Button size="sm" variant="ghost" onClick={() => setIsExpanded(false)} className="h-8 w-8 p-0">
                       <X className="h-4 w-4" />
                     </Button>
