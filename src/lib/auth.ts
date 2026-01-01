@@ -38,6 +38,15 @@ class AuthService {
 
   private async initializeAuth() {
     try {
+      // Hard timeout: Guarantee loading state resolves within 3 seconds no matter what
+      // This prevents the app from being stuck on "Reconnecting..." indefinitely
+      setTimeout(() => {
+        if (this.authState.loading) {
+          console.warn('Auth hard timeout: Forcing loading: false after 3s');
+          this.updateAuthState({ user: null, session: null, loading: false });
+        }
+      }, 3000);
+
       // Track if we've received any auth event to know if fallback is needed
       let hasReceivedAuthEvent = false;
 
@@ -47,6 +56,9 @@ class AuthService {
       // creating a window where login events are lost.
       this.supabase.auth.onAuthStateChange(async (event, session) => {
         hasReceivedAuthEvent = true;
+        // Note: Don't clear hardTimeout here - only clear it when loading actually completes
+        // in case the async handlers below hang
+
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           // Clear React Query cache to prevent stale data bleeding between user sessions
