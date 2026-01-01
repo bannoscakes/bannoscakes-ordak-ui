@@ -188,41 +188,7 @@ html {
   font-size: var(--font-size);
 }
 
-/* Notification Badge - anchored to icon wrapper */
-.icon-wrapper {
-  position: relative;
-  width: fit-content;
-}
-
-.notification-badge {
-  position: absolute;
-  top: -5px;
-  right: -8px;
-  z-index: 10;
-
-  /* Use CSS variables for theming with fallbacks */
-  --notification-bg: var(--destructive, #e11d48);
-  --notification-text: var(--destructive-foreground, #ffffff);
-  --notification-border: var(--background, #ffffff);
-
-  background-color: var(--notification-bg);
-  color: var(--notification-text);
-
-  /* Circle shape */
-  min-width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid var(--notification-border);
-
-  /* Center the text */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: bold;
-}
-
-/* Wiggle animation when count changes */
+/* Wiggle animation for notification badges - triggers on count change */
 @keyframes wiggle {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(15deg); }
@@ -235,8 +201,6 @@ html {
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  .notification-badge,
-  .notification-badge.animate-wiggle,
   .animate-wiggle {
     animation: none;
   }

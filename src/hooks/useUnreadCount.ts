@@ -7,8 +7,8 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 /** Query key for unread message count */
 export const UNREAD_COUNT_QUERY_KEY = ['unreadCount'] as const;
 
-/** Polling interval for unread count (5 seconds) */
-const UNREAD_COUNT_REFETCH_INTERVAL = 5000;
+/** Polling interval for unread count (30 seconds - realtime handles immediate updates) */
+const UNREAD_COUNT_REFETCH_INTERVAL = 30000;
 
 /**
  * TanStack Query hook for fetching unread message count.
