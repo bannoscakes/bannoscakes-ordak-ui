@@ -38,27 +38,23 @@ class AuthService {
 
   private async initializeAuth() {
     try {
-      // Hard timeout: Guarantee loading state resolves within 3 seconds no matter what
-      // This prevents the app from being stuck on "Reconnecting..." indefinitely
-      setTimeout(() => {
-        if (this.authState.loading) {
-          console.warn('Auth hard timeout: Forcing loading: false after 3s');
-          this.updateAuthState({ user: null, session: null, loading: false });
-        }
-      }, 3000);
+      // Get initial session first - this is the reliable way to check auth state
+      const { data: { session }, error } = await this.supabase.auth.getSession();
 
-      // Track if we've received any auth event to know if fallback is needed
-      let hasReceivedAuthEvent = false;
+      if (error) {
+        console.error('Error getting session:', error);
+        this.updateAuthState({ user: null, session: null, loading: false });
+        return;
+      }
 
-      // CRITICAL FIX (#596): Set up auth listener BEFORE getSession() to prevent
-      // race condition where SIGNED_IN events are missed during initialization.
-      // In Chrome, getSession() can take longer due to storage access timing,
-      // creating a window where login events are lost.
+      if (session?.user) {
+        await this.loadUserProfile(session.user, session);
+      } else {
+        this.updateAuthState({ user: null, session: null, loading: false });
+      }
+
+      // Listen for auth changes AFTER initial session is handled
       this.supabase.auth.onAuthStateChange(async (event, session) => {
-        hasReceivedAuthEvent = true;
-        // Note: Don't clear hardTimeout here - only clear it when loading actually completes
-        // in case the async handlers below hang
-
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           // Clear React Query cache to prevent stale data bleeding between user sessions
@@ -79,17 +75,12 @@ class AuthService {
           return;
         }
 
-        // Handle initial session - this fires immediately when listener is set up
-        if (event === 'INITIAL_SESSION') {
-          if (session?.user) {
-            await this.loadUserProfile(session.user, session);
-          } else {
-            // No session on initial load - try recovery before giving up
-            console.warn('INITIAL_SESSION with no session data - attempting recovery');
-            const recovered = await this.recoverSession();
-            if (!recovered) {
-              this.updateAuthState({ user: null, session: null, loading: false });
-            }
+        // Handle initial session with no data - try to recover
+        if (event === 'INITIAL_SESSION' && !session) {
+          console.warn('INITIAL_SESSION with no session data - attempting recovery');
+          const recovered = await this.recoverSession();
+          if (!recovered) {
+            this.updateAuthState({ user: null, session: null, loading: false });
           }
           return;
         }
@@ -105,31 +96,6 @@ class AuthService {
           await this.loadUserProfile(session.user, session);
         }
       });
-
-      // Note: We no longer call getSession() separately here because:
-      // 1. onAuthStateChange fires INITIAL_SESSION immediately with current session
-      // 2. This prevents the race condition where events are missed during the await
-      // 3. All session handling is now centralized in the listener
-
-      // Fallback: If INITIAL_SESSION doesn't fire within 2 seconds, manually check session
-      // This handles edge cases where Supabase client initialization is delayed
-      // (UI shows "Reconnecting..." after 3s, so we need to resolve before that)
-      setTimeout(async () => {
-        if (!hasReceivedAuthEvent && this.authState.loading) {
-          console.warn('Auth timeout: No INITIAL_SESSION received, falling back to getSession()');
-          try {
-            const { data: { session } } = await this.supabase.auth.getSession();
-            if (session?.user) {
-              await this.loadUserProfile(session.user, session);
-            } else {
-              this.updateAuthState({ user: null, session: null, loading: false });
-            }
-          } catch (err) {
-            console.error('Fallback getSession failed:', err);
-            this.updateAuthState({ user: null, session: null, loading: false });
-          }
-        }
-      }, 2000);
     } catch (error) {
       console.error('Auth initialization error:', error);
       this.updateAuthState({ user: null, session: null, loading: false });
