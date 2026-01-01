@@ -157,8 +157,10 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     }
   }, [initialConversationId, conversations.length, isDialogMode]);
 
-  // Realtime handlers
+  // Realtime handlers - use ref to avoid stale closure
   const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
+    const currentSelectedConv = selectedConversationRef.current;
+
     const uiMsg: Message = {
       id: toId(row.id),
       text: row.body ?? "",
@@ -168,20 +170,20 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
       read: row.sender_id === currentUserId,
     };
 
-    if (selectedConversation && selectedConversation === toId(row.conversation_id)) {
+    if (currentSelectedConv && currentSelectedConv === toId(row.conversation_id)) {
       setMessages((prev) => {
         if (prev.some((m) => m.id === uiMsg.id)) return prev;
         const next = [...prev, uiMsg].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         return next;
       });
-      markAsRead(selectedConversation).catch(console.error);
-      setConversations((prev) => prev.map((c) => (c.id === selectedConversation ? { ...c, unreadCount: 0 } : c)));
+      markAsRead(currentSelectedConv).catch(console.error);
+      setConversations((prev) => prev.map((c) => (c.id === currentSelectedConv ? { ...c, unreadCount: 0 } : c)));
     }
 
     // ✅ Background updates - no loading spinner flicker
     loadConversations({ background: true });
     loadUnreadCount({ background: true });
-  }, [currentUserId, selectedConversation, markAsRead, loadConversations, loadUnreadCount]);
+  }, [currentUserId, markAsRead, loadConversations, loadUnreadCount]);
 
   // Debounced loadConversations to prevent excessive calls
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
