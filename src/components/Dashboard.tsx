@@ -1,23 +1,34 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import { DashboardContent } from "./DashboardContent";
-import { StaffPage } from "./StaffPage";
-import { InventoryPage } from "./inventory-v2";
-import { BannosProductionPage } from "./BannosProductionPage";
-import { FlourlaneProductionPage } from "./FlourlaneProductionPage";
-import { BannosMonitorPage } from "./BannosMonitorPage";
-import { FlourlaneMonitorPage } from "./FlourlaneMonitorPage";
-import { BannosAnalyticsPage } from "./BannosAnalyticsPage";
-import { FlourlaneAnalyticsPage } from "./FlourlaneAnalyticsPage";
-import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
-import { SettingsPage } from "./SettingsPage";
-import { TimePayrollPage } from "./TimePayrollPage";
-import { OrdersPage } from "./OrdersPage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { safePushState, NAVIGATION_EVENT } from "@/lib/safeNavigate";
+
+// Loading spinner for lazy-loaded pages
+function PageSpinner() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
+}
+
+// Lazy-loaded pages for code splitting
+const DashboardContent = lazy(() => import("./DashboardContent").then(m => ({ default: m.DashboardContent })));
+const StaffPage = lazy(() => import("./StaffPage").then(m => ({ default: m.StaffPage })));
+const InventoryPage = lazy(() => import("./inventory-v2").then(m => ({ default: m.InventoryPage })));
+const BannosProductionPage = lazy(() => import("./BannosProductionPage").then(m => ({ default: m.BannosProductionPage })));
+const FlourlaneProductionPage = lazy(() => import("./FlourlaneProductionPage").then(m => ({ default: m.FlourlaneProductionPage })));
+const BannosMonitorPage = lazy(() => import("./BannosMonitorPage").then(m => ({ default: m.BannosMonitorPage })));
+const FlourlaneMonitorPage = lazy(() => import("./FlourlaneMonitorPage").then(m => ({ default: m.FlourlaneMonitorPage })));
+const BannosAnalyticsPage = lazy(() => import("./BannosAnalyticsPage").then(m => ({ default: m.BannosAnalyticsPage })));
+const FlourlaneAnalyticsPage = lazy(() => import("./FlourlaneAnalyticsPage").then(m => ({ default: m.FlourlaneAnalyticsPage })));
+const StaffAnalyticsPage = lazy(() => import("./StaffAnalyticsPage").then(m => ({ default: m.StaffAnalyticsPage })));
+const SettingsPage = lazy(() => import("./SettingsPage").then(m => ({ default: m.SettingsPage })));
+const TimePayrollPage = lazy(() => import("./TimePayrollPage").then(m => ({ default: m.TimePayrollPage })));
+const OrdersPage = lazy(() => import("./OrdersPage").then(m => ({ default: m.OrdersPage })));
 
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const { user } = useAuth();
@@ -227,7 +238,9 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           <Header onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
-          {renderContent()}
+          <Suspense fallback={<PageSpinner />}>
+            {renderContent()}
+          </Suspense>
         </main>
       </div>
       <Toaster />
