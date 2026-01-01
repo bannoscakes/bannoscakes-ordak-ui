@@ -35,6 +35,14 @@ begin
   if p_type = 'direct' and array_length(p_participants, 1) = 1 then
     v_other_user := p_participants[1];
 
+    if v_other_user is null then
+      raise exception 'Participant cannot be null';
+    end if;
+
+    if v_other_user = v_me then
+      raise exception 'Cannot create direct conversation with yourself';
+    end if;
+
     -- Acquire advisory lock on the pair of user IDs to prevent race conditions
     -- Uses deterministic key from sorted UUIDs (released at transaction end)
     perform pg_advisory_xact_lock(
