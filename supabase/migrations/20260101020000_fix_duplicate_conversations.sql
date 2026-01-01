@@ -1,0 +1,98 @@
+-- Migration: Fix duplicate direct conversations with find-or-create pattern
+-- Issue: #582 - Clicking a user in Recipients creates duplicate direct conversations
+--
+-- Problem: create_conversation always creates a new conversation, even when a
+-- direct conversation between the same two users already exists.
+--
+-- Solution: For direct conversations, check for an existing conversation between
+-- the two users before creating a new one. Return the existing conversation ID
+-- if found.
+
+CREATE OR REPLACE FUNCTION public.create_conversation(p_participants uuid[], p_name text DEFAULT NULL::text, p_type text DEFAULT 'direct'::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+declare
+  v_convo_id uuid;
+  v_me uuid := auth.uid();
+  v_name text := p_name;
+  v_other_user uuid;
+begin
+  if v_me is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if p_type not in ('direct','group','broadcast') then
+    raise exception 'Invalid conversation type %', p_type;
+  end if;
+
+  if array_length(p_participants,1) is null or array_length(p_participants,1) = 0 then
+    raise exception 'At least one participant required';
+  end if;
+
+  -- For DIRECT conversations: find existing or create new
+  if p_type = 'direct' and array_length(p_participants, 1) = 1 then
+    v_other_user := p_participants[1];
+
+    -- Look for existing direct conversation between these two users
+    select c.id into v_convo_id
+    from public.conversations c
+    where c.type = 'direct'
+      -- Check that current user is a participant
+      and exists (
+        select 1 from public.conversation_participants cp1
+        where cp1.conversation_id = c.id and cp1.user_id = v_me
+      )
+      -- Check that other user is a participant
+      and exists (
+        select 1 from public.conversation_participants cp2
+        where cp2.conversation_id = c.id and cp2.user_id = v_other_user
+      )
+      -- Ensure exactly 2 participants (direct conversation)
+      and (
+        select count(*) from public.conversation_participants cp
+        where cp.conversation_id = c.id
+      ) = 2
+    limit 1;
+
+    -- If found, return existing conversation
+    if v_convo_id is not null then
+      return v_convo_id;
+    end if;
+  end if;
+
+  -- for direct, normalize name empty (UI can show other user's name)
+  if p_type = 'direct' and v_name is null then
+    v_name := null;
+  end if;
+
+  insert into public.conversations(type, name, created_by)
+  values (p_type, v_name, v_me)
+  returning id into v_convo_id;
+
+  -- add creator
+  insert into public.conversation_participants(conversation_id, user_id, role)
+  values (v_convo_id, v_me, 'owner')
+  on conflict do nothing;
+
+  -- add other participants
+  insert into public.conversation_participants(conversation_id, user_id)
+  select v_convo_id, unnest(p_participants)
+  on conflict do nothing;
+
+  -- initialize read marker for creator
+  insert into public.message_reads(conversation_id, user_id, last_read_at)
+  values (v_convo_id, v_me, now())
+  on conflict (conversation_id, user_id) do update set last_read_at = excluded.last_read_at;
+
+  return v_convo_id;
+end;
+$function$;
+
+-- Set search_path for security
+ALTER FUNCTION public.create_conversation(uuid[], text, text) SET search_path = 'public';
+
+-- Add comment for documentation
+COMMENT ON FUNCTION public.create_conversation(uuid[], text, text) IS
+  'Creates a conversation or returns existing one. For direct conversations between two users, finds existing conversation if one exists (find-or-create pattern).';
