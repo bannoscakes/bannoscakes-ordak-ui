@@ -31,11 +31,11 @@ interface SupabaseError {
 // =============================================
 
 export interface Message {
-  id: number;
+  id: string;
   body: string;
-  authorId: string;
-  createdAt: string;
-  conversationId: string;
+  sender_id: string;
+  sender_name: string;
+  created_at: string;
   is_own_message: boolean;
 }
 
