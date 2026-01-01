@@ -54,11 +54,12 @@ class AuthService {
       }
 
       // Listen for auth changes AFTER initial session is handled
-      this.supabase.auth.onAuthStateChange(async (event, session) => {
+      // IMPORTANT: Avoid async Supabase calls directly in handler to prevent deadlocks
+      // Defer any async recovery/profile loading to next tick with setTimeout
+      this.supabase.auth.onAuthStateChange((event, session) => {
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           // Clear React Query cache to prevent stale data bleeding between user sessions
-          // This handles sign-outs from other tabs or session invalidations
           queryClient.clear();
           this.loadedUserId = null;
           this.updateAuthState({ user: null, session: null, loading: false });
@@ -69,31 +70,41 @@ class AuthService {
         if (event === 'TOKEN_REFRESHED') {
           if (session && this.authState.user) {
             // Update session without re-fetching profile from DB
-            // Keep loadedUserId as-is (user.id doesn't change on refresh)
             this.updateAuthState({ session, loading: false });
           }
           return;
         }
 
-        // Handle initial session with no data - try to recover
+        // Handle initial session with no data - defer recovery to next tick to prevent deadlock
         if (event === 'INITIAL_SESSION' && !session) {
-          console.warn('INITIAL_SESSION with no session data - attempting recovery');
-          const recovered = await this.recoverSession();
-          if (!recovered) {
-            this.updateAuthState({ user: null, session: null, loading: false });
-          }
+          console.warn('INITIAL_SESSION with no session data - scheduling recovery');
+          setTimeout(() => {
+            this.recoverSession().then(recovered => {
+              if (!recovered) {
+                this.updateAuthState({ user: null, session: null, loading: false });
+              }
+            });
+          }, 0);
           return;
         }
 
-        // Handle signed in event
+        // Handle signed in event - defer profile loading to next tick
         if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadUserProfile(session.user, session);
+          const user = session.user;
+          const sess = session;
+          setTimeout(() => {
+            this.loadUserProfile(user, sess);
+          }, 0);
           return;
         }
 
-        // For any other case with valid session, load profile
+        // For any other case with valid session, defer profile loading
         if (session?.user) {
-          await this.loadUserProfile(session.user, session);
+          const user = session.user;
+          const sess = session;
+          setTimeout(() => {
+            this.loadUserProfile(user, sess);
+          }, 0);
         }
       });
     } catch (error) {

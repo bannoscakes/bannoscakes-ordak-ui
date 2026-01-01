@@ -242,9 +242,11 @@ function RoleBasedRouter() {
   
   if (user.role === 'Staff') {
     return (
-      <Suspense fallback={<Spinner />}>
-        <StaffWorkspacePage onSignOut={signOut} />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<Spinner />}>
+          <StaffWorkspacePage onSignOut={signOut} />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -270,13 +272,15 @@ function RoleBasedRouter() {
     }
 
     return (
-      <Suspense fallback={<Spinner />}>
-        <SupervisorWorkspacePage
-          onSignOut={signOut}
-          onNavigateToBannosQueue={() => navigateToQueue('bannos')}
-          onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
-        />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<Spinner />}>
+          <SupervisorWorkspacePage
+            onSignOut={signOut}
+            onNavigateToBannosQueue={() => navigateToQueue('bannos')}
+            onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
