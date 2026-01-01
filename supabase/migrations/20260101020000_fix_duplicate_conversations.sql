@@ -27,13 +27,19 @@ begin
     raise exception 'Invalid conversation type %', p_type;
   end if;
 
-  if array_length(p_participants,1) is null or array_length(p_participants,1) = 0 then
+  if array_length(p_participants, 1) is null then
     raise exception 'At least one participant required';
   end if;
 
   -- For DIRECT conversations: find existing or create new
   if p_type = 'direct' and array_length(p_participants, 1) = 1 then
     v_other_user := p_participants[1];
+
+    -- Acquire advisory lock on the pair of user IDs to prevent race conditions
+    -- Uses deterministic key from sorted UUIDs (released at transaction end)
+    perform pg_advisory_xact_lock(
+      ('x' || left(md5(least(v_me::text, v_other_user::text) || greatest(v_me::text, v_other_user::text)), 15))::bit(60)::bigint
+    );
 
     -- Look for existing direct conversation between these two users
     select c.id into v_convo_id
@@ -60,11 +66,6 @@ begin
     if v_convo_id is not null then
       return v_convo_id;
     end if;
-  end if;
-
-  -- for direct, normalize name empty (UI can show other user's name)
-  if p_type = 'direct' and v_name is null then
-    v_name := null;
   end if;
 
   insert into public.conversations(type, name, created_by)
