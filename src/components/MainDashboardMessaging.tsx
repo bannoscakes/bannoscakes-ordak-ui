@@ -14,6 +14,7 @@ import { NewConversationModal } from "./messaging/NewConversationModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { useErrorNotifications } from "../lib/error-notifications";
 import { useRealtimeMessages } from "../hooks/useRealtimeMessages";
+import { useRealtimeMessageHandler } from "../hooks/useRealtimeMessageHandler";
 import { useOptimisticSendMessage } from "../hooks/useOptimisticSendMessage";
 
 import {
@@ -31,13 +32,9 @@ import {
   toUIConversation,
   toUIMessage,
   toId,
-  CURRENT_USER_SENTINEL,
   type UIConversation as Conversation,
-  type UIMessage as Message,
   type DisplayMessage,
 } from "../lib/messaging-adapters";
-
-import type { RealtimeMessageRow } from "../lib/messaging-types";
 import { ChatWindow } from "./messaging/ChatWindow";
 
 interface MainDashboardMessagingProps {
@@ -157,33 +154,16 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
     }
   }, [initialConversationId, conversations.length, isDialogMode]);
 
-  // Realtime handlers - use ref to avoid stale closure
-  const handleNewMessage = useCallback((row: RealtimeMessageRow) => {
-    const currentSelectedConv = selectedConversationRef.current;
-
-    const uiMsg: Message = {
-      id: toId(row.id),
-      text: row.body ?? "",
-      timestamp: row.created_at,
-      senderId: row.sender_id === currentUserId ? CURRENT_USER_SENTINEL : toId(row.sender_id),
-      senderName: row.sender_name || "Unknown",
-      read: row.sender_id === currentUserId,
-    };
-
-    if (currentSelectedConv && currentSelectedConv === toId(row.conversation_id)) {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === uiMsg.id)) return prev;
-        const next = [...prev, uiMsg].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        return next;
-      });
-      markAsRead(currentSelectedConv).catch(console.error);
-      setConversations((prev) => prev.map((c) => (c.id === currentSelectedConv ? { ...c, unreadCount: 0 } : c)));
-    }
-
-    // ✅ Background updates - no loading spinner flicker
-    loadConversations({ background: true });
-    loadUnreadCount({ background: true });
-  }, [currentUserId, markAsRead, loadConversations, loadUnreadCount]);
+  // Realtime message handler - extracted to shared hook
+  const handleNewMessage = useRealtimeMessageHandler({
+    selectedConversationRef,
+    currentUserId,
+    setMessages,
+    setConversations,
+    markAsRead,
+    loadConversations,
+    loadUnreadCount,
+  });
 
   // Debounced loadConversations to prevent excessive calls
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
