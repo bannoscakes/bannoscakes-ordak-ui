@@ -1,37 +1,66 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUnreadCount } from '../lib/rpc-client';
 import { getSupabase } from '../lib/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+/** Query key for unread message count */
+export const UNREAD_COUNT_QUERY_KEY = ['unreadCount'] as const;
+
+/** Polling interval for unread count (5 seconds) */
+const UNREAD_COUNT_REFETCH_INTERVAL = 5000;
 
 /**
- * Hook to track unread message count with realtime updates.
- * Uses its own dedicated realtime channel to avoid conflicts.
- * Also polls every 30 seconds as a fallback.
+ * TanStack Query hook for fetching unread message count.
+ *
+ * @returns Query result with unread count data, loading state, and error state
+ *
+ * @example
+ * const { data: count, isLoading, error } = useUnreadCountQuery();
  */
-export function useUnreadCount() {
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const channelRef = useRef<any>(null);
-
-  const fetchCount = useCallback(async () => {
-    try {
+export function useUnreadCountQuery() {
+  return useQuery({
+    queryKey: UNREAD_COUNT_QUERY_KEY,
+    queryFn: async () => {
       const count = await getUnreadCount();
-      setUnreadCount(count);
-    } catch (error) {
-      console.error('Failed to fetch unread count:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      return count;
+    },
+    staleTime: UNREAD_COUNT_REFETCH_INTERVAL,
+    refetchInterval: UNREAD_COUNT_REFETCH_INTERVAL,
+    // Polling pauses when tab is hidden (saves RPC calls)
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Hook for real-time unread count updates via Supabase Realtime.
+ *
+ * Subscribes to INSERT events on the messages table and changes on
+ * message_reads table. When changes occur, invalidates React Query
+ * cache to trigger a refetch.
+ *
+ * @param options - Optional configuration
+ * @param options.enabled - Whether the subscription is active (default: true)
+ */
+export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
+  const { enabled = true } = options || {};
+  const queryClient = useQueryClient();
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
-    // Initial fetch
-    fetchCount();
+    if (!enabled) return;
 
     const supabase = getSupabase();
 
+    // Clean up existing channel if any
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     // Create a unique channel for unread count updates
-    const channelName = `unread-count-${Math.random().toString(36).slice(2)}`;
+    const channelName = `unread-count-${crypto.randomUUID()}`;
     const channel = supabase
       .channel(channelName)
       .on(
@@ -42,8 +71,8 @@ export function useUnreadCount() {
           table: 'messages',
         },
         () => {
-          // New message inserted - refetch count
-          fetchCount();
+          // New message inserted - invalidate unread count query
+          queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
         }
       )
       .on(
@@ -54,26 +83,52 @@ export function useUnreadCount() {
           table: 'message_reads',
         },
         () => {
-          // Message read status changed - refetch count
-          fetchCount();
+          // Message read status changed - invalidate unread count query
+          queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('Unread count realtime subscription error:', status);
+        }
+      });
 
-    channelRef.current = channel as typeof channelRef.current;
-
-    // Polling every 5 seconds for near real-time updates
-    const pollInterval = setInterval(() => {
-      fetchCount();
-    }, 5000);
+    channelRef.current = channel;
 
     return () => {
-      clearInterval(pollInterval);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
-  }, [fetchCount]);
+  }, [enabled, queryClient]);
+}
 
-  return { unreadCount, isLoading, refetch: fetchCount };
+/**
+ * Combined hook for unread message count with real-time updates.
+ *
+ * Uses TanStack Query for data fetching/caching and Supabase Realtime
+ * for live updates. Polls every 5 seconds as a fallback.
+ *
+ * @returns Object with unreadCount, isLoading, error, and refetch function
+ *
+ * @example
+ * const { unreadCount, isLoading } = useUnreadCount();
+ *
+ * if (unreadCount > 0) {
+ *   return <Badge>{unreadCount}</Badge>;
+ * }
+ */
+export function useUnreadCount() {
+  const { data: unreadCount = 0, isLoading, error, refetch } = useUnreadCountQuery();
+
+  // Subscribe to realtime updates
+  useRealtimeUnreadCount();
+
+  return {
+    unreadCount,
+    isLoading,
+    error,
+    refetch,
+  };
 }

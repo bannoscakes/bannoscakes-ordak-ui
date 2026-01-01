@@ -198,16 +198,21 @@ html {
   position: absolute;
   top: -5px;
   right: -8px;
+  z-index: 10;
 
-  /* Vibrant Red */
-  background-color: #e11d48;
-  color: white;
+  /* Use CSS variables for theming with fallbacks */
+  --notification-bg: var(--destructive, #e11d48);
+  --notification-text: var(--destructive-foreground, #ffffff);
+  --notification-border: var(--background, #ffffff);
+
+  background-color: var(--notification-bg);
+  color: var(--notification-text);
 
   /* Circle shape */
   min-width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid var(--notification-border);
 
   /* Center the text */
   display: flex;
@@ -226,4 +231,13 @@ html {
 
 .animate-wiggle {
   animation: wiggle 0.4s ease-in-out;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .notification-badge,
+  .notification-badge.animate-wiggle,
+  .animate-wiggle {
+    animation: none;
+  }
 }
