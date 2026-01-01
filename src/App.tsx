@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { lazy, Suspense, useEffect, useState, useRef } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client";
 
@@ -13,11 +13,13 @@ import { ModernLoginPage } from "./components/Auth/ModernLoginPage";
 // ✅ panic sign-out route
 import Logout from "./components/Logout";
 
-// ⛳ your existing stuff (keep these)
-import { Dashboard } from "./components/Dashboard";
-import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
-import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
+// ✅ Error boundary (needed before lazy components load)
 import { ErrorBoundary } from "./components/ErrorBoundary";
+
+// ⛳ Lazy-loaded workspace pages for code splitting
+const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
+const StaffWorkspacePage = lazy(() => import("./components/StaffWorkspacePage").then(m => ({ default: m.StaffWorkspacePage })));
+const SupervisorWorkspacePage = lazy(() => import("./components/SupervisorWorkspacePage").then(m => ({ default: m.SupervisorWorkspacePage })));
 
 // Tiny spinner (fallback if you don't have one)
 function Spinner() {
@@ -239,7 +241,11 @@ function RoleBasedRouter() {
   // All users access "/" but see different interfaces based on their role
   
   if (user.role === 'Staff') {
-    return <StaffWorkspacePage onSignOut={signOut} />;
+    return (
+      <Suspense fallback={<Spinner />}>
+        <StaffWorkspacePage onSignOut={signOut} />
+      </Suspense>
+    );
   }
 
   if (user.role === 'Supervisor') {
@@ -256,22 +262,30 @@ function RoleBasedRouter() {
       // Show Dashboard with queue view for supervisors
       return (
         <ErrorBoundary>
-          <Dashboard onSignOut={signOut} />
+          <Suspense fallback={<Spinner />}>
+            <Dashboard onSignOut={signOut} />
+          </Suspense>
         </ErrorBoundary>
       );
     }
 
-    return <SupervisorWorkspacePage
-      onSignOut={signOut}
-      onNavigateToBannosQueue={() => navigateToQueue('bannos')}
-      onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
-    />;
+    return (
+      <Suspense fallback={<Spinner />}>
+        <SupervisorWorkspacePage
+          onSignOut={signOut}
+          onNavigateToBannosQueue={() => navigateToQueue('bannos')}
+          onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
+        />
+      </Suspense>
+    );
   }
 
   if (user.role === 'Admin') {
     return (
       <ErrorBoundary>
-        <Dashboard onSignOut={signOut} />
+        <Suspense fallback={<Spinner />}>
+          <Dashboard onSignOut={signOut} />
+        </Suspense>
       </ErrorBoundary>
     );
   }
