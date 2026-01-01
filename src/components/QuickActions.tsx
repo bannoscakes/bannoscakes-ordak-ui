@@ -18,6 +18,7 @@ import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
 import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
 import { formatOrderNumber } from "../lib/format-utils";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -27,6 +28,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const { unreadCount } = useUnreadCount();
   const [searchResult, setSearchResult] = useState<{
     store: string;
     orderNumber: string;
@@ -125,27 +127,36 @@ export function QuickActions({ store }: QuickActionsProps) {
 
         <div className="grid grid-cols-2 gap-3">
           {actions.map((action) => (
-            <Button
-              key={action.id}
-              variant="ghost"
-              className="h-auto p-4 flex flex-col items-start space-y-2 hover:bg-muted/50 transition-colors"
-              onClick={() => {
-                if (action.id === "new-order") {
-                  handleNewOrder();
-                } else if (action.id === "messages") {
-                  openMessages();
-                } else {
-                  setActiveModal(action.id);
-                }
-              }}
-            >
-              <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
-                <action.icon className="h-5 w-5" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-foreground">{action.label}</div>
-              </div>
-            </Button>
+            <div key={action.id} className="relative">
+              <Button
+                variant="ghost"
+                className="h-auto p-4 flex flex-col items-start space-y-2 hover:bg-muted/50 transition-colors w-full"
+                onClick={() => {
+                  if (action.id === "new-order") {
+                    handleNewOrder();
+                  } else if (action.id === "messages") {
+                    openMessages();
+                  } else {
+                    setActiveModal(action.id);
+                  }
+                }}
+              >
+                <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
+                  <action.icon className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-foreground">{action.label}</div>
+                </div>
+              </Button>
+              {action.id === "messages" && unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 min-w-[20px] text-xs flex items-center justify-center"
+                >
+                  {unreadCount}
+                </Badge>
+              )}
+            </div>
           ))}
         </div>
       </Card>
