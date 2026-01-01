@@ -149,12 +149,9 @@ export function QuickActions({ store }: QuickActionsProps) {
                 </div>
               </Button>
               {action.id === "messages" && unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 min-w-[20px] text-xs flex items-center justify-center"
-                >
+                <span className="notification-badge animate-wiggle">
                   {unreadCount}
-                </Badge>
+                </span>
               )}
             </div>
           ))}
