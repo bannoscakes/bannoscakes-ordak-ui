@@ -38,11 +38,15 @@ class AuthService {
 
   private async initializeAuth() {
     try {
+      // Track if we've received any auth event to know if fallback is needed
+      let hasReceivedAuthEvent = false;
+
       // CRITICAL FIX (#596): Set up auth listener BEFORE getSession() to prevent
       // race condition where SIGNED_IN events are missed during initialization.
       // In Chrome, getSession() can take longer due to storage access timing,
       // creating a window where login events are lost.
       this.supabase.auth.onAuthStateChange(async (event, session) => {
+        hasReceivedAuthEvent = true;
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           // Clear React Query cache to prevent stale data bleeding between user sessions
@@ -94,6 +98,26 @@ class AuthService {
       // 1. onAuthStateChange fires INITIAL_SESSION immediately with current session
       // 2. This prevents the race condition where events are missed during the await
       // 3. All session handling is now centralized in the listener
+
+      // Fallback: If INITIAL_SESSION doesn't fire within 2 seconds, manually check session
+      // This handles edge cases where Supabase client initialization is delayed
+      // (UI shows "Reconnecting..." after 3s, so we need to resolve before that)
+      setTimeout(async () => {
+        if (!hasReceivedAuthEvent && this.authState.loading) {
+          console.warn('Auth timeout: No INITIAL_SESSION received, falling back to getSession()');
+          try {
+            const { data: { session } } = await this.supabase.auth.getSession();
+            if (session?.user) {
+              await this.loadUserProfile(session.user, session);
+            } else {
+              this.updateAuthState({ user: null, session: null, loading: false });
+            }
+          } catch (err) {
+            console.error('Fallback getSession failed:', err);
+            this.updateAuthState({ user: null, session: null, loading: false });
+          }
+        }
+      }, 2000);
     } catch (error) {
       console.error('Auth initialization error:', error);
       this.updateAuthState({ user: null, session: null, loading: false });
