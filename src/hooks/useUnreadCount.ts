@@ -62,10 +62,10 @@ export function useUnreadCount() {
 
     channelRef.current = channel as typeof channelRef.current;
 
-    // Polling every 10 seconds for reliable updates
+    // Polling every 5 seconds for near real-time updates
     const pollInterval = setInterval(() => {
       fetchCount();
-    }, 10000);
+    }, 5000);
 
     return () => {
       clearInterval(pollInterval);
