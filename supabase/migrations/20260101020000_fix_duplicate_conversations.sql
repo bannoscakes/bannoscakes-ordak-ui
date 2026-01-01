@@ -11,6 +11,10 @@
 -- Add index for efficient type-based queries
 CREATE INDEX IF NOT EXISTS idx_conversations_type ON public.conversations(type);
 
+-- Add index for participant count subquery performance
+CREATE INDEX IF NOT EXISTS idx_conversation_participants_conversation_id
+  ON public.conversation_participants(conversation_id);
+
 CREATE OR REPLACE FUNCTION public.create_conversation(p_participants uuid[], p_name text DEFAULT NULL::text, p_type text DEFAULT 'direct'::text)
  RETURNS uuid
  LANGUAGE plpgsql
