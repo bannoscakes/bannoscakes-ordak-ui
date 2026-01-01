@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getUnreadCount } from '../lib/rpc-client';
-import { useRealtimeMessages } from './useRealtimeMessages';
+import { getSupabase } from '../lib/supabase';
 
 /**
  * Hook to track unread message count with realtime updates.
- * Fetches initial count on mount and subscribes to new messages.
+ * Uses its own dedicated realtime channel to avoid conflicts.
+ * Also polls every 30 seconds as a fallback.
  */
 export function useUnreadCount() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Debounce timer ref
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const channelRef = useRef<any>(null);
 
   const fetchCount = useCallback(async () => {
     try {
@@ -24,31 +24,53 @@ export function useUnreadCount() {
     }
   }, []);
 
-  // Debounced fetch to avoid hammering the RPC on rapid message updates
-  const debouncedFetch = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      fetchCount();
-    }, 500);
-  }, [fetchCount]);
-
-  // Subscribe to realtime message updates
-  useRealtimeMessages({
-    conversationId: null,
-    onNewMessage: () => {
-      debouncedFetch();
-    },
-  });
-
-  // Fetch on mount
   useEffect(() => {
+    // Initial fetch
     fetchCount();
 
+    const supabase = getSupabase();
+
+    // Create a unique channel for unread count updates
+    const channelName = `unread-count-${Math.random().toString(36).slice(2)}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        () => {
+          // New message inserted - refetch count
+          fetchCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reads',
+        },
+        () => {
+          // Message read status changed - refetch count
+          fetchCount();
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel as typeof channelRef.current;
+
+    // Polling fallback every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchCount();
+    }, 30000);
+
     return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+      clearInterval(pollInterval);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
       }
     };
   }, [fetchCount]);
