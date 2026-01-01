@@ -8,6 +8,9 @@
 -- the two users before creating a new one. Return the existing conversation ID
 -- if found.
 
+-- Add index for efficient type-based queries
+CREATE INDEX IF NOT EXISTS idx_conversations_type ON public.conversations(type);
+
 CREATE OR REPLACE FUNCTION public.create_conversation(p_participants uuid[], p_name text DEFAULT NULL::text, p_type text DEFAULT 'direct'::text)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -50,24 +53,17 @@ begin
     );
 
     -- Look for existing direct conversation between these two users
-    select c.id into v_convo_id
-    from public.conversations c
-    where c.type = 'direct'
-      -- Check that current user is a participant
-      and exists (
-        select 1 from public.conversation_participants cp1
-        where cp1.conversation_id = c.id and cp1.user_id = v_me
-      )
-      -- Check that other user is a participant
-      and exists (
-        select 1 from public.conversation_participants cp2
-        where cp2.conversation_id = c.id and cp2.user_id = v_other_user
-      )
-      -- Ensure exactly 2 participants (direct conversation)
-      and (
-        select count(*) from public.conversation_participants cp
-        where cp.conversation_id = c.id
-      ) = 2
+    -- Uses JOIN-based query for better index utilization
+    select cp1.conversation_id into v_convo_id
+    from public.conversation_participants cp1
+    join public.conversation_participants cp2
+      on cp1.conversation_id = cp2.conversation_id
+    join public.conversations c
+      on c.id = cp1.conversation_id
+    where cp1.user_id = v_me
+      and cp2.user_id = v_other_user
+      and c.type = 'direct'
+      and (select count(*) from public.conversation_participants where conversation_id = c.id) = 2
     limit 1;
 
     -- If found, return existing conversation
