@@ -18,6 +18,7 @@ import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
 import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
 import { formatOrderNumber } from "../lib/format-utils";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -27,6 +28,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const { unreadCount } = useUnreadCount();
   const [searchResult, setSearchResult] = useState<{
     store: string;
     orderNumber: string;
@@ -139,8 +141,19 @@ export function QuickActions({ store }: QuickActionsProps) {
                 }
               }}
             >
-              <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
-                <action.icon className="h-5 w-5" />
+              {/* Icon wrapper - badge is anchored here */}
+              <div className="relative w-fit">
+                <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
+                  <action.icon className="h-5 w-5" />
+                </div>
+                {action.id === "messages" && unreadCount > 0 && (
+                  <div
+                    key={unreadCount}
+                    className="absolute -top-1 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-wiggle"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </div>
+                )}
               </div>
               <div className="text-left">
                 <div className="font-medium text-foreground">{action.label}</div>
