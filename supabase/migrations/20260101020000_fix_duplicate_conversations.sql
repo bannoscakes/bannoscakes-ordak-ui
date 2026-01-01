@@ -46,7 +46,7 @@ begin
     -- Acquire advisory lock on the pair of user IDs to prevent race conditions
     -- Uses deterministic key from sorted UUIDs (released at transaction end)
     perform pg_advisory_xact_lock(
-      ('x' || left(md5(least(v_me::text, v_other_user::text) || greatest(v_me::text, v_other_user::text)), 15))::bit(60)::bigint
+      hashtext(least(v_me::text, v_other_user::text) || '|' || greatest(v_me::text, v_other_user::text))
     );
 
     -- Look for existing direct conversation between these two users
