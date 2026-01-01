@@ -29,6 +29,10 @@ $function$;
 -- Set search_path for security
 ALTER FUNCTION public.current_user_name() SET search_path = 'public';
 
+-- Restrict access: SECURITY DEFINER functions should not be callable by PUBLIC
+REVOKE ALL ON FUNCTION public.current_user_name() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_user_name() TO authenticated;
+
 -- Add comment for documentation
 COMMENT ON FUNCTION public.current_user_name() IS
   'Returns display name for current user. Priority: staff_shared.full_name > JWT full_name > email > Unknown';
