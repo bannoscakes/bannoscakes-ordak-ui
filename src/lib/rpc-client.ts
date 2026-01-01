@@ -30,12 +30,22 @@ interface SupabaseError {
 // MESSAGING TYPES
 // =============================================
 
+/**
+ * Message returned by get_messages_temp RPC
+ * Fields use snake_case to match PostgreSQL/RPC naming conventions
+ */
 export interface Message {
+  /** Message ID (numeric from database) */
   id: number;
+  /** Message content */
   body: string;
-  authorId: string;
-  createdAt: string;
-  conversationId: string;
+  /** UUID of the user who sent the message */
+  sender_id: string;
+  /** Display name of the sender */
+  sender_name: string;
+  /** ISO timestamp when the message was created */
+  created_at: string;
+  /** Whether this message was sent by the current user (computed by RPC) */
   is_own_message: boolean;
 }
 
