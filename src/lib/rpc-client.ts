@@ -31,7 +31,7 @@ interface SupabaseError {
 // =============================================
 
 export interface Message {
-  id: string;
+  id: number;
   body: string;
   sender_id: string;
   sender_name: string;
