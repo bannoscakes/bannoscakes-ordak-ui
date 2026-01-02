@@ -51,6 +51,9 @@ export function useRealtimeOrders(
           // Invalidate all queue-related queries for this store
           queryClient.invalidateQueries({ queryKey: ['queue', store] });
           queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
+          // Also invalidate user-specific queues (supervisor/staff see orders across stores)
+          queryClient.invalidateQueries({ queryKey: ['supervisorQueue'] });
+          queryClient.invalidateQueries({ queryKey: ['staffQueue'] });
         }
       )
       .subscribe((status) => {
