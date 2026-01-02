@@ -12,22 +12,25 @@ function PageSpinner() {
   return <LoadingSpinner className="h-64" />;
 }
 
-// Lazy-loaded pages for code splitting
-// Note: .then(m => ({ default: m.ComponentName })) is needed because
-// these components use named exports, not default exports
-const DashboardContent = lazy(() => import("./DashboardContent").then(m => ({ default: m.DashboardContent })));
-const StaffPage = lazy(() => import("./StaffPage").then(m => ({ default: m.StaffPage })));
-const InventoryPage = lazy(() => import("./inventory-v2").then(m => ({ default: m.InventoryPage })));
-const BannosProductionPage = lazy(() => import("./BannosProductionPage").then(m => ({ default: m.BannosProductionPage })));
-const FlourlaneProductionPage = lazy(() => import("./FlourlaneProductionPage").then(m => ({ default: m.FlourlaneProductionPage })));
-const BannosMonitorPage = lazy(() => import("./BannosMonitorPage").then(m => ({ default: m.BannosMonitorPage })));
-const FlourlaneMonitorPage = lazy(() => import("./FlourlaneMonitorPage").then(m => ({ default: m.FlourlaneMonitorPage })));
-const BannosAnalyticsPage = lazy(() => import("./BannosAnalyticsPage").then(m => ({ default: m.BannosAnalyticsPage })));
-const FlourlaneAnalyticsPage = lazy(() => import("./FlourlaneAnalyticsPage").then(m => ({ default: m.FlourlaneAnalyticsPage })));
-const StaffAnalyticsPage = lazy(() => import("./StaffAnalyticsPage").then(m => ({ default: m.StaffAnalyticsPage })));
-const SettingsPage = lazy(() => import("./SettingsPage").then(m => ({ default: m.SettingsPage })));
-const TimePayrollPage = lazy(() => import("./TimePayrollPage").then(m => ({ default: m.TimePayrollPage })));
-const OrdersPage = lazy(() => import("./OrdersPage").then(m => ({ default: m.OrdersPage })));
+// Retry wrapper for chunk load failures (network errors, mid-deploy)
+const retryImport = <T,>(fn: () => Promise<T>): Promise<T> =>
+  fn().catch(() => new Promise<void>(r => setTimeout(r, 1500)).then(() => fn()));
+
+// Lazy-loaded pages for code splitting with retry on failure
+// Note: .then(m => ({ default: m.ComponentName })) is needed for named exports
+const DashboardContent = lazy(() => retryImport(() => import("./DashboardContent")).then(m => ({ default: m.DashboardContent })));
+const StaffPage = lazy(() => retryImport(() => import("./StaffPage")).then(m => ({ default: m.StaffPage })));
+const InventoryPage = lazy(() => retryImport(() => import("./inventory-v2/InventoryPage")).then(m => ({ default: m.InventoryPage })));
+const BannosProductionPage = lazy(() => retryImport(() => import("./BannosProductionPage")).then(m => ({ default: m.BannosProductionPage })));
+const FlourlaneProductionPage = lazy(() => retryImport(() => import("./FlourlaneProductionPage")).then(m => ({ default: m.FlourlaneProductionPage })));
+const BannosMonitorPage = lazy(() => retryImport(() => import("./BannosMonitorPage")).then(m => ({ default: m.BannosMonitorPage })));
+const FlourlaneMonitorPage = lazy(() => retryImport(() => import("./FlourlaneMonitorPage")).then(m => ({ default: m.FlourlaneMonitorPage })));
+const BannosAnalyticsPage = lazy(() => retryImport(() => import("./BannosAnalyticsPage")).then(m => ({ default: m.BannosAnalyticsPage })));
+const FlourlaneAnalyticsPage = lazy(() => retryImport(() => import("./FlourlaneAnalyticsPage")).then(m => ({ default: m.FlourlaneAnalyticsPage })));
+const StaffAnalyticsPage = lazy(() => retryImport(() => import("./StaffAnalyticsPage")).then(m => ({ default: m.StaffAnalyticsPage })));
+const SettingsPage = lazy(() => retryImport(() => import("./SettingsPage")).then(m => ({ default: m.SettingsPage })));
+const TimePayrollPage = lazy(() => retryImport(() => import("./TimePayrollPage")).then(m => ({ default: m.TimePayrollPage })));
+const OrdersPage = lazy(() => retryImport(() => import("./OrdersPage")).then(m => ({ default: m.OrdersPage })));
 
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const { user } = useAuth();
