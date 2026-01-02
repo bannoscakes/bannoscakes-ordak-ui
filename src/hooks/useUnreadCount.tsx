@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUnreadCount } from '../lib/rpc-client';
 import { getSupabase } from '../lib/supabase';
@@ -40,17 +40,14 @@ export function useUnreadCountQuery() {
  * message_reads table. When changes occur, invalidates React Query
  * cache to trigger a refetch.
  *
- * @param options - Optional configuration
- * @param options.enabled - Whether the subscription is active (default: true)
+ * Note: This hook is used internally by UnreadCountSubscriptionProvider.
+ * Components should use useUnreadCount() instead.
  */
-export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
-  const { enabled = true } = options || {};
+function useRealtimeUnreadCount() {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
-    if (!enabled) return;
-
     const supabase = getSupabase();
 
     // Clean up existing channel if any
@@ -59,8 +56,8 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
       channelRef.current = null;
     }
 
-    // Create a unique channel for unread count updates
-    const channelName = `unread-count-${crypto.randomUUID()}`;
+    // Static channel name for easier debugging and single subscription management
+    const channelName = 'unread-count-realtime';
     const channel = supabase
       .channel(channelName)
       .on(
@@ -89,6 +86,10 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Log error for debugging - not surfaced to UI because:
+          // 1. Realtime errors are often transient (network blips)
+          // 2. Polling fallback (every 30s) ensures users still get updates
+          // 3. Toast spam would be annoying for background features
           console.error('Unread count realtime subscription error:', status);
         }
       });
@@ -101,14 +102,14 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
         channelRef.current = null;
       }
     };
-  }, [enabled, queryClient]);
+  }, [queryClient]);
 }
 
 /**
  * Combined hook for unread message count with real-time updates.
  *
- * Uses TanStack Query for data fetching/caching and Supabase Realtime
- * for live updates. Polls every 5 seconds as a fallback.
+ * Uses TanStack Query for data fetching/caching. Real-time updates are
+ * handled by the UnreadCountSubscriptionProvider at the app level.
  *
  * @returns Object with unreadCount, isLoading, error, and refetch function
  *
@@ -122,8 +123,8 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
 export function useUnreadCount() {
   const { data: unreadCount = 0, isLoading, error, refetch } = useUnreadCountQuery();
 
-  // Subscribe to realtime updates
-  useRealtimeUnreadCount();
+  // Note: Realtime subscription is managed by UnreadCountSubscriptionProvider
+  // which is mounted once at the app level (fixes duplicate subscription issue #594)
 
   return {
     unreadCount,
@@ -131,4 +132,25 @@ export function useUnreadCount() {
     error,
     refetch,
   };
+}
+
+/**
+ * Provider component that manages a single realtime subscription for unread count.
+ *
+ * Mount this once at the app level (after authentication) to share a single
+ * subscription across all components that use useUnreadCount().
+ *
+ * @example
+ * // In App.tsx, wrap authenticated content:
+ * <UnreadCountSubscriptionProvider>
+ *   <Dashboard />
+ * </UnreadCountSubscriptionProvider>
+ */
+export function UnreadCountSubscriptionProvider({ children }: { children: ReactNode }) {
+  // Single realtime subscription for the entire app
+  // This provider ensures only one subscription exists, avoiding duplicates
+  // when multiple components call useUnreadCount()
+  useRealtimeUnreadCount();
+
+  return <>{children}</>;
 }

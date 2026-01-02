@@ -19,6 +19,9 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 // ✅ Shared loading spinner for Suspense fallbacks
 import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 
+// ✅ Single realtime subscription for unread message count (fixes #594)
+import { UnreadCountSubscriptionProvider } from "./hooks/useUnreadCount";
+
 // Full-screen spinner for page-level loading states
 function Spinner() {
   return <LoadingSpinner size="lg" className="min-h-screen" />;
@@ -177,7 +180,9 @@ function RootApp() {
   // User is authenticated - route by role
   return (
     <FadeTransition transitionKey={transitionKey}>
-      <RoleBasedRouter />
+      <UnreadCountSubscriptionProvider>
+        <RoleBasedRouter />
+      </UnreadCountSubscriptionProvider>
     </FadeTransition>
   );
 }
