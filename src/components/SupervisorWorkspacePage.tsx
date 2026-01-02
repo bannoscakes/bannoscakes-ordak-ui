@@ -28,6 +28,7 @@ import {
   getCurrentShift
 } from "../lib/rpc-client";
 import { useUnreadCount } from "../hooks/useUnreadCount";
+import { UnreadBadge } from "./UnreadBadge";
 
 interface SupervisorWorkspacePageProps {
   onSignOut: () => void;
@@ -377,14 +378,7 @@ export function SupervisorWorkspacePage({
             >
               <div className="relative">
                 <MessageSquare className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <div
-                    key={unreadCount}
-                    className="absolute -top-1 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-wiggle"
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </div>
-                )}
+                <UnreadBadge count={unreadCount} />
               </div>
               Messages
             </TabsTrigger>

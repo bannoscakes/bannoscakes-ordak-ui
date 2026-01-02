@@ -20,6 +20,7 @@ import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
 import { formatOrderNumber } from "../lib/format-utils";
 import { useUnreadCount } from "../hooks/useUnreadCount";
+import { UnreadBadge } from "./UnreadBadge";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -147,14 +148,7 @@ export function QuickActions({ store }: QuickActionsProps) {
                 <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
                   <action.icon className="h-5 w-5" />
                 </div>
-                {action.id === "messages" && unreadCount > 0 && (
-                  <div
-                    key={unreadCount}
-                    className="absolute -top-1 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-wiggle"
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </div>
-                )}
+                {action.id === "messages" && <UnreadBadge count={unreadCount} />}
               </div>
               <div className="text-left">
                 <div className="font-medium text-foreground">{action.label}</div>
