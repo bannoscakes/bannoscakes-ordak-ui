@@ -238,9 +238,11 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           <Header onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
-          <Suspense fallback={<PageSpinner />}>
-            {renderContent()}
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageSpinner />}>
+              {renderContent()}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <Toaster />
