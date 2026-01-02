@@ -26,11 +26,14 @@ class AuthService {
     loading: true
   };
   private listeners: ((state: AuthState) => void)[] = [];
-  private isRecoveringSession = false;
   // Guard to prevent duplicate loadUserProfile calls for the same user (fixes #500)
   private loadedUserId: string | null = null;
   // Cache in-flight promises to deduplicate concurrent calls
   private loadingPromises: Map<string, Promise<void>> = new Map();
+  // Store unsubscribe function for potential cleanup (e.g., testing scenarios)
+  private unsubscribeAuth: (() => void) | null = null;
+  // Track if an explicit sign-out occurred (to guard against stale profile loads)
+  private isSignedOut = false;
 
   constructor() {
     this.initializeAuth();
@@ -38,33 +41,27 @@ class AuthService {
 
   private async initializeAuth() {
     try {
-      // Get initial session
-      const { data: { session }, error } = await this.supabase.auth.getSession();
-
-      if (error) {
-        console.error('Error getting session:', error);
-        this.updateAuthState({ user: null, session: null, loading: false });
-        return;
-      }
-
-      if (session?.user) {
-        await this.loadUserProfile(session.user, session);
-      } else {
-        this.updateAuthState({ user: null, session: null, loading: false });
-      }
-
-      // Listen for auth changes with explicit event handling
-      this.supabase.auth.onAuthStateChange(async (event, session) => {
-        // CRITICAL: Only logout on explicit SIGNED_OUT event
+      // CRITICAL FIX (#596): Set up auth listener BEFORE any async work.
+      // In Chrome, getSession() can take longer due to storage access timing,
+      // creating a race window where SIGNED_IN events are missed if user
+      // signs in during initialization.
+      //
+      // IMPORTANT: Keep callback lightweight - don't await Supabase calls inside!
+      // Async Supabase calls (RPC, queries) in this callback cause deadlocks
+      // because supabase-js has an internal session lock (see gotrue-js#762).
+      const { data: { subscription } } = this.supabase.auth.onAuthStateChange((event, session) => {
+        // SIGNED_OUT: Handle synchronously (no Supabase calls needed)
         if (event === 'SIGNED_OUT') {
+          // Mark as signed out FIRST to guard against in-flight profile loads
+          this.isSignedOut = true;
           // Clear React Query cache to prevent stale data bleeding between user sessions
-          // This handles sign-outs from other tabs or session invalidations
           queryClient.clear();
+          this.loadedUserId = null;
           this.updateAuthState({ user: null, session: null, loading: false });
           return;
         }
 
-        // Handle token refresh - just update session, don't re-fetch profile
+        // TOKEN_REFRESHED: Handle synchronously (just update session, no profile reload)
         if (event === 'TOKEN_REFRESHED') {
           if (session && this.authState.user) {
             // Update session without re-fetching profile from DB
@@ -74,27 +71,40 @@ class AuthService {
           return;
         }
 
-        // Handle initial session with no data - try to recover
-        if (event === 'INITIAL_SESSION' && !session) {
-          console.warn('INITIAL_SESSION with no session data - attempting recovery');
-          const recovered = await this.recoverSession();
-          if (!recovered) {
-            this.updateAuthState({ user: null, session: null, loading: false });
-          }
-          return;
-        }
-
-        // Handle signed in event
-        if (event === 'SIGNED_IN' && session?.user) {
-          await this.loadUserProfile(session.user, session);
-          return;
-        }
-
-        // For any other case with valid session, load profile
+        // INITIAL_SESSION, SIGNED_IN, or any event with valid session:
+        // DEFER profile loading to avoid blocking the callback and causing deadlocks
         if (session?.user) {
-          await this.loadUserProfile(session.user, session);
+          // Clear signed-out flag since we're starting a new session
+          this.isSignedOut = false;
+          // setTimeout(0) breaks out of the callback's execution context,
+          // allowing Supabase's internal session lock to be released before
+          // we make any RPC calls. This prevents the deadlock.
+          setTimeout(() => {
+            this.loadUserProfile(session.user, session);
+          }, 0);
+          return;
+        }
+
+        // INITIAL_SESSION with no session: Try recovery for Chrome storage timing issues
+        if (event === 'INITIAL_SESSION') {
+          // Chrome's storage access can be slow. Attempt recovery before giving up.
+          setTimeout(() => {
+            this.recoverSession();
+          }, 0);
+          return;
         }
       });
+
+      // Store unsubscribe function for potential cleanup
+      this.unsubscribeAuth = () => subscription.unsubscribe();
+
+      // NOTE: No separate getSession() call needed here.
+      // The INITIAL_SESSION event fires immediately when the listener is set up,
+      // providing the current session from storage. This approach:
+      // 1. Prevents race conditions (listener catches all events from the start)
+      // 2. Avoids redundant storage reads (INITIAL_SESSION already has the session)
+      // 3. Centralizes all session handling in one place
+
     } catch (error) {
       console.error('Auth initialization error:', error);
       this.updateAuthState({ user: null, session: null, loading: false });
@@ -102,36 +112,31 @@ class AuthService {
   }
 
   /**
-   * Attempt to recover session from storage
-   * Prevents random logouts due to transient session loss
+   * Attempt to recover session from storage.
+   * Called when INITIAL_SESSION fires without session data.
+   * Chrome's storage access can be slow, so this provides a fallback.
    */
-  private async recoverSession(): Promise<boolean> {
-    if (this.isRecoveringSession) {
-      return false;
-    }
-
-    this.isRecoveringSession = true;
-
+  private async recoverSession(): Promise<void> {
     try {
-      // Try to get session again
       const { data: { session }, error } = await this.supabase.auth.getSession();
 
       if (error) {
         console.error('Session recovery failed:', error);
-        return false;
+        this.updateAuthState({ user: null, session: null, loading: false });
+        return;
       }
 
       if (session?.user) {
+        // Found a session - load the profile
+        this.isSignedOut = false;
         await this.loadUserProfile(session.user, session);
-        return true;
+      } else {
+        // No session found - user is genuinely not logged in
+        this.updateAuthState({ user: null, session: null, loading: false });
       }
-
-      return false;
     } catch (error) {
       console.error('Session recovery error:', error);
-      return false;
-    } finally {
-      this.isRecoveringSession = false;
+      this.updateAuthState({ user: null, session: null, loading: false });
     }
   }
 
@@ -184,6 +189,22 @@ class AuthService {
       }
 
       if (data && data.length > 0) {
+        // Guard against stale profile load:
+        // 1. If user signed out while this was in-flight
+        // 2. If a different user logged in (fast user-switch scenario)
+        if (this.isSignedOut) {
+          console.warn('Profile load completed but user signed out. Discarding stale data.');
+          return;
+        }
+
+        // Check if the current session belongs to the same user we loaded profile for
+        // This prevents cross-user data leakage in fast user-switch scenarios
+        const currentSessionUserId = this.authState.session?.user?.id;
+        if (currentSessionUserId && currentSessionUserId !== userId) {
+          console.warn(`Profile load for user ${userId} completed but current session is for ${currentSessionUserId}. Discarding stale data.`);
+          return;
+        }
+
         const profile = data[0];
         const authUser: AuthUser = {
           id: profile.user_id,
@@ -330,6 +351,20 @@ class AuthService {
   canAccessStore(store: 'bannos' | 'flourlane'): boolean {
     if (!this.authState.user) return false;
     return this.authState.user.store === 'both' || this.authState.user.store === store;
+  }
+
+  /**
+   * Cleanup method for testing scenarios or architecture changes.
+   * Unsubscribes from auth state changes and clears pending operations.
+   */
+  destroy(): void {
+    if (this.unsubscribeAuth) {
+      this.unsubscribeAuth();
+      this.unsubscribeAuth = null;
+    }
+    this.listeners = [];
+    this.loadingPromises.clear();
+    this.isSignedOut = false;
   }
 
   subscribe(listener: (state: AuthState) => void, options?: { skipInitial?: boolean }): () => void {

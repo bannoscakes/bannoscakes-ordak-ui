@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
 import {
   Search,
   Scan,
@@ -18,6 +19,8 @@ import { AdminMessagingDialog } from "./admin/AdminMessagingDialog";
 import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
 import { formatOrderNumber } from "../lib/format-utils";
+import { useUnreadCount } from "../hooks/useUnreadCount";
+import { UnreadBadge } from "./UnreadBadge";
 
 interface QuickActionsProps {
   store: "bannos" | "flourlane";
@@ -27,6 +30,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const { unreadCount } = useUnreadCount();
   const [searchResult, setSearchResult] = useState<{
     store: string;
     orderNumber: string;
@@ -139,8 +143,12 @@ export function QuickActions({ store }: QuickActionsProps) {
                 }
               }}
             >
-              <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
-                <action.icon className="h-5 w-5" />
+              {/* Icon wrapper - badge is anchored here */}
+              <div className="relative w-fit">
+                <div className={`p-2 rounded-lg ${action.color} transition-colors`}>
+                  <action.icon className="h-5 w-5" />
+                </div>
+                {action.id === "messages" && <UnreadBadge count={unreadCount} />}
               </div>
               <div className="text-left">
                 <div className="font-medium text-foreground">{action.label}</div>
@@ -192,7 +200,7 @@ export function QuickActions({ store }: QuickActionsProps) {
 
             {searchLoading && (
               <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                <LoadingSpinner size="sm" />
                 <span className="text-sm">Looking up order…</span>
               </div>
             )}

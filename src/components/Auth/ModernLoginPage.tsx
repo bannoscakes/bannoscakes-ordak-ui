@@ -7,15 +7,7 @@ import { Separator } from "../ui/separator";
 import { Scan, AlertCircle, Shield, Users, ChefHat, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { OrdakLogo } from "../OrdakLogo";
-
-// Lazy-load authService once at module level to avoid per-call dynamic imports
-let authServicePromise: Promise<typeof import('../../lib/auth')> | null = null;
-function getAuthService() {
-  if (!authServicePromise) {
-    authServicePromise = import('../../lib/auth');
-  }
-  return authServicePromise;
-}
+import { authService } from "../../lib/auth";
 
 interface ModernLoginPageProps {
   onSuccess: () => void;
@@ -37,7 +29,6 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
     setError("");
 
     try {
-      const { authService } = await getAuthService();
       const result = await authService.signIn(email, password);
 
       if (result.success) {

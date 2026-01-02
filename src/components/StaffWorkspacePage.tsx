@@ -28,6 +28,8 @@ import { OrderOverflowMenu } from "./OrderOverflowMenu";
 import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
+import { useUnreadCount } from "../hooks/useUnreadCount";
+import { UnreadBadge } from "./UnreadBadge";
 
 // Import real RPCs
 import {
@@ -75,6 +77,7 @@ export function StaffWorkspacePage({
   const [orderDetailOpen, setOrderDetailOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
+  const { unreadCount } = useUnreadCount();
 
   // Load current shift from database
   async function loadCurrentShift() {
@@ -418,7 +421,10 @@ export function StaffWorkspacePage({
               value="messages"
               className="flex items-center gap-2"
             >
-              <MessageSquare className="h-4 w-4" />
+              <div className="relative">
+                <MessageSquare className="h-4 w-4" />
+                <UnreadBadge count={unreadCount} />
+              </div>
               Messages
             </TabsTrigger>
           </TabsList>

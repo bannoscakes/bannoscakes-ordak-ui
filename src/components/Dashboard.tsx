@@ -1,23 +1,36 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import { DashboardContent } from "./DashboardContent";
-import { StaffPage } from "./StaffPage";
-import { InventoryPage } from "./inventory-v2";
-import { BannosProductionPage } from "./BannosProductionPage";
-import { FlourlaneProductionPage } from "./FlourlaneProductionPage";
-import { BannosMonitorPage } from "./BannosMonitorPage";
-import { FlourlaneMonitorPage } from "./FlourlaneMonitorPage";
-import { BannosAnalyticsPage } from "./BannosAnalyticsPage";
-import { FlourlaneAnalyticsPage } from "./FlourlaneAnalyticsPage";
-import { StaffAnalyticsPage } from "./StaffAnalyticsPage";
-import { SettingsPage } from "./SettingsPage";
-import { TimePayrollPage } from "./TimePayrollPage";
-import { OrdersPage } from "./OrdersPage";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { safePushState, NAVIGATION_EVENT } from "@/lib/safeNavigate";
+
+// Page-level spinner for lazy-loaded sub-pages
+function PageSpinner() {
+  return <LoadingSpinner className="h-64" />;
+}
+
+// Retry wrapper for chunk load failures (network errors, mid-deploy)
+const retryImport = <T,>(fn: () => Promise<T>): Promise<T> =>
+  fn().catch(() => new Promise<void>(r => setTimeout(r, 1500)).then(() => fn()));
+
+// Lazy-loaded pages for code splitting with retry on failure
+// Note: .then(m => ({ default: m.ComponentName })) is needed for named exports
+const DashboardContent = lazy(() => retryImport(() => import("./DashboardContent")).then(m => ({ default: m.DashboardContent })));
+const StaffPage = lazy(() => retryImport(() => import("./StaffPage")).then(m => ({ default: m.StaffPage })));
+const InventoryPage = lazy(() => retryImport(() => import("./inventory-v2/InventoryPage")).then(m => ({ default: m.InventoryPage })));
+const BannosProductionPage = lazy(() => retryImport(() => import("./BannosProductionPage")).then(m => ({ default: m.BannosProductionPage })));
+const FlourlaneProductionPage = lazy(() => retryImport(() => import("./FlourlaneProductionPage")).then(m => ({ default: m.FlourlaneProductionPage })));
+const BannosMonitorPage = lazy(() => retryImport(() => import("./BannosMonitorPage")).then(m => ({ default: m.BannosMonitorPage })));
+const FlourlaneMonitorPage = lazy(() => retryImport(() => import("./FlourlaneMonitorPage")).then(m => ({ default: m.FlourlaneMonitorPage })));
+const BannosAnalyticsPage = lazy(() => retryImport(() => import("./BannosAnalyticsPage")).then(m => ({ default: m.BannosAnalyticsPage })));
+const FlourlaneAnalyticsPage = lazy(() => retryImport(() => import("./FlourlaneAnalyticsPage")).then(m => ({ default: m.FlourlaneAnalyticsPage })));
+const StaffAnalyticsPage = lazy(() => retryImport(() => import("./StaffAnalyticsPage")).then(m => ({ default: m.StaffAnalyticsPage })));
+const SettingsPage = lazy(() => retryImport(() => import("./SettingsPage")).then(m => ({ default: m.SettingsPage })));
+const TimePayrollPage = lazy(() => retryImport(() => import("./TimePayrollPage")).then(m => ({ default: m.TimePayrollPage })));
+const OrdersPage = lazy(() => retryImport(() => import("./OrdersPage")).then(m => ({ default: m.OrdersPage })));
 
 export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const { user } = useAuth();
@@ -96,119 +109,64 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   }, []);
 
   const renderContent = () => {
-    try {
-      switch (activeView) {
-        case "orders":
-          return (
-            <ErrorBoundary>
-              <OrdersPage />
-            </ErrorBoundary>
-          );
-        case "bannos-production":
-          return (
-            <ErrorBoundary>
-              <BannosProductionPage
-                initialFilter={viewFilter}
-                onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
-              />
-            </ErrorBoundary>
-          );
-        case "flourlane-production":
-          return (
-            <ErrorBoundary>
-              <FlourlaneProductionPage
-                initialFilter={viewFilter}
-                onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
-              />
-            </ErrorBoundary>
-          );
-        case "bannos-monitor":
-          return (
-            <ErrorBoundary>
-              <BannosMonitorPage />
-            </ErrorBoundary>
-          );
-        case "flourlane-monitor":
-          return (
-            <ErrorBoundary>
-              <FlourlaneMonitorPage />
-            </ErrorBoundary>
-          );
-        case "bannos-analytics":
-          return (
-            <ErrorBoundary>
-              <BannosAnalyticsPage />
-            </ErrorBoundary>
-          );
-        case "flourlane-analytics":
-          return (
-            <ErrorBoundary>
-              <FlourlaneAnalyticsPage />
-            </ErrorBoundary>
-          );
-        case "staff-analytics":
-          return (
-            <ErrorBoundary>
-              <StaffAnalyticsPage />
-            </ErrorBoundary>
-          );
-        case "staff":
-          return (
-            <ErrorBoundary>
-              <StaffPage />
-            </ErrorBoundary>
-          );
-        case "inventory":
-          return (
-            <ErrorBoundary>
-              <InventoryPage />
-            </ErrorBoundary>
-          );
-        case "bannos-settings":
-          return (
-            <ErrorBoundary>
-              <SettingsPage store="bannos" onBack={() => {
-                safePushState('/');
-                setActiveView("dashboard");
-              }} />
-            </ErrorBoundary>
-          );
-        case "flourlane-settings":
-          return (
-            <ErrorBoundary>
-              <SettingsPage store="flourlane" onBack={() => {
-                safePushState('/');
-                setActiveView("dashboard");
-              }} />
-            </ErrorBoundary>
-          );
-        case "time-payroll":
-          return (
-            <ErrorBoundary>
-              <TimePayrollPage
-                initialStaffFilter={staffFilter || undefined}
-                onBack={() => {
-                  safePushState('/');
-                  setActiveView("dashboard");
-                }}
-              />
-            </ErrorBoundary>
-          );
-        case "dashboard":
-        default:
-          return (
-            <ErrorBoundary>
-              <DashboardContent />
-            </ErrorBoundary>
-          );
-      }
-    } catch (error) {
-      console.error('Error rendering dashboard content:', error);
-      return (
-        <ErrorBoundary>
-          <DashboardContent />
-        </ErrorBoundary>
-      );
+    switch (activeView) {
+      case "orders":
+        return <OrdersPage />;
+      case "bannos-production":
+        return (
+          <BannosProductionPage
+            initialFilter={viewFilter}
+            onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
+          />
+        );
+      case "flourlane-production":
+        return (
+          <FlourlaneProductionPage
+            initialFilter={viewFilter}
+            onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
+          />
+        );
+      case "bannos-monitor":
+        return <BannosMonitorPage />;
+      case "flourlane-monitor":
+        return <FlourlaneMonitorPage />;
+      case "bannos-analytics":
+        return <BannosAnalyticsPage />;
+      case "flourlane-analytics":
+        return <FlourlaneAnalyticsPage />;
+      case "staff-analytics":
+        return <StaffAnalyticsPage />;
+      case "staff":
+        return <StaffPage />;
+      case "inventory":
+        return <InventoryPage />;
+      case "bannos-settings":
+        return (
+          <SettingsPage store="bannos" onBack={() => {
+            safePushState('/');
+            setActiveView("dashboard");
+          }} />
+        );
+      case "flourlane-settings":
+        return (
+          <SettingsPage store="flourlane" onBack={() => {
+            safePushState('/');
+            setActiveView("dashboard");
+          }} />
+        );
+      case "time-payroll":
+        return (
+          <TimePayrollPage
+            initialStaffFilter={staffFilter || undefined}
+            onBack={() => {
+              safePushState('/');
+              setActiveView("dashboard");
+            }}
+          />
+        );
+      case "dashboard":
+      default:
+        return <DashboardContent />;
     }
   };
 
@@ -227,7 +185,11 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           <Header onSignOut={onSignOut} />
         </ErrorBoundary>
         <main className="flex-1 overflow-auto">
-          {renderContent()}
+          <ErrorBoundary>
+            <Suspense fallback={<PageSpinner />}>
+              {renderContent()}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <Toaster />

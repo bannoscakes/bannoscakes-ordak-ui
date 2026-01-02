@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { lazy, Suspense, useEffect, useState, useRef } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client";
 
@@ -13,16 +13,37 @@ import { ModernLoginPage } from "./components/Auth/ModernLoginPage";
 // ✅ panic sign-out route
 import Logout from "./components/Logout";
 
-// ⛳ your existing stuff (keep these)
-import { Dashboard } from "./components/Dashboard";
-import { StaffWorkspacePage } from "./components/StaffWorkspacePage";
-import { SupervisorWorkspacePage } from "./components/SupervisorWorkspacePage";
+// ✅ Error boundary (needed before lazy components load)
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
-// Tiny spinner (fallback if you don't have one)
+// ✅ Shared loading spinner for Suspense fallbacks
+import { LoadingSpinner } from "./components/ui/LoadingSpinner";
+
+// ✅ Single realtime subscription for unread message count (fixes #594)
+import { UnreadCountSubscriptionProvider } from "./hooks/useUnreadCount";
+
+// Full-screen spinner for page-level loading states
 function Spinner() {
-  return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+  return <LoadingSpinner size="lg" className="min-h-screen" />;
 }
+
+// Wrapper for lazy-loaded pages with error boundary and loading state
+function LazyPageWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<Spinner />}>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+// ⛳ Lazy-loaded workspace pages for code splitting
+// Note: .then(m => ({ default: m.ComponentName })) is needed because
+// these components use named exports, not default exports
+const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
+const StaffWorkspacePage = lazy(() => import("./components/StaffWorkspacePage").then(m => ({ default: m.StaffWorkspacePage })));
+const SupervisorWorkspacePage = lazy(() => import("./components/SupervisorWorkspacePage").then(m => ({ default: m.SupervisorWorkspacePage })));
 
 // Fade transition wrapper to prevent flickering during auth state changes
 function FadeTransition({ children, transitionKey }: { children: React.ReactNode; transitionKey: string }) {
@@ -93,7 +114,7 @@ function ReconnectingIndicator() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4">
       <div className="flex items-center gap-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <LoadingSpinner />
         <p className="text-lg text-muted-foreground">Reconnecting...</p>
       </div>
       <p className="text-sm text-muted-foreground max-w-md text-center">
@@ -159,7 +180,9 @@ function RootApp() {
   // User is authenticated - route by role
   return (
     <FadeTransition transitionKey={transitionKey}>
-      <RoleBasedRouter />
+      <UnreadCountSubscriptionProvider>
+        <RoleBasedRouter />
+      </UnreadCountSubscriptionProvider>
     </FadeTransition>
   );
 }
@@ -239,7 +262,11 @@ function RoleBasedRouter() {
   // All users access "/" but see different interfaces based on their role
   
   if (user.role === 'Staff') {
-    return <StaffWorkspacePage onSignOut={signOut} />;
+    return (
+      <LazyPageWrapper>
+        <StaffWorkspacePage onSignOut={signOut} />
+      </LazyPageWrapper>
+    );
   }
 
   if (user.role === 'Supervisor') {
@@ -255,24 +282,28 @@ function RoleBasedRouter() {
     if (isViewingQueue) {
       // Show Dashboard with queue view for supervisors
       return (
-        <ErrorBoundary>
+        <LazyPageWrapper>
           <Dashboard onSignOut={signOut} />
-        </ErrorBoundary>
+        </LazyPageWrapper>
       );
     }
 
-    return <SupervisorWorkspacePage
-      onSignOut={signOut}
-      onNavigateToBannosQueue={() => navigateToQueue('bannos')}
-      onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
-    />;
+    return (
+      <LazyPageWrapper>
+        <SupervisorWorkspacePage
+          onSignOut={signOut}
+          onNavigateToBannosQueue={() => navigateToQueue('bannos')}
+          onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
+        />
+      </LazyPageWrapper>
+    );
   }
 
   if (user.role === 'Admin') {
     return (
-      <ErrorBoundary>
+      <LazyPageWrapper>
         <Dashboard onSignOut={signOut} />
-      </ErrorBoundary>
+      </LazyPageWrapper>
     );
   }
 

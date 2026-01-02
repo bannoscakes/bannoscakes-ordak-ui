@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, User, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
@@ -152,7 +153,7 @@ export function Header({ onSignOut }: HeaderProps) {
         <div className="space-y-4">
           {searchLoading && (
             <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+              <LoadingSpinner size="sm" />
               <span className="text-sm">Looking up order…</span>
             </div>
           )}
