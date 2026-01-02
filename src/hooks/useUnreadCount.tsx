@@ -40,17 +40,14 @@ export function useUnreadCountQuery() {
  * message_reads table. When changes occur, invalidates React Query
  * cache to trigger a refetch.
  *
- * @param options - Optional configuration
- * @param options.enabled - Whether the subscription is active (default: true)
+ * Note: This hook is used internally by UnreadCountSubscriptionProvider.
+ * Components should use useUnreadCount() instead.
  */
-export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
-  const { enabled = true } = options || {};
+function useRealtimeUnreadCount() {
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
-    if (!enabled) return;
-
     const supabase = getSupabase();
 
     // Clean up existing channel if any
@@ -59,8 +56,8 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
       channelRef.current = null;
     }
 
-    // Create a unique channel for unread count updates
-    const channelName = `unread-count-${crypto.randomUUID()}`;
+    // Static channel name for easier debugging (matches pattern: orders-${store}-realtime)
+    const channelName = 'unread-count-realtime';
     const channel = supabase
       .channel(channelName)
       .on(
@@ -101,7 +98,7 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
         channelRef.current = null;
       }
     };
-  }, [enabled, queryClient]);
+  }, [queryClient]);
 }
 
 /**
