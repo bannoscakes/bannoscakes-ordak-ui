@@ -6,9 +6,10 @@
 -- even if no manual edits are made to the order.
 --
 -- Schedule: 0 19 * * * (19:00 UTC = 5am AEST, 6am during AEDT daylight saving)
-
--- Ensure pg_cron extension is available (already enabled, but safe to include)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+--
+-- IMPORTANT: pg_cron must be enabled in Supabase Dashboard (Database > Extensions) before deploying.
+-- Do NOT add "CREATE EXTENSION pg_cron" here - only supabase_admin can create extensions.
+-- This migration checks if pg_cron exists and skips gracefully if not (expected in CI/preview environments).
 
 -- Create the priority escalation function
 CREATE OR REPLACE FUNCTION escalate_order_priorities()
@@ -84,18 +85,23 @@ COMMENT ON FUNCTION escalate_order_priorities() IS
 -- Wrapped in DO block for idempotency - safe to re-run
 DO $$
 BEGIN
-  -- Unschedule existing job if it exists (idempotent)
-  BEGIN
-    PERFORM cron.unschedule('priority-escalation');
-  EXCEPTION
-    WHEN OTHERS THEN NULL;  -- job doesn't exist, that's fine
-  END;
+  -- Only run if pg_cron extension exists (production Supabase)
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    -- Remove existing job if it exists (for idempotency)
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'priority-escalation') THEN
+      PERFORM cron.unschedule('priority-escalation');
+    END IF;
 
-  -- Schedule the job
-  PERFORM cron.schedule(
-    'priority-escalation',
-    '0 19 * * *',
-    'SELECT escalate_order_priorities()'
-  );
+    -- Schedule the job
+    PERFORM cron.schedule(
+      'priority-escalation',
+      '0 19 * * *',
+      'SELECT escalate_order_priorities()'
+    );
+
+    RAISE NOTICE 'pg_cron job priority-escalation scheduled successfully';
+  ELSE
+    RAISE NOTICE 'pg_cron extension not available - skipping cron job creation (expected in CI/test environments)';
+  END IF;
 END;
 $$;
