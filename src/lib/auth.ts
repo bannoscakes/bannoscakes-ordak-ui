@@ -30,6 +30,8 @@ class AuthService {
   private loadedUserId: string | null = null;
   // Cache in-flight promises to deduplicate concurrent calls
   private loadingPromises: Map<string, Promise<void>> = new Map();
+  // Store unsubscribe function for potential cleanup (e.g., testing scenarios)
+  private unsubscribeAuth: (() => void) | null = null;
 
   constructor() {
     this.initializeAuth();
@@ -45,7 +47,7 @@ class AuthService {
       // IMPORTANT: Keep callback lightweight - don't await Supabase calls inside!
       // Async Supabase calls (RPC, queries) in this callback cause deadlocks
       // because supabase-js has an internal session lock (see gotrue-js#762).
-      this.supabase.auth.onAuthStateChange((event, session) => {
+      const { data: { subscription } } = this.supabase.auth.onAuthStateChange((event, session) => {
         // SIGNED_OUT: Handle synchronously (no Supabase calls needed)
         if (event === 'SIGNED_OUT') {
           // Clear React Query cache to prevent stale data bleeding between user sessions
@@ -83,6 +85,9 @@ class AuthService {
           return;
         }
       });
+
+      // Store unsubscribe function for potential cleanup
+      this.unsubscribeAuth = () => subscription.unsubscribe();
 
       // NOTE: No separate getSession() call needed here.
       // The INITIAL_SESSION event fires immediately when the listener is set up,
@@ -146,6 +151,13 @@ class AuthService {
       }
 
       if (data && data.length > 0) {
+        // Guard against stale profile load: If user signed out while this was in-flight,
+        // don't overwrite the cleared state. Check if session is still valid.
+        if (!this.authState.session) {
+          console.warn('Profile load completed but session was cleared (user signed out). Discarding stale data.');
+          return;
+        }
+
         const profile = data[0];
         const authUser: AuthUser = {
           id: profile.user_id,
@@ -292,6 +304,18 @@ class AuthService {
   canAccessStore(store: 'bannos' | 'flourlane'): boolean {
     if (!this.authState.user) return false;
     return this.authState.user.store === 'both' || this.authState.user.store === store;
+  }
+
+  /**
+   * Cleanup method for testing scenarios or architecture changes.
+   * Unsubscribes from auth state changes.
+   */
+  destroy(): void {
+    if (this.unsubscribeAuth) {
+      this.unsubscribeAuth();
+      this.unsubscribeAuth = null;
+    }
+    this.listeners = [];
   }
 
   subscribe(listener: (state: AuthState) => void, options?: { skipInitial?: boolean }): () => void {
