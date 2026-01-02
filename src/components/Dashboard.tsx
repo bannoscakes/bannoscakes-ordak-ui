@@ -106,119 +106,64 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   }, []);
 
   const renderContent = () => {
-    try {
-      switch (activeView) {
-        case "orders":
-          return (
-            <ErrorBoundary>
-              <OrdersPage />
-            </ErrorBoundary>
-          );
-        case "bannos-production":
-          return (
-            <ErrorBoundary>
-              <BannosProductionPage
-                initialFilter={viewFilter}
-                onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
-              />
-            </ErrorBoundary>
-          );
-        case "flourlane-production":
-          return (
-            <ErrorBoundary>
-              <FlourlaneProductionPage
-                initialFilter={viewFilter}
-                onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
-              />
-            </ErrorBoundary>
-          );
-        case "bannos-monitor":
-          return (
-            <ErrorBoundary>
-              <BannosMonitorPage />
-            </ErrorBoundary>
-          );
-        case "flourlane-monitor":
-          return (
-            <ErrorBoundary>
-              <FlourlaneMonitorPage />
-            </ErrorBoundary>
-          );
-        case "bannos-analytics":
-          return (
-            <ErrorBoundary>
-              <BannosAnalyticsPage />
-            </ErrorBoundary>
-          );
-        case "flourlane-analytics":
-          return (
-            <ErrorBoundary>
-              <FlourlaneAnalyticsPage />
-            </ErrorBoundary>
-          );
-        case "staff-analytics":
-          return (
-            <ErrorBoundary>
-              <StaffAnalyticsPage />
-            </ErrorBoundary>
-          );
-        case "staff":
-          return (
-            <ErrorBoundary>
-              <StaffPage />
-            </ErrorBoundary>
-          );
-        case "inventory":
-          return (
-            <ErrorBoundary>
-              <InventoryPage />
-            </ErrorBoundary>
-          );
-        case "bannos-settings":
-          return (
-            <ErrorBoundary>
-              <SettingsPage store="bannos" onBack={() => {
-                safePushState('/');
-                setActiveView("dashboard");
-              }} />
-            </ErrorBoundary>
-          );
-        case "flourlane-settings":
-          return (
-            <ErrorBoundary>
-              <SettingsPage store="flourlane" onBack={() => {
-                safePushState('/');
-                setActiveView("dashboard");
-              }} />
-            </ErrorBoundary>
-          );
-        case "time-payroll":
-          return (
-            <ErrorBoundary>
-              <TimePayrollPage
-                initialStaffFilter={staffFilter || undefined}
-                onBack={() => {
-                  safePushState('/');
-                  setActiveView("dashboard");
-                }}
-              />
-            </ErrorBoundary>
-          );
-        case "dashboard":
-        default:
-          return (
-            <ErrorBoundary>
-              <DashboardContent />
-            </ErrorBoundary>
-          );
-      }
-    } catch (error) {
-      console.error('Error rendering dashboard content:', error);
-      return (
-        <ErrorBoundary>
-          <DashboardContent />
-        </ErrorBoundary>
-      );
+    switch (activeView) {
+      case "orders":
+        return <OrdersPage />;
+      case "bannos-production":
+        return (
+          <BannosProductionPage
+            initialFilter={viewFilter}
+            onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
+          />
+        );
+      case "flourlane-production":
+        return (
+          <FlourlaneProductionPage
+            initialFilter={viewFilter}
+            onBackToWorkspace={isSupervisor ? handleBackToWorkspace : undefined}
+          />
+        );
+      case "bannos-monitor":
+        return <BannosMonitorPage />;
+      case "flourlane-monitor":
+        return <FlourlaneMonitorPage />;
+      case "bannos-analytics":
+        return <BannosAnalyticsPage />;
+      case "flourlane-analytics":
+        return <FlourlaneAnalyticsPage />;
+      case "staff-analytics":
+        return <StaffAnalyticsPage />;
+      case "staff":
+        return <StaffPage />;
+      case "inventory":
+        return <InventoryPage />;
+      case "bannos-settings":
+        return (
+          <SettingsPage store="bannos" onBack={() => {
+            safePushState('/');
+            setActiveView("dashboard");
+          }} />
+        );
+      case "flourlane-settings":
+        return (
+          <SettingsPage store="flourlane" onBack={() => {
+            safePushState('/');
+            setActiveView("dashboard");
+          }} />
+        );
+      case "time-payroll":
+        return (
+          <TimePayrollPage
+            initialStaffFilter={staffFilter || undefined}
+            onBack={() => {
+              safePushState('/');
+              setActiveView("dashboard");
+            }}
+          />
+        );
+      case "dashboard":
+      default:
+        return <DashboardContent />;
     }
   };
 
