@@ -85,9 +85,12 @@ class AuthService {
           return;
         }
 
-        // INITIAL_SESSION with no session: User is not logged in
+        // INITIAL_SESSION with no session: Try recovery for Chrome storage timing issues
         if (event === 'INITIAL_SESSION') {
-          this.updateAuthState({ user: null, session: null, loading: false });
+          // Chrome's storage access can be slow. Attempt recovery before giving up.
+          setTimeout(() => {
+            this.recoverSession();
+          }, 0);
           return;
         }
       });
@@ -104,6 +107,35 @@ class AuthService {
 
     } catch (error) {
       console.error('Auth initialization error:', error);
+      this.updateAuthState({ user: null, session: null, loading: false });
+    }
+  }
+
+  /**
+   * Attempt to recover session from storage.
+   * Called when INITIAL_SESSION fires without session data.
+   * Chrome's storage access can be slow, so this provides a fallback.
+   */
+  private async recoverSession(): Promise<void> {
+    try {
+      const { data: { session }, error } = await this.supabase.auth.getSession();
+
+      if (error) {
+        console.error('Session recovery failed:', error);
+        this.updateAuthState({ user: null, session: null, loading: false });
+        return;
+      }
+
+      if (session?.user) {
+        // Found a session - load the profile
+        this.isSignedOut = false;
+        await this.loadUserProfile(session.user, session);
+      } else {
+        // No session found - user is genuinely not logged in
+        this.updateAuthState({ user: null, session: null, loading: false });
+      }
+    } catch (error) {
+      console.error('Session recovery error:', error);
       this.updateAuthState({ user: null, session: null, loading: false });
     }
   }
@@ -157,10 +189,19 @@ class AuthService {
       }
 
       if (data && data.length > 0) {
-        // Guard against stale profile load: If user signed out while this was in-flight,
-        // don't overwrite the cleared state.
+        // Guard against stale profile load:
+        // 1. If user signed out while this was in-flight
+        // 2. If a different user logged in (fast user-switch scenario)
         if (this.isSignedOut) {
           console.warn('Profile load completed but user signed out. Discarding stale data.');
+          return;
+        }
+
+        // Check if the current session belongs to the same user we loaded profile for
+        // This prevents cross-user data leakage in fast user-switch scenarios
+        const currentSessionUserId = this.authState.session?.user?.id;
+        if (currentSessionUserId && currentSessionUserId !== userId) {
+          console.warn(`Profile load for user ${userId} completed but current session is for ${currentSessionUserId}. Discarding stale data.`);
           return;
         }
 
@@ -314,7 +355,7 @@ class AuthService {
 
   /**
    * Cleanup method for testing scenarios or architecture changes.
-   * Unsubscribes from auth state changes.
+   * Unsubscribes from auth state changes and clears pending operations.
    */
   destroy(): void {
     if (this.unsubscribeAuth) {
@@ -322,6 +363,8 @@ class AuthService {
       this.unsubscribeAuth = null;
     }
     this.listeners = [];
+    this.loadingPromises.clear();
+    this.isSignedOut = false;
   }
 
   subscribe(listener: (state: AuthState) => void, options?: { skipInitial?: boolean }): () => void {
