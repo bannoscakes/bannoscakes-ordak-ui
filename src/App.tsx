@@ -16,15 +16,20 @@ import Logout from "./components/Logout";
 // ✅ Error boundary (needed before lazy components load)
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
+// ✅ Shared loading spinner for Suspense fallbacks
+import { LoadingSpinner } from "./components/ui/LoadingSpinner";
+
+// Full-screen spinner for page-level loading states
+function Spinner() {
+  return <LoadingSpinner size="lg" className="min-h-screen" />;
+}
+
 // ⛳ Lazy-loaded workspace pages for code splitting
+// Note: .then(m => ({ default: m.ComponentName })) is needed because
+// these components use named exports, not default exports
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
 const StaffWorkspacePage = lazy(() => import("./components/StaffWorkspacePage").then(m => ({ default: m.StaffWorkspacePage })));
 const SupervisorWorkspacePage = lazy(() => import("./components/SupervisorWorkspacePage").then(m => ({ default: m.SupervisorWorkspacePage })));
-
-// Tiny spinner (fallback if you don't have one)
-function Spinner() {
-  return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
-}
 
 // Fade transition wrapper to prevent flickering during auth state changes
 function FadeTransition({ children, transitionKey }: { children: React.ReactNode; transitionKey: string }) {

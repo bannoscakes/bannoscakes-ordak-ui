@@ -3,19 +3,18 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { safePushState, NAVIGATION_EVENT } from "@/lib/safeNavigate";
 
-// Loading spinner for lazy-loaded pages
+// Page-level spinner for lazy-loaded sub-pages
 function PageSpinner() {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-    </div>
-  );
+  return <LoadingSpinner className="h-64" />;
 }
 
 // Lazy-loaded pages for code splitting
+// Note: .then(m => ({ default: m.ComponentName })) is needed because
+// these components use named exports, not default exports
 const DashboardContent = lazy(() => import("./DashboardContent").then(m => ({ default: m.DashboardContent })));
 const StaffPage = lazy(() => import("./StaffPage").then(m => ({ default: m.StaffPage })));
 const InventoryPage = lazy(() => import("./inventory-v2").then(m => ({ default: m.InventoryPage })));
