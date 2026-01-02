@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase } from '../lib/supabase';
 import type { Store } from '../types/db';
 
@@ -22,8 +23,7 @@ export function useRealtimeOrders(
 ) {
   const { enabled = true } = options || {};
   const queryClient = useQueryClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const channelRef = useRef<any>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -51,6 +51,9 @@ export function useRealtimeOrders(
           // Invalidate all queue-related queries for this store
           queryClient.invalidateQueries({ queryKey: ['queue', store] });
           queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
+          // Also invalidate user-specific queues (supervisor/staff see orders across stores)
+          queryClient.invalidateQueries({ queryKey: ['supervisorQueue'] });
+          queryClient.invalidateQueries({ queryKey: ['staffQueue'] });
         }
       )
       .subscribe((status) => {
