@@ -24,6 +24,17 @@ function Spinner() {
   return <LoadingSpinner size="lg" className="min-h-screen" />;
 }
 
+// Wrapper for lazy-loaded pages with error boundary and loading state
+function LazyPageWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<Spinner />}>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
 // ⛳ Lazy-loaded workspace pages for code splitting
 // Note: .then(m => ({ default: m.ComponentName })) is needed because
 // these components use named exports, not default exports
@@ -247,11 +258,9 @@ function RoleBasedRouter() {
   
   if (user.role === 'Staff') {
     return (
-      <ErrorBoundary>
-        <Suspense fallback={<Spinner />}>
-          <StaffWorkspacePage onSignOut={signOut} />
-        </Suspense>
-      </ErrorBoundary>
+      <LazyPageWrapper>
+        <StaffWorkspacePage onSignOut={signOut} />
+      </LazyPageWrapper>
     );
   }
 
@@ -268,34 +277,28 @@ function RoleBasedRouter() {
     if (isViewingQueue) {
       // Show Dashboard with queue view for supervisors
       return (
-        <ErrorBoundary>
-          <Suspense fallback={<Spinner />}>
-            <Dashboard onSignOut={signOut} />
-          </Suspense>
-        </ErrorBoundary>
+        <LazyPageWrapper>
+          <Dashboard onSignOut={signOut} />
+        </LazyPageWrapper>
       );
     }
 
     return (
-      <ErrorBoundary>
-        <Suspense fallback={<Spinner />}>
-          <SupervisorWorkspacePage
-            onSignOut={signOut}
-            onNavigateToBannosQueue={() => navigateToQueue('bannos')}
-            onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
-          />
-        </Suspense>
-      </ErrorBoundary>
+      <LazyPageWrapper>
+        <SupervisorWorkspacePage
+          onSignOut={signOut}
+          onNavigateToBannosQueue={() => navigateToQueue('bannos')}
+          onNavigateToFlourlaneQueue={() => navigateToQueue('flourlane')}
+        />
+      </LazyPageWrapper>
     );
   }
 
   if (user.role === 'Admin') {
     return (
-      <ErrorBoundary>
-        <Suspense fallback={<Spinner />}>
-          <Dashboard onSignOut={signOut} />
-        </Suspense>
-      </ErrorBoundary>
+      <LazyPageWrapper>
+        <Dashboard onSignOut={signOut} />
+      </LazyPageWrapper>
     );
   }
 
