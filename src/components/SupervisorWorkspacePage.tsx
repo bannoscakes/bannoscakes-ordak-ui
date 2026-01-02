@@ -27,6 +27,7 @@ import {
   endBreak,
   getCurrentShift
 } from "../lib/rpc-client";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 
 interface SupervisorWorkspacePageProps {
   onSignOut: () => void;
@@ -47,6 +48,7 @@ export function SupervisorWorkspacePage({
   // Use React Query hook for orders
   const { data: orders = [], isLoading: loading, isError } = useSupervisorQueue(user?.id);
   const invalidateSupervisorQueue = useInvalidateSupervisorQueue();
+  const { unreadCount } = useUnreadCount();
 
   // Show toast on error
   useEffect(() => {
@@ -373,7 +375,17 @@ export function SupervisorWorkspacePage({
               value="messages"
               className="flex items-center gap-2"
             >
-              <MessageSquare className="h-4 w-4" />
+              <div className="relative">
+                <MessageSquare className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <div
+                    key={unreadCount}
+                    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border border-white animate-wiggle"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </div>
+                )}
+              </div>
               Messages
             </TabsTrigger>
           </TabsList>
