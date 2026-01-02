@@ -13,10 +13,9 @@ export function UnreadBadge({ count }: UnreadBadgeProps) {
 
   return (
     <div
-      key={count}
-      className="absolute -top-1 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center border-2 border-white animate-wiggle"
-      aria-label={`${count} unread message${count === 1 ? '' : 's'}`}
+      className="absolute -top-1 -right-2 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center border-2 border-background animate-wiggle"
       role="status"
+      aria-live="polite"
     >
       {count > 99 ? '99+' : count}
     </div>
