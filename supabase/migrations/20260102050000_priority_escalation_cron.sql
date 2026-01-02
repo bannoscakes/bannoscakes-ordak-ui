@@ -35,7 +35,6 @@ BEGIN
     FROM orders_bannos
     WHERE stage != 'Complete'
       AND due_date IS NOT NULL
-      AND deleted_at IS NULL
   )
   UPDATE orders_bannos o
   SET
@@ -59,7 +58,6 @@ BEGIN
     FROM orders_flourlane
     WHERE stage != 'Complete'
       AND due_date IS NOT NULL
-      AND deleted_at IS NULL
   )
   UPDATE orders_flourlane o
   SET
