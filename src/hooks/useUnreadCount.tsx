@@ -1,8 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, createContext, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUnreadCount } from '../lib/rpc-client';
 import { getSupabase } from '../lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+
+// Context to track if the subscription provider is mounted
+const UnreadCountSubscriptionContext = createContext<boolean>(false);
 
 /** Query key for unread message count */
 export const UNREAD_COUNT_QUERY_KEY = ['unreadCount'] as const;
@@ -107,8 +110,8 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
 /**
  * Combined hook for unread message count with real-time updates.
  *
- * Uses TanStack Query for data fetching/caching and Supabase Realtime
- * for live updates. Polls every 5 seconds as a fallback.
+ * Uses TanStack Query for data fetching/caching. Real-time updates are
+ * handled by the UnreadCountSubscriptionProvider at the app level.
  *
  * @returns Object with unreadCount, isLoading, error, and refetch function
  *
@@ -122,8 +125,8 @@ export function useRealtimeUnreadCount(options?: { enabled?: boolean }) {
 export function useUnreadCount() {
   const { data: unreadCount = 0, isLoading, error, refetch } = useUnreadCountQuery();
 
-  // Subscribe to realtime updates
-  useRealtimeUnreadCount();
+  // Note: Realtime subscription is managed by UnreadCountSubscriptionProvider
+  // which is mounted once at the app level (fixes duplicate subscription issue #594)
 
   return {
     unreadCount,
@@ -131,4 +134,27 @@ export function useUnreadCount() {
     error,
     refetch,
   };
+}
+
+/**
+ * Provider component that manages a single realtime subscription for unread count.
+ *
+ * Mount this once at the app level (after authentication) to share a single
+ * subscription across all components that use useUnreadCount().
+ *
+ * @example
+ * // In App.tsx, wrap authenticated content:
+ * <UnreadCountSubscriptionProvider>
+ *   <Dashboard />
+ * </UnreadCountSubscriptionProvider>
+ */
+export function UnreadCountSubscriptionProvider({ children }: { children: ReactNode }) {
+  // Single realtime subscription for the entire app
+  useRealtimeUnreadCount();
+
+  return (
+    <UnreadCountSubscriptionContext.Provider value={true}>
+      {children}
+    </UnreadCountSubscriptionContext.Provider>
+  );
 }
