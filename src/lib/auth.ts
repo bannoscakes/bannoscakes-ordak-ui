@@ -38,17 +38,28 @@ class AuthService {
 
   private async initializeAuth() {
     try {
-      // CRITICAL FIX (#596): Set up auth listener BEFORE getSession() to prevent
-      // race condition where SIGNED_IN events are missed during initialization.
-      // In Chrome, getSession() can take longer due to storage access timing,
-      // creating a window where login events are lost.
+      // Get initial session
+      const { data: { session }, error } = await this.supabase.auth.getSession();
+
+      if (error) {
+        console.error('Error getting session:', error);
+        this.updateAuthState({ user: null, session: null, loading: false });
+        return;
+      }
+
+      if (session?.user) {
+        await this.loadUserProfile(session.user, session);
+      } else {
+        this.updateAuthState({ user: null, session: null, loading: false });
+      }
+
+      // Listen for auth changes with explicit event handling
       this.supabase.auth.onAuthStateChange(async (event, session) => {
         // CRITICAL: Only logout on explicit SIGNED_OUT event
         if (event === 'SIGNED_OUT') {
           // Clear React Query cache to prevent stale data bleeding between user sessions
           // This handles sign-outs from other tabs or session invalidations
           queryClient.clear();
-          this.loadedUserId = null;
           this.updateAuthState({ user: null, session: null, loading: false });
           return;
         }
@@ -63,17 +74,12 @@ class AuthService {
           return;
         }
 
-        // Handle initial session - this fires immediately when listener is set up
-        if (event === 'INITIAL_SESSION') {
-          if (session?.user) {
-            await this.loadUserProfile(session.user, session);
-          } else {
-            // No session on initial load - try recovery before giving up
-            console.warn('INITIAL_SESSION with no session data - attempting recovery');
-            const recovered = await this.recoverSession();
-            if (!recovered) {
-              this.updateAuthState({ user: null, session: null, loading: false });
-            }
+        // Handle initial session with no data - try to recover
+        if (event === 'INITIAL_SESSION' && !session) {
+          console.warn('INITIAL_SESSION with no session data - attempting recovery');
+          const recovered = await this.recoverSession();
+          if (!recovered) {
+            this.updateAuthState({ user: null, session: null, loading: false });
           }
           return;
         }
@@ -89,11 +95,6 @@ class AuthService {
           await this.loadUserProfile(session.user, session);
         }
       });
-
-      // Note: We no longer call getSession() separately here because:
-      // 1. onAuthStateChange fires INITIAL_SESSION immediately with current session
-      // 2. This prevents the race condition where events are missed during the await
-      // 3. All session handling is now centralized in the listener
     } catch (error) {
       console.error('Auth initialization error:', error);
       this.updateAuthState({ user: null, session: null, loading: false });
