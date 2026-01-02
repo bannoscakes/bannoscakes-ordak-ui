@@ -26,7 +26,6 @@ BEGIN
   WITH priority_calc AS (
     SELECT
       id,
-      priority,
       CASE
         WHEN due_date - CURRENT_DATE <= 1 THEN 'High'::priority_level
         WHEN due_date - CURRENT_DATE <= 3 THEN 'Medium'::priority_level
@@ -51,7 +50,6 @@ BEGIN
   WITH priority_calc AS (
     SELECT
       id,
-      priority,
       CASE
         WHEN due_date - CURRENT_DATE <= 1 THEN 'High'::priority_level
         WHEN due_date - CURRENT_DATE <= 3 THEN 'Medium'::priority_level
@@ -83,10 +81,21 @@ COMMENT ON FUNCTION escalate_order_priorities() IS
 
 -- Schedule the cron job to run daily at 5am Sydney time (19:00 UTC)
 -- Note: pg_cron uses UTC. 19:00 UTC = 5am AEST (6am during AEDT daylight saving)
-SELECT cron.schedule(
-  'priority-escalation',
-  '0 19 * * *',
-  $$SELECT escalate_order_priorities()$$
-);
+-- Wrapped in DO block for idempotency - safe to re-run
+DO $$
+BEGIN
+  -- Unschedule existing job if it exists (idempotent)
+  BEGIN
+    PERFORM cron.unschedule('priority-escalation');
+  EXCEPTION
+    WHEN OTHERS THEN NULL;  -- job doesn't exist, that's fine
+  END;
 
-COMMENT ON EXTENSION pg_cron IS 'Scheduled jobs including priority escalation (daily 5am Sydney) and order monitor (every 30 min)';
+  -- Schedule the job
+  PERFORM cron.schedule(
+    'priority-escalation',
+    '0 19 * * *',
+    'SELECT escalate_order_priorities()'
+  );
+END;
+$$;
