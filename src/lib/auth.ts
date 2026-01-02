@@ -32,6 +32,8 @@ class AuthService {
   private loadingPromises: Map<string, Promise<void>> = new Map();
   // Store unsubscribe function for potential cleanup (e.g., testing scenarios)
   private unsubscribeAuth: (() => void) | null = null;
+  // Track if an explicit sign-out occurred (to guard against stale profile loads)
+  private isSignedOut = false;
 
   constructor() {
     this.initializeAuth();
@@ -50,6 +52,8 @@ class AuthService {
       const { data: { subscription } } = this.supabase.auth.onAuthStateChange((event, session) => {
         // SIGNED_OUT: Handle synchronously (no Supabase calls needed)
         if (event === 'SIGNED_OUT') {
+          // Mark as signed out FIRST to guard against in-flight profile loads
+          this.isSignedOut = true;
           // Clear React Query cache to prevent stale data bleeding between user sessions
           queryClient.clear();
           this.loadedUserId = null;
@@ -70,6 +74,8 @@ class AuthService {
         // INITIAL_SESSION, SIGNED_IN, or any event with valid session:
         // DEFER profile loading to avoid blocking the callback and causing deadlocks
         if (session?.user) {
+          // Clear signed-out flag since we're starting a new session
+          this.isSignedOut = false;
           // setTimeout(0) breaks out of the callback's execution context,
           // allowing Supabase's internal session lock to be released before
           // we make any RPC calls. This prevents the deadlock.
@@ -152,9 +158,9 @@ class AuthService {
 
       if (data && data.length > 0) {
         // Guard against stale profile load: If user signed out while this was in-flight,
-        // don't overwrite the cleared state. Check if session is still valid.
-        if (!this.authState.session) {
-          console.warn('Profile load completed but session was cleared (user signed out). Discarding stale data.');
+        // don't overwrite the cleared state.
+        if (this.isSignedOut) {
+          console.warn('Profile load completed but user signed out. Discarding stale data.');
           return;
         }
 
