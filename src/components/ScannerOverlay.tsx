@@ -84,6 +84,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   };
 
   const handleCameraScan = (result: string) => {
+    if (isScanLookupPending) return;
     handleScan(result);
   };
 
@@ -98,6 +99,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   };
 
   const handleManualScan = () => {
+    if (isScanLookupPending) return;
     if (manualInput.trim()) {
       handleScan(manualInput.trim());
     }
@@ -188,6 +190,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
     setErrorMessage("");
     setCameraFailed(false);
     setManualInput("");
+    setIsScanLookupPending(false);
     onClose();
   };
 
