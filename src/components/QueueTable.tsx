@@ -21,6 +21,7 @@ import { StaffAssignmentModal } from "./StaffAssignmentModal";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { useBulkAssignStaff } from "../hooks/useQueueMutations";
 import { useQueueByStore } from "../hooks/useQueueByStore";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { useStorageLocations, useStaffList } from "../hooks/useSettingsQueries";
 import { formatOrderNumber } from "../lib/format-utils";
 import type { GetQueueRow } from "../types/rpc-returns";
@@ -53,6 +54,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     dataUpdatedAt,
     refetch,
   } = useQueueByStore(store, { storage: storageFilter });
+
+  // Subscribe to realtime updates for instant refresh when orders change
+  useRealtimeOrders(store);
 
   // Convert dataUpdatedAt timestamp to Date for display
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
