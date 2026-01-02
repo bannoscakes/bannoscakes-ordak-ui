@@ -1,11 +1,8 @@
-import { useEffect, useRef, createContext, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUnreadCount } from '../lib/rpc-client';
 import { getSupabase } from '../lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-
-// Context to track if the subscription provider is mounted
-const UnreadCountSubscriptionContext = createContext<boolean>(false);
 
 /** Query key for unread message count */
 export const UNREAD_COUNT_QUERY_KEY = ['unreadCount'] as const;
@@ -150,11 +147,9 @@ export function useUnreadCount() {
  */
 export function UnreadCountSubscriptionProvider({ children }: { children: ReactNode }) {
   // Single realtime subscription for the entire app
+  // This provider ensures only one subscription exists, avoiding duplicates
+  // when multiple components call useUnreadCount()
   useRealtimeUnreadCount();
 
-  return (
-    <UnreadCountSubscriptionContext.Provider value={true}>
-      {children}
-    </UnreadCountSubscriptionContext.Provider>
-  );
+  return <>{children}</>;
 }
