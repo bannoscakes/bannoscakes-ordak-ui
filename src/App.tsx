@@ -100,7 +100,7 @@ function ReconnectingIndicator() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-4">
       <div className="flex items-center gap-3">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <LoadingSpinner />
         <p className="text-lg text-muted-foreground">Reconnecting...</p>
       </div>
       <p className="text-sm text-muted-foreground max-w-md text-center">
