@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
+import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -297,7 +298,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <LoadingSpinner className="mx-auto mb-4" />
             <p className="text-muted-foreground">Loading staff data...</p>
           </div>
         </div>
