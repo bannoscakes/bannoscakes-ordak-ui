@@ -56,7 +56,7 @@ function useRealtimeUnreadCount() {
       channelRef.current = null;
     }
 
-    // Static channel name for easier debugging (matches pattern: orders-${store}-realtime)
+    // Static channel name for easier debugging and single subscription management
     const channelName = 'unread-count-realtime';
     const channel = supabase
       .channel(channelName)
@@ -86,6 +86,10 @@ function useRealtimeUnreadCount() {
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Log error for debugging - not surfaced to UI because:
+          // 1. Realtime errors are often transient (network blips)
+          // 2. Polling fallback (every 30s) ensures users still get updates
+          // 3. Toast spam would be annoying for background features
           console.error('Unread count realtime subscription error:', status);
         }
       });
