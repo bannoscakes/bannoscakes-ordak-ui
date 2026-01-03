@@ -5750,6 +5750,8 @@ html {
 .dark\:text-indigo-400:is(.dark *) { color: oklch(0.61 0.15 275); }
 .dark\:text-blue-100:is(.dark *) { color: oklch(0.93 0.03 264); }
 .dark\:text-blue-900:is(.dark *) { color: oklch(0.28 0.07 264); }
+.dark\:text-purple-400:is(.dark *) { color: oklch(0.61 0.15 300); }
+.dark\:text-orange-500:is(.dark *) { color: oklch(0.70 0.17 50); }
 
 /* Dark mode hover states */
 .dark\:hover\:bg-blue-900:is(.dark *):hover { background-color: oklch(0.28 0.07 264); }

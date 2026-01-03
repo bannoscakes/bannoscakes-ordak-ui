@@ -17,28 +17,28 @@ interface Station {
 const getColorClasses = (color: string) => {
   const colorMap = {
     blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-700",
-      icon: "text-blue-500"
+      bg: "bg-blue-50 dark:bg-blue-950",
+      border: "border-blue-200 dark:border-blue-800",
+      text: "text-blue-700 dark:text-blue-300",
+      icon: "text-blue-500 dark:text-blue-400"
     },
     purple: {
-      bg: "bg-purple-50", 
-      border: "border-purple-200",
-      text: "text-purple-700",
-      icon: "text-purple-500"
+      bg: "bg-purple-50 dark:bg-purple-950",
+      border: "border-purple-200 dark:border-purple-800",
+      text: "text-purple-700 dark:text-purple-300",
+      icon: "text-purple-500 dark:text-purple-400"
     },
     pink: {
-      bg: "bg-pink-50",
-      border: "border-pink-200", 
-      text: "text-pink-700",
-      icon: "text-pink-500"
+      bg: "bg-pink-50 dark:bg-pink-950",
+      border: "border-pink-200 dark:border-pink-800",
+      text: "text-pink-700 dark:text-pink-300",
+      icon: "text-pink-500 dark:text-pink-400"
     },
     orange: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      text: "text-orange-700", 
-      icon: "text-orange-500"
+      bg: "bg-orange-50 dark:bg-orange-950",
+      border: "border-orange-200 dark:border-orange-800",
+      text: "text-orange-700 dark:text-orange-300",
+      icon: "text-orange-500 dark:text-orange-400"
     }
   };
   return colorMap[color as keyof typeof colorMap];
