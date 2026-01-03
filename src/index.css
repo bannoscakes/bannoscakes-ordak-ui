@@ -5711,7 +5711,20 @@ html {
   }
 }
 
-/* Dark mode utility classes for colored backgrounds */
+/*
+ * MANUAL DARK MODE UTILITIES
+ *
+ * These utilities are required because Tailwind v4's pre-compiled CSS output
+ * doesn't include all dark: variants for color utilities. Components using
+ * classes like "dark:bg-blue-950" need these definitions to work.
+ *
+ * Color values use oklch() format to match Tailwind v4's color system.
+ *
+ * TODO: Remove when Tailwind v4 supports on-demand dark mode variants or
+ * when migrating to a JIT-compiled Tailwind setup.
+ */
+
+/* Dark mode background colors */
 .dark\:bg-blue-950:is(.dark *) { background-color: oklch(0.21 0.05 264); }
 .dark\:bg-blue-900:is(.dark *) { background-color: oklch(0.28 0.07 264); }
 .dark\:bg-purple-950:is(.dark *) { background-color: oklch(0.21 0.05 300); }
