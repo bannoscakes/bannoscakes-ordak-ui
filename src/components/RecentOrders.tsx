@@ -91,7 +91,7 @@ const getStatusColor = (status: string) => {
     "Completed": "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     "Scheduled": "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
   };
-  return colors[status as keyof typeof colors] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
+  return colors[status as keyof typeof colors] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
 };
 
 const getPriorityColor = (priority: string | null) => {
@@ -101,7 +101,7 @@ const getPriorityColor = (priority: string | null) => {
     "Medium": "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
     "Low": "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
   };
-  return colors[priority as keyof typeof colors] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
+  return colors[priority as keyof typeof colors] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
 };
 
 export function RecentOrders({ store }: RecentOrdersProps) {
