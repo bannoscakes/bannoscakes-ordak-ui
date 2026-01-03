@@ -5,12 +5,12 @@ import {
   Settings,
   Clock,
   ChevronLeft,
-  ChevronRight,
   Cake,
   ClipboardList
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
+import { OrdakLogo } from "./OrdakLogo";
 import { safePushState } from "@/lib/safeNavigate";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -64,20 +64,35 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
     <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className={`p-2 rounded-md ${collapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2' : 'cursor-default'}`}
+              style={{ backgroundColor: '#FF6B00' }}
+              onClick={collapsed ? () => onCollapse(false) : undefined}
+              tabIndex={collapsed ? 0 : -1}
+              aria-label="Expand sidebar"
+              aria-expanded={!collapsed}
+            >
+              <OrdakLogo className="h-6 w-6" variant="light" />
+            </button>
+            {!collapsed && (
+              <div>
+                <h1 className="text-xl font-semibold text-sidebar-foreground">Ordak</h1>
+                <p className="text-sm text-muted-foreground">Manufacturing Hub</p>
+              </div>
+            )}
+          </div>
           {!collapsed && (
-            <div>
-              <h1 className="text-xl font-medium text-sidebar-foreground">Manufactory</h1>
-              <p className="text-sm text-muted-foreground">Production Hub</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCollapse(true)}
+              className="p-2 hover:bg-sidebar-accent"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onCollapse(!collapsed)}
-            className="p-2 hover:bg-sidebar-accent"
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
         </div>
       </div>
       
