@@ -1,3 +1,16 @@
+/**
+ * ModernLoginPage - Theme-Independent Login Experience
+ *
+ * This component intentionally uses inline styles instead of CSS variables
+ * to maintain a consistent branded appearance regardless of the app's theme
+ * setting. The login page always displays:
+ * - Dark industrial background (#1E1E1E)
+ * - Light login card (rgba(255,255,255,0.95))
+ * - Orange accent color (#FF6B00) matching Ordak branding
+ *
+ * This is a deliberate design decision - the login page serves as a branded
+ * entry point before users enter the theme-aware dashboard.
+ */
 import { useState } from "react";
 import { Scan, AlertCircle, Shield, Users, ChefHat, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
