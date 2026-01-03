@@ -9,6 +9,14 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const applyThemeClass = (isDark: boolean) => {
+  const root = document.documentElement;
+  root.classList.remove("dark");
+  if (isDark) {
+    root.classList.add("dark");
+  }
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
@@ -18,18 +26,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("dark");
-
     const isDark =
       theme === "dark" ||
       (theme === "system" &&
         window.matchMedia("(prefers-color-scheme: dark)").matches);
 
-    if (isDark) {
-      root.classList.add("dark");
-    }
-
+    applyThemeClass(isDark);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
@@ -39,11 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = () => {
-      const root = document.documentElement;
-      root.classList.remove("dark");
-      if (mediaQuery.matches) {
-        root.classList.add("dark");
-      }
+      applyThemeClass(mediaQuery.matches);
     };
 
     mediaQuery.addEventListener("change", handleChange);
