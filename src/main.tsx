@@ -9,8 +9,9 @@ if (typeof window !== "undefined") {
 
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import "./index.css";
+// CSS import order matters: globals.css defines variables, index.css uses them
 import "./styles/globals.css";
+import "./index.css";
 import { initErrorMonitoring, SentryErrorBoundary } from "./lib/error-monitoring";
 import { ThemeProvider } from "./components/ThemeProvider";
 
