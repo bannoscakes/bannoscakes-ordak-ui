@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Cake,
-  AlertTriangle,
   ClipboardList
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -29,7 +28,6 @@ const CLICKABLE_NAV_IDS = new Set([
   "staff",
   "time-payroll",
   "inventory",
-  "error-test",
   "bannos-settings",
   "flourlane-settings",
 ]);
@@ -54,7 +52,6 @@ const navigationItems = [
   { icon: Users, label: "Staff", id: "staff", isStaff: true },
   { icon: Clock, label: "Time & Payroll", id: "time-payroll", adminOnly: true, isStaff: true },
   { icon: Package, label: "Inventory", id: "inventory" },
-  { icon: AlertTriangle, label: "Error Test", id: "error-test", isSettings: true, devOnly: true },
   { icon: Settings, label: "Bannos Settings", id: "bannos-settings", isSettings: true },
   { icon: Settings, label: "Flourlane Settings", id: "flourlane-settings", isSettings: true },
 ];
@@ -88,8 +85,6 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
         {navigationItems.filter(item => {
           // Filter by admin role
           if (item.adminOnly && !isAdmin) return false;
-          // Filter dev-only items in production (use Vite's env variable)
-          if (item.devOnly && import.meta.env.PROD) return false;
           return true;
         }).map((item, index) => {
           const isActive = activeView === item.id;
