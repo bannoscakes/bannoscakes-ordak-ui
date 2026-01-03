@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, User, CheckCircle2, AlertCircle, RefreshCw, Sun, Moon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, User, CheckCircle2, AlertCircle, RefreshCw, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { Button } from "./ui/button";
@@ -17,6 +17,40 @@ interface HeaderProps {
 export function Header({ onSignOut }: HeaderProps) {
   const invalidateDashboard = useInvalidateDashboard();
   const { theme, setTheme } = useTheme();
+
+  // Resolve actual dark mode state (accounting for system preference)
+  const [resolvedIsDark, setResolvedIsDark] = useState(false);
+
+  useEffect(() => {
+    const updateResolved = () => {
+      if (theme === "system") {
+        setResolvedIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
+      } else {
+        setResolvedIsDark(theme === "dark");
+      }
+    };
+
+    updateResolved();
+
+    // Listen for system preference changes when in system mode
+    if (theme === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      mediaQuery.addEventListener("change", updateResolved);
+      return () => mediaQuery.removeEventListener("change", updateResolved);
+    }
+  }, [theme]);
+
+  // Cycle through: light → dark → system → light
+  const cycleTheme = () => {
+    if (theme === "light") setTheme("dark");
+    else if (theme === "dark") setTheme("system");
+    else setTheme("light");
+  };
+
+  const getThemeLabel = () => {
+    if (theme === "system") return "system (auto)";
+    return theme;
+  };
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -129,10 +163,17 @@ export function Header({ onSignOut }: HeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={cycleTheme}
+              aria-label={`Current theme: ${getThemeLabel()}. Click to cycle theme.`}
+              title={`Theme: ${getThemeLabel()}`}
             >
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {theme === "system" ? (
+                <Monitor className="h-5 w-5" />
+              ) : resolvedIsDark ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </Button>
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
