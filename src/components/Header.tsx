@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Search, User, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, User, CheckCircle2, AlertCircle, RefreshCw, Sun, Moon } from "lucide-react";
+import { useTheme } from "./ThemeProvider";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,6 +16,7 @@ interface HeaderProps {
 
 export function Header({ onSignOut }: HeaderProps) {
   const invalidateDashboard = useInvalidateDashboard();
+  const { theme, setTheme } = useTheme();
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -113,8 +115,8 @@ export function Header({ onSignOut }: HeaderProps) {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={handleRefresh}
               disabled={refreshing}
@@ -123,6 +125,14 @@ export function Header({ onSignOut }: HeaderProps) {
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               {!refreshing && <span className="hidden sm:inline">Refresh</span>}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
