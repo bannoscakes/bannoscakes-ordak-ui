@@ -498,6 +498,14 @@
   }
 }
 
+/* Component-specific styles to override base reset */
+@layer components {
+  /* Card border - override base reset which sets border: 0 solid */
+  [data-slot="card"] {
+    border: 1px solid var(--border);
+  }
+}
+
 @layer utilities {
   .\@container\/card-header {
     container: card-header / inline-size;
