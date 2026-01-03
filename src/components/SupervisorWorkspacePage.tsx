@@ -28,6 +28,7 @@ import {
   getCurrentShift
 } from "../lib/rpc-client";
 import { useUnreadCount } from "../hooks/useUnreadCount";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { UnreadBadge } from "./UnreadBadge";
 
 interface SupervisorWorkspacePageProps {
@@ -50,6 +51,10 @@ export function SupervisorWorkspacePage({
   const { data: orders = [], isLoading: loading, isError } = useSupervisorQueue(user?.id);
   const invalidateSupervisorQueue = useInvalidateSupervisorQueue();
   const { unreadCount } = useUnreadCount();
+
+  // Subscribe to realtime updates for both stores (supervisor sees orders from both)
+  useRealtimeOrders('bannos');
+  useRealtimeOrders('flourlane');
 
   // Show toast on error
   useEffect(() => {

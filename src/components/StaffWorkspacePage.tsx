@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { MainDashboardMessaging } from "./MainDashboardMessaging";
 import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { useUnreadCount } from "../hooks/useUnreadCount";
+import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { UnreadBadge } from "./UnreadBadge";
 
 // Import real RPCs
@@ -55,6 +56,10 @@ export function StaffWorkspacePage({
   // Use React Query hook for orders
   const { data: orders = [], isLoading: loading, isError, refetch } = useStaffQueue(user?.id);
   const invalidateStaffQueue = useInvalidateStaffQueue();
+
+  // Subscribe to realtime updates for both stores (staff can be assigned orders from either)
+  useRealtimeOrders('bannos');
+  useRealtimeOrders('flourlane');
 
   // Show toast on error
   useEffect(() => {
