@@ -271,7 +271,7 @@ function LoginFormFields({
         <button
           type="submit"
           disabled={!isFormValid || isLoading}
-          className="w-full h-12 text-base font-medium rounded-md transition-all disabled:opacity-50"
+          className="w-full h-12 text-base font-medium rounded-md transition-all disabled:opacity-70"
           style={{
             backgroundColor: '#FF6B00',
             color: '#ffffff',
