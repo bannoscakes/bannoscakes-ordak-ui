@@ -50,21 +50,21 @@ export function QuickActions({ store }: QuickActionsProps) {
       icon: Plus,
       label: "New Manual Order",
       description: "Create manual production order",
-      color: store === "bannos" ? "bg-blue-50 text-blue-600 hover:bg-blue-100" : "bg-pink-50 text-pink-600 hover:bg-pink-100"
+      color: store === "bannos" ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900" : "bg-pink-50 dark:bg-pink-950 text-pink-600 dark:text-pink-400 hover:bg-pink-100 dark:hover:bg-pink-900"
     },
     {
       id: "find-order",
       icon: Search,
       label: "Find Order's Store",
       description: "Locate an order fast by number or scan",
-      color: "bg-blue-50 text-blue-600 hover:bg-blue-100"
+      color: "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900"
     },
     {
       id: "messages",
       icon: MessageSquare,
       label: "Messages",
       description: "Team communication",
-      color: "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+      color: "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900"
     }
   ];
 
@@ -208,42 +208,42 @@ export function QuickActions({ store }: QuickActionsProps) {
             {searchResult && (
               <div className="space-y-3">
                 {/* Order Found */}
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                   <div className="flex-1">
-                    <div className="text-sm font-medium">Order {searchResult.orderNumber}</div>
-                    <div className="text-xs text-gray-600">{searchResult.productTitle}</div>
-                    <div className="text-xs text-gray-600">{searchResult.customerName}</div>
+                    <div className="text-sm font-medium text-foreground">Order {searchResult.orderNumber}</div>
+                    <div className="text-xs text-muted-foreground">{searchResult.productTitle}</div>
+                    <div className="text-xs text-muted-foreground">{searchResult.customerName}</div>
                   </div>
                 </div>
 
                 {/* Current Stage & Status */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <div className="bg-muted/50 border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs text-slate-600 font-medium">Current Stage</div>
+                    <div className="text-xs text-muted-foreground font-medium">Current Stage</div>
                     <Badge variant="outline">{searchResult.stage}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-slate-600 font-medium">Store</div>
-                    <span className="text-xs font-medium">{searchResult.store}</span>
+                    <div className="text-xs text-muted-foreground font-medium">Store</div>
+                    <span className="text-xs font-medium text-foreground">{searchResult.store}</span>
                   </div>
                   {searchResult.assigneeName && (
                     <div className="flex items-center justify-between mt-2">
-                      <div className="text-xs text-slate-600 font-medium">Assigned to</div>
-                      <span className="text-xs font-medium">{searchResult.assigneeName}</span>
+                      <div className="text-xs text-muted-foreground font-medium">Assigned to</div>
+                      <span className="text-xs font-medium text-foreground">{searchResult.assigneeName}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Storage Location - PROMINENT (if set or Complete) */}
                 {(searchResult.storage || searchResult.stage === 'Complete') && (
-                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                    <div className="text-xs text-blue-700 font-medium mb-1">Storage Location</div>
-                    <div className="text-lg font-bold text-blue-900">
+                  <div className="bg-blue-50 dark:bg-blue-950 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-4">
+                    <div className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">Storage Location</div>
+                    <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
                       {searchResult.storage || "Not Set"}
                     </div>
                     {searchResult.stage === 'Complete' && !searchResult.storage && (
-                      <div className="text-xs text-orange-600 mt-1">⚠️ Complete but storage not set</div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">⚠️ Complete but storage not set</div>
                     )}
                   </div>
                 )}
@@ -259,9 +259,9 @@ export function QuickActions({ store }: QuickActionsProps) {
             )}
 
             {searchResult === null && searchValue && !searchLoading && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <span className="text-sm">No order found for "{searchValue}". Check the number and try again.</span>
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <span className="text-sm text-foreground">No order found for "{searchValue}". Check the number and try again.</span>
               </div>
             )}
 

@@ -113,26 +113,26 @@ const getStatusIcon = (status: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "completed":
-      return "bg-green-50 border-green-200";
+      return "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800";
     case "current":
-      return "bg-blue-50 border-blue-200";
+      return "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800";
     case "upcoming":
-      return "bg-gray-50 border-gray-200";
+      return "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
     default:
-      return "bg-gray-50 border-gray-200";
+      return "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
   }
 };
 
 const getTypeColor = (type: string) => {
   switch (type) {
     case "production":
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300";
     case "quality":
-      return "bg-orange-100 text-orange-700";
+      return "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300";
     case "break":
-      return "bg-gray-100 text-gray-700";
+      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
   }
 };
 

@@ -10,7 +10,7 @@ interface ProductionStatusProps {
 const storeProductionData = {
   bannos: {
     systemStatus: "All Systems Operational",
-    systemStatusColor: "bg-green-100 text-green-700 border-green-200",
+    systemStatusColor: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     stations: [
       {
         name: "Filling",
@@ -56,7 +56,7 @@ const storeProductionData = {
   },
   flourlane: {
     systemStatus: "All Systems Operational",
-    systemStatusColor: "bg-green-100 text-green-700 border-green-200",
+    systemStatusColor: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
     stations: [
       {
         name: "Filling",
@@ -105,32 +105,32 @@ const storeProductionData = {
 const getColorClasses = (color: string) => {
   const colorMap = {
     blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-700",
+      bg: "bg-blue-50 dark:bg-blue-950",
+      border: "border-blue-200 dark:border-blue-800",
+      text: "text-blue-700 dark:text-blue-300",
       progress: "bg-blue-500",
-      badge: "bg-blue-100 text-blue-700"
+      badge: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
     },
     purple: {
-      bg: "bg-purple-50", 
-      border: "border-purple-200",
-      text: "text-purple-700",
+      bg: "bg-purple-50 dark:bg-purple-950",
+      border: "border-purple-200 dark:border-purple-800",
+      text: "text-purple-700 dark:text-purple-300",
       progress: "bg-purple-500",
-      badge: "bg-purple-100 text-purple-700"
+      badge: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300"
     },
     pink: {
-      bg: "bg-pink-50",
-      border: "border-pink-200", 
-      text: "text-pink-700",
+      bg: "bg-pink-50 dark:bg-pink-950",
+      border: "border-pink-200 dark:border-pink-800",
+      text: "text-pink-700 dark:text-pink-300",
       progress: "bg-pink-500",
-      badge: "bg-pink-100 text-pink-700"
+      badge: "bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300"
     },
     orange: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      text: "text-orange-700", 
+      bg: "bg-orange-50 dark:bg-orange-950",
+      border: "border-orange-200 dark:border-orange-800",
+      text: "text-orange-700 dark:text-orange-300",
       progress: "bg-orange-500",
-      badge: "bg-orange-100 text-orange-700"
+      badge: "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300"
     }
   };
   return colorMap[color as keyof typeof colorMap];
@@ -139,15 +139,15 @@ const getColorClasses = (color: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "Active":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800";
     case "Maintenance":
-      return "bg-red-100 text-red-700 border-red-200";
+      return "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800";
     case "Warning":
-      return "bg-orange-100 text-orange-700 border-orange-200";
+      return "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800";
     case "Idle":
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
   }
 };
 

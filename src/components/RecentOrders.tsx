@@ -85,23 +85,23 @@ const convertToQueueItem = (order: DisplayOrder, store: 'bannos' | 'flourlane'):
 
 const getStatusColor = (status: string) => {
   const colors = {
-    "In Production": "bg-blue-100 text-blue-700 border-blue-200",
-    "Pending": "bg-gray-100 text-gray-700 border-gray-200",
-    "Quality Check": "bg-orange-100 text-orange-700 border-orange-200", 
-    "Completed": "bg-green-100 text-green-700 border-green-200",
-    "Scheduled": "bg-purple-100 text-purple-700 border-purple-200"
+    "In Production": "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+    "Pending": "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+    "Quality Check": "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+    "Completed": "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+    "Scheduled": "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
   };
-  return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-700";
+  return colors[status as keyof typeof colors] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
 };
 
 const getPriorityColor = (priority: string | null) => {
-  if (!priority) return "bg-gray-100 text-gray-700 border-gray-200";
+  if (!priority) return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
   const colors = {
-    "High": "bg-red-100 text-red-700 border-red-200",
-    "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "Low": "bg-green-100 text-green-700 border-green-200"
+    "High": "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+    "Medium": "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
+    "Low": "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
   };
-  return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-700";
+  return colors[priority as keyof typeof colors] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
 };
 
 export function RecentOrders({ store }: RecentOrdersProps) {
