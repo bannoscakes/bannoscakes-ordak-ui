@@ -67,11 +67,11 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+              className={`p-2 rounded-md ${collapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2' : 'cursor-default'}`}
               style={{ backgroundColor: '#FF6B00' }}
-              onClick={() => collapsed && onCollapse(false)}
+              onClick={collapsed ? () => onCollapse(false) : undefined}
               tabIndex={collapsed ? 0 : -1}
-              aria-label={collapsed ? "Expand sidebar" : "Ordak logo"}
+              aria-label="Expand sidebar"
               aria-expanded={!collapsed}
             >
               <OrdakLogo className="h-6 w-6" variant="light" />
