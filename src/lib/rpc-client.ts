@@ -2133,3 +2133,46 @@ export async function getStaffStagePerformance(
   }));
 }
 
+// ==============================================
+// STAFF TIME ANALYTICS
+// ==============================================
+
+export interface StaffTimeAnalytics {
+  staff_id: string;
+  staff_name: string;
+  filling_count: number;
+  filling_avg_minutes: number | null;
+  covering_count: number;
+  covering_avg_minutes: number | null;
+  decorating_count: number;
+  decorating_avg_minutes: number | null;
+  packing_count: number;
+  packing_avg_minutes: number | null;
+  total_count: number;
+  total_time_minutes: number | null;
+}
+
+export async function getStaffTimeAnalytics(
+  days: number = 30
+): Promise<StaffTimeAnalytics[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_time_analytics', {
+    p_days: days,
+  });
+  if (error) throw error;
+  return (data || []).map((d: Record<string, unknown>) => ({
+    staff_id: String(d.staff_id || ''),
+    staff_name: String(d.staff_name || 'Unknown'),
+    filling_count: toNum(d.filling_count),
+    filling_avg_minutes: d.filling_avg_minutes != null ? toNum(d.filling_avg_minutes) : null,
+    covering_count: toNum(d.covering_count),
+    covering_avg_minutes: d.covering_avg_minutes != null ? toNum(d.covering_avg_minutes) : null,
+    decorating_count: toNum(d.decorating_count),
+    decorating_avg_minutes: d.decorating_avg_minutes != null ? toNum(d.decorating_avg_minutes) : null,
+    packing_count: toNum(d.packing_count),
+    packing_avg_minutes: d.packing_avg_minutes != null ? toNum(d.packing_avg_minutes) : null,
+    total_count: toNum(d.total_count),
+    total_time_minutes: d.total_time_minutes != null ? toNum(d.total_time_minutes) : null,
+  }));
+}
+
