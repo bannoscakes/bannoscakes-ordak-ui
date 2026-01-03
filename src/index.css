@@ -5757,3 +5757,8 @@ html {
 .dark\:hover\:bg-blue-900:is(.dark *):hover { background-color: oklch(0.28 0.07 264); }
 .dark\:hover\:bg-pink-900:is(.dark *):hover { background-color: oklch(0.28 0.07 350); }
 .dark\:hover\:bg-indigo-900:is(.dark *):hover { background-color: oklch(0.28 0.07 275); }
+
+/* Tabs active state styling */
+[data-state="active"].data-\[state\=active\]\:bg-background { background-color: var(--background); }
+[data-state="active"].data-\[state\=active\]\:text-foreground { color: var(--foreground); }
+[data-state="active"].data-\[state\=active\]\:shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }

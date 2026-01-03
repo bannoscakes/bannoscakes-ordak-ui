@@ -18,17 +18,17 @@ export function OrdakLogo({ className = "h-10 w-10", variant = 'light' }: OrdakL
       className={className}
     >
       <defs>
-        {/* Gradient for light variant */}
+        {/* Gradient for light variant - light orange tones */}
         <linearGradient id={gradientLightId} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style={{ stopColor: '#ffffff', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#e0e7ff', stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: '#FFE5CC', stopOpacity: 1 }} />
         </linearGradient>
 
-        {/* Gradient for dark variant */}
+        {/* Gradient for dark variant - orange to match Ordak brand */}
         <linearGradient id={gradientDarkId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
-          <stop offset="50%" style={{ stopColor: '#6366f1', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
+          <stop offset="0%" style={{ stopColor: '#FF6B00', stopOpacity: 1 }} />
+          <stop offset="50%" style={{ stopColor: '#FF8533', stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: '#FFA366', stopOpacity: 1 }} />
         </linearGradient>
       </defs>
 
@@ -48,7 +48,7 @@ export function OrdakLogo({ className = "h-10 w-10", variant = 'light' }: OrdakL
           width="30"
           height="8"
           rx="2"
-          fill={variant === 'light' ? '#ffffff' : '#60a5fa'}
+          fill={variant === 'light' ? '#ffffff' : '#FF8533'}
           opacity="0.8"
         />
 
@@ -58,7 +58,7 @@ export function OrdakLogo({ className = "h-10 w-10", variant = 'light' }: OrdakL
           width="30"
           height="8"
           rx="2"
-          fill={variant === 'light' ? '#ffffff' : '#818cf8'}
+          fill={variant === 'light' ? '#ffffff' : '#FF9F4D'}
           opacity="0.9"
         />
 
@@ -68,7 +68,7 @@ export function OrdakLogo({ className = "h-10 w-10", variant = 'light' }: OrdakL
           width="30"
           height="8"
           rx="2"
-          fill={variant === 'light' ? '#ffffff' : '#a78bfa'}
+          fill={variant === 'light' ? '#ffffff' : '#FFB366'}
           opacity="1"
         />
       </g>
