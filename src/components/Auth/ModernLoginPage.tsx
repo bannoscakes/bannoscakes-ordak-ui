@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -142,13 +141,13 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
             <p className="text-gray-400 text-sm">Manufacturing Hub</p>
           </div>
 
-          <Card className="p-6 sm:p-8 shadow-2xl backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb' }}>
+          <div className="p-6 sm:p-8 shadow-2xl backdrop-blur-sm rounded-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb', color: '#1f2937' }}>
             <div className="space-y-6">
               <div className="text-center space-y-2">
-                <h1 className="text-2xl sm:text-3xl text-foreground font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
+                <h1 className="text-2xl sm:text-3xl font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif', color: '#111827' }}>
                   Welcome Back
                 </h1>
-                <p className="text-muted-foreground text-sm sm:text-base">
+                <p className="text-sm sm:text-base" style={{ color: '#6b7280' }}>
                   Sign in to access your workspace
                 </p>
               </div>
@@ -167,11 +166,11 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
               handleSignIn={handleSignIn}
             />
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm" style={{ color: '#6b7280' }}>
               Need help? Contact your manager
             </p>
           </div>
-        </Card>
+        </div>
         </div>
       </div>
     </div>
