@@ -171,7 +171,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 dark:bg-slate-900">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       <ErrorBoundary>
         <Sidebar 
           collapsed={sidebarCollapsed} 
