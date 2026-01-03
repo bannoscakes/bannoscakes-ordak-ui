@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, User, CheckCircle2, AlertCircle, RefreshCw, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
@@ -16,29 +16,7 @@ interface HeaderProps {
 
 export function Header({ onSignOut }: HeaderProps) {
   const invalidateDashboard = useInvalidateDashboard();
-  const { theme, setTheme } = useTheme();
-
-  // Resolve actual dark mode state (accounting for system preference)
-  const [resolvedIsDark, setResolvedIsDark] = useState(false);
-
-  useEffect(() => {
-    const updateResolved = () => {
-      if (theme === "system") {
-        setResolvedIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
-      } else {
-        setResolvedIsDark(theme === "dark");
-      }
-    };
-
-    updateResolved();
-
-    // Listen for system preference changes when in system mode
-    if (theme === "system") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      mediaQuery.addEventListener("change", updateResolved);
-      return () => mediaQuery.removeEventListener("change", updateResolved);
-    }
-  }, [theme]);
+  const { theme, setTheme, resolvedIsDark } = useTheme();
 
   // Cycle through: light → dark → system → light
   const cycleTheme = () => {
@@ -51,6 +29,7 @@ export function Header({ onSignOut }: HeaderProps) {
     if (theme === "system") return "system (auto)";
     return theme;
   };
+
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
