@@ -8,13 +8,13 @@ import { getStaffWithShiftStatus, type StaffWithShiftStatus } from "../lib/rpc-c
 const getStatusColor = (status: string) => {
   switch (status) {
     case "On Shift":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800";
     case "On Break":
-      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      return "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800";
     case "Off Shift":
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700";
   }
 };
 

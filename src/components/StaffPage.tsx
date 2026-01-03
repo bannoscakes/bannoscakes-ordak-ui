@@ -101,14 +101,14 @@ export function StaffPage() {
   );
 
   const getStatusBadge = (status: string) => {
-    return status === "Active" 
-      ? <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
-      : <Badge className="bg-blue-100 text-blue-700 border-blue-200">Approved</Badge>;
+    return status === "Active"
+      ? <Badge className="bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">Active</Badge>
+      : <Badge className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">Approved</Badge>;
   };
 
   const getOnShiftBadge = (onShift: boolean) => {
-    return onShift 
-      ? <Badge className="bg-green-100 text-green-700 border-green-200">On Shift</Badge>
+    return onShift
+      ? <Badge className="bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">On Shift</Badge>
       : <Badge variant="outline">Off Shift</Badge>;
   };
 

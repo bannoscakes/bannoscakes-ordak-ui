@@ -167,21 +167,21 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const getPriorityColor = (priority: string | null) => {
     switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'High': return 'bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300';
+      case 'Medium': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300';
+      case 'Low': return 'bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-300';
+      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Production': return 'bg-blue-100 text-blue-800';
-      case 'Pending': return 'bg-gray-100 text-gray-800';
-      case 'Quality Check': return 'bg-purple-100 text-purple-800';
-      case 'Completed': return 'bg-green-100 text-green-800';
-      case 'Scheduled': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'In Production': return 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300';
+      case 'Pending': return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
+      case 'Quality Check': return 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300';
+      case 'Completed': return 'bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-300';
+      case 'Scheduled': return 'bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300';
+      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300';
     }
   };
 
