@@ -1,8 +1,4 @@
 import { useState } from "react";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Separator } from "../ui/separator";
 import { Scan, AlertCircle, Shield, Users, ChefHat, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { OrdakLogo } from "../OrdakLogo";
@@ -209,8 +205,8 @@ function LoginFormFields({
     <form onSubmit={handleSignIn} className="space-y-4">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="login-email">Email</Label>
-          <Input
+          <label htmlFor="login-email" className="text-sm font-medium" style={{ color: '#374151' }}>Email</label>
+          <input
             id="login-email"
             type="email"
             placeholder="Enter your email"
@@ -218,14 +214,19 @@ function LoginFormFields({
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
-            className="h-12"
+            className="h-12 w-full rounded-md px-3 text-base outline-none transition-all"
+            style={{
+              backgroundColor: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              color: '#111827'
+            }}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="login-password">Password</Label>
+          <label htmlFor="login-password" className="text-sm font-medium" style={{ color: '#374151' }}>Password</label>
           <div className="relative">
-            <Input
+            <input
               id="login-password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
@@ -233,70 +234,83 @@ function LoginFormFields({
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              className="h-12 pr-10"
+              className="h-12 w-full rounded-md px-3 pr-10 text-base outline-none transition-all"
+              style={{
+                backgroundColor: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                color: '#111827'
+              }}
               minLength={6}
             />
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-0 h-12 w-12 hover:bg-transparent"
+              className="absolute right-0 top-0 h-12 w-12 flex items-center justify-center"
               onClick={() => setShowPassword(!showPassword)}
               disabled={isLoading}
               aria-label={showPassword ? "Hide password" : "Show password"}
+              style={{ background: 'transparent' }}
             >
               {showPassword ? (
-                <EyeOff className="h-5 w-5 text-muted-foreground" />
+                <EyeOff className="h-5 w-5" style={{ color: '#9ca3af' }} />
               ) : (
-                <Eye className="h-5 w-5 text-muted-foreground" />
+                <Eye className="h-5 w-5" style={{ color: '#9ca3af' }} />
               )}
-            </Button>
+            </button>
           </div>
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-            <p className="text-sm text-destructive">{error}</p>
+          <div className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+            <AlertCircle className="h-5 w-5 flex-shrink-0" style={{ color: '#dc2626' }} />
+            <p className="text-sm" style={{ color: '#dc2626' }}>{error}</p>
           </div>
         )}
       </div>
 
       <div className="space-y-3">
-        <Button
+        <button
           type="submit"
           disabled={!isFormValid || isLoading}
-          className="w-full h-12 text-base"
+          className="w-full h-12 text-base font-medium rounded-md transition-all disabled:opacity-50"
+          style={{
+            backgroundColor: '#FF6B00',
+            color: '#ffffff',
+            border: 'none'
+          }}
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin inline" />
               Signing in...
             </>
           ) : (
             "Sign In"
           )}
-        </Button>
+        </button>
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
+            <div className="w-full" style={{ borderTop: '1px solid #e5e7eb' }} />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-muted-foreground">Or</span>
+            <span className="px-2" style={{ backgroundColor: 'rgba(255,255,255,0.95)', color: '#6b7280' }}>Or</span>
           </div>
         </div>
 
-        <Button
+        <button
           type="button"
-          variant="outline"
           disabled
-          className="w-full h-12 text-base"
+          className="w-full h-12 text-base font-medium rounded-md transition-all disabled:opacity-50 flex items-center justify-center"
+          style={{
+            backgroundColor: '#ffffff',
+            color: '#374151',
+            border: '1px solid #e5e7eb'
+          }}
           title="Badge scanning coming soon"
         >
           <Scan className="mr-2 h-5 w-5" />
           Scan Badge (Coming Soon)
-        </Button>
+        </button>
       </div>
     </form>
   );
