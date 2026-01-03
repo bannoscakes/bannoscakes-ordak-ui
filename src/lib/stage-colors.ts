@@ -11,31 +11,31 @@ export const stageColorParts: Record<string, StageColorParts> = {
     bg: "bg-blue-50 dark:bg-blue-950",
     border: "border-blue-200 dark:border-blue-800",
     text: "text-blue-700 dark:text-blue-300",
-    dot: "bg-blue-500",
+    dot: "bg-blue-500 dark:bg-blue-300",
   },
   "Covering": {
     bg: "bg-purple-50 dark:bg-purple-950",
     border: "border-purple-200 dark:border-purple-800",
     text: "text-purple-700 dark:text-purple-300",
-    dot: "bg-purple-500",
+    dot: "bg-purple-500 dark:bg-purple-300",
   },
   "Decorating": {
     bg: "bg-pink-50 dark:bg-pink-950",
     border: "border-pink-200 dark:border-pink-800",
     text: "text-pink-700 dark:text-pink-300",
-    dot: "bg-pink-500",
+    dot: "bg-pink-500 dark:bg-pink-300",
   },
   "Packing": {
     bg: "bg-orange-50 dark:bg-orange-950",
     border: "border-orange-200 dark:border-orange-800",
     text: "text-orange-700 dark:text-orange-300",
-    dot: "bg-orange-500",
+    dot: "bg-orange-500 dark:bg-orange-300",
   },
   "Complete": {
     bg: "bg-green-50 dark:bg-green-950",
     border: "border-green-200 dark:border-green-800",
     text: "text-green-700 dark:text-green-300",
-    dot: "bg-green-500",
+    dot: "bg-green-500 dark:bg-green-300",
   },
 };
 
@@ -43,7 +43,7 @@ const defaultColorParts: StageColorParts = {
   bg: "bg-gray-50 dark:bg-gray-900",
   border: "border-gray-200 dark:border-gray-700",
   text: "text-gray-700 dark:text-gray-300",
-  dot: "bg-gray-500",
+  dot: "bg-gray-500 dark:bg-gray-300",
 };
 
 const cancelledColorClass = "bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800";
