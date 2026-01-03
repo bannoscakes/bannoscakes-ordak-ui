@@ -9,6 +9,12 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const VALID_THEMES: readonly Theme[] = ["light", "dark", "system"] as const;
+
+const isValidTheme = (value: string | null): value is Theme => {
+  return value !== null && VALID_THEMES.includes(value as Theme);
+};
+
 const applyThemeClass = (isDark: boolean) => {
   const root = document.documentElement;
   root.classList.remove("dark");
@@ -20,7 +26,8 @@ const applyThemeClass = (isDark: boolean) => {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("theme") as Theme) || "light";
+      const stored = localStorage.getItem("theme");
+      return isValidTheme(stored) ? stored : "light";
     }
     return "light";
   });
