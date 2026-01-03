@@ -29,32 +29,32 @@ export function MetricCards({ store }: MetricCardsProps) {
         value: stats.total_orders?.toString() || "0",
         subtitle: `${stats.unassigned_orders || 0} unassigned`,
         icon: TrendingUp,
-        bg: "bg-blue-50",
-        iconColor: "text-blue-600"
+        bg: "bg-blue-50 dark:bg-blue-950",
+        iconColor: "text-blue-600 dark:text-blue-400"
       },
       {
         title: "Completed",
         value: stats.completed_orders?.toString() || "0",
         subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
         icon: CheckCircle,
-        bg: "bg-green-50",
-        iconColor: "text-green-600"
+        bg: "bg-green-50 dark:bg-green-950",
+        iconColor: "text-green-600 dark:text-green-400"
       },
       {
         title: "In Production",
         value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
         subtitle: `${stats.unassigned_orders || 0} unassigned`,
         icon: Clock,
-        bg: "bg-orange-50",
-        iconColor: "text-orange-600"
+        bg: "bg-orange-50 dark:bg-orange-950",
+        iconColor: "text-orange-600 dark:text-orange-400"
       },
       {
         title: "By Stage",
         value: `${stats.filling_count || 0}/${stats.decorating_count || 0}`,
         subtitle: "Filling/Decorating",
         icon: Zap,
-        bg: "bg-purple-50",
-        iconColor: "text-purple-600"
+        bg: "bg-purple-50 dark:bg-purple-950",
+        iconColor: "text-purple-600 dark:text-purple-400"
       }
     ];
   }, [stats]);
@@ -66,32 +66,32 @@ export function MetricCards({ store }: MetricCardsProps) {
       value: "0",
       subtitle: "No data available",
       icon: TrendingUp,
-      bg: "bg-blue-50",
-      iconColor: "text-blue-600"
+      bg: "bg-blue-50 dark:bg-blue-950",
+      iconColor: "text-blue-600 dark:text-blue-400"
     },
     {
       title: "Completed Today",
       value: "0",
-      subtitle: "No data available", 
+      subtitle: "No data available",
       icon: CheckCircle,
-      bg: "bg-green-50",
-      iconColor: "text-green-600"
+      bg: "bg-green-50 dark:bg-green-950",
+      iconColor: "text-green-600 dark:text-green-400"
     },
     {
       title: "In Production",
       value: "0",
       subtitle: "No data available",
       icon: Clock,
-      bg: "bg-orange-50",
-      iconColor: "text-orange-600"
+      bg: "bg-orange-50 dark:bg-orange-950",
+      iconColor: "text-orange-600 dark:text-orange-400"
     },
     {
       title: "Quality Score",
       value: "0%",
       subtitle: "No data available",
       icon: Zap,
-      bg: "bg-purple-50",
-      iconColor: "text-purple-600"
+      bg: "bg-purple-50 dark:bg-purple-950",
+      iconColor: "text-purple-600 dark:text-purple-400"
     }
   ];
 
