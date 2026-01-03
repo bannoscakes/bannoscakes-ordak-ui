@@ -5,7 +5,7 @@ import { cn } from "./utils";
 const Card = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <div
     ref={ref}
     data-slot="card"
@@ -13,7 +13,7 @@ const Card = React.forwardRef<
       "bg-card text-card-foreground flex flex-col gap-6 rounded-xl shadow-sm",
       className,
     )}
-    style={{ border: '1px solid var(--border)' }}
+    style={{ border: '1px solid var(--border)', ...style }}
     {...props}
   />
 ));
