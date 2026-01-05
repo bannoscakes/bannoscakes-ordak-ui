@@ -161,8 +161,8 @@ export function Header({ onSignOut }: HeaderProps) {
           {searchResult && (
             <div className="space-y-3">
               {/* Order Found */}
-              <div className="flex items-center gap-2 p-3 bg-green-500/10 rounded-lg">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 <div className="flex-1">
                   <div className="text-sm font-medium">Order {searchResult.orderNumber}</div>
                   <div className="text-xs text-muted-foreground">{searchResult.productTitle}</div>

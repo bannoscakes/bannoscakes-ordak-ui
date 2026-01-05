@@ -70,8 +70,8 @@ const calculatePriority = (dueDate: string): 'High' | 'Medium' | 'Low' => {
 const getPriorityColor = (priority: string) => {
   const colors = {
     "High": "bg-destructive/15 text-destructive border-destructive/30",
-    "Medium": "bg-yellow-500/15 text-yellow-700 border-yellow-500/30",
-    "Low": "bg-green-500/15 text-green-700 border-green-500/30"
+    "Medium": "bg-warning/15 text-warning border-warning/30",
+    "Low": "bg-success/15 text-success border-success/30"
   };
   return colors[priority as keyof typeof colors] || "bg-muted text-muted-foreground";
 };
