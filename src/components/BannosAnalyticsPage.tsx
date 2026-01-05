@@ -156,7 +156,6 @@ export function BannosAnalyticsPage() {
               variant={dateRange === range ? "default" : "outline"}
               size="sm"
               onClick={() => setDateRange(range)}
-              className=""
             >
               {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
             </Button>

@@ -71,7 +71,7 @@ const getPriorityColor = (priority: string) => {
   const colors = {
     "High": "bg-destructive/15 text-destructive border-destructive/30",
     "Medium": "bg-yellow-500/15 text-yellow-700 border-yellow-500/30",
-    "Low": "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+    "Low": "bg-green-500/15 text-green-700 border-green-500/30"
   };
   return colors[priority as keyof typeof colors] || "bg-muted text-muted-foreground";
 };
