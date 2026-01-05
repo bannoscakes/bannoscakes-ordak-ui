@@ -196,7 +196,7 @@ export function Header({ onSignOut }: HeaderProps) {
                     {searchResult.storage || "Not Set"}
                   </div>
                   {searchResult.stage === 'Complete' && !searchResult.storage && (
-                    <div className="text-xs text-amber-600 mt-1">⚠️ Complete but storage not set</div>
+                    <div className="text-xs text-warning mt-1">⚠️ Complete but storage not set</div>
                   )}
                 </div>
               )}
