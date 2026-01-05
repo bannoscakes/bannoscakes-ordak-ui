@@ -119,12 +119,12 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
                           </span>
                         )}
 
-                        {/* Bubble */}
+                        {/* Bubble - blue color intentionally kept as standard messaging UX pattern */}
                         <div
                           className={cn(
                             "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md rounded-full",
                             isOwn
-                              ? "bg-primary text-primary-foreground"
+                              ? "bg-blue-500 text-white"
                               : "bg-muted dark:bg-muted/80"
                           )}
                         >
@@ -169,11 +169,12 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
               className="rounded-full bg-muted/50 border-0 focus-visible:ring-1 px-4"
             />
           </div>
+          {/* Send button matches chat bubble color - standard messaging UX */}
           <Button
             onClick={send}
             disabled={!draft.trim()}
             size="icon"
-            className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+            className="h-10 w-10 rounded-full bg-blue-500 hover:bg-blue-600 disabled:bg-muted disabled:text-muted-foreground"
           >
             <Send className="h-4 w-4" />
           </Button>
