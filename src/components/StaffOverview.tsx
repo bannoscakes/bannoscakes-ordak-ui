@@ -49,7 +49,7 @@ export function StaffOverview() {
     return (
       <Card className="p-6">
         <div className="text-center text-muted-foreground">
-          <p>Failed to load staff data</p>
+          <p>Failed to load {staffError ? 'staff information' : 'order counts'}</p>
         </div>
       </Card>
     );
@@ -136,15 +136,6 @@ export function StaffOverview() {
                 </div>
               )}
             </div>
-
-            {member.role && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground mb-2">Role</p>
-                <Badge variant="secondary" className="text-xs">
-                  {member.role}
-                </Badge>
-              </div>
-            )}
           </div>
         ))}
       </div>
