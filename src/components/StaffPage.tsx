@@ -101,14 +101,14 @@ export function StaffPage() {
   );
 
   const getStatusBadge = (status: string) => {
-    return status === "Active" 
-      ? <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
-      : <Badge className="bg-blue-100 text-blue-700 border-blue-200">Approved</Badge>;
+    return status === "Active"
+      ? <Badge className="bg-success/15 text-success border-success/30">Active</Badge>
+      : <Badge className="bg-primary/15 text-primary border-primary/30">Approved</Badge>;
   };
 
   const getOnShiftBadge = (onShift: boolean) => {
-    return onShift 
-      ? <Badge className="bg-green-100 text-green-700 border-green-200">On Shift</Badge>
+    return onShift
+      ? <Badge className="bg-success/15 text-success border-success/30">On Shift</Badge>
       : <Badge variant="outline">Off Shift</Badge>;
   };
 
@@ -227,7 +227,7 @@ export function StaffPage() {
 
       {/* Shift status warning */}
       {isShiftsError && (
-        <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+        <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg text-warning">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span className="text-sm">Unable to load shift data. On Shift status may be inaccurate.</span>
         </div>

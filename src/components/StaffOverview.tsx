@@ -8,13 +8,13 @@ import { useStaffWithShiftStatus, useStaffOrderCounts } from "../hooks/useDashbo
 const getStatusColor = (status: string) => {
   switch (status) {
     case "On Shift":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-success/15 text-success border-success/30";
     case "On Break":
-      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      return "bg-warning/15 text-warning border-warning/30";
     case "Off Shift":
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-muted text-muted-foreground border-border";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 };
 
@@ -74,15 +74,15 @@ export function StaffOverview() {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="text-center">
-          <p className="text-lg font-semibold text-green-600">{onShiftCount}</p>
+          <p className="text-lg font-semibold text-success">{onShiftCount}</p>
           <p className="text-xs text-muted-foreground">On Shift</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-semibold text-yellow-600">{onBreakCount}</p>
+          <p className="text-lg font-semibold text-warning">{onBreakCount}</p>
           <p className="text-xs text-muted-foreground">On Break</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-semibold text-gray-600">{offShiftCount}</p>
+          <p className="text-lg font-semibold text-muted-foreground">{offShiftCount}</p>
           <p className="text-xs text-muted-foreground">Off Shift</p>
         </div>
       </div>
