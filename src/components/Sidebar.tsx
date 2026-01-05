@@ -67,8 +67,7 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className={`p-2 rounded-md ${collapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2' : 'cursor-default'}`}
-              style={{ backgroundColor: '#FF6B00' }}
+              className={`p-2 rounded-md bg-orange-500 ${collapsed ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2' : 'cursor-default'}`}
               onClick={collapsed ? () => onCollapse(false) : undefined}
               tabIndex={collapsed ? 0 : -1}
               aria-label="Expand sidebar"

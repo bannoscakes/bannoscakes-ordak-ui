@@ -37,6 +37,9 @@ export function BarcodeGenerator({
         }
 
         // Generate Code 128 barcode
+        // Note: Colors are intentionally hardcoded (white bg, black lines) for reliable
+        // barcode scanning. High contrast black-on-white is required for scanner compatibility
+        // and should NOT adapt to dark mode themes.
         JsBarcode(canvas, orderId, {
           format: "CODE128",
           width: 2,
@@ -54,7 +57,10 @@ export function BarcodeGenerator({
         if (canvas) {
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.fillStyle = '#ff0000';
+            // Read destructive color from CSS variable for theme consistency
+            const destructiveColor = getComputedStyle(document.documentElement)
+              .getPropertyValue('--destructive').trim() || '#ff0000';
+            ctx.fillStyle = destructiveColor;
             ctx.font = '14px Arial';
             ctx.fillText('Barcode Error', 10, 40);
           }
@@ -173,24 +179,23 @@ export function BarcodeGenerator({
 
   return (
     <div className={`barcode-generator ${className}`}>
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm w-full">
-        
+      <div className="bg-background p-4 rounded-lg border border-border shadow-sm w-full">
+
         {/* Barcode Canvas */}
         <div className="flex flex-col items-center mb-4">
-          <canvas 
-            ref={canvasRef} 
-            className="border border-gray-300 max-w-full"
+          <canvas
+            ref={canvasRef}
+            className="border border-border max-w-full bg-white"
             width={280}
             height={80}
-            style={{ backgroundColor: '#f0f0f0' }}
           />
         </div>
-        
+
         {/* Order Information */}
         <div className="text-center mb-4">
-          <div className="font-bold text-base text-gray-900 truncate">{orderId}</div>
-          <div className="text-sm text-gray-600 mt-1 truncate">{productTitle}</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="font-bold text-base text-foreground truncate">{orderId}</div>
+          <div className="text-sm text-muted-foreground mt-1 truncate">{productTitle}</div>
+          <div className="text-xs text-muted-foreground mt-1">
             Due: {dueDate ? formatDate(dueDate) : 'No date'}
           </div>
         </div>

@@ -156,8 +156,8 @@ export function StaffAnalyticsPage() {
       change: "",
       trend: "neutral" as const,
       icon: Users,
-      color: isStaffError ? "text-destructive" : "text-blue-600",
-      bg: isStaffError ? "bg-red-50" : "bg-blue-50"
+      color: isStaffError ? "text-destructive" : "text-primary",
+      bg: isStaffError ? "bg-destructive/10" : "bg-primary/10"
     },
     {
       title: "Avg Productivity",
@@ -165,8 +165,8 @@ export function StaffAnalyticsPage() {
       change: "",
       trend: "neutral" as const,
       icon: Target,
-      color: "text-green-600",
-      bg: "bg-green-50"
+      color: "text-success",
+      bg: "bg-success/10"
     },
     {
       title: "Attendance Rate",
@@ -483,15 +483,15 @@ export function StaffAnalyticsPage() {
                   {isEnabled ? (
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-green-600">88</p>
+                        <p className="text-2xl font-semibold text-success">88</p>
                         <p className="text-sm text-muted-foreground">Present</p>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-red-600">4</p>
+                        <p className="text-2xl font-semibold text-destructive">4</p>
                         <p className="text-sm text-muted-foreground">Absent</p>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-orange-600">2</p>
+                        <p className="text-2xl font-semibold text-warning">2</p>
                         <p className="text-sm text-muted-foreground">Late</p>
                       </div>
                     </div>
