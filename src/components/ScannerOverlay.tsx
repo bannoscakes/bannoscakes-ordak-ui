@@ -204,7 +204,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
         <Card className="w-full max-w-md p-6 space-y-6">
           <div className="text-center space-y-2">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+            <CheckCircle className="h-12 w-12 text-success mx-auto" />
             <h3 className="text-lg font-medium">Confirm {actionVerbCapitalized}</h3>
             <p className="text-sm text-muted-foreground">
               {isStartAction() ? 'Start' : 'Mark'} <span className="font-medium">{displayOrderNumber}</span> <span className="font-medium">{order.stage}</span> stage {actionVerb}?
@@ -237,7 +237,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
         <Card className="w-full max-w-md p-6 space-y-6">
           <div className="text-center space-y-2">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+            <CheckCircle className="h-16 w-16 text-success mx-auto" />
             <h3 className="text-lg font-medium">Stage {isStartAction() ? 'Started' : 'Completed'}!</h3>
             <p className="text-sm text-muted-foreground">
               {displayOrderNumber} - {order.stage} stage has been {actionVerbPast}
@@ -289,7 +289,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       {cameraFailed && scanState === 'scanning' && (
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/90 backdrop-blur-sm">
           <Card className="p-4 space-y-4">
-            <div className="flex items-center gap-2 text-amber-600">
+            <div className="flex items-center gap-2 text-warning">
               <CameraOff className="h-5 w-5" />
               <span className="text-sm font-medium">Camera unavailable - enter barcode manually</span>
             </div>

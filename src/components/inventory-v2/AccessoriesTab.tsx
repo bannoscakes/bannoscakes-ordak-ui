@@ -347,7 +347,7 @@ export function AccessoriesTab() {
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                <TableCell colSpan={8} className="text-center py-8 text-destructive">
                   Failed to load accessories. Please refresh.
                 </TableCell>
               </TableRow>
@@ -375,9 +375,9 @@ export function AccessoriesTab() {
                     </TableCell>
                     <TableCell className="text-right">
                       {accessory.is_out_of_stock ? (
-                        <span className="text-red-600 font-medium">0</span>
+                        <span className="text-destructive font-medium">0</span>
                       ) : accessory.is_low_stock ? (
-                        <span className="text-amber-600 font-medium flex items-center justify-end gap-1">
+                        <span className="text-warning font-medium flex items-center justify-end gap-1">
                           <AlertTriangle className="h-4 w-4" />
                           {accessory.current_stock}
                         </span>

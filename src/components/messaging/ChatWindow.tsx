@@ -124,7 +124,7 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
                           className={cn(
                             "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md rounded-full",
                             isOwn
-                              ? "bg-blue-500 text-white"
+                              ? "bg-primary text-primary-foreground"
                               : "bg-muted dark:bg-muted/80"
                           )}
                         >
@@ -146,8 +146,8 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
           ) : (
             /* Empty state */
             <div className="flex flex-col items-center justify-center h-64 text-center px-8">
-              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
-                <MessageSquare className="h-8 w-8 text-blue-500" />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <MessageSquare className="h-8 w-8 text-primary" />
               </div>
               <h3 className="font-medium text-foreground mb-1">No messages yet</h3>
               <p className="text-sm text-muted-foreground">Send a message to start the conversation</p>
@@ -173,7 +173,7 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
             onClick={send}
             disabled={!draft.trim()}
             size="icon"
-            className="h-10 w-10 rounded-full bg-blue-500 hover:bg-blue-600 disabled:bg-muted disabled:text-muted-foreground"
+            className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
           >
             <Send className="h-4 w-4" />
           </Button>

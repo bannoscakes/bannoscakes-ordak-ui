@@ -429,8 +429,8 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                 <TableCell>${record.hourlyRate.toFixed(2)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-green-600">
+                    <DollarSign className="h-4 w-4 text-success" />
+                    <span className="font-medium text-success">
                       ${record.totalPay.toFixed(2)}
                     </span>
                   </div>
@@ -511,7 +511,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                   </div>
                   <div>
                     <p className="text-muted-foreground">Total Pay</p>
-                    <p className="font-medium text-green-600">${selectedStaff.totalPay.toFixed(2)}</p>
+                    <p className="font-medium text-success">${selectedStaff.totalPay.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                   type="number"
                   value={editingEntry.breakMinutes}
                   disabled
-                  className="bg-gray-100"
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Auto-calculated from break records</p>
               </div>
@@ -574,7 +574,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
                   step="0.25"
                   value={editingEntry.netHours}
                   disabled
-                  className="bg-gray-100"
+                  className="bg-muted"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Auto-calculated from shift and breaks</p>
               </div>
