@@ -209,12 +209,12 @@ export function CakeToppersTab() {
 
   const getStockStatus = (topper: CakeTopper) => {
     if (topper.is_out_of_stock) {
-      return { label: 'Out of Stock', className: 'bg-red-100 text-red-700 border-red-200' };
+      return { label: 'Out of Stock', className: 'bg-destructive/15 text-destructive border-destructive/30' };
     }
     if (topper.is_low_stock) {
-      return { label: 'Low Stock', className: 'bg-amber-100 text-amber-700 border-amber-200' };
+      return { label: 'Low Stock', className: 'bg-warning/15 text-warning border-warning/30' };
     }
-    return { label: 'In Stock', className: 'bg-green-100 text-green-700 border-green-200' };
+    return { label: 'In Stock', className: 'bg-success/15 text-success border-success/30' };
   };
 
   const lowStockCount = toppers.filter(t => t.is_low_stock && t.is_active).length;
@@ -224,10 +224,10 @@ export function CakeToppersTab() {
     <div className="space-y-4">
       {/* Alert Banner */}
       {(lowStockCount > 0 || outOfStockCount > 0) && (
-        <Card className="p-4 border-amber-200 bg-amber-50">
+        <Card className="p-4 border-warning/30 bg-warning/10">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <span className="text-amber-800 font-medium">
+            <AlertTriangle className="h-5 w-5 text-warning" />
+            <span className="text-warning font-medium">
               {outOfStockCount > 0 && `${outOfStockCount} topper${outOfStockCount > 1 ? 's' : ''} out of stock`}
               {outOfStockCount > 0 && lowStockCount > 0 && ', '}
               {lowStockCount > 0 && `${lowStockCount} topper${lowStockCount > 1 ? 's' : ''} low on stock`}
@@ -280,7 +280,7 @@ export function CakeToppersTab() {
               </TableRow>
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                <TableCell colSpan={8} className="text-center py-8 text-destructive">
                   Failed to load cake toppers. Please refresh.
                 </TableCell>
               </TableRow>
@@ -469,7 +469,7 @@ export function CakeToppersTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(topper)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

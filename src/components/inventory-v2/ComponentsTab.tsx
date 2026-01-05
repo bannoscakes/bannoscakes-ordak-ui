@@ -203,16 +203,16 @@ export function ComponentsTab() {
     <div className="space-y-4">
       {/* Low Stock Alert */}
       {lowStockCount > 0 && (
-        <Card className="p-4 border-amber-200 bg-amber-50">
+        <Card className="p-4 border-warning/30 bg-warning/10">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <span className="text-amber-800 font-medium">
+            <AlertTriangle className="h-5 w-5 text-warning" />
+            <span className="text-warning font-medium">
               {lowStockCount} component{lowStockCount > 1 ? 's are' : ' is'} low on stock
             </span>
             <Button
               variant="outline"
               size="sm"
-              className="ml-auto border-amber-300 text-amber-700 hover:bg-amber-100"
+              className="ml-auto border-warning/30 text-warning hover:bg-warning/10"
               onClick={() => setCategoryFilter('all')}
             >
               View All
@@ -425,7 +425,7 @@ export function ComponentsTab() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-10 w-10 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="h-10 w-10 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         onClick={() => handleDelete(component)}
                       >
                         <Trash2 className="h-4 w-4" />

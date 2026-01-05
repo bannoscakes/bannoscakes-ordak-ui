@@ -208,28 +208,28 @@ export function QuickActions({ store }: QuickActionsProps) {
             {searchResult && (
               <div className="space-y-3">
                 {/* Order Found */}
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
                   <div className="flex-1">
                     <div className="text-sm font-medium">Order {searchResult.orderNumber}</div>
-                    <div className="text-xs text-gray-600">{searchResult.productTitle}</div>
-                    <div className="text-xs text-gray-600">{searchResult.customerName}</div>
+                    <div className="text-xs text-muted-foreground">{searchResult.productTitle}</div>
+                    <div className="text-xs text-muted-foreground">{searchResult.customerName}</div>
                   </div>
                 </div>
 
                 {/* Current Stage & Status */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <div className="bg-muted/30 border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs text-slate-600 font-medium">Current Stage</div>
+                    <div className="text-xs text-muted-foreground font-medium">Current Stage</div>
                     <Badge variant="outline">{searchResult.stage}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-slate-600 font-medium">Store</div>
+                    <div className="text-xs text-muted-foreground font-medium">Store</div>
                     <span className="text-xs font-medium">{searchResult.store}</span>
                   </div>
                   {searchResult.assigneeName && (
                     <div className="flex items-center justify-between mt-2">
-                      <div className="text-xs text-slate-600 font-medium">Assigned to</div>
+                      <div className="text-xs text-muted-foreground font-medium">Assigned to</div>
                       <span className="text-xs font-medium">{searchResult.assigneeName}</span>
                     </div>
                   )}
@@ -237,13 +237,13 @@ export function QuickActions({ store }: QuickActionsProps) {
 
                 {/* Storage Location - PROMINENT (if set or Complete) */}
                 {(searchResult.storage || searchResult.stage === 'Complete') && (
-                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                    <div className="text-xs text-blue-700 font-medium mb-1">Storage Location</div>
-                    <div className="text-lg font-bold text-blue-900">
+                  <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-4">
+                    <div className="text-xs text-primary font-medium mb-1">Storage Location</div>
+                    <div className="text-lg font-bold text-foreground">
                       {searchResult.storage || "Not Set"}
                     </div>
                     {searchResult.stage === 'Complete' && !searchResult.storage && (
-                      <div className="text-xs text-orange-600 mt-1">⚠️ Complete but storage not set</div>
+                      <div className="text-xs text-warning mt-1">⚠️ Complete but storage not set</div>
                     )}
                   </div>
                 )}
@@ -259,8 +259,8 @@ export function QuickActions({ store }: QuickActionsProps) {
             )}
 
             {searchResult === null && searchValue && !searchLoading && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-red-600" />
+              <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-destructive" />
                 <span className="text-sm">No order found for "{searchValue}". Check the number and try again.</span>
               </div>
             )}
