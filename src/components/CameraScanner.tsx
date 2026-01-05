@@ -151,15 +151,15 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
         {/* Scanning Overlay */}
         {isScanning && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-64 h-32 border-2 border-green-500 rounded-lg relative">
-              <div className="absolute -top-1 -left-1 w-8 h-8 border-l-2 border-t-2 border-green-500"></div>
-              <div className="absolute -top-1 -right-1 w-8 h-8 border-r-2 border-t-2 border-green-500"></div>
-              <div className="absolute -bottom-1 -left-1 w-8 h-8 border-l-2 border-b-2 border-green-500"></div>
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 border-r-2 border-b-2 border-green-500"></div>
-              
+            <div className="w-64 h-32 border-2 border-success rounded-lg relative">
+              <div className="absolute -top-1 -left-1 w-8 h-8 border-l-2 border-t-2 border-success"></div>
+              <div className="absolute -top-1 -right-1 w-8 h-8 border-r-2 border-t-2 border-success"></div>
+              <div className="absolute -bottom-1 -left-1 w-8 h-8 border-l-2 border-b-2 border-success"></div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 border-r-2 border-b-2 border-success"></div>
+
               {/* Scanning line animation */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full h-0.5 bg-green-500 animate-pulse"></div>
+                <div className="w-full h-0.5 bg-success animate-pulse"></div>
               </div>
             </div>
           </div>

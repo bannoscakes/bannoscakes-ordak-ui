@@ -346,7 +346,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
               </Badge>
             )}
             <div
-              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-destructive'}`}
               title={isConnected ? 'Connected' : 'Disconnected'}
             />
           </div>
@@ -428,7 +428,7 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
                   <h4 className="font-medium">Conversations</h4>
                   {/* Connection status - visible in both dialog and non-dialog expanded mode */}
                   <div
-                    className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                    className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-destructive'}`}
                     title={isConnected ? 'Connected' : 'Disconnected'}
                   />
                 </div>
@@ -501,8 +501,8 @@ export function MainDashboardMessaging({ onClose, initialConversationId }: MainD
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center max-w-xs px-6">
-                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
-                    <MessageSquare className="h-8 w-8 text-blue-500" />
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="font-medium text-foreground mb-1">Select a conversation</h3>
                   <p className="text-sm text-muted-foreground">Choose a conversation to start messaging</p>

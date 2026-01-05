@@ -287,7 +287,7 @@ export function MessagesPage() {
               <h2>Messages</h2>
               {unreadCount > 0 && <Badge variant="destructive" className="text-xs">{unreadCount}</Badge>}
               <div
-                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-success" : "bg-destructive"}`}
                 title={isConnected ? "Connected" : "Disconnected"}
               />
             </div>
@@ -321,8 +321,8 @@ export function MessagesPage() {
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center max-w-sm px-6">
-              <div className="w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-6">
-                <MessageSquare className="h-10 w-10 text-blue-500" />
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                <MessageSquare className="h-10 w-10 text-primary" />
               </div>
               <h3 className="text-lg font-medium text-foreground mb-2">Select a conversation</h3>
               <p className="text-sm text-muted-foreground">Choose a conversation from the sidebar or start a new one to begin messaging</p>

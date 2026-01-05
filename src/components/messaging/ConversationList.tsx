@@ -117,7 +117,7 @@ export function ConversationList({
                     </h4>
                     {conversation.isPinned && <Pin className="h-3 w-3 text-muted-foreground shrink-0" />}
                     {conversation.isOnline && (
-                      <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" title="Online" />
+                      <div className="w-2 h-2 bg-success rounded-full shrink-0" title="Online" />
                     )}
                   </div>
                   {lastTs && (

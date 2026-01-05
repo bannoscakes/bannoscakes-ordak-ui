@@ -60,10 +60,10 @@ function getStageBadge(stage: string, cancelledAt: string | null) {
 
 function getDeliveryMethodBadge(method: string | undefined) {
   if (method === "Pickup") {
-    return <Badge variant="outline" className="border-transparent bg-blue-100 text-blue-800">Pickup</Badge>;
+    return <Badge variant="outline" className="border-transparent bg-primary/15 text-primary">Pickup</Badge>;
   }
   if (method === "Delivery") {
-    return <Badge variant="outline" className="border-transparent bg-amber-100 text-amber-800">Delivery</Badge>;
+    return <Badge variant="outline" className="border-transparent bg-warning/15 text-warning">Delivery</Badge>;
   }
   return null; // Hide unknown delivery method
 }

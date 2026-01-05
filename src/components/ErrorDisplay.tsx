@@ -64,12 +64,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   );
 
   const renderAlert = () => (
-    <Alert className={`${severity === 'warning' ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-destructive/20 bg-destructive/10'} ${className}`}>
-      <AlertTriangle className={`h-4 w-4 ${severity === 'warning' ? 'text-yellow-600' : 'text-destructive'}`} />
-      <AlertTitle className={severity === 'warning' ? 'text-yellow-700' : 'text-destructive'}>
+    <Alert className={`${severity === 'warning' ? 'border-warning/30 bg-warning/10' : 'border-destructive/20 bg-destructive/10'} ${className}`}>
+      <AlertTriangle className={`h-4 w-4 ${severity === 'warning' ? 'text-warning' : 'text-destructive'}`} />
+      <AlertTitle className={severity === 'warning' ? 'text-warning' : 'text-destructive'}>
         {title || 'Error'}
       </AlertTitle>
-      <AlertDescription className={severity === 'warning' ? 'text-yellow-600' : 'text-destructive'}>
+      <AlertDescription className={severity === 'warning' ? 'text-warning' : 'text-destructive'}>
         <div className="space-y-2">
           <p>{message}</p>
           
