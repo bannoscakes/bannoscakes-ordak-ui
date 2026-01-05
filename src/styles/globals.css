@@ -309,4 +309,15 @@ html {
   .border-l-destructive {
     border-left-color: var(--destructive);
   }
+
+  /* Text opacity variants */
+  .text-warning\/80 {
+    color: color-mix(in oklab, var(--warning) 80%, transparent);
+  }
+  .text-destructive\/80 {
+    color: color-mix(in oklab, var(--destructive) 80%, transparent);
+  }
+  .text-primary\/80 {
+    color: color-mix(in oklab, var(--primary) 80%, transparent);
+  }
 }
