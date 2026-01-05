@@ -178,9 +178,9 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
     switch (status) {
       case 'In Production': return 'bg-primary/15 text-primary';
       case 'Pending': return 'bg-muted text-muted-foreground';
-      case 'Quality Check': return 'bg-accent text-accent-foreground';
+      case 'Quality Check': return 'bg-warning/15 text-warning';
       case 'Completed': return 'bg-success/15 text-success';
-      case 'Scheduled': return 'bg-warning/15 text-warning';
+      case 'Scheduled': return 'bg-accent text-accent-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
