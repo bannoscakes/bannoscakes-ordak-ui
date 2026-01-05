@@ -57,7 +57,10 @@ export function BarcodeGenerator({
         if (canvas) {
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.fillStyle = '#ff0000';
+            // Read destructive color from CSS variable for theme consistency
+            const destructiveColor = getComputedStyle(document.documentElement)
+              .getPropertyValue('--destructive').trim() || '#ff0000';
+            ctx.fillStyle = destructiveColor;
             ctx.font = '14px Arial';
             ctx.fillText('Barcode Error', 10, 40);
           }
