@@ -25,7 +25,7 @@ export function StaffOverview() {
   // Create lookup map for order counts
   const orderCounts = useMemo(() => {
     if (!orderCountsData) return new Map<string, number>();
-    return new Map(orderCountsData.map(c => [c.staff_id, c.order_count]));
+    return new Map(orderCountsData.map(c => [c.user_id, c.order_count]));
   }, [orderCountsData]);
 
   const isLoading = staffLoading || countsLoading;

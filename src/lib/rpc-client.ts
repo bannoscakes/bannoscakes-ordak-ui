@@ -453,7 +453,7 @@ export async function getStaffWithShiftStatus(): Promise<StaffWithShiftStatus[]>
 }
 
 export interface StaffOrderCount {
-  staff_id: string;
+  user_id: string;
   order_count: number;
 }
 
