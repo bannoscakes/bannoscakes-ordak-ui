@@ -62,10 +62,10 @@ const navigationItems = [
 export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   return (
@@ -183,14 +183,14 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           size="sm"
           onClick={toggleTheme}
           className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {theme === "dark" ? (
+          {resolvedTheme === "dark" ? (
             <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
           ) : (
             <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
           )}
-          {!collapsed && <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+          {!collapsed && <span>{resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
         </Button>
       </div>
     </div>
