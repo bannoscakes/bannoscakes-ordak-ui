@@ -182,7 +182,7 @@ export function BarcodeGenerator({
         <div className="flex flex-col items-center mb-4">
           <canvas
             ref={canvasRef}
-            className="border border-border max-w-full bg-muted"
+            className="border border-border max-w-full bg-white"
             width={280}
             height={80}
           />
