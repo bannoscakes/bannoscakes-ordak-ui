@@ -294,7 +294,7 @@ export function StaffWorkspacePage({
   // Block UI until auth is ready
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-sm text-muted-foreground">Loading authentication...</div>
       </div>
     );
@@ -302,7 +302,7 @@ export function StaffWorkspacePage({
   
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-sm text-destructive">Please sign in to access the staff workspace.</div>
       </div>
     );
@@ -310,7 +310,7 @@ export function StaffWorkspacePage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#1E1E1E] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse">
           <div className="w-12 h-12 bg-muted rounded-lg mb-4 mx-auto"></div>
           <div className="h-4 bg-muted rounded w-32"></div>
@@ -320,7 +320,7 @@ export function StaffWorkspacePage({
   }
 
   return (
-    <div className="min-h-screen bg-[#1E1E1E]">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
