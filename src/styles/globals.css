@@ -335,8 +335,14 @@ html {
   .bg-destructive\/20 {
     background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
   }
+  .bg-destructive\/60 {
+    background-color: color-mix(in oklab, var(--destructive) 60%, transparent);
+  }
   .bg-destructive\/90 {
     background-color: color-mix(in oklab, var(--destructive) 90%, transparent);
+  }
+  .text-destructive\/90 {
+    color: color-mix(in oklab, var(--destructive) 90%, transparent);
   }
   .border-destructive {
     border-color: var(--destructive);
