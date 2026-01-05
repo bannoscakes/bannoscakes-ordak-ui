@@ -69,11 +69,11 @@ const calculatePriority = (dueDate: string): 'High' | 'Medium' | 'Low' => {
 
 const getPriorityColor = (priority: string) => {
   const colors = {
-    "High": "bg-red-100 text-red-700 border-red-200",
-    "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "Low": "bg-green-100 text-green-700 border-green-200"
+    "High": "bg-destructive/15 text-destructive border-destructive/30",
+    "Medium": "bg-yellow-500/15 text-yellow-700 border-yellow-500/30",
+    "Low": "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
   };
-  return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-700";
+  return colors[priority as keyof typeof colors] || "bg-muted text-muted-foreground";
 };
 
 export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: EditOrderDrawerProps) {

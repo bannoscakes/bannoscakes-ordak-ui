@@ -127,7 +127,7 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
           <select
             value={selectedDeviceId || ''}
             onChange={(e) => handleDeviceChange(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md bg-white text-black"
+            className="w-full p-2 border border-border rounded-md bg-background text-foreground"
             disabled={isScanning}
           >
             {devices.map((device) => (
@@ -191,16 +191,16 @@ export function CameraScanner({ onScan, onCameraFailed, isActive, className = ''
 
       {/* Error Display */}
       {error && (
-        <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-red-500" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mt-4 flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
       {/* Instructions */}
-      <div className="mt-4 text-center text-sm text-gray-600">
+      <div className="mt-4 text-center text-sm text-muted-foreground">
         <p>Position the barcode within the green frame</p>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Make sure the barcode is well-lit and clearly visible
         </p>
       </div>

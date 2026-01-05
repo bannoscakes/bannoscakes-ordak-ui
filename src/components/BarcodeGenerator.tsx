@@ -173,24 +173,23 @@ export function BarcodeGenerator({
 
   return (
     <div className={`barcode-generator ${className}`}>
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm w-full">
-        
+      <div className="bg-background p-4 rounded-lg border border-border shadow-sm w-full">
+
         {/* Barcode Canvas */}
         <div className="flex flex-col items-center mb-4">
-          <canvas 
-            ref={canvasRef} 
-            className="border border-gray-300 max-w-full"
+          <canvas
+            ref={canvasRef}
+            className="border border-border max-w-full bg-muted"
             width={280}
             height={80}
-            style={{ backgroundColor: '#f0f0f0' }}
           />
         </div>
-        
+
         {/* Order Information */}
         <div className="text-center mb-4">
-          <div className="font-bold text-base text-gray-900 truncate">{orderId}</div>
-          <div className="text-sm text-gray-600 mt-1 truncate">{productTitle}</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="font-bold text-base text-foreground truncate">{orderId}</div>
+          <div className="text-sm text-muted-foreground mt-1 truncate">{productTitle}</div>
+          <div className="text-xs text-muted-foreground mt-1">
             Due: {dueDate ? formatDate(dueDate) : 'No date'}
           </div>
         </div>
