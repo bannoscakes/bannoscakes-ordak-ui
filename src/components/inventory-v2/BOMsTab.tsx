@@ -297,7 +297,7 @@ export function BOMsTab() {
               ))
             ) : bomsError ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-red-500">
+                <TableCell colSpan={6} className="text-center py-8 text-destructive">
                   <p>Failed to load BOMs. Please try again.</p>
                 </TableCell>
               </TableRow>
