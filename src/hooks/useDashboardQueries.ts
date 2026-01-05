@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getQueueStats, getUnassignedCounts, getQueue } from '../lib/rpc-client';
+import { getQueueStats, getUnassignedCounts, getQueue, getStaffWithShiftStatus, getStaffOrderCounts } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 // Auto-refresh interval for dashboard data (30 seconds)
@@ -80,6 +80,17 @@ export function usePrefetchStore() {
         sort_order: 'ASC',
       }),
     });
+
+    // Prefetch staff data (shared across stores)
+    queryClient.prefetchQuery({
+      queryKey: ['staffWithShiftStatus'],
+      queryFn: getStaffWithShiftStatus,
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: ['staffOrderCounts'],
+      queryFn: getStaffOrderCounts,
+    });
   };
 }
 
@@ -92,11 +103,13 @@ export function useInvalidateDashboard() {
 
   return async (store?: Store): Promise<void> => {
     if (store) {
-      // Refetch specific store queries
+      // Refetch specific store queries + staff data (shared across stores)
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['queueStats', store] }),
         queryClient.refetchQueries({ queryKey: ['unassignedCounts', store] }),
         queryClient.refetchQueries({ queryKey: ['recentOrders', store] }),
+        queryClient.refetchQueries({ queryKey: ['staffWithShiftStatus'] }),
+        queryClient.refetchQueries({ queryKey: ['staffOrderCounts'] }),
       ]);
     } else {
       // Refetch all dashboard queries
@@ -104,7 +117,35 @@ export function useInvalidateDashboard() {
         queryClient.refetchQueries({ queryKey: ['queueStats'] }),
         queryClient.refetchQueries({ queryKey: ['unassignedCounts'] }),
         queryClient.refetchQueries({ queryKey: ['recentOrders'] }),
+        queryClient.refetchQueries({ queryKey: ['staffWithShiftStatus'] }),
+        queryClient.refetchQueries({ queryKey: ['staffOrderCounts'] }),
       ]);
     }
   };
+}
+
+/**
+ * Hook for staff with shift status (On Shift, On Break, Off Shift)
+ * Used by: StaffOverview
+ */
+export function useStaffWithShiftStatus() {
+  return useQuery({
+    queryKey: ['staffWithShiftStatus'],
+    queryFn: getStaffWithShiftStatus,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Hook for staff order counts (active orders per staff)
+ * Used by: StaffOverview
+ */
+export function useStaffOrderCounts() {
+  return useQuery({
+    queryKey: ['staffOrderCounts'],
+    queryFn: getStaffOrderCounts,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
+  });
 }

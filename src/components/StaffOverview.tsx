@@ -1,9 +1,9 @@
-import { Users, Clock, MapPin, Phone } from "lucide-react";
+import { Users, Clock, MapPin, Phone, Package } from "lucide-react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
-import { useEffect, useState } from "react";
-import { getStaffWithShiftStatus, type StaffWithShiftStatus } from "../lib/rpc-client";
+import { useMemo } from "react";
+import { useStaffWithShiftStatus, useStaffOrderCounts } from "../hooks/useDashboardQueries";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -19,27 +19,18 @@ const getStatusColor = (status: string) => {
 };
 
 export function StaffOverview() {
-  const [staffData, setStaffData] = useState<StaffWithShiftStatus[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: staffData, isLoading: staffLoading, isError: staffError } = useStaffWithShiftStatus();
+  const { data: orderCountsData, isLoading: countsLoading, isError: countsError } = useStaffOrderCounts();
 
-  useEffect(() => {
-    fetchStaffData();
-  }, []);
+  // Create lookup map for order counts
+  const orderCounts = useMemo(() => {
+    if (!orderCountsData) return new Map<string, number>();
+    return new Map(orderCountsData.map(c => [c.user_id, c.order_count]));
+  }, [orderCountsData]);
 
-  const fetchStaffData = async () => {
-    try {
-      setLoading(true);
-      const staff = await getStaffWithShiftStatus();
-      setStaffData(staff);
-    } catch (error) {
-      console.error('Failed to fetch staff data:', error);
-      setStaffData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isLoading = staffLoading || countsLoading;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card className="p-6">
         <div className="animate-pulse space-y-4">
@@ -54,10 +45,22 @@ export function StaffOverview() {
     );
   }
 
+  if (staffError || countsError) {
+    return (
+      <Card className="p-6">
+        <div className="text-center text-muted-foreground">
+          <p>Failed to load {staffError ? 'staff information' : 'order counts'}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  const staff = staffData || [];
+
   // Calculate counts from real shift data
-  const onShiftCount = staffData.filter(s => s.shift_status === 'On Shift').length;
-  const onBreakCount = staffData.filter(s => s.shift_status === 'On Break').length;
-  const offShiftCount = staffData.filter(s => s.shift_status === 'Off Shift').length;
+  const onShiftCount = staff.filter(s => s.shift_status === 'On Shift').length;
+  const onBreakCount = staff.filter(s => s.shift_status === 'On Break').length;
+  const offShiftCount = staff.filter(s => s.shift_status === 'Off Shift').length;
 
   return (
     <Card className="p-6">
@@ -85,57 +88,54 @@ export function StaffOverview() {
       </div>
 
       <div className="space-y-4">
-        {staffData.map((staff) => (
-          <div key={staff.user_id} className="border border-border rounded-lg p-4">
+        {staff.map((member) => (
+          <div key={member.user_id} className="border border-border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{staff.full_name.charAt(0)}</span>
+                  <span className="text-sm font-medium">{member.full_name.charAt(0)}</span>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-foreground">{staff.full_name}</p>
-                  <p className="text-sm text-muted-foreground">{staff.role}</p>
+                  <p className="font-medium text-foreground">{member.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{member.role}</p>
                 </div>
               </div>
-              <Badge className={getStatusColor(staff.shift_status)}>
-                {staff.shift_status}
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 text-sm">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{orderCounts.get(member.user_id) || 0}</span>
+                </div>
+                <Badge className={getStatusColor(member.shift_status)}>
+                  {member.shift_status}
+                </Badge>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>{staff.shift_store || staff.store || 'No store assigned'}</span>
+                <span>{member.shift_store || member.store || 'No store assigned'}</span>
               </div>
-              {staff.phone && (
+              {member.phone && (
                 <div className="flex items-center space-x-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <span>{staff.phone}</span>
+                  <span>{member.phone}</span>
                 </div>
               )}
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
-                  {staff.shift_start
-                    ? `Started ${new Date(staff.shift_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  {member.shift_start
+                    ? `Started ${new Date(member.shift_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                     : 'Not clocked in'}
                 </span>
               </div>
-              {staff.email && (
+              {member.email && (
                 <div className="text-muted-foreground">
-                  <span className="font-medium">Email:</span> {staff.email}
+                  <span className="font-medium">Email:</span> {member.email}
                 </div>
               )}
             </div>
-
-            {staff.role && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground mb-2">Role</p>
-                <Badge variant="secondary" className="text-xs">
-                  {staff.role}
-                </Badge>
-              </div>
-            )}
           </div>
         ))}
       </div>

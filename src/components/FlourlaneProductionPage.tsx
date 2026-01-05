@@ -2,7 +2,8 @@ import { UnassignedStations } from "./UnassignedStations";
 import { ProductionStatus } from "./ProductionStatus";
 import { QueueTable } from "./QueueTable";
 import { MetricCards } from "./MetricCards";
-import { ProductionTimeline } from "./ProductionTimeline";
+// TODO: ProductionTimeline hidden - uses hardcoded mock data, needs real schedule integration
+// import { ProductionTimeline } from "./ProductionTimeline";
 import { StaffOverview } from "./StaffOverview";
 import { Button } from "./ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -51,7 +52,7 @@ export function FlourlaneProductionPage({ initialFilter, onBackToWorkspace }: Fl
         </div>
         <div className="col-span-12 lg:col-span-4 space-y-6">
           <StaffOverview />
-          <ProductionTimeline store="flourlane" />
+          {/* <ProductionTimeline store="flourlane" /> */}
         </div>
       </div>
     </div>
