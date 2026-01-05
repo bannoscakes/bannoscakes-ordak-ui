@@ -171,8 +171,8 @@ export function BannosMonitorPage() {
         <Card className="h-full">
           <CardContent className="p-6">
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="p-3 rounded-full bg-red-100 mb-4">
-                <AlertCircle className="h-8 w-8 text-red-600" />
+              <div className="p-3 rounded-full bg-destructive/15 mb-4">
+                <AlertCircle className="h-8 w-8 text-destructive" />
               </div>
               <h3 className="text-lg font-semibold mb-2">Failed to load queue</h3>
               <p className="text-muted-foreground mb-4 max-w-md">

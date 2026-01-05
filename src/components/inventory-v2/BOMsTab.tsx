@@ -229,10 +229,11 @@ export function BOMsTab() {
   };
 
   const getStoreBadgeClass = (store: string) => {
+    // Store colors are intentionally hardcoded for quick visual identification
     switch (store) {
       case 'bannos': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'flourlane': return 'bg-pink-100 text-pink-700 border-pink-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -334,7 +335,7 @@ export function BOMsTab() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(bom)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -499,7 +500,7 @@ export function BOMsTab() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="flex-shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        className="flex-shrink-0 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         onClick={() => handleRemoveItem(item.id)}
                       >
                         <X className="h-4 w-4" />

@@ -167,21 +167,21 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
   const getPriorityColor = (priority: string | null) => {
     switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'High': return 'bg-destructive/15 text-destructive';
+      case 'Medium': return 'bg-warning/15 text-warning';
+      case 'Low': return 'bg-success/15 text-success';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Production': return 'bg-blue-100 text-blue-800';
-      case 'Pending': return 'bg-gray-100 text-gray-800';
-      case 'Quality Check': return 'bg-purple-100 text-purple-800';
-      case 'Completed': return 'bg-green-100 text-green-800';
-      case 'Scheduled': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'In Production': return 'bg-primary/15 text-primary';
+      case 'Pending': return 'bg-muted text-muted-foreground';
+      case 'Quality Check': return 'bg-accent text-accent-foreground';
+      case 'Completed': return 'bg-success/15 text-success';
+      case 'Scheduled': return 'bg-warning/15 text-warning';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -346,7 +346,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
 
           {/* Bulk Actions */}
           {selectedItems.length > 0 && (
-            <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-4 p-3 bg-primary/10 rounded-lg">
               <span className="text-sm">
                 {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
               </span>
@@ -434,7 +434,7 @@ export function QueueTable({ store, initialFilter }: QueueTableProps) {
                     <div
                       key={item.id}
                       className={`p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer ${
-                        selectedItems.includes(item.id) ? 'border-blue-500 bg-blue-50' : ''
+                        selectedItems.includes(item.id) ? 'border-primary bg-primary/10' : ''
                       }`}
                       onClick={() => setSelectedOrder(item)}
                     >
