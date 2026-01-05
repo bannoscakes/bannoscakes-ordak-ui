@@ -450,7 +450,7 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
               />
             </div>
           </div>
-          <div className="mt-4 rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700">
+          <div className="mt-4 rounded-md bg-warning/10 border border-warning/30 px-4 py-3 text-xs text-warning">
             Warning: Enable only after BOMs and inventory counts are loaded. The system is dormant by default.
           </div>
         </Card>
@@ -476,16 +476,16 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
             </div>
 
             {connectionStatus === 'success' && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">Admin API token validated successfully.</p>
+              <div className="mb-4 p-3 bg-success/10 border border-success/30 rounded-lg">
+                <p className="text-sm text-success">Admin API token validated successfully.</p>
               </div>
             )}
 
             {connectionStatus === 'error' && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm text-red-700">Token validation failed. Check token and permissions.</p>
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <p className="text-sm text-destructive">Token validation failed. Check token and permissions.</p>
                 </div>
               </div>
             )}
@@ -537,26 +537,26 @@ export function SettingsPage({ store, onBack }: SettingsPageProps) {
             </div>
 
             {syncStatus === 'success' && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-700">Sync complete</p>
+              <div className="mb-4 p-3 bg-success/10 border border-success/30 rounded-lg">
+                <p className="text-sm text-success">Sync complete</p>
               </div>
             )}
 
             {syncStatus === 'error' && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <p className="text-sm text-red-700">Sync failed — <button className="underline">View Sync Log</button></p>
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <p className="text-sm text-destructive">Sync failed — <button className="underline">View Sync Log</button></p>
                 </div>
               </div>
             )}
 
             {isSyncing && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-4 p-4 bg-primary/10 border border-primary/30 rounded-lg">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-blue-700">Sync in progress...</span>
-                    <div className="text-xs text-blue-600">
+                    <span className="text-sm font-medium text-primary">Sync in progress...</span>
+                    <div className="text-xs text-primary/80">
                       Imported {syncProgress.imported} · Skipped {syncProgress.skipped} · Errors {syncProgress.errors}
                     </div>
                   </div>

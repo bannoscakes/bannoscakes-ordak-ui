@@ -194,10 +194,10 @@ export function StaffAssignmentModal({
               <Badge
                 variant="secondary"
                 className={`text-xs ${
-                  order.priority === 'High' ? 'bg-red-100 text-red-700' :
-                  order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                  order.priority === 'Low' ? 'bg-green-100 text-green-700' :
-                  'bg-gray-100 text-gray-700'
+                  order.priority === 'High' ? 'bg-destructive/15 text-destructive' :
+                  order.priority === 'Medium' ? 'bg-warning/15 text-warning' :
+                  order.priority === 'Low' ? 'bg-success/15 text-success' :
+                  'bg-muted text-muted-foreground'
                 }`}
               >
                 {order.priority || '-'}
@@ -205,7 +205,7 @@ export function StaffAssignmentModal({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due:</span>
-              <span className={order.dueDate ? '' : 'text-red-600 font-bold'}>{order.dueDate ? formatDate(order.dueDate) : 'No due date'}</span>
+              <span className={order.dueDate ? '' : 'text-destructive font-bold'}>{order.dueDate ? formatDate(order.dueDate) : 'No due date'}</span>
             </div>
           </div>
         </div>

@@ -80,33 +80,33 @@ const storeEquipment = {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "operational":
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
+      return <CheckCircle className="h-4 w-4 text-success" />;
     case "warning":
-      return <AlertTriangle className="h-4 w-4 text-orange-600" />;
+      return <AlertTriangle className="h-4 w-4 text-warning" />;
     case "offline":
-      return <XCircle className="h-4 w-4 text-red-600" />;
+      return <XCircle className="h-4 w-4 text-destructive" />;
     default:
-      return <CheckCircle className="h-4 w-4 text-gray-400" />;
+      return <CheckCircle className="h-4 w-4 text-muted-foreground" />;
   }
 };
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "operational":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-success/15 text-success border-success/30";
     case "warning":
-      return "bg-orange-100 text-orange-700 border-orange-200";
+      return "bg-warning/15 text-warning border-warning/30";
     case "offline":
-      return "bg-red-100 text-red-700 border-red-200";
+      return "bg-destructive/15 text-destructive border-destructive/30";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 };
 
 const getHealthColor = (health: number) => {
-  if (health >= 80) return "bg-green-500";
-  if (health >= 60) return "bg-orange-500";
-  return "bg-red-500";
+  if (health >= 80) return "bg-success";
+  if (health >= 60) return "bg-warning";
+  return "bg-destructive";
 };
 
 export function EquipmentStatus({ store }: EquipmentStatusProps) {
@@ -174,19 +174,19 @@ export function EquipmentStatus({ store }: EquipmentStatusProps) {
       <div className="mt-4 pt-4 border-t border-border">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-lg font-semibold text-green-600">
+            <p className="text-lg font-semibold text-success">
               {equipment.filter(item => item.status === "operational").length}
             </p>
             <p className="text-xs text-muted-foreground">Operational</p>
           </div>
           <div>
-            <p className="text-lg font-semibold text-orange-600">
+            <p className="text-lg font-semibold text-warning">
               {equipment.filter(item => item.status === "warning").length}
             </p>
             <p className="text-xs text-muted-foreground">Warning</p>
           </div>
           <div>
-            <p className="text-lg font-semibold text-red-600">
+            <p className="text-lg font-semibold text-destructive">
               {equipment.filter(item => item.status === "offline").length}
             </p>
             <p className="text-xs text-muted-foreground">Offline</p>

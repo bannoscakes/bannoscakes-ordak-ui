@@ -32,19 +32,19 @@ interface DaySchedule {
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'High': return 'text-red-600 bg-red-50 border-red-200';
-    case 'Medium': return 'text-orange-600 bg-orange-50 border-orange-200';
-    case 'Low': return 'text-green-600 bg-green-50 border-green-200';
-    default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    case 'High': return 'bg-destructive/15 text-destructive border-destructive/30';
+    case 'Medium': return 'bg-warning/15 text-warning border-warning/30';
+    case 'Low': return 'bg-success/15 text-success border-success/30';
+    default: return 'bg-muted text-muted-foreground border-border';
   }
 };
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'completed': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-    case 'in-progress': return <Clock className="h-4 w-4 text-orange-600" />;
-    case 'pending': return <AlertCircle className="h-4 w-4 text-gray-400" />;
-    default: return <AlertCircle className="h-4 w-4 text-gray-400" />;
+    case 'completed': return <CheckCircle2 className="h-4 w-4 text-success" />;
+    case 'in-progress': return <Clock className="h-4 w-4 text-warning" />;
+    case 'pending': return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
+    default: return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
   }
 };
 
@@ -124,7 +124,7 @@ function KitchenMonitor({ storeName, storeIcon: StoreIcon, weekData, primaryColo
                 {/* Orders List */}
                 <div className="flex-1 space-y-3 overflow-y-auto">
                   {day.orders.map((order) => (
-                    <Card key={order.id} className={`border-l-4 ${order.priority === 'High' ? 'border-l-red-500' : order.priority === 'Medium' ? 'border-l-orange-500' : 'border-l-green-500'} shadow-sm hover:shadow-md transition-shadow`}>
+                    <Card key={order.id} className={`border-l-4 ${order.priority === 'High' ? 'border-l-destructive' : order.priority === 'Medium' ? 'border-l-warning' : 'border-l-success'} shadow-sm hover:shadow-md transition-shadow`}>
                       <CardContent className="p-4">
                         <div className="space-y-2">
                           {/* Order Header */}
@@ -162,13 +162,13 @@ function KitchenMonitor({ storeName, storeIcon: StoreIcon, weekData, primaryColo
                               Qty: {order.quantity}
                             </span>
                             {order.status === 'in-progress' && (
-                              <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                              <div className="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
                             )}
                           </div>
 
                           {/* Special Notes */}
                           {order.specialNotes && (
-                            <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded border">
+                            <div className="text-xs text-primary bg-primary/10 p-2 rounded border border-primary/20">
                               {order.specialNotes}
                             </div>
                           )}

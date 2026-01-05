@@ -70,22 +70,22 @@ export const NetworkErrorRecovery: React.FC<NetworkErrorRecoveryProps> = ({
   // Show offline indicator
   if (!isOnline) {
     return (
-      <Card className={`border-orange-200 bg-orange-50 ${className}`}>
+      <Card className={`border-warning/30 bg-warning/10 ${className}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <WifiOff className="w-5 h-5 text-orange-600" />
-            <CardTitle className="text-lg text-orange-800">
+            <WifiOff className="w-5 h-5 text-warning" />
+            <CardTitle className="text-lg text-warning">
               Network Connection Lost
             </CardTitle>
           </div>
-          <CardDescription className="text-orange-700">
+          <CardDescription className="text-warning/80">
             You're currently offline. Some features may not work properly.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-orange-600 border-orange-300">
+              <Badge variant="outline" className="text-warning border-warning/30">
                 Offline
               </Badge>
               {retryCount > 0 && (
@@ -126,7 +126,7 @@ export const NetworkErrorRecovery: React.FC<NetworkErrorRecoveryProps> = ({
               )}
             </div>
             
-            <div className="text-xs text-orange-600 space-y-1">
+            <div className="text-xs text-warning space-y-1">
               <p>• Check your internet connection</p>
               <p>• Try refreshing the page</p>
               <p>• Contact support if the problem persists</p>
@@ -139,15 +139,15 @@ export const NetworkErrorRecovery: React.FC<NetworkErrorRecoveryProps> = ({
 
   // Show general network error (when online but having issues)
   return (
-    <Card className={`border-red-200 bg-red-50 ${className}`}>
+    <Card className={`border-destructive/30 bg-destructive/10 ${className}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
-          <CardTitle className="text-lg text-red-800">
+          <AlertTriangle className="w-5 h-5 text-destructive" />
+          <CardTitle className="text-lg text-destructive">
             Network Error
           </CardTitle>
         </div>
-        <CardDescription className="text-red-700">
+        <CardDescription className="text-destructive/80">
           There was a problem connecting to the server. Please try again.
         </CardDescription>
       </CardHeader>
