@@ -4,6 +4,7 @@ import { MetricCards } from "./MetricCards";
 import { UnassignedStations } from "./UnassignedStations";
 import { ProductionStatus } from "./ProductionStatus";
 import { RecentOrders } from "./RecentOrders";
+// TODO: ProductionTimeline hidden - uses hardcoded mock data, needs real schedule integration
 // import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
 // import { EquipmentStatus } from "./EquipmentStatus"; // Hidden - not in use

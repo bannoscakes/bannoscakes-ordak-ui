@@ -437,10 +437,19 @@ export interface StaffWithShiftStatus {
 }
 
 export async function getStaffWithShiftStatus(): Promise<StaffWithShiftStatus[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_staff_with_shift_status');
-  if (error) throw error;
-  return (data || []) as StaffWithShiftStatus[];
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_staff_with_shift_status');
+      if (error) throw error;
+      return (data || []) as StaffWithShiftStatus[];
+    },
+    {
+      operation: 'getStaffWithShiftStatus',
+      rpcName: 'get_staff_with_shift_status',
+      params: {}
+    }
+  );
 }
 
 export interface StaffOrderCount {

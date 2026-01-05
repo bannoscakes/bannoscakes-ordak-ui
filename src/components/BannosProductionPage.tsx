@@ -2,6 +2,7 @@ import { UnassignedStations } from "./UnassignedStations";
 import { ProductionStatus } from "./ProductionStatus";
 import { QueueTable } from "./QueueTable";
 import { MetricCards } from "./MetricCards";
+// TODO: ProductionTimeline hidden - uses hardcoded mock data, needs real schedule integration
 // import { ProductionTimeline } from "./ProductionTimeline";
 import { StaffOverview } from "./StaffOverview";
 import { Button } from "./ui/button";

@@ -1,4 +1,4 @@
-import { Users, Clock, MapPin, Phone, Briefcase } from "lucide-react";
+import { Users, Clock, MapPin, Phone, Package } from "lucide-react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
@@ -20,7 +20,7 @@ const getStatusColor = (status: string) => {
 
 export function StaffOverview() {
   const { data: staffData, isLoading: staffLoading, isError: staffError } = useStaffWithShiftStatus();
-  const { data: orderCountsData, isLoading: countsLoading } = useStaffOrderCounts();
+  const { data: orderCountsData, isLoading: countsLoading, isError: countsError } = useStaffOrderCounts();
 
   // Create lookup map for order counts
   const orderCounts = useMemo(() => {
@@ -45,7 +45,7 @@ export function StaffOverview() {
     );
   }
 
-  if (staffError) {
+  if (staffError || countsError) {
     return (
       <Card className="p-6">
         <div className="text-center text-muted-foreground">
@@ -102,7 +102,7 @@ export function StaffOverview() {
               </div>
               <div className="flex items-center space-x-2">
                 <div className="flex items-center space-x-1 text-sm">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <Package className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{orderCounts.get(member.user_id) || 0}</span>
                 </div>
                 <Badge className={getStatusColor(member.shift_status)}>
