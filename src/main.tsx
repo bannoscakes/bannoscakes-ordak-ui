@@ -12,6 +12,7 @@ import App from "./App";
 import "./index.css";
 import "./styles/globals.css";
 import { initErrorMonitoring, SentryErrorBoundary } from "./lib/error-monitoring";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 // Initialize error monitoring (Sentry)
 initErrorMonitoring();
@@ -23,7 +24,9 @@ if (import.meta.env.DEV) {
 
 createRoot(document.getElementById("root")!).render(
   <SentryErrorBoundary>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </SentryErrorBoundary>
 );
   

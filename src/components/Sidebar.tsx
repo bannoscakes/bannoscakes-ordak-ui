@@ -6,8 +6,11 @@ import {
   Clock,
   ChevronLeft,
   Cake,
-  ClipboardList
+  ClipboardList,
+  Sun,
+  Moon
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { OrdakLogo } from "./OrdakLogo";
@@ -59,9 +62,14 @@ const navigationItems = [
 export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
+  const { theme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
-    <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
+    <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col h-full ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -167,6 +175,24 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           );
         })}
       </nav>
+
+      {/* Theme toggle at bottom */}
+      <div className="mt-auto p-4 border-t border-sidebar-border">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleTheme}
+          className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? (
+            <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+          ) : (
+            <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+          )}
+          {!collapsed && <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+        </Button>
+      </div>
     </div>
   );
 }
