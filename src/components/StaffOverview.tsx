@@ -1,9 +1,9 @@
-import { Users, Clock, MapPin, Phone } from "lucide-react";
+import { Users, Clock, MapPin, Phone, Briefcase } from "lucide-react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { useEffect, useState } from "react";
-import { getStaffWithShiftStatus, type StaffWithShiftStatus } from "../lib/rpc-client";
+import { getStaffWithShiftStatus, getStaffOrderCounts, type StaffWithShiftStatus } from "../lib/rpc-client";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -20,6 +20,7 @@ const getStatusColor = (status: string) => {
 
 export function StaffOverview() {
   const [staffData, setStaffData] = useState<StaffWithShiftStatus[]>([]);
+  const [orderCounts, setOrderCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,11 +30,16 @@ export function StaffOverview() {
   const fetchStaffData = async () => {
     try {
       setLoading(true);
-      const staff = await getStaffWithShiftStatus();
+      const [staff, counts] = await Promise.all([
+        getStaffWithShiftStatus(),
+        getStaffOrderCounts()
+      ]);
       setStaffData(staff);
+      setOrderCounts(new Map(counts.map(c => [c.staff_id, c.order_count])));
     } catch (error) {
       console.error('Failed to fetch staff data:', error);
       setStaffData([]);
+      setOrderCounts(new Map());
     } finally {
       setLoading(false);
     }
@@ -97,9 +103,15 @@ export function StaffOverview() {
                   <p className="text-sm text-muted-foreground">{staff.role}</p>
                 </div>
               </div>
-              <Badge className={getStatusColor(staff.shift_status)}>
-                {staff.shift_status}
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 text-sm">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{orderCounts.get(staff.user_id) || 0}</span>
+                </div>
+                <Badge className={getStatusColor(staff.shift_status)}>
+                  {staff.shift_status}
+                </Badge>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

@@ -4,7 +4,7 @@ import { MetricCards } from "./MetricCards";
 import { UnassignedStations } from "./UnassignedStations";
 import { ProductionStatus } from "./ProductionStatus";
 import { RecentOrders } from "./RecentOrders";
-import { ProductionTimeline } from "./ProductionTimeline";
+// import { ProductionTimeline } from "./ProductionTimeline";
 import { QuickActions } from "./QuickActions";
 // import { EquipmentStatus } from "./EquipmentStatus"; // Hidden - not in use
 import { usePrefetchStore } from "../hooks/useDashboardQueries";
@@ -50,7 +50,7 @@ export function DashboardContent() {
             </div>
             <div className="col-span-12 lg:col-span-4 space-y-6">
               <QuickActions store="bannos" />
-              <ProductionTimeline store="bannos" />
+              {/* <ProductionTimeline store="bannos" /> */}
               {/* EquipmentStatus hidden - not in use */}
               {/* <EquipmentStatus store="bannos" /> */}
             </div>
@@ -67,7 +67,7 @@ export function DashboardContent() {
             </div>
             <div className="col-span-12 lg:col-span-4 space-y-6">
               <QuickActions store="flourlane" />
-              <ProductionTimeline store="flourlane" />
+              {/* <ProductionTimeline store="flourlane" /> */}
               {/* EquipmentStatus hidden - not in use */}
               {/* <EquipmentStatus store="flourlane" /> */}
             </div>

@@ -443,6 +443,18 @@ export async function getStaffWithShiftStatus(): Promise<StaffWithShiftStatus[]>
   return (data || []) as StaffWithShiftStatus[];
 }
 
+export interface StaffOrderCount {
+  staff_id: string;
+  order_count: number;
+}
+
+export async function getStaffOrderCounts(): Promise<StaffOrderCount[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('get_staff_order_counts');
+  if (error) throw error;
+  return (data || []) as StaffOrderCount[];
+}
+
 export interface UpdateStaffMemberParams {
   userId: string;
   fullName?: string;
