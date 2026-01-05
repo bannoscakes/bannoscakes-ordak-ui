@@ -320,4 +320,56 @@ html {
   .text-primary\/80 {
     color: color-mix(in oklab, var(--primary) 80%, transparent);
   }
+
+  /* Additional warning variants */
+  .border-warning\/40 {
+    border-color: color-mix(in oklab, var(--warning) 40%, transparent);
+  }
+
+  /* Additional destructive variants */
+  .border-destructive\/20 {
+    border-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+  }
+  .bg-destructive\/90 {
+    background-color: color-mix(in oklab, var(--destructive) 90%, transparent);
+  }
+
+  /* Primary color utilities */
+  .bg-primary\/10 {
+    background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  }
+  .bg-primary\/15 {
+    background-color: color-mix(in oklab, var(--primary) 15%, transparent);
+  }
+  .bg-primary\/90 {
+    background-color: color-mix(in oklab, var(--primary) 90%, transparent);
+  }
+  .border-primary\/20 {
+    border-color: color-mix(in oklab, var(--primary) 20%, transparent);
+  }
+  .border-primary\/30 {
+    border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+  }
+
+  /* Muted color utilities */
+  .bg-muted\/30 {
+    background-color: color-mix(in oklab, var(--muted) 30%, transparent);
+  }
+  .bg-muted\/50 {
+    background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+  }
+  .bg-muted\/80 {
+    background-color: color-mix(in oklab, var(--muted) 80%, transparent);
+  }
+
+  /* Accent color utilities */
+  .bg-accent\/40 {
+    background-color: color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  .bg-accent\/50 {
+    background-color: color-mix(in oklab, var(--accent) 50%, transparent);
+  }
+  .bg-accent\/80 {
+    background-color: color-mix(in oklab, var(--accent) 80%, transparent);
+  }
 }
