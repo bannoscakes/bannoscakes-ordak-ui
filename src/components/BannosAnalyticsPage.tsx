@@ -156,7 +156,7 @@ export function BannosAnalyticsPage() {
               variant={dateRange === range ? "default" : "outline"}
               size="sm"
               onClick={() => setDateRange(range)}
-              className={dateRange === range ? "bg-blue-600 hover:bg-blue-700" : ""}
+              className={dateRange === range ? "bg-primary hover:bg-primary/90" : ""}
             >
               {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
             </Button>

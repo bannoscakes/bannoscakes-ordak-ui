@@ -157,7 +157,7 @@ export function StaffAnalyticsPage() {
       trend: "neutral" as const,
       icon: Users,
       color: isStaffError ? "text-destructive" : "text-blue-600",
-      bg: isStaffError ? "bg-red-50" : "bg-blue-50"
+      bg: isStaffError ? "bg-destructive/10" : "bg-blue-50"
     },
     {
       title: "Avg Productivity",
