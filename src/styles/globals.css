@@ -280,4 +280,33 @@ html {
   .border-l-warning {
     border-left-color: var(--warning);
   }
+
+  /* Destructive color utilities */
+  .text-destructive {
+    color: var(--destructive);
+  }
+  .text-destructive-foreground {
+    color: var(--destructive-foreground);
+  }
+  .bg-destructive {
+    background-color: var(--destructive);
+  }
+  .bg-destructive\/10 {
+    background-color: color-mix(in oklab, var(--destructive) 10%, transparent);
+  }
+  .bg-destructive\/15 {
+    background-color: color-mix(in oklab, var(--destructive) 15%, transparent);
+  }
+  .bg-destructive\/20 {
+    background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+  }
+  .border-destructive {
+    border-color: var(--destructive);
+  }
+  .border-destructive\/30 {
+    border-color: color-mix(in oklab, var(--destructive) 30%, transparent);
+  }
+  .border-l-destructive {
+    border-left-color: var(--destructive);
+  }
 }
