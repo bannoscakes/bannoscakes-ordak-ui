@@ -449,10 +449,19 @@ export interface StaffOrderCount {
 }
 
 export async function getStaffOrderCounts(): Promise<StaffOrderCount[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('get_staff_order_counts');
-  if (error) throw error;
-  return (data || []) as StaffOrderCount[];
+  return withErrorHandling(
+    async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase.rpc('get_staff_order_counts');
+      if (error) throw error;
+      return (data || []) as StaffOrderCount[];
+    },
+    {
+      operation: 'getStaffOrderCounts',
+      rpcName: 'get_staff_order_counts',
+      params: {}
+    }
+  );
 }
 
 export interface UpdateStaffMemberParams {

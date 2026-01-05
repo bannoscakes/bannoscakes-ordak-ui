@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getQueueStats, getUnassignedCounts, getQueue } from '../lib/rpc-client';
+import { getQueueStats, getUnassignedCounts, getQueue, getStaffWithShiftStatus, getStaffOrderCounts } from '../lib/rpc-client';
 import type { Store } from '../types/db';
 
 // Auto-refresh interval for dashboard data (30 seconds)
@@ -107,4 +107,30 @@ export function useInvalidateDashboard() {
       ]);
     }
   };
+}
+
+/**
+ * Hook for staff with shift status (On Shift, On Break, Off Shift)
+ * Used by: StaffOverview
+ */
+export function useStaffWithShiftStatus() {
+  return useQuery({
+    queryKey: ['staffWithShiftStatus'],
+    queryFn: getStaffWithShiftStatus,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Hook for staff order counts (active orders per staff)
+ * Used by: StaffOverview
+ */
+export function useStaffOrderCounts() {
+  return useQuery({
+    queryKey: ['staffOrderCounts'],
+    queryFn: getStaffOrderCounts,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
+  });
 }
