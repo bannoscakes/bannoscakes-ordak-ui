@@ -37,6 +37,9 @@ export function BarcodeGenerator({
         }
 
         // Generate Code 128 barcode
+        // Note: Colors are intentionally hardcoded (white bg, black lines) for reliable
+        // barcode scanning. High contrast black-on-white is required for scanner compatibility
+        // and should NOT adapt to dark mode themes.
         JsBarcode(canvas, orderId, {
           format: "CODE128",
           width: 2,
