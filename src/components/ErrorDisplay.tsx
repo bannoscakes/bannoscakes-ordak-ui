@@ -47,15 +47,15 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   const severity = getSeverity(code);
 
   const renderInline = () => (
-    <div className={`flex items-center gap-2 p-2 rounded-md bg-red-50 border border-red-200 ${className}`}>
-      <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
-      <span className="text-sm text-red-700 flex-1">{message}</span>
+    <div className={`flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20 ${className}`}>
+      <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
+      <span className="text-sm text-destructive flex-1">{message}</span>
       {onDismiss && (
         <Button
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          className="h-10 w-10 p-0 text-red-600 hover:text-red-700"
+          className="h-10 w-10 p-0 text-destructive hover:text-destructive/80"
         >
           <X className="w-4 h-4" />
         </Button>
@@ -64,12 +64,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   );
 
   const renderAlert = () => (
-    <Alert className={`${severity === 'warning' ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'} ${className}`}>
-      <AlertTriangle className={`h-4 w-4 ${severity === 'warning' ? 'text-yellow-600' : 'text-red-600'}`} />
-      <AlertTitle className={severity === 'warning' ? 'text-yellow-800' : 'text-red-800'}>
+    <Alert className={`${severity === 'warning' ? 'border-warning/30 bg-warning/10' : 'border-destructive/20 bg-destructive/10'} ${className}`}>
+      <AlertTriangle className={`h-4 w-4 ${severity === 'warning' ? 'text-warning' : 'text-destructive'}`} />
+      <AlertTitle className={severity === 'warning' ? 'text-warning' : 'text-destructive'}>
         {title || 'Error'}
       </AlertTitle>
-      <AlertDescription className={severity === 'warning' ? 'text-yellow-700' : 'text-red-700'}>
+      <AlertDescription className={severity === 'warning' ? 'text-warning' : 'text-destructive'}>
         <div className="space-y-2">
           <p>{message}</p>
           
@@ -106,7 +106,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                 <ChevronRight className="w-3 h-3" />
                 Technical Details
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono">
+              <CollapsibleContent className="mt-2 p-2 bg-muted rounded text-xs font-mono">
                 <div className="space-y-1">
                   <div><strong>Correlation ID:</strong> {error.correlationId}</div>
                   <div><strong>Timestamp:</strong> {error.timestamp}</div>
@@ -152,11 +152,11 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   );
 
   const renderCard = () => (
-    <Card className={`border-red-200 ${className}`}>
+    <Card className={`border-destructive/20 ${className}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
-          <CardTitle className="text-lg text-red-800">
+          <AlertTriangle className="w-5 h-5 text-destructive" />
+          <CardTitle className="text-lg text-destructive">
             {title || 'Error'}
           </CardTitle>
         </div>
@@ -164,7 +164,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           <CardDescription className="flex items-center gap-2">
             <Badge variant="outline">{code}</Badge>
             {isAppError && error.correlationId && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 ID: {error.correlationId.slice(-8)}
               </span>
             )}
@@ -172,15 +172,15 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-red-700">{message}</p>
+        <p className="text-destructive">{message}</p>
 
         {recoveryActions.length > 0 && (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Suggested actions:</p>
+            <p className="text-sm font-medium text-foreground mb-2">Suggested actions:</p>
             <ul className="text-sm space-y-1">
               {recoveryActions.map((action, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                  <span className="w-1 h-1 bg-muted-foreground rounded-full"></span>
                   {action}
                 </li>
               ))}
@@ -194,7 +194,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               <ChevronRight className="w-4 h-4" />
               Technical Details
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 p-3 bg-gray-100 rounded text-sm font-mono">
+            <CollapsibleContent className="mt-2 p-3 bg-muted rounded text-sm font-mono">
               <div className="space-y-2">
                 <div><strong>Correlation ID:</strong> {error.correlationId}</div>
                 <div><strong>Timestamp:</strong> {error.timestamp}</div>

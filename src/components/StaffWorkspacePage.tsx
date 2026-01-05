@@ -277,18 +277,18 @@ export function StaffWorkspacePage({
 
   const getPriorityColor = (priority: string | null) => {
     const colors = {
-      High: "bg-red-100 text-red-700 border-red-200",
-      Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-      Low: "bg-green-100 text-green-700 border-green-200",
+      High: "bg-destructive/15 text-destructive border-destructive/30",
+      Medium: "bg-warning/15 text-warning border-warning/30",
+      Low: "bg-success/15 text-success border-success/30",
     };
     return (
       colors[priority as keyof typeof colors] ||
-      "bg-gray-100 text-gray-700"
+      "bg-muted text-muted-foreground"
     );
   };
 
   const getStorageColor = () => {
-    return "bg-purple-100 text-purple-700 border-purple-200";
+    return "bg-accent text-accent-foreground border-border";
   };
 
   // Block UI until auth is ready
@@ -369,7 +369,7 @@ export function StaffWorkspacePage({
                 </>
               ) : shiftStatus === "on-shift" ? (
                 <>
-                  <Badge className="bg-green-100 text-green-700 border-green-200">
+                  <Badge className="bg-success/15 text-success border-success/30">
                     <Clock className="mr-1 h-3 w-3" />
                     On Shift {elapsedTime}
                   </Badge>
@@ -394,7 +394,7 @@ export function StaffWorkspacePage({
                 </>
               ) : (
                 <>
-                  <Badge className="bg-orange-100 text-orange-700 border-orange-200">
+                  <Badge className="bg-warning/15 text-warning border-warning/30">
                     <Coffee className="mr-1 h-3 w-3" />
                     On Break {elapsedTime}
                   </Badge>
@@ -532,7 +532,7 @@ export function StaffWorkspacePage({
                         >
                           {order.priority || '-'}
                         </Badge>
-                        <span className={`text-xs ${order.dueDate ? 'text-muted-foreground' : 'text-red-600 font-bold'}`}>
+                        <span className={`text-xs ${order.dueDate ? 'text-muted-foreground' : 'text-destructive font-bold'}`}>
                           {order.dueDate ? `Due: ${formatDate(order.dueDate)}` : 'No due date'}
                         </span>
                       </div>

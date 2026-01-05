@@ -243,28 +243,28 @@ export function AccessoriesTab() {
 
   const getStockStatus = (accessory: Accessory) => {
     if (accessory.is_out_of_stock) {
-      return { label: 'Out of Stock', className: 'bg-red-100 text-red-700 border-red-200' };
+      return { label: 'Out of Stock', className: 'bg-destructive/15 text-destructive border-destructive/30' };
     }
     if (accessory.is_low_stock) {
-      return { label: 'Low Stock', className: 'bg-amber-100 text-amber-700 border-amber-200' };
+      return { label: 'Low Stock', className: 'bg-warning/15 text-warning border-warning/30' };
     }
-    return { label: 'In Stock', className: 'bg-green-100 text-green-700 border-green-200' };
+    return { label: 'In Stock', className: 'bg-success/15 text-success border-success/30' };
   };
 
   return (
     <div className="space-y-4">
       {/* Sync Alert */}
       {needsSyncCount > 0 && (
-        <Card className="p-4 border-red-200 bg-red-50">
+        <Card className="p-4 border-destructive/30 bg-destructive/10">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <span className="text-red-800 font-medium">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <span className="text-destructive font-medium">
               {needsSyncCount} accessor{needsSyncCount > 1 ? 'ies are' : 'y is'} out of stock - Shopify sync needed
             </span>
             <Button
               variant="outline"
               size="sm"
-              className="ml-auto border-red-300 text-red-700 hover:bg-red-100"
+              className="ml-auto border-destructive/30 text-destructive hover:bg-destructive/10"
               onClick={handleSyncToShopify}
               disabled={syncing}
             >
@@ -347,7 +347,7 @@ export function AccessoriesTab() {
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-red-600">
+                <TableCell colSpan={8} className="text-center py-8 text-destructive">
                   Failed to load accessories. Please refresh.
                 </TableCell>
               </TableRow>
@@ -375,9 +375,9 @@ export function AccessoriesTab() {
                     </TableCell>
                     <TableCell className="text-right">
                       {accessory.is_out_of_stock ? (
-                        <span className="text-red-600 font-medium">0</span>
+                        <span className="text-destructive font-medium">0</span>
                       ) : accessory.is_low_stock ? (
-                        <span className="text-amber-600 font-medium flex items-center justify-end gap-1">
+                        <span className="text-warning font-medium flex items-center justify-end gap-1">
                           <AlertTriangle className="h-4 w-4" />
                           {accessory.current_stock}
                         </span>
@@ -498,7 +498,7 @@ export function AccessoriesTab() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(accessory)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

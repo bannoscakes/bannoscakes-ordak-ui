@@ -100,39 +100,39 @@ const storeTimelines = {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "completed":
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
+      return <CheckCircle className="h-4 w-4 text-success" />;
     case "current":
-      return <Clock className="h-4 w-4 text-blue-600" />;
+      return <Clock className="h-4 w-4 text-primary" />;
     case "upcoming":
-      return <AlertCircle className="h-4 w-4 text-gray-400" />;
+      return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     default:
-      return <Clock className="h-4 w-4 text-gray-400" />;
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
   }
 };
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "completed":
-      return "bg-green-50 border-green-200";
+      return "bg-success/15 border-success/30";
     case "current":
-      return "bg-blue-50 border-blue-200";
+      return "bg-primary/15 border-primary/30";
     case "upcoming":
-      return "bg-gray-50 border-gray-200";
+      return "bg-muted border-border";
     default:
-      return "bg-gray-50 border-gray-200";
+      return "bg-muted border-border";
   }
 };
 
 const getTypeColor = (type: string) => {
   switch (type) {
     case "production":
-      return "bg-blue-100 text-blue-700";
+      return "bg-primary/15 text-primary";
     case "quality":
-      return "bg-orange-100 text-orange-700";
+      return "bg-warning/15 text-warning";
     case "break":
-      return "bg-gray-100 text-gray-700";
+      return "bg-muted text-muted-foreground";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-muted text-muted-foreground";
   }
 };
 
@@ -172,15 +172,15 @@ export function ProductionTimeline({ store }: ProductionTimelineProps) {
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
-              <CheckCircle className="h-3 w-3 text-green-600" />
+              <CheckCircle className="h-3 w-3 text-success" />
               <span className="text-muted-foreground">Completed</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Clock className="h-3 w-3 text-blue-600" />
+              <Clock className="h-3 w-3 text-primary" />
               <span className="text-muted-foreground">Current</span>
             </div>
             <div className="flex items-center space-x-1">
-              <AlertCircle className="h-3 w-3 text-gray-400" />
+              <AlertCircle className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Upcoming</span>
             </div>
           </div>

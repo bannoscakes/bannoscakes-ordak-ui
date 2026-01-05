@@ -64,15 +64,15 @@ const getExtendedOrderData = (order: QueueItem | null) => {
 
 const getPriorityColor = (priority: string | null) => {
   const colors = {
-    "High": "bg-red-100 text-red-700 border-red-200",
-    "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "Low": "bg-green-100 text-green-700 border-green-200"
+    "High": "bg-destructive/15 text-destructive border-destructive/30",
+    "Medium": "bg-warning/15 text-warning border-warning/30",
+    "Low": "bg-success/15 text-success border-success/30"
   };
-  return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-700";
+  return colors[priority as keyof typeof colors] || "bg-muted text-muted-foreground";
 };
 
 const getStorageColor = () => {
-  return "bg-purple-100 text-purple-700 border-purple-200";
+  return "bg-accent text-accent-foreground border-border";
 };
 
 const mapStageToStatus = (stage: string): 'In Production' | 'Pending' | 'Quality Check' | 'Completed' | 'Scheduled' => {
@@ -355,7 +355,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                 </div>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Due Date</p>
-                  <p className={`mt-2 ${extendedOrder.deliveryDate ? 'text-foreground' : 'text-red-600 font-bold'}`}>
+                  <p className={`mt-2 ${extendedOrder.deliveryDate ? 'text-foreground' : 'text-destructive font-bold'}`}>
                     {extendedOrder.deliveryDate ? formatDate(extendedOrder.deliveryDate) : 'No due date'}
                   </p>
                 </div>
@@ -482,7 +482,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
 
             {/* Quality Control Section - Only for Packing stage */}
             {isPackingStage && (
-              <div className="space-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="space-y-4 p-4 bg-warning/10 border border-warning/30 rounded-lg">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-foreground">
                     Quality Control
@@ -491,7 +491,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                     variant="ghost"
                     size="sm"
                     onClick={handleRunAIQC}
-                    className="text-xs text-blue-600 hover:text-blue-700 p-0 h-auto"
+                    className="text-xs text-primary hover:text-primary/80 p-0 h-auto"
                   >
                     <Bot className="mr-1 h-3 w-3" />
                     Run AI QC
@@ -527,9 +527,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                 </div>
 
                 {/* Storage Location Section */}
-                <div className="border-t border-amber-300 pt-4">
+                <div className="border-t border-warning/40 pt-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Package className="h-4 w-4 text-amber-600" />
+                    <Package className="h-4 w-4 text-warning" />
                     <label className="text-sm font-medium text-foreground">
                       Storage Location
                     </label>
@@ -571,7 +571,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                     )}
 
                     {selectedStorage && selectedStorage !== "none" && (
-                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
+                      <div className="mt-2 p-2 bg-success/10 border border-success/30 rounded text-xs text-success">
                         ✓ Order will be stored in: <strong>{selectedStorage}</strong>
                       </div>
                     )}

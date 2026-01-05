@@ -10,7 +10,7 @@ interface ProductionStatusProps {
 const storeProductionData = {
   bannos: {
     systemStatus: "All Systems Operational",
-    systemStatusColor: "bg-green-100 text-green-700 border-green-200",
+    systemStatusColor: "bg-success/15 text-success border-success/30",
     stations: [
       {
         name: "Filling",
@@ -56,7 +56,7 @@ const storeProductionData = {
   },
   flourlane: {
     systemStatus: "All Systems Operational",
-    systemStatusColor: "bg-green-100 text-green-700 border-green-200",
+    systemStatusColor: "bg-success/15 text-success border-success/30",
     stations: [
       {
         name: "Filling",
@@ -139,15 +139,15 @@ const getColorClasses = (color: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "Active":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-success/15 text-success border-success/30";
     case "Maintenance":
-      return "bg-red-100 text-red-700 border-red-200";
+      return "bg-destructive/15 text-destructive border-destructive/30";
     case "Warning":
-      return "bg-orange-100 text-orange-700 border-orange-200";
+      return "bg-warning/15 text-warning border-warning/30";
     case "Idle":
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-muted text-muted-foreground border-border";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 };
 

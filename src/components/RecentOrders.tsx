@@ -85,23 +85,23 @@ const convertToQueueItem = (order: DisplayOrder, store: 'bannos' | 'flourlane'):
 
 const getStatusColor = (status: string) => {
   const colors = {
-    "In Production": "bg-blue-100 text-blue-700 border-blue-200",
-    "Pending": "bg-gray-100 text-gray-700 border-gray-200",
-    "Quality Check": "bg-orange-100 text-orange-700 border-orange-200", 
-    "Completed": "bg-green-100 text-green-700 border-green-200",
-    "Scheduled": "bg-purple-100 text-purple-700 border-purple-200"
+    "In Production": "bg-primary/15 text-primary border-primary/30",
+    "Pending": "bg-muted text-muted-foreground border-border",
+    "Quality Check": "bg-warning/15 text-warning border-warning/30",
+    "Completed": "bg-success/15 text-success border-success/30",
+    "Scheduled": "bg-accent text-accent-foreground border-border"
   };
-  return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-700";
+  return colors[status as keyof typeof colors] || "bg-muted text-muted-foreground";
 };
 
 const getPriorityColor = (priority: string | null) => {
-  if (!priority) return "bg-gray-100 text-gray-700 border-gray-200";
+  if (!priority) return "bg-muted text-muted-foreground border-border";
   const colors = {
-    "High": "bg-red-100 text-red-700 border-red-200",
-    "Medium": "bg-yellow-100 text-yellow-700 border-yellow-200",
-    "Low": "bg-green-100 text-green-700 border-green-200"
+    "High": "bg-destructive/15 text-destructive border-destructive/30",
+    "Medium": "bg-warning/15 text-warning border-warning/30",
+    "Low": "bg-success/15 text-success border-success/30"
   };
-  return colors[priority as keyof typeof colors] || "bg-gray-100 text-gray-700";
+  return colors[priority as keyof typeof colors] || "bg-muted text-muted-foreground";
 };
 
 export function RecentOrders({ store }: RecentOrdersProps) {

@@ -119,7 +119,7 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
                           </span>
                         )}
 
-                        {/* Bubble */}
+                        {/* Bubble - blue color intentionally kept as standard messaging UX pattern */}
                         <div
                           className={cn(
                             "break-words text-sm px-4 py-2.5 shadow-sm transition-shadow hover:shadow-md rounded-full",
@@ -146,8 +146,8 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
           ) : (
             /* Empty state */
             <div className="flex flex-col items-center justify-center h-64 text-center px-8">
-              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
-                <MessageSquare className="h-8 w-8 text-blue-500" />
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <MessageSquare className="h-8 w-8 text-primary" />
               </div>
               <h3 className="font-medium text-foreground mb-1">No messages yet</h3>
               <p className="text-sm text-muted-foreground">Send a message to start the conversation</p>
@@ -169,6 +169,7 @@ export function ChatWindow({ conversation, messages, onSendMessage }: ChatWindow
               className="rounded-full bg-muted/50 border-0 focus-visible:ring-1 px-4"
             />
           </div>
+          {/* Send button matches chat bubble color - standard messaging UX */}
           <Button
             onClick={send}
             disabled={!draft.trim()}
