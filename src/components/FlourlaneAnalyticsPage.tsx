@@ -141,8 +141,8 @@ export function FlourlaneAnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-pink-100">
-            <TallCakeIcon className="h-8 w-8 text-pink-600" />
+          <div className="p-3 rounded-xl bg-pink-100 dark:bg-pink-900/40">
+            <TallCakeIcon className="h-8 w-8 text-pink-600 dark:text-pink-400" />
           </div>
           <div>
             <h1 className="text-2xl font-medium text-foreground">Flourlane Analytics</h1>
