@@ -394,7 +394,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
           </div>
 
           <div className="flex items-end">
-            <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+            <Badge className="bg-blue-100/70 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
               Dec 16-20, 2024
             </Badge>
           </div>

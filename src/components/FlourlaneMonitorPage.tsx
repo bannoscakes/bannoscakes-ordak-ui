@@ -195,7 +195,7 @@ export function FlourlaneMonitorPage() {
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-pink-100 dark:bg-pink-900/40">
+              <div className="p-3 rounded-xl bg-pink-100/70 dark:bg-pink-900/40">
                 <TallCakeIcon className="h-8 w-8 text-pink-600 dark:text-pink-400" />
               </div>
               <div>
@@ -225,7 +225,7 @@ export function FlourlaneMonitorPage() {
               <div key={index} className="flex flex-col border-r last:border-r-0">
                 {/* Day Header */}
                 <div className="mb-4 text-center px-1">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 dark:bg-pink-900/40 mb-2">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100/70 dark:bg-pink-900/40 mb-2">
                     <div>
                       <div className="font-medium text-pink-600 dark:text-pink-400 text-sm">{day.dayName.toUpperCase()}</div>
                       <div className="text-xs text-pink-600 dark:text-pink-400">

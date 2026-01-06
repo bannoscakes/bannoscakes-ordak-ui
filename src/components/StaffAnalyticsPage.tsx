@@ -202,7 +202,7 @@ export function StaffAnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/40">
+          <div className="p-3 rounded-xl bg-purple-100/70 dark:bg-purple-900/40">
             <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
