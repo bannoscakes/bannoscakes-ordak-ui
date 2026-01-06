@@ -26,7 +26,7 @@ export function ThemeToggleButton({ showLabel = false, className = "" }: ThemeTo
       size={showLabel ? "sm" : "icon"}
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className={showLabel ? className : `h-8 w-8 ${className}`}
+      className={className}
     >
       {isDark ? (
         <Sun className={showLabel ? "h-5 w-5 mr-3" : "h-4 w-4"} />
