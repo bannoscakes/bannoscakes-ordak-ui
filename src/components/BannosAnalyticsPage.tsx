@@ -32,7 +32,7 @@ import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { format, subDays, startOfWeek, addWeeks, subWeeks, parseISO } from "date-fns";
 import { useTheme } from "next-themes";
-import { getChartColors } from "@/lib/chart-colors";
+import { getChartColorsFromTheme } from "@/lib/chart-colors";
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -40,7 +40,7 @@ type DateRange = '7d' | '30d' | '90d';
 
 export function BannosAnalyticsPage() {
   const { resolvedTheme } = useTheme();
-  const chartColors = getChartColors(resolvedTheme as 'light' | 'dark');
+  const chartColors = getChartColorsFromTheme(resolvedTheme);
 
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>('30d');

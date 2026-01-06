@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTheme } from "next-themes";
-import { getChartColors } from "@/lib/chart-colors";
+import { getChartColorsFromTheme } from "@/lib/chart-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -114,7 +114,7 @@ const shiftDistribution = [
 
 export function StaffAnalyticsPage() {
   const { resolvedTheme } = useTheme();
-  const chartColors = getChartColors(resolvedTheme as 'light' | 'dark');
+  const chartColors = getChartColorsFromTheme(resolvedTheme);
 
   const [loading, setLoading] = useState(true);
   const [avgProductivity, setAvgProductivity] = useState<number | null>(null);

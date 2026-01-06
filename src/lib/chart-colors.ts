@@ -102,9 +102,9 @@ export function getChartColors(theme: 'light' | 'dark' | undefined): ChartColors
 }
 
 /**
- * Hook-friendly helper to get chart colors with a mounted guard.
+ * Helper to get chart colors from a resolved theme string.
  * Use with useTheme's resolvedTheme.
  */
-export function useChartColors(resolvedTheme: string | undefined): ChartColors {
+export function getChartColorsFromTheme(resolvedTheme: string | undefined): ChartColors {
   return getChartColors(resolvedTheme as 'light' | 'dark' | undefined);
 }
