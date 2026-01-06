@@ -18,11 +18,9 @@ interface Station {
 // Get color classes from stage-colors.ts (single source of truth)
 const getColorClasses = (stageName: string) => {
   const parts = getStageColorParts(stageName);
-  // Convert dot bg color (bg-blue-500) to text color (text-blue-500)
-  const iconColor = parts.dot.replace("bg-", "text-");
   return {
     text: parts.text,
-    icon: `${iconColor} dark:${iconColor.replace("-500", "-400")}`
+    icon: parts.icon
   };
 };
 
