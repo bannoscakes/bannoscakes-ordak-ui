@@ -121,7 +121,10 @@ export function StaffAnalyticsPage() {
     setMounted(true);
   }, []);
 
-  const chartColors = getChartColorsFromTheme(mounted ? resolvedTheme : 'light');
+  const chartColors = useMemo(
+    () => getChartColorsFromTheme(mounted ? resolvedTheme : 'light'),
+    [mounted, resolvedTheme]
+  );
 
   const [loading, setLoading] = useState(true);
   const [avgProductivity, setAvgProductivity] = useState<number | null>(null);
