@@ -21,7 +21,10 @@ import {
   Clock,
   Briefcase,
   MessageSquare,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -83,6 +86,18 @@ export function StaffWorkspacePage({
   const [scannerOpen, setScannerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
   const { unreadCount } = useUnreadCount();
+
+  // Theme toggle
+  const [themeMounted, setThemeMounted] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
 
   // Load current shift from database
   async function loadCurrentShift() {
@@ -339,6 +354,21 @@ export function StaffWorkspacePage({
               >
                 Refresh
               </Button>
+              {themeMounted && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                  className="h-8 w-8"
+                >
+                  {resolvedTheme === "dark" ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
