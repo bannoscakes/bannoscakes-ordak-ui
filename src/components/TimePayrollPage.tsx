@@ -51,9 +51,6 @@ interface StaffTimeRecord {
   timeEntries: TimeEntry[];
 }
 
-
-// Real staff data will be fetched from Supabase
-
 interface TimePayrollPageProps {
   initialStaffFilter?: string;
   onBack?: () => void;
