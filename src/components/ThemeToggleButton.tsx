@@ -26,6 +26,8 @@ export function ThemeToggleButton({ showLabel = false, className = "" }: ThemeTo
       size={showLabel ? "sm" : "icon"}
       onClick={toggleTheme}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      role="switch"
+      aria-checked={isDark}
       className={className}
     >
       {isDark ? (

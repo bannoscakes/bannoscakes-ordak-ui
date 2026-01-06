@@ -177,10 +177,12 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
         <div className="mt-auto p-4 border-t border-sidebar-border">
           <Button
             variant="ghost"
-            size="sm"
+            size={collapsed ? "icon" : "sm"}
             onClick={toggleTheme}
             className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            role="switch"
+            aria-checked={resolvedTheme === "dark"}
           >
             {resolvedTheme === "dark" ? (
               <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
