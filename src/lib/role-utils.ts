@@ -1,5 +1,10 @@
 // Single source of truth for role-based styling
 
+// Role constants (lowercase for case-insensitive matching)
+export const ROLE_ADMIN = "admin";
+export const ROLE_SUPERVISOR = "supervisor";
+export const ROLE_STAFF = "staff";
+
 /**
  * Returns Tailwind classes for staff avatar colors based on role.
  * - Admin: brand orange (#FF6B00 from --sidebar-primary)
@@ -11,11 +16,11 @@
 export function getRoleAvatarColor(role: string | null | undefined): string {
   const normalizedRole = role?.trim().toLowerCase();
   switch (normalizedRole) {
-    case "admin":
+    case ROLE_ADMIN:
       return "bg-[var(--sidebar-primary)] text-white";
-    case "supervisor":
+    case ROLE_SUPERVISOR:
       return "bg-pink-500 text-white";
-    case "staff":
+    case ROLE_STAFF:
     default:
       return "bg-green-500 text-white";
   }
