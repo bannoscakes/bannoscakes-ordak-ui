@@ -1,4 +1,16 @@
 // Single source of truth for stage colors
+
+// Stage name constants
+export const STAGES = {
+  FILLING: "Filling",
+  COVERING: "Covering",
+  DECORATING: "Decorating",
+  PACKING: "Packing",
+  COMPLETE: "Complete",
+} as const;
+
+export type StageName = typeof STAGES[keyof typeof STAGES];
+
 export interface StageColorParts {
   bg: string;
   border: string;

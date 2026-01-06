@@ -3,7 +3,7 @@ import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
 import { useMemo } from "react";
 import { useUnassignedCounts } from "../hooks/useDashboardQueries";
-import { getStageColorParts } from "../lib/stage-colors";
+import { getStageColorParts, STAGES } from "../lib/stage-colors";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
@@ -30,10 +30,10 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
   // Transform the RPC data to station format
   const { stations, totalUnassigned } = useMemo(() => {
     const defaultStations: Station[] = [
-      { name: "Filling Unassigned", stage: "Filling", count: 0 },
-      { name: "Covering Unassigned", stage: "Covering", count: 0 },
-      { name: "Decorating Unassigned", stage: "Decorating", count: 0 },
-      { name: "Packing Unassigned", stage: "Packing", count: 0 }
+      { name: "Filling Unassigned", stage: STAGES.FILLING, count: 0 },
+      { name: "Covering Unassigned", stage: STAGES.COVERING, count: 0 },
+      { name: "Decorating Unassigned", stage: STAGES.DECORATING, count: 0 },
+      { name: "Packing Unassigned", stage: STAGES.PACKING, count: 0 }
     ];
 
     if (!data) {
@@ -41,17 +41,17 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
     }
 
     const counts = {
-      filling: data.find((d: { stage: string; count: number }) => d.stage === 'Filling')?.count || 0,
-      covering: data.find((d: { stage: string; count: number }) => d.stage === 'Covering')?.count || 0,
-      decorating: data.find((d: { stage: string; count: number }) => d.stage === 'Decorating')?.count || 0,
-      packing: data.find((d: { stage: string; count: number }) => d.stage === 'Packing')?.count || 0
+      filling: data.find((d: { stage: string; count: number }) => d.stage === STAGES.FILLING)?.count || 0,
+      covering: data.find((d: { stage: string; count: number }) => d.stage === STAGES.COVERING)?.count || 0,
+      decorating: data.find((d: { stage: string; count: number }) => d.stage === STAGES.DECORATING)?.count || 0,
+      packing: data.find((d: { stage: string; count: number }) => d.stage === STAGES.PACKING)?.count || 0
     };
 
     const stationData: Station[] = [
-      { name: "Filling Unassigned", stage: "Filling", count: counts.filling },
-      { name: "Covering Unassigned", stage: "Covering", count: counts.covering },
-      { name: "Decorating Unassigned", stage: "Decorating", count: counts.decorating },
-      { name: "Packing Unassigned", stage: "Packing", count: counts.packing }
+      { name: "Filling Unassigned", stage: STAGES.FILLING, count: counts.filling },
+      { name: "Covering Unassigned", stage: STAGES.COVERING, count: counts.covering },
+      { name: "Decorating Unassigned", stage: STAGES.DECORATING, count: counts.decorating },
+      { name: "Packing Unassigned", stage: STAGES.PACKING, count: counts.packing }
     ];
 
     return {
