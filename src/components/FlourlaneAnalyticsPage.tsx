@@ -248,7 +248,11 @@ export function FlourlaneAnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
                       <XAxis dataKey="date" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
-                      <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
+                      <Tooltip
+                        formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']}
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                       <Area type="monotone" dataKey="revenue" stroke={chartColors.flourlane.primary} fill={chartColors.flourlane.primary} fillOpacity={0.1} strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -271,7 +275,10 @@ export function FlourlaneAnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
                       <XAxis dataKey="date" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                       <Bar dataKey="orders" fill={chartColors.flourlane.primary} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -366,7 +373,7 @@ export function FlourlaneAnalyticsPage() {
                     />
                     <Bar dataKey="completed" stackId="a" fill={chartColors.completed} name="Completed" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="pending" stackId="a" fill={chartColors.pending} name="Pending" radius={[4, 4, 0, 0]} />
-                    <Legend />
+                    <Legend wrapperStyle={{ color: chartColors.text }} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -402,7 +409,10 @@ export function FlourlaneAnalyticsPage() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>

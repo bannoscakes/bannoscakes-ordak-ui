@@ -299,7 +299,10 @@ export function StaffAnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
                       <XAxis dataKey="month" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <YAxis domain={[85, 100]} tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                       <Line type="monotone" dataKey="productivity" stroke={chartColors.staff.primary} strokeWidth={3} dot={{fill: chartColors.staff.primary, strokeWidth: 2, r: 4}} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -322,10 +325,13 @@ export function StaffAnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
                       <XAxis dataKey="month" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                       <Bar dataKey="hours" fill={chartColors.hours} name="Regular Hours" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="overtime" fill={chartColors.overtime} name="Overtime" radius={[2, 2, 0, 0]} />
-                      <Legend />
+                      <Legend wrapperStyle={{ color: chartColors.text }} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -467,11 +473,14 @@ export function StaffAnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
                       <XAxis dataKey="week" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                       <Bar dataKey="present" fill={chartColors.present} name="Present" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="absent" fill={chartColors.absent} name="Absent" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="late" fill={chartColors.late} name="Late" radius={[2, 2, 0, 0]} />
-                      <Legend />
+                      <Legend wrapperStyle={{ color: chartColors.text }} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -660,7 +669,10 @@ export function StaffAnalyticsPage() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>
