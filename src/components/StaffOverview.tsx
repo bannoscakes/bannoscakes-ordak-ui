@@ -4,6 +4,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { useMemo } from "react";
 import { useStaffWithShiftStatus, useStaffOrderCounts } from "../hooks/useDashboardQueries";
+import { getRoleAvatarColor } from "../lib/role-utils";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -92,7 +93,7 @@ export function StaffOverview() {
           <div key={member.user_id} className="border border-border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center">
+                <Avatar className={`h-10 w-10 flex items-center justify-center ${getRoleAvatarColor(member.role)}`}>
                   <span className="text-sm font-medium">{member.full_name.charAt(0)}</span>
                 </Avatar>
                 <div>

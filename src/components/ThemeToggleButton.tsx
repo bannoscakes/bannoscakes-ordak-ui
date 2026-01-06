@@ -31,9 +31,9 @@ export function ThemeToggleButton({ showLabel = false, className = "" }: ThemeTo
       className={className}
     >
       {isDark ? (
-        <Sun className={showLabel ? "h-5 w-5 mr-3" : "h-4 w-4"} />
+        <Sun className={showLabel ? "h-5 w-5 mr-3" : "h-5 w-5"} />
       ) : (
-        <Moon className={showLabel ? "h-5 w-5 mr-3" : "h-4 w-4"} />
+        <Moon className={showLabel ? "h-5 w-5 mr-3" : "h-5 w-5"} />
       )}
       {showLabel && <span>{isDark ? "Light Mode" : "Dark Mode"}</span>}
     </Button>

@@ -3,6 +3,7 @@ import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
 import { useMemo } from "react";
 import { useUnassignedCounts } from "../hooks/useDashboardQueries";
+import { getStageColorParts, STAGES, type StageName } from "../lib/stage-colors";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
@@ -10,38 +11,20 @@ interface UnassignedStationsProps {
 
 interface Station {
   name: string;
+  stage: StageName;
   count: number;
-  color: string;
 }
 
-const getColorClasses = (color: string) => {
-  const colorMap = {
-    blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-700",
-      icon: "text-blue-500"
-    },
-    purple: {
-      bg: "bg-purple-50", 
-      border: "border-purple-200",
-      text: "text-purple-700",
-      icon: "text-purple-500"
-    },
-    pink: {
-      bg: "bg-pink-50",
-      border: "border-pink-200", 
-      text: "text-pink-700",
-      icon: "text-pink-500"
-    },
-    orange: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      text: "text-orange-700", 
-      icon: "text-orange-500"
-    }
+// Type for RPC response data
+type StageCount = { stage: string; count: number };
+
+// Get color classes from stage-colors.ts (single source of truth)
+const getColorClasses = (stageName: StageName) => {
+  const parts = getStageColorParts(stageName);
+  return {
+    text: parts.text,
+    icon: parts.icon
   };
-  return colorMap[color as keyof typeof colorMap];
 };
 
 export function UnassignedStations({ store }: UnassignedStationsProps) {
@@ -50,10 +33,10 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
   // Transform the RPC data to station format
   const { stations, totalUnassigned } = useMemo(() => {
     const defaultStations: Station[] = [
-      { name: "Filling Unassigned", count: 0, color: "blue" },
-      { name: "Covering Unassigned", count: 0, color: "purple" },
-      { name: "Decoration Unassigned", count: 0, color: "pink" },
-      { name: "Packing Unassigned", count: 0, color: "orange" }
+      { name: "Filling Unassigned", stage: STAGES.FILLING, count: 0 },
+      { name: "Covering Unassigned", stage: STAGES.COVERING, count: 0 },
+      { name: "Decorating Unassigned", stage: STAGES.DECORATING, count: 0 },
+      { name: "Packing Unassigned", stage: STAGES.PACKING, count: 0 }
     ];
 
     if (!data) {
@@ -61,17 +44,17 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
     }
 
     const counts = {
-      filling: data.find((d: { stage: string; count: number }) => d.stage === 'Filling')?.count || 0,
-      covering: data.find((d: { stage: string; count: number }) => d.stage === 'Covering')?.count || 0,
-      decorating: data.find((d: { stage: string; count: number }) => d.stage === 'Decorating')?.count || 0,
-      packing: data.find((d: { stage: string; count: number }) => d.stage === 'Packing')?.count || 0
+      filling: data.find((d: StageCount) => d.stage === STAGES.FILLING)?.count || 0,
+      covering: data.find((d: StageCount) => d.stage === STAGES.COVERING)?.count || 0,
+      decorating: data.find((d: StageCount) => d.stage === STAGES.DECORATING)?.count || 0,
+      packing: data.find((d: StageCount) => d.stage === STAGES.PACKING)?.count || 0
     };
 
     const stationData: Station[] = [
-      { name: "Filling Unassigned", count: counts.filling, color: "blue" },
-      { name: "Covering Unassigned", count: counts.covering, color: "purple" },
-      { name: "Decoration Unassigned", count: counts.decorating, color: "pink" },
-      { name: "Packing Unassigned", count: counts.packing, color: "orange" }
+      { name: "Filling Unassigned", stage: STAGES.FILLING, count: counts.filling },
+      { name: "Covering Unassigned", stage: STAGES.COVERING, count: counts.covering },
+      { name: "Decorating Unassigned", stage: STAGES.DECORATING, count: counts.decorating },
+      { name: "Packing Unassigned", stage: STAGES.PACKING, count: counts.packing }
     ];
 
     return {
@@ -110,15 +93,15 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stations.map((station, index) => {
-          const colors = getColorClasses(station.color);
+          const colors = getColorClasses(station.stage);
           
           return (
-            <div key={index} className={`p-3 border-2 ${colors.border} ${colors.bg} rounded-lg hover:shadow-sm transition-all duration-200`}>
+            <div key={index} className="p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20">
               <div className="flex items-center justify-between mb-2">
-                <UserX className={`h-4 w-4 ${colors.icon}`} />
-                <span className={`text-sm font-medium ${colors.text}`}>{station.count}</span>
+                <UserX className={`h-5 w-5 ${colors.icon}`} />
+                <span className={`text-base font-medium ${colors.text}`}>{station.count}</span>
               </div>
               <div>
                 <h4 className={`text-sm font-medium ${colors.text}`}>{station.name}</h4>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "./ui/card";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { Button } from "./ui/button";
@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "./ui/textarea";
 import { adjustStaffTime, getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
 import type { GetStaffTimesRow, GetStaffTimesDetailRow } from "../types/rpc-returns";
+import { useStaffList } from "../hooks/useSettingsQueries";
+import { getRoleAvatarColor } from "../lib/role-utils";
 import { 
   Calendar,
   Search, 
@@ -39,6 +41,7 @@ interface StaffTimeRecord {
   id: string;
   name: string;
   avatar: string;
+  role: string;
   daysWorked: number;
   totalShiftHours: number;
   totalBreakMinutes: number;
@@ -47,8 +50,6 @@ interface StaffTimeRecord {
   totalPay: number;
   timeEntries: TimeEntry[];
 }
-
-// Real staff data will be fetched from Supabase
 
 interface TimePayrollPageProps {
   initialStaffFilter?: string;
@@ -64,6 +65,14 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
   const [selectedStaff, setSelectedStaff] = useState<StaffTimeRecord | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+
+  // Fetch staff list to get roles
+  const { data: staffList = [] } = useStaffList();
+
+  // Create role lookup map from staff list
+  const roleMap = useMemo(() => {
+    return new Map(staffList.map(s => [s.user_id, s.role]));
+  }, [staffList]);
 
   // Helper: Format date to YYYY-MM-DD without timezone conversion
   function formatDateForDB(date: Date): string {
@@ -121,6 +130,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
           id: staff.staff_id,
           name: staff.staff_name || 'Unknown Staff',
           avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          role: roleMap.get(staff.staff_id) || 'Staff',
           daysWorked: staff.days_worked || 0,
           totalShiftHours: staff.total_shift_hours || 0,
           totalBreakMinutes: staff.total_break_minutes || 0,
@@ -140,7 +150,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     }
     
     fetchStaffData();
-  }, [dateRange]);
+  }, [dateRange, roleMap]);
 
   // Filter by initial staff if provided
   useEffect(() => {
@@ -236,6 +246,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
         id: staff.staff_id,
         name: staff.staff_name || 'Unknown Staff',
         avatar: (staff.staff_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        role: roleMap.get(staff.staff_id) || 'Staff',
         daysWorked: staff.days_worked || 0,
         totalShiftHours: staff.total_shift_hours || 0,
         totalBreakMinutes: staff.total_break_minutes || 0,
@@ -286,11 +297,35 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
     });
+  };
+
+  // Format date range for display badge (e.g., "Jan 6-10, 2026" or "Jan 28 - Feb 3, 2026")
+  const getDisplayDateRange = () => {
+    const { from, to } = getDateRange();
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const fromMonth = fromDate.toLocaleDateString('en-US', { month: 'short' });
+    const toMonth = toDate.toLocaleDateString('en-US', { month: 'short' });
+    const fromDay = fromDate.getDate();
+    const toDay = toDate.getDate();
+    const fromYear = fromDate.getFullYear();
+    const toYear = toDate.getFullYear();
+
+    // Handle cross-year ranges (e.g., Dec 28, 2025 - Jan 3, 2026)
+    if (fromYear !== toYear) {
+      return `${fromMonth} ${fromDay}, ${fromYear} - ${toMonth} ${toDay}, ${toYear}`;
+    }
+    // Handle cross-month ranges (e.g., Jan 28 - Feb 3, 2026)
+    if (fromMonth !== toMonth) {
+      return `${fromMonth} ${fromDay} - ${toMonth} ${toDay}, ${fromYear}`;
+    }
+    // Same month (e.g., Jan 6-10, 2026)
+    return `${fromMonth} ${fromDay}-${toDay}, ${fromYear}`;
   };
 
   if (loading) {
@@ -379,8 +414,8 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
           </div>
 
           <div className="flex items-end">
-            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
-              Dec 16-20, 2024
+            <Badge className="bg-blue-100/70 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+              {getDisplayDateRange()}
             </Badge>
           </div>
         </div>
@@ -406,7 +441,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
               <TableRow key={record.id}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
-                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground flex items-center justify-center">
+                    <Avatar className={`h-8 w-8 flex items-center justify-center ${getRoleAvatarColor(record.role)}`}>
                       <span className="text-sm font-medium">{record.avatar}</span>
                     </Avatar>
                     <span className="font-medium">{record.name}</span>
@@ -454,7 +489,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
             <DialogHeader>
               <DialogTitle>Time Details - {selectedStaff.name}</DialogTitle>
               <DialogDescription>
-                Daily time entries for Dec 16-20, 2024
+                Daily time entries for {getDisplayDateRange()}
               </DialogDescription>
             </DialogHeader>
 
