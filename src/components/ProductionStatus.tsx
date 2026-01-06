@@ -2,6 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useMemo } from "react";
 import { useQueueStats } from "../hooks/useDashboardQueries";
+import { getStageColorParts, getStageProgressColor } from "../lib/stage-colors";
 
 interface ProductionStatusProps {
   store: "bannos" | "flourlane";
@@ -17,27 +18,24 @@ const storeProductionData = {
         count: 45,
         status: "Active",
         progress: 92,
-        color: "blue",
         todayTarget: 50,
         weekTarget: 350,
         efficiency: "92%"
       },
       {
-        name: "Covering", 
+        name: "Covering",
         count: 38,
         status: "Active",
         progress: 88,
-        color: "purple",
         todayTarget: 45,
         weekTarget: 315,
         efficiency: "88%"
       },
       {
-        name: "Decoration",
-        count: 32, 
+        name: "Decorating",
+        count: 32,
         status: "Active",
         progress: 94,
-        color: "pink",
         todayTarget: 35,
         weekTarget: 245,
         efficiency: "94%"
@@ -45,9 +43,8 @@ const storeProductionData = {
       {
         name: "Packing",
         count: 28,
-        status: "Active", 
+        status: "Active",
         progress: 85,
-        color: "orange",
         todayTarget: 40,
         weekTarget: 280,
         efficiency: "85%"
@@ -63,27 +60,24 @@ const storeProductionData = {
         count: 22,
         status: "Active",
         progress: 89,
-        color: "blue",
         todayTarget: 25,
         weekTarget: 175,
         efficiency: "89%"
       },
       {
-        name: "Covering", 
+        name: "Covering",
         count: 18,
         status: "Active",
         progress: 75,
-        color: "purple",
         todayTarget: 24,
         weekTarget: 168,
         efficiency: "75%"
       },
       {
-        name: "Decoration",
-        count: 15, 
+        name: "Decorating",
+        count: 15,
         status: "Active",
         progress: 62,
-        color: "pink",
         todayTarget: 22,
         weekTarget: 154,
         efficiency: "62%"
@@ -91,9 +85,8 @@ const storeProductionData = {
       {
         name: "Packing",
         count: 12,
-        status: "Active", 
+        status: "Active",
         progress: 85,
-        color: "orange",
         todayTarget: 20,
         weekTarget: 140,
         efficiency: "85%"
@@ -102,38 +95,13 @@ const storeProductionData = {
   }
 };
 
-const getColorClasses = (color: string) => {
-  const colorMap = {
-    blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-700",
-      progress: "bg-blue-500",
-      badge: "bg-blue-100 text-blue-700"
-    },
-    purple: {
-      bg: "bg-purple-50", 
-      border: "border-purple-200",
-      text: "text-purple-700",
-      progress: "bg-purple-500",
-      badge: "bg-purple-100 text-purple-700"
-    },
-    pink: {
-      bg: "bg-pink-50",
-      border: "border-pink-200", 
-      text: "text-pink-700",
-      progress: "bg-pink-500",
-      badge: "bg-pink-100 text-pink-700"
-    },
-    orange: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      text: "text-orange-700", 
-      progress: "bg-orange-500",
-      badge: "bg-orange-100 text-orange-700"
-    }
+// Get color classes directly from stage name (uses stage-colors.ts as source of truth)
+const getColorClasses = (stageName: string) => {
+  const baseParts = getStageColorParts(stageName);
+  return {
+    text: baseParts.text,
+    progress: getStageProgressColor(stageName)
   };
-  return colorMap[color as keyof typeof colorMap];
 };
 
 const getStatusColor = (status: string) => {
@@ -171,7 +139,7 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
           case 'Covering':
             count = Number(stats.covering_count) || 0;
             break;
-          case 'Decoration':
+          case 'Decorating':
             count = Number(stats.decorating_count) || 0;
             break;
           case 'Packing':
@@ -215,10 +183,10 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {storeData.stations.map((station, index) => {
-          const colors = getColorClasses(station.color);
+          const colors = getColorClasses(station.name);
           
           return (
-            <div key={index} className={`p-4 border-2 ${colors.border} ${colors.bg} rounded-lg hover:shadow-md transition-all duration-200`}>
+            <div key={index} className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20`}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className={`font-medium ${colors.text}`}>{station.name}</h4>
@@ -238,9 +206,9 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
                       <span className="text-muted-foreground">Progress</span>
                       <span className={`font-medium ${colors.text}`}>{station.efficiency}</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-500 ${colors.progress}`}
+                    <div className="w-full bg-muted rounded-full h-3">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-500 ${colors.progress}`}
                         style={{ width: `${station.progress}%` }}
                       />
                     </div>

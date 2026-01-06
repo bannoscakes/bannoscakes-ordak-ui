@@ -174,8 +174,8 @@ export function StaffAnalyticsPage() {
       change: "",
       trend: "neutral" as const,
       icon: CheckCircle,
-      color: "text-purple-600",
-      bg: "bg-purple-50"
+      color: "text-purple-600 dark:text-purple-400",
+      bg: "bg-purple-50 dark:bg-purple-900/40"
     }
     // Training Complete removed - not useful per user request
   ];
@@ -202,8 +202,8 @@ export function StaffAnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-purple-100">
-            <Users className="h-8 w-8 text-purple-600" />
+          <div className="p-3 rounded-xl bg-purple-100/70 dark:bg-purple-900/40">
+            <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
             <h1 className="text-2xl font-medium text-foreground">Staff Analytics</h1>
@@ -270,7 +270,7 @@ export function StaffAnalyticsPage() {
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-purple-600" />
+                  <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   Productivity Trend
                 </CardTitle>
               </CardHeader>
@@ -293,7 +293,7 @@ export function StaffAnalyticsPage() {
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-purple-600" />
+                  <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   Working Hours & Overtime
                 </CardTitle>
               </CardHeader>
@@ -319,7 +319,7 @@ export function StaffAnalyticsPage() {
           <Card className="p-6">
             <CardHeader className="p-0 pb-6">
               <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-purple-600" />
+                <Star className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 Top Performers
               </CardTitle>
             </CardHeader>
@@ -332,9 +332,9 @@ export function StaffAnalyticsPage() {
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
                         <AvatarFallback className={`${
-                          performer.store === 'bannos' ? 'bg-blue-100 text-blue-600' :
-                          performer.store === 'flourlane' ? 'bg-pink-100 text-pink-600' :
-                          'bg-purple-100 text-purple-600'
+                          performer.store === 'bannos' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' :
+                          performer.store === 'flourlane' ? 'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400' :
+                          'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400'
                         }`}>
                           {performer.initials}
                         </AvatarFallback>
@@ -438,7 +438,7 @@ export function StaffAnalyticsPage() {
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <UserCheck className="h-5 w-5 text-purple-600" />
+                  <UserCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   Weekly Attendance
                 </CardTitle>
               </CardHeader>
@@ -470,7 +470,7 @@ export function StaffAnalyticsPage() {
                   <div className="text-center">
                     {isEnabled ? (
                       <>
-                        <p className="text-4xl font-semibold text-green-600">96.8%</p>
+                        <p className="text-4xl font-semibold text-green-600 dark:text-green-400">96.8%</p>
                         <p className="text-muted-foreground">Overall Attendance Rate</p>
                       </>
                     ) : (
@@ -507,7 +507,7 @@ export function StaffAnalyticsPage() {
           <Card className="p-6">
             <CardHeader className="p-0 pb-6">
               <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-purple-600" />
+                <Star className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 Top Performers by Stage (Last 30 Days)
               </CardTitle>
             </CardHeader>
@@ -519,10 +519,10 @@ export function StaffAnalyticsPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { stage: 'Filling', data: stageTopPerformers.filling, color: 'bg-blue-100 text-blue-600', count: stageTopPerformers.filling?.filling_count },
-                    { stage: 'Covering', data: stageTopPerformers.covering, color: 'bg-green-100 text-green-600', count: stageTopPerformers.covering?.covering_count },
-                    { stage: 'Decorating', data: stageTopPerformers.decorating, color: 'bg-pink-100 text-pink-600', count: stageTopPerformers.decorating?.decorating_count },
-                    { stage: 'Packing', data: stageTopPerformers.packing, color: 'bg-orange-100 text-orange-600', count: stageTopPerformers.packing?.packing_count },
+                    { stage: 'Filling', data: stageTopPerformers.filling, color: 'bg-blue-100/70 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400', count: stageTopPerformers.filling?.filling_count },
+                    { stage: 'Covering', data: stageTopPerformers.covering, color: 'bg-green-100/70 dark:bg-green-900/40 text-green-600 dark:text-green-400', count: stageTopPerformers.covering?.covering_count },
+                    { stage: 'Decorating', data: stageTopPerformers.decorating, color: 'bg-pink-100/70 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400', count: stageTopPerformers.decorating?.decorating_count },
+                    { stage: 'Packing', data: stageTopPerformers.packing, color: 'bg-orange-100/70 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400', count: stageTopPerformers.packing?.packing_count },
                   ].map(({ stage, data, color, count }) => (
                     <div key={stage} className="p-4 border border-border rounded-lg">
                       <div className="flex items-center gap-2 mb-3">
@@ -534,7 +534,7 @@ export function StaffAnalyticsPage() {
                       {data ? (
                         <div>
                           <p className="text-lg font-semibold text-foreground">{data.staff_name}</p>
-                          <p className="text-2xl font-bold text-purple-600">{count}</p>
+                          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{count}</p>
                           <p className="text-sm text-muted-foreground">orders completed</p>
                         </div>
                       ) : (
@@ -551,7 +551,7 @@ export function StaffAnalyticsPage() {
           <Card className="p-6">
             <CardHeader className="p-0 pb-6">
               <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-purple-600" />
+                <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 Orders Completed by Stage (Last 30 Days)
               </CardTitle>
             </CardHeader>
@@ -579,7 +579,7 @@ export function StaffAnalyticsPage() {
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
+                                <AvatarFallback className="bg-purple-100/70 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 text-xs">
                                   {staff.staff_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -587,27 +587,27 @@ export function StaffAnalyticsPage() {
                             </div>
                           </td>
                           <td className="text-center py-3 px-4">
-                            <span className={staff.filling_count > 0 ? 'font-semibold text-blue-600' : 'text-muted-foreground'}>
+                            <span className={staff.filling_count > 0 ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}>
                               {staff.filling_count}
                             </span>
                           </td>
                           <td className="text-center py-3 px-4">
-                            <span className={staff.covering_count > 0 ? 'font-semibold text-green-600' : 'text-muted-foreground'}>
+                            <span className={staff.covering_count > 0 ? 'font-semibold text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
                               {staff.covering_count}
                             </span>
                           </td>
                           <td className="text-center py-3 px-4">
-                            <span className={staff.decorating_count > 0 ? 'font-semibold text-pink-600' : 'text-muted-foreground'}>
+                            <span className={staff.decorating_count > 0 ? 'font-semibold text-pink-600 dark:text-pink-400' : 'text-muted-foreground'}>
                               {staff.decorating_count}
                             </span>
                           </td>
                           <td className="text-center py-3 px-4">
-                            <span className={staff.packing_count > 0 ? 'font-semibold text-orange-600' : 'text-muted-foreground'}>
+                            <span className={staff.packing_count > 0 ? 'font-semibold text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}>
                               {staff.packing_count}
                             </span>
                           </td>
                           <td className="text-center py-3 px-4">
-                            <span className="font-bold text-purple-600">{staff.total_count}</span>
+                            <span className="font-bold text-purple-600 dark:text-purple-400">{staff.total_count}</span>
                           </td>
                         </tr>
                       ))}

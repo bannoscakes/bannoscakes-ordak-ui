@@ -1,4 +1,4 @@
-import { TrendingUp, CheckCircle, Clock, Zap } from "lucide-react";
+import { TrendingUp, CheckCircle, Clock, Zap, type LucideIcon } from "lucide-react";
 import { Card } from "./ui/card";
 import { useMemo } from "react";
 import { useQueueStats } from "../hooks/useDashboardQueries";
@@ -11,10 +11,30 @@ interface Metric {
   title: string;
   value: string;
   subtitle: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
   bg: string;
   iconColor: string;
 }
+
+// Shared color schemes for metric card icons (transparent for glassmorphism)
+const METRIC_COLORS = {
+  blue: {
+    bg: "bg-blue-100/70 dark:bg-blue-500/20",
+    iconColor: "text-blue-600 dark:text-blue-400"
+  },
+  green: {
+    bg: "bg-green-100/70 dark:bg-green-500/20",
+    iconColor: "text-green-600 dark:text-green-400"
+  },
+  orange: {
+    bg: "bg-orange-100/70 dark:bg-orange-500/20",
+    iconColor: "text-orange-600 dark:text-orange-400"
+  },
+  purple: {
+    bg: "bg-purple-100/70 dark:bg-purple-500/20",
+    iconColor: "text-purple-600 dark:text-purple-400"
+  }
+} as const;
 
 export function MetricCards({ store }: MetricCardsProps) {
   const { data: stats, isLoading } = useQueueStats(store);
@@ -22,39 +42,35 @@ export function MetricCards({ store }: MetricCardsProps) {
   // Transform stats to metrics display format
   const metrics = useMemo<Metric[]>(() => {
     if (!stats) return [];
-    
+
     return [
       {
         title: "Total Orders",
         value: stats.total_orders?.toString() || "0",
         subtitle: `${stats.unassigned_orders || 0} unassigned`,
         icon: TrendingUp,
-        bg: "bg-blue-50",
-        iconColor: "text-blue-600"
+        ...METRIC_COLORS.blue
       },
       {
         title: "Completed",
         value: stats.completed_orders?.toString() || "0",
         subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
         icon: CheckCircle,
-        bg: "bg-green-50",
-        iconColor: "text-green-600"
+        ...METRIC_COLORS.green
       },
       {
         title: "In Production",
         value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
         subtitle: `${stats.unassigned_orders || 0} unassigned`,
         icon: Clock,
-        bg: "bg-orange-50",
-        iconColor: "text-orange-600"
+        ...METRIC_COLORS.orange
       },
       {
         title: "By Stage",
         value: `${stats.filling_count || 0}/${stats.decorating_count || 0}`,
         subtitle: "Filling/Decorating",
         icon: Zap,
-        bg: "bg-purple-50",
-        iconColor: "text-purple-600"
+        ...METRIC_COLORS.purple
       }
     ];
   }, [stats]);
@@ -66,32 +82,28 @@ export function MetricCards({ store }: MetricCardsProps) {
       value: "0",
       subtitle: "No data available",
       icon: TrendingUp,
-      bg: "bg-blue-50",
-      iconColor: "text-blue-600"
+      ...METRIC_COLORS.blue
     },
     {
       title: "Completed Today",
       value: "0",
-      subtitle: "No data available", 
+      subtitle: "No data available",
       icon: CheckCircle,
-      bg: "bg-green-50",
-      iconColor: "text-green-600"
+      ...METRIC_COLORS.green
     },
     {
       title: "In Production",
       value: "0",
       subtitle: "No data available",
       icon: Clock,
-      bg: "bg-orange-50",
-      iconColor: "text-orange-600"
+      ...METRIC_COLORS.orange
     },
     {
       title: "Quality Score",
       value: "0%",
       subtitle: "No data available",
       icon: Zap,
-      bg: "bg-purple-50",
-      iconColor: "text-purple-600"
+      ...METRIC_COLORS.purple
     }
   ];
 
@@ -102,7 +114,7 @@ export function MetricCards({ store }: MetricCardsProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="p-6">
+          <Card key={i} className="p-6 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20 shadow-md">
             <div className="animate-pulse">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -122,14 +134,14 @@ export function MetricCards({ store }: MetricCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {displayMetrics.map((metric, index) => (
-        <Card key={index} className="p-6">
+        <Card key={index} className="p-6 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20 shadow-md">
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <p className="text-muted-foreground">{metric.title}</p>
               <p className="text-2xl">{metric.value}</p>
               <p className="text-xs text-muted-foreground">{metric.subtitle}</p>
             </div>
-            <div className={`w-12 h-12 rounded-lg ${metric.bg} flex items-center justify-center`}>
+            <div className={`w-12 h-12 rounded-xl ${metric.bg} flex items-center justify-center border border-gray-200/50 dark:border-white/20`}>
               <metric.icon className={`w-6 h-6 ${metric.iconColor}`} />
             </div>
           </div>

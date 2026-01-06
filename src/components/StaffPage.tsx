@@ -11,6 +11,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { getRoleAvatarColor } from "../lib/role-utils";
 import {
   Plus,
   Search,
@@ -274,7 +275,7 @@ export function StaffPage() {
               <TableRow key={staffMember.id}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
-                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground flex items-center justify-center">
+                    <Avatar className={`h-8 w-8 flex items-center justify-center ${getRoleAvatarColor(staffMember.role)}`}>
                       <span className="text-sm font-medium">{staffMember.avatar}</span>
                     </Avatar>
                     <span className="font-medium">{staffMember.fullName}</span>
