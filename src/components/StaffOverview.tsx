@@ -4,6 +4,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { useMemo } from "react";
 import { useStaffWithShiftStatus, useStaffOrderCounts } from "../hooks/useDashboardQueries";
+import { getRoleAvatarColor } from "../lib/role-utils";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -15,18 +16,6 @@ const getStatusColor = (status: string) => {
       return "bg-muted text-muted-foreground border-border";
     default:
       return "bg-muted text-muted-foreground border-border";
-  }
-};
-
-const getRoleAvatarColor = (role: string) => {
-  switch (role) {
-    case "Admin":
-      return "bg-orange-500 text-white";
-    case "Supervisor":
-      return "bg-pink-500 text-white";
-    case "Staff":
-    default:
-      return "bg-green-500 text-white";
   }
 };
 

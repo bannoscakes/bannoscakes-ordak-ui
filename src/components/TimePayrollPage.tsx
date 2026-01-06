@@ -13,6 +13,7 @@ import { Textarea } from "./ui/textarea";
 import { adjustStaffTime, getStaffTimes, getStaffTimesDetail } from "../lib/rpc-client";
 import type { GetStaffTimesRow, GetStaffTimesDetailRow } from "../types/rpc-returns";
 import { useStaffList } from "../hooks/useSettingsQueries";
+import { getRoleAvatarColor } from "../lib/role-utils";
 import { 
   Calendar,
   Search, 
@@ -50,17 +51,6 @@ interface StaffTimeRecord {
   timeEntries: TimeEntry[];
 }
 
-const getRoleAvatarColor = (role: string) => {
-  switch (role) {
-    case "Admin":
-      return "bg-orange-500 text-white";
-    case "Supervisor":
-      return "bg-pink-500 text-white";
-    case "Staff":
-    default:
-      return "bg-green-500 text-white";
-  }
-};
 
 // Real staff data will be fetched from Supabase
 
@@ -163,7 +153,8 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     }
     
     fetchStaffData();
-  }, [dateRange, roleMap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange]); // roleMap excluded: only used for mapping, not fetching
 
   // Filter by initial staff if provided
   useEffect(() => {

@@ -114,7 +114,7 @@ export function MetricCards({ store }: MetricCardsProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="p-6 bg-white/70 dark:bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+          <Card key={i} className="p-6 bg-white/70 dark:bg-white/20 backdrop-blur-md border border-white/20 shadow-md">
             <div className="animate-pulse">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -134,14 +134,14 @@ export function MetricCards({ store }: MetricCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {displayMetrics.map((metric, index) => (
-        <Card key={index} className="p-6 bg-white/70 dark:bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+        <Card key={index} className="p-6 bg-white/70 dark:bg-white/20 backdrop-blur-md border border-white/20 shadow-md">
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <p className="text-muted-foreground">{metric.title}</p>
               <p className="text-2xl">{metric.value}</p>
               <p className="text-xs text-muted-foreground">{metric.subtitle}</p>
             </div>
-            <div className={`w-12 h-12 rounded-lg ${metric.bg} flex items-center justify-center bg-white/70 dark:bg-white/10 backdrop-blur-md border border-white/20`}>
+            <div className={`w-12 h-12 rounded-lg ${metric.bg} flex items-center justify-center bg-white/70 dark:bg-white/20 backdrop-blur-md border border-white/20`}>
               <metric.icon className={`w-6 h-6 ${metric.iconColor}`} />
             </div>
           </div>

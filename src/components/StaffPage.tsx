@@ -11,6 +11,7 @@ import { Badge } from "./ui/badge";
 import { Avatar } from "./ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { getRoleAvatarColor } from "../lib/role-utils";
 import {
   Plus,
   Search,
@@ -104,18 +105,6 @@ export function StaffPage() {
     return status === "Active"
       ? <Badge className="bg-success/15 text-success border-success/30">Active</Badge>
       : <Badge className="bg-primary/15 text-primary border-primary/30">Approved</Badge>;
-  };
-
-  const getRoleAvatarColor = (role: string) => {
-    switch (role) {
-      case "Admin":
-        return "bg-orange-500 text-white";
-      case "Supervisor":
-        return "bg-pink-500 text-white";
-      case "Staff":
-      default:
-        return "bg-green-500 text-white";
-    }
   };
 
   const getOnShiftBadge = (onShift: boolean) => {

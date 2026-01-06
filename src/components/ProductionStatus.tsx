@@ -113,22 +113,18 @@ const colorToStage: Record<string, string> = {
 
 const getColorClasses = (color: string) => {
   const stageName = colorToStage[color];
-  const baseParts = stageName ? getStageColorParts(stageName) : null;
 
-  if (!baseParts) {
+  if (!stageName) {
     return {
-      bg: "bg-gray-100 dark:bg-gray-800/30",
-      border: "border-gray-300 dark:border-gray-700",
       text: "text-gray-700 dark:text-gray-300",
-      progress: "bg-gray-500",
-      badge: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300"
+      progress: "bg-gray-500"
     };
   }
 
+  const baseParts = getStageColorParts(stageName);
   return {
-    ...baseParts,
-    progress: stageName ? getStageProgressColor(stageName) : "bg-gray-500",
-    badge: `${baseParts.bg.replace('/30', '/50')} ${baseParts.text}`
+    text: baseParts.text,
+    progress: getStageProgressColor(stageName)
   };
 };
 
@@ -214,7 +210,7 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
           const colors = getColorClasses(station.color);
           
           return (
-            <div key={index} className={`p-4 rounded-lg hover:shadow-md transition-all duration-200 bg-white/70 dark:bg-white/10 backdrop-blur-md border border-white/20 shadow-lg`}>
+            <div key={index} className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-white/20 backdrop-blur-md border border-white/20`}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className={`font-medium ${colors.text}`}>{station.name}</h4>
