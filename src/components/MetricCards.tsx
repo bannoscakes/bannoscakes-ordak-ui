@@ -16,22 +16,22 @@ interface Metric {
   iconColor: string;
 }
 
-// Shared color schemes for metric card icons
+// Shared color schemes for metric card icons (transparent for glassmorphism)
 const METRIC_COLORS = {
   blue: {
-    bg: "bg-blue-100 dark:bg-blue-900/40",
+    bg: "bg-blue-100/70 dark:bg-blue-500/20",
     iconColor: "text-blue-600 dark:text-blue-400"
   },
   green: {
-    bg: "bg-green-100 dark:bg-green-900/40",
+    bg: "bg-green-100/70 dark:bg-green-500/20",
     iconColor: "text-green-600 dark:text-green-400"
   },
   orange: {
-    bg: "bg-orange-100 dark:bg-orange-900/40",
+    bg: "bg-orange-100/70 dark:bg-orange-500/20",
     iconColor: "text-orange-600 dark:text-orange-400"
   },
   purple: {
-    bg: "bg-purple-100 dark:bg-purple-900/40",
+    bg: "bg-purple-100/70 dark:bg-purple-500/20",
     iconColor: "text-purple-600 dark:text-purple-400"
   }
 } as const;
@@ -141,7 +141,7 @@ export function MetricCards({ store }: MetricCardsProps) {
               <p className="text-2xl">{metric.value}</p>
               <p className="text-xs text-muted-foreground">{metric.subtitle}</p>
             </div>
-            <div className={`w-12 h-12 rounded-xl ${metric.bg} flex items-center justify-center bg-white/70 dark:bg-white/20 backdrop-blur-sm border border-white/20`}>
+            <div className={`w-12 h-12 rounded-xl ${metric.bg} flex items-center justify-center backdrop-blur-sm border border-white/20`}>
               <metric.icon className={`w-6 h-6 ${metric.iconColor}`} />
             </div>
           </div>
