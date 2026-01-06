@@ -80,7 +80,7 @@ const darkColors: ChartColors = Object.freeze({
     primary: '#a78bfa', // violet-400 - lighter for dark bg
   }),
   completed: '#4ade80', // green-400
-  pending: '#f97316', // orange-500 - darker to differentiate from warning
+  pending: '#f97316', // orange-500 - distinct from amber warning
   success: '#4ade80', // green-400
   warning: '#fbbf24', // amber-400
   error: '#f87171', // red-400
