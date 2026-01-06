@@ -1,6 +1,9 @@
 /**
  * Theme-aware chart colors for Recharts components.
  * Provides appropriate color contrast for light and dark modes.
+ *
+ * Note: lightColors and darkColors are module-level singletons,
+ * so getChartColors returns stable object references (no re-render concerns).
  */
 
 export interface ChartColors {
@@ -19,10 +22,10 @@ export interface ChartColors {
   // Semantic colors
   completed: string;
   pending: string;
+  // Reserved for future chart customization (axis labels, gridlines, tooltips)
   success: string;
   warning: string;
   error: string;
-  // Chart axis and grid
   axis: string;
   grid: string;
   text: string;
@@ -106,5 +109,5 @@ export function getChartColors(theme: 'light' | 'dark' | undefined): ChartColors
  * Use with useTheme's resolvedTheme.
  */
 export function getChartColorsFromTheme(resolvedTheme: string | undefined): ChartColors {
-  return getChartColors(resolvedTheme as 'light' | 'dark' | undefined);
+  return getChartColors(resolvedTheme === 'dark' ? 'dark' : 'light');
 }
