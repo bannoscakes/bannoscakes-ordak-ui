@@ -238,7 +238,6 @@ export function StaffAnalyticsPage() {
         {metrics.map((metric) => {
           const raw = metric?.value;
           const num = toNumberOrNull(raw);
-          const isEnabled = useAnalyticsEnabled();
           const isEmpty = num == null;
 
           const unit =
