@@ -245,9 +245,9 @@ export function BannosAnalyticsPage() {
                 <ChartContainer hasData={chartRevenueData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={chartRevenueData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
                       <Area type="monotone" dataKey="revenue" stroke={chartColors.bannos.primary} fill={chartColors.bannos.primary} fillOpacity={0.1} strokeWidth={2} />
                     </AreaChart>
@@ -268,9 +268,9 @@ export function BannosAnalyticsPage() {
                 <ChartContainer hasData={chartRevenueData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={chartRevenueData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <Tooltip />
                       <Bar dataKey="orders" fill={chartColors.bannos.primary} radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -345,9 +345,9 @@ export function BannosAnalyticsPage() {
               <ChartContainer hasData={chartForecastData.length > 0}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartForecastData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                    <XAxis dataKey="day" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                    <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                     <Tooltip
                       content={({ active, payload, label }) => {
                         if (active && payload && payload.length) {

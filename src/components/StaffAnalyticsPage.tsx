@@ -296,9 +296,9 @@ export function StaffAnalyticsPage() {
                 <ChartContainer hasData={staffProductivityData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={staffProductivityData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[85, 100]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="month" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis domain={[85, 100]} tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <Tooltip />
                       <Line type="monotone" dataKey="productivity" stroke={chartColors.staff.primary} strokeWidth={3} dot={{fill: chartColors.staff.primary, strokeWidth: 2, r: 4}} />
                     </LineChart>
@@ -319,9 +319,9 @@ export function StaffAnalyticsPage() {
                 <ChartContainer hasData={staffProductivityData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={staffProductivityData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="month" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <Tooltip />
                       <Bar dataKey="hours" fill={chartColors.hours} name="Regular Hours" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="overtime" fill={chartColors.overtime} name="Overtime" radius={[2, 2, 0, 0]} />
@@ -464,9 +464,9 @@ export function StaffAnalyticsPage() {
                 <ChartContainer hasData={attendanceDataUse.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={attendanceDataUse}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="week" />
-                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="week" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                       <Tooltip />
                       <Bar dataKey="present" fill={chartColors.present} name="Present" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="absent" fill={chartColors.absent} name="Absent" radius={[2, 2, 0, 0]} />
