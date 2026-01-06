@@ -195,8 +195,8 @@ export function BannosMonitorPage() {
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-blue-100">
-                <Cake className="h-8 w-8 text-blue-600" />
+              <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40">
+                <Cake className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <CardTitle className="text-2xl">Bannos Kitchen Monitor</CardTitle>
@@ -225,10 +225,10 @@ export function BannosMonitorPage() {
               <div key={index} className="flex flex-col border-r last:border-r-0">
                 {/* Day Header */}
                 <div className="mb-4 text-center px-1">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-2">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/40 mb-2">
                     <div>
-                      <div className="font-medium text-blue-600 text-sm">{day.dayName.toUpperCase()}</div>
-                      <div className="text-xs text-blue-600">
+                      <div className="font-medium text-blue-600 dark:text-blue-400 text-sm">{day.dayName.toUpperCase()}</div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">
                         {day.date.getDate()}
                       </div>
                     </div>

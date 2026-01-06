@@ -105,32 +105,32 @@ const storeProductionData = {
 const getColorClasses = (color: string) => {
   const colorMap = {
     blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-700",
+      bg: "bg-blue-100 dark:bg-blue-900/30",
+      border: "border-blue-300 dark:border-blue-700",
+      text: "text-blue-700 dark:text-blue-300",
       progress: "bg-blue-500",
-      badge: "bg-blue-100 text-blue-700"
+      badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
     },
     purple: {
-      bg: "bg-purple-50", 
-      border: "border-purple-200",
-      text: "text-purple-700",
+      bg: "bg-purple-100 dark:bg-purple-900/30",
+      border: "border-purple-300 dark:border-purple-700",
+      text: "text-purple-700 dark:text-purple-300",
       progress: "bg-purple-500",
-      badge: "bg-purple-100 text-purple-700"
+      badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
     },
     pink: {
-      bg: "bg-pink-50",
-      border: "border-pink-200", 
-      text: "text-pink-700",
+      bg: "bg-pink-100 dark:bg-pink-900/30",
+      border: "border-pink-300 dark:border-pink-700",
+      text: "text-pink-700 dark:text-pink-300",
       progress: "bg-pink-500",
-      badge: "bg-pink-100 text-pink-700"
+      badge: "bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300"
     },
     orange: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      text: "text-orange-700", 
+      bg: "bg-orange-100 dark:bg-orange-900/30",
+      border: "border-orange-300 dark:border-orange-700",
+      text: "text-orange-700 dark:text-orange-300",
       progress: "bg-orange-500",
-      badge: "bg-orange-100 text-orange-700"
+      badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
     }
   };
   return colorMap[color as keyof typeof colorMap];
