@@ -139,7 +139,7 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
           case 'Covering':
             count = Number(stats.covering_count) || 0;
             break;
-          case 'Decoration':
+          case 'Decorating':
             count = Number(stats.decorating_count) || 0;
             break;
           case 'Packing':
