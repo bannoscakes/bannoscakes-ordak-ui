@@ -114,7 +114,7 @@ export function MetricCards({ store }: MetricCardsProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="p-6">
+          <Card key={i} className="p-6 bg-white/70 dark:bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
             <div className="animate-pulse">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">

@@ -2,7 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useMemo } from "react";
 import { useQueueStats } from "../hooks/useDashboardQueries";
-import { getStageColorParts } from "../lib/stage-colors";
+import { getStageColorParts, getStageProgressColor } from "../lib/stage-colors";
 
 interface ProductionStatusProps {
   store: "bannos" | "flourlane";
@@ -111,14 +111,6 @@ const colorToStage: Record<string, string> = {
   orange: "Packing"
 };
 
-// Additional color properties not in stage-colors.ts
-const progressColors: Record<string, string> = {
-  blue: "bg-blue-500",
-  purple: "bg-purple-500",
-  pink: "bg-pink-500",
-  orange: "bg-orange-500"
-};
-
 const getColorClasses = (color: string) => {
   const stageName = colorToStage[color];
   const baseParts = stageName ? getStageColorParts(stageName) : null;
@@ -135,7 +127,7 @@ const getColorClasses = (color: string) => {
 
   return {
     ...baseParts,
-    progress: progressColors[color] || "bg-gray-500",
+    progress: stageName ? getStageProgressColor(stageName) : "bg-gray-500",
     badge: `${baseParts.bg.replace('/30', '/50')} ${baseParts.text}`
   };
 };
