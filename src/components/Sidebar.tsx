@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -62,7 +63,12 @@ const navigationItems = [
 export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
+  const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
@@ -177,22 +183,24 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
       </nav>
 
       {/* Theme toggle at bottom */}
-      <div className="mt-auto p-4 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleTheme}
-          className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
-          aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {resolvedTheme === "dark" ? (
-            <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
-          ) : (
-            <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
-          )}
-          {!collapsed && <span>{resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
-        </Button>
-      </div>
+      {mounted && (
+        <div className="mt-auto p-4 border-t border-sidebar-border">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
+            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {resolvedTheme === "dark" ? (
+              <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+            ) : (
+              <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+            )}
+            {!collapsed && <span>{resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

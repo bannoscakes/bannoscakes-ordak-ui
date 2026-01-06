@@ -13,6 +13,7 @@ import "./index.css";
 import "./styles/globals.css";
 import { initErrorMonitoring, SentryErrorBoundary } from "./lib/error-monitoring";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { Toaster } from "./components/ui/sonner";
 
 // Initialize error monitoring (Sentry)
 initErrorMonitoring();
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
   <SentryErrorBoundary>
     <ThemeProvider>
       <App />
+      <Toaster />
     </ThemeProvider>
   </SentryErrorBoundary>
 );
