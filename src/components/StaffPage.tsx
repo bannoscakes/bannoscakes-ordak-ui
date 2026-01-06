@@ -106,6 +106,18 @@ export function StaffPage() {
       : <Badge className="bg-primary/15 text-primary border-primary/30">Approved</Badge>;
   };
 
+  const getRoleAvatarColor = (role: string) => {
+    switch (role) {
+      case "Admin":
+        return "bg-orange-500 text-white";
+      case "Supervisor":
+        return "bg-pink-500 text-white";
+      case "Staff":
+      default:
+        return "bg-green-500 text-white";
+    }
+  };
+
   const getOnShiftBadge = (onShift: boolean) => {
     return onShift
       ? <Badge className="bg-success/15 text-success border-success/30">On Shift</Badge>
@@ -274,7 +286,7 @@ export function StaffPage() {
               <TableRow key={staffMember.id}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
-                    <Avatar className="h-8 w-8 bg-primary text-primary-foreground flex items-center justify-center">
+                    <Avatar className={`h-8 w-8 flex items-center justify-center ${getRoleAvatarColor(staffMember.role)}`}>
                       <span className="text-sm font-medium">{staffMember.avatar}</span>
                     </Avatar>
                     <span className="font-medium">{staffMember.fullName}</span>
