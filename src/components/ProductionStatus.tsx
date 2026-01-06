@@ -210,7 +210,7 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
           const colors = getColorClasses(station.color);
           
           return (
-            <div key={index} className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-900/80 md:backdrop-blur-md border border-white/20`}>
+            <div key={index} className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/90 md:backdrop-blur-md border border-white/20`}>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className={`font-medium ${colors.text}`}>{station.name}</h4>

@@ -107,7 +107,7 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
           const colors = getColorClasses(station.color);
           
           return (
-            <div key={index} className="p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-900/80 md:backdrop-blur-md border border-white/20">
+            <div key={index} className="p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/90 md:backdrop-blur-md border border-white/20">
               <div className="flex items-center justify-between mb-2">
                 <UserX className={`h-4 w-4 ${colors.icon}`} />
                 <span className={`text-sm font-medium ${colors.text}`}>{station.count}</span>
