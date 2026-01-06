@@ -17,28 +17,20 @@ interface Station {
 const getColorClasses = (color: string) => {
   const colorMap = {
     blue: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-700",
-      icon: "text-blue-500"
+      text: "text-blue-700 dark:text-blue-300",
+      icon: "text-blue-500 dark:text-blue-400"
     },
     purple: {
-      bg: "bg-purple-50", 
-      border: "border-purple-200",
-      text: "text-purple-700",
-      icon: "text-purple-500"
+      text: "text-purple-700 dark:text-purple-300",
+      icon: "text-purple-500 dark:text-purple-400"
     },
     pink: {
-      bg: "bg-pink-50",
-      border: "border-pink-200", 
-      text: "text-pink-700",
-      icon: "text-pink-500"
+      text: "text-pink-700 dark:text-pink-300",
+      icon: "text-pink-500 dark:text-pink-400"
     },
     orange: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      text: "text-orange-700", 
-      icon: "text-orange-500"
+      text: "text-orange-700 dark:text-orange-300",
+      icon: "text-orange-500 dark:text-orange-400"
     }
   };
   return colorMap[color as keyof typeof colorMap];
@@ -115,7 +107,7 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
           const colors = getColorClasses(station.color);
           
           return (
-            <div key={index} className={`p-3 border-2 ${colors.border} ${colors.bg} rounded-lg hover:shadow-sm transition-all duration-200`}>
+            <div key={index} className="p-3 rounded-lg hover:shadow-md transition-all duration-200 bg-white/70 dark:bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
               <div className="flex items-center justify-between mb-2">
                 <UserX className={`h-4 w-4 ${colors.icon}`} />
                 <span className={`text-sm font-medium ${colors.text}`}>{station.count}</span>
