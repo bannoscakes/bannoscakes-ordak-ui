@@ -18,6 +18,18 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const getRoleAvatarColor = (role: string) => {
+  switch (role) {
+    case "Admin":
+      return "bg-orange-500 text-white";
+    case "Supervisor":
+      return "bg-pink-500 text-white";
+    case "Staff":
+    default:
+      return "bg-green-500 text-white";
+  }
+};
+
 export function StaffOverview() {
   const { data: staffData, isLoading: staffLoading, isError: staffError } = useStaffWithShiftStatus();
   const { data: orderCountsData, isLoading: countsLoading, isError: countsError } = useStaffOrderCounts();
@@ -92,7 +104,7 @@ export function StaffOverview() {
           <div key={member.user_id} className="border border-border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center">
+                <Avatar className={`h-10 w-10 flex items-center justify-center ${getRoleAvatarColor(member.role)}`}>
                   <span className="text-sm font-medium">{member.full_name.charAt(0)}</span>
                 </Avatar>
                 <div>
