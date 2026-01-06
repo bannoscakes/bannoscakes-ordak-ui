@@ -20,7 +20,7 @@ export interface StageColorParts {
 }
 
 // Progress bar colors for production status cards
-export const stageProgressColors: Record<string, string> = {
+export const stageProgressColors: Record<StageName, string> = {
   "Filling": "bg-blue-500",
   "Covering": "bg-purple-500",
   "Decorating": "bg-pink-500",
@@ -28,11 +28,11 @@ export const stageProgressColors: Record<string, string> = {
   "Complete": "bg-green-500",
 };
 
-export function getStageProgressColor(stage: string): string {
-  return stageProgressColors[stage] || "bg-gray-500";
+export function getStageProgressColor(stage: StageName | string): string {
+  return stageProgressColors[stage as StageName] || "bg-gray-500";
 }
 
-export const stageColorParts: Record<string, StageColorParts> = {
+export const stageColorParts: Record<StageName, StageColorParts> = {
   "Filling": {
     bg: "bg-blue-100 dark:bg-blue-900/30",
     border: "border-blue-300 dark:border-blue-700",
@@ -85,14 +85,14 @@ function partsToClass(parts: StageColorParts): string {
   return `${parts.bg} ${parts.text} ${parts.border}`;
 }
 
-export function getStageColorClass(stage: string, cancelledAt?: string | null): string {
+export function getStageColorClass(stage: StageName | string, cancelledAt?: string | null): string {
   if (cancelledAt) {
     return cancelledColorClass;
   }
-  const parts = stageColorParts[stage] || defaultColorParts;
+  const parts = stageColorParts[stage as StageName] || defaultColorParts;
   return partsToClass(parts);
 }
 
-export function getStageColorParts(stage: string): StageColorParts {
-  return stageColorParts[stage] || defaultColorParts;
+export function getStageColorParts(stage: StageName | string): StageColorParts {
+  return stageColorParts[stage as StageName] || defaultColorParts;
 }

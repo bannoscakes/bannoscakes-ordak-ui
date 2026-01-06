@@ -3,7 +3,7 @@ import { Badge } from "./ui/badge";
 import { UserX } from "lucide-react";
 import { useMemo } from "react";
 import { useUnassignedCounts } from "../hooks/useDashboardQueries";
-import { getStageColorParts, STAGES } from "../lib/stage-colors";
+import { getStageColorParts, STAGES, type StageName } from "../lib/stage-colors";
 
 interface UnassignedStationsProps {
   store: "bannos" | "flourlane";
@@ -11,12 +11,12 @@ interface UnassignedStationsProps {
 
 interface Station {
   name: string;
-  stage: string;
+  stage: StageName;
   count: number;
 }
 
 // Get color classes from stage-colors.ts (single source of truth)
-const getColorClasses = (stageName: string) => {
+const getColorClasses = (stageName: StageName) => {
   const parts = getStageColorParts(stageName);
   return {
     text: parts.text,
