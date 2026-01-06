@@ -93,15 +93,15 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stations.map((station, index) => {
           const colors = getColorClasses(station.stage);
           
           return (
-            <div key={index} className="p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20">
+            <div key={index} className="p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20">
               <div className="flex items-center justify-between mb-2">
-                <UserX className={`h-4 w-4 ${colors.icon}`} />
-                <span className={`text-sm font-medium ${colors.text}`}>{station.count}</span>
+                <UserX className={`h-5 w-5 ${colors.icon}`} />
+                <span className={`text-base font-medium ${colors.text}`}>{station.count}</span>
               </div>
               <div>
                 <h4 className={`text-sm font-medium ${colors.text}`}>{station.name}</h4>

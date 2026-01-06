@@ -297,11 +297,23 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
     });
+  };
+
+  // Format date range for display badge (e.g., "Jan 6-10, 2026")
+  const getDisplayDateRange = () => {
+    const { from, to } = getDateRange();
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const month = fromDate.toLocaleDateString('en-US', { month: 'short' });
+    const fromDay = fromDate.getDate();
+    const toDay = toDate.getDate();
+    const year = fromDate.getFullYear();
+    return `${month} ${fromDay}-${toDay}, ${year}`;
   };
 
   if (loading) {
@@ -391,7 +403,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
 
           <div className="flex items-end">
             <Badge className="bg-blue-100/70 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
-              Dec 16-20, 2024
+              {getDisplayDateRange()}
             </Badge>
           </div>
         </div>
@@ -465,7 +477,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
             <DialogHeader>
               <DialogTitle>Time Details - {selectedStaff.name}</DialogTitle>
               <DialogDescription>
-                Daily time entries for Dec 16-20, 2024
+                Daily time entries for {getDisplayDateRange()}
               </DialogDescription>
             </DialogHeader>
 

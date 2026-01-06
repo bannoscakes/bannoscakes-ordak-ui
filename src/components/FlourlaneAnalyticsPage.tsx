@@ -149,14 +149,13 @@ export function FlourlaneAnalyticsPage() {
             <p className="text-muted-foreground">Performance insights for cake & dessert operations</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           {(['7d', '30d', '90d'] as DateRange[]).map((range) => (
             <Button
               key={range}
               variant={dateRange === range ? "default" : "outline"}
-              size="sm"
               onClick={() => setDateRange(range)}
-              className={dateRange === range ? "bg-pink-600 hover:bg-pink-700" : ""}
+              className={`min-h-11 px-4 ${dateRange === range ? "bg-pink-600 hover:bg-pink-700" : ""}`}
             >
               {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
             </Button>

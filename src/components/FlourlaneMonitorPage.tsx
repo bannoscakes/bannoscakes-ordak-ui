@@ -209,11 +209,11 @@ export function FlourlaneMonitorPage() {
                 <span className="font-medium">{getWeekRange()}</span>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => navigateWeek('prev')}>
-                  <ChevronLeft className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="min-w-11 min-h-11" onClick={() => navigateWeek('prev')}>
+                  <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => navigateWeek('next')}>
-                  <ChevronRight className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="min-w-11 min-h-11" onClick={() => navigateWeek('next')}>
+                  <ChevronRight className="h-5 w-5" />
                 </Button>
               </div>
             </div>
