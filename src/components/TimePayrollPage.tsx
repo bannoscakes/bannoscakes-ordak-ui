@@ -304,16 +304,28 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     });
   };
 
-  // Format date range for display badge (e.g., "Jan 6-10, 2026")
+  // Format date range for display badge (e.g., "Jan 6-10, 2026" or "Jan 28 - Feb 3, 2026")
   const getDisplayDateRange = () => {
     const { from, to } = getDateRange();
     const fromDate = new Date(from);
     const toDate = new Date(to);
-    const month = fromDate.toLocaleDateString('en-US', { month: 'short' });
+    const fromMonth = fromDate.toLocaleDateString('en-US', { month: 'short' });
+    const toMonth = toDate.toLocaleDateString('en-US', { month: 'short' });
     const fromDay = fromDate.getDate();
     const toDay = toDate.getDate();
-    const year = fromDate.getFullYear();
-    return `${month} ${fromDay}-${toDay}, ${year}`;
+    const fromYear = fromDate.getFullYear();
+    const toYear = toDate.getFullYear();
+
+    // Handle cross-year ranges (e.g., Dec 28, 2025 - Jan 3, 2026)
+    if (fromYear !== toYear) {
+      return `${fromMonth} ${fromDay}, ${fromYear} - ${toMonth} ${toDay}, ${toYear}`;
+    }
+    // Handle cross-month ranges (e.g., Jan 28 - Feb 3, 2026)
+    if (fromMonth !== toMonth) {
+      return `${fromMonth} ${fromDay} - ${toMonth} ${toDay}, ${fromYear}`;
+    }
+    // Same month (e.g., Jan 6-10, 2026)
+    return `${fromMonth} ${fromDay}-${toDay}, ${fromYear}`;
   };
 
   if (loading) {
