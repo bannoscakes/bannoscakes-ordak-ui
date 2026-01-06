@@ -7,7 +7,7 @@ export const ROLE_STAFF = "staff";
 
 /**
  * Returns Tailwind classes for staff avatar colors based on role.
- * - Admin: brand orange (#FF6B00 from --sidebar-primary)
+ * - Admin: brand orange (#FF6B00 via bg-sidebar-primary)
  * - Supervisor: pink
  * - Staff (default): green
  *
@@ -17,7 +17,7 @@ export function getRoleAvatarColor(role: string | null | undefined): string {
   const normalizedRole = role?.trim().toLowerCase();
   switch (normalizedRole) {
     case ROLE_ADMIN:
-      return "bg-[var(--sidebar-primary)] text-white";
+      return "bg-sidebar-primary text-white";
     case ROLE_SUPERVISOR:
       return "bg-pink-500 text-white";
     case ROLE_STAFF:
