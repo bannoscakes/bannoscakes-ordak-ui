@@ -28,6 +28,11 @@ export const stageProgressColors: Record<StageName, string> = {
   "Complete": "bg-green-500",
 };
 
+/**
+ * Returns the Tailwind background color class for a stage's progress bar.
+ * @param stage - Stage name (StageName or string for runtime flexibility)
+ * @returns Progress bar color class, or "bg-gray-500" for unknown stages
+ */
 export function getStageProgressColor(stage: StageName | string): string {
   return stageProgressColors[stage as StageName] || "bg-gray-500";
 }
@@ -85,6 +90,12 @@ function partsToClass(parts: StageColorParts): string {
   return `${parts.bg} ${parts.text} ${parts.border}`;
 }
 
+/**
+ * Returns combined Tailwind classes (bg, text, border) for a stage badge.
+ * @param stage - Stage name (StageName or string for runtime flexibility)
+ * @param cancelledAt - If set, returns cancelled styling instead
+ * @returns Combined color classes, or gray fallback for unknown stages
+ */
 export function getStageColorClass(stage: StageName | string, cancelledAt?: string | null): string {
   if (cancelledAt) {
     return cancelledColorClass;
@@ -93,6 +104,11 @@ export function getStageColorClass(stage: StageName | string, cancelledAt?: stri
   return partsToClass(parts);
 }
 
+/**
+ * Returns individual color parts for a stage (bg, border, text, dot, icon).
+ * @param stage - Stage name (StageName or string for runtime flexibility)
+ * @returns StageColorParts object, or gray fallback for unknown stages
+ */
 export function getStageColorParts(stage: StageName | string): StageColorParts {
   return stageColorParts[stage as StageName] || defaultColorParts;
 }

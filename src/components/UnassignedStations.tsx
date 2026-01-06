@@ -15,6 +15,9 @@ interface Station {
   count: number;
 }
 
+// Type for RPC response data
+type StageCount = { stage: string; count: number };
+
 // Get color classes from stage-colors.ts (single source of truth)
 const getColorClasses = (stageName: StageName) => {
   const parts = getStageColorParts(stageName);
@@ -41,10 +44,10 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
     }
 
     const counts = {
-      filling: data.find((d: { stage: string; count: number }) => d.stage === STAGES.FILLING)?.count || 0,
-      covering: data.find((d: { stage: string; count: number }) => d.stage === STAGES.COVERING)?.count || 0,
-      decorating: data.find((d: { stage: string; count: number }) => d.stage === STAGES.DECORATING)?.count || 0,
-      packing: data.find((d: { stage: string; count: number }) => d.stage === STAGES.PACKING)?.count || 0
+      filling: data.find((d: StageCount) => d.stage === STAGES.FILLING)?.count || 0,
+      covering: data.find((d: StageCount) => d.stage === STAGES.COVERING)?.count || 0,
+      decorating: data.find((d: StageCount) => d.stage === STAGES.DECORATING)?.count || 0,
+      packing: data.find((d: StageCount) => d.stage === STAGES.PACKING)?.count || 0
     };
 
     const stationData: Station[] = [
