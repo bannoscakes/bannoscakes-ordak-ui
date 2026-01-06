@@ -22,6 +22,7 @@ import {
   Briefcase,
   MessageSquare,
 } from "lucide-react";
+import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -339,6 +340,7 @@ export function StaffWorkspacePage({
               >
                 Refresh
               </Button>
+              <ThemeToggleButton />
               <Button
                 variant="outline"
                 size="sm"

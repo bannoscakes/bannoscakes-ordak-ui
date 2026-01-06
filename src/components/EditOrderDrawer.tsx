@@ -331,7 +331,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 value={formData.product}
                 onChange={(e) => updateField('product', e.target.value)}
                 placeholder="Enter product name..."
-                className={dirtyFields.product ? 'border-orange-300 bg-orange-50' : ''}
+                className={dirtyFields.product ? 'border-warning bg-warning/10' : ''}
               />
             </div>
 
@@ -356,7 +356,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 value={formData.size}
                 onChange={(e) => updateField('size', e.target.value)}
                 placeholder="Enter size..."
-                className={dirtyFields.size ? 'border-orange-300 bg-orange-50' : ''}
+                className={dirtyFields.size ? 'border-warning bg-warning/10' : ''}
               />
             </div>
 
@@ -382,7 +382,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                   <Button
                     variant="outline"
                     className={`w-full justify-start text-left font-normal ${
-                      dirtyFields.dueDate ? 'border-orange-300 bg-orange-50' : ''
+                      dirtyFields.dueDate ? 'border-warning bg-warning/10' : ''
                     }`}
                   >
                     {formData.dueDate ? formatDateDisplay(formData.dueDate) : "Select date"}
@@ -422,7 +422,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 )}
               </div>
               <Select value={formData.method} onValueChange={(value: 'Delivery' | 'Pickup') => updateField('method', value)}>
-                <SelectTrigger className={dirtyFields.method ? 'border-orange-300 bg-orange-50' : ''}>
+                <SelectTrigger className={dirtyFields.method ? 'border-warning bg-warning/10' : ''}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -453,7 +453,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 value={formData.flavour}
                 onChange={(e) => updateField('flavour', e.target.value)}
                 placeholder="Enter flavour..."
-                className={dirtyFields.flavour ? 'border-orange-300 bg-orange-50' : ''}
+                className={dirtyFields.flavour ? 'border-warning bg-warning/10' : ''}
               />
             </div>
 
@@ -463,7 +463,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 Priority (Auto-calculated from due date)
               </label>
               <div className="p-3 bg-muted/30 rounded-lg border">
-                <Badge className={`text-xs ${formData.dueDate ? getPriorityColor(calculatePriority(formData.dueDate)) : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                <Badge className={`text-xs ${formData.dueDate ? getPriorityColor(calculatePriority(formData.dueDate)) : 'bg-muted text-foreground border-border'}`}>
                   {formData.dueDate ? calculatePriority(formData.dueDate) : '-'}
                 </Badge>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -493,7 +493,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 )}
               </div>
               <Select value={formData.storage || "none"} onValueChange={(value) => updateField('storage', value === "none" ? "" : value)}>
-                <SelectTrigger className={dirtyFields.storage ? 'border-orange-300 bg-orange-50' : ''}>
+                <SelectTrigger className={dirtyFields.storage ? 'border-warning bg-warning/10' : ''}>
                   <SelectValue placeholder="Select storage location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -528,7 +528,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 value={formData.writingOnCake}
                 onChange={(e) => updateField('writingOnCake', e.target.value)}
                 placeholder="Enter text for cake decoration..."
-                className={`min-h-[80px] ${dirtyFields.writingOnCake ? 'border-orange-300 bg-orange-50' : ''}`}
+                className={`min-h-[80px] ${dirtyFields.writingOnCake ? 'border-warning bg-warning/10' : ''}`}
               />
             </div>
 
@@ -564,7 +564,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 </div>
                 {formData.accessories.length > 0 && (
                   <div className={`flex flex-wrap gap-3 p-3 rounded-lg border ${
-                    dirtyFields.accessories ? 'border-orange-300 bg-orange-50' : 'bg-muted/30'
+                    dirtyFields.accessories ? 'border-warning bg-warning/10' : 'bg-muted/30'
                   }`}>
                     {formData.accessories.map((accessory, index) => (
                       <div key={index} className="flex items-center gap-1">
@@ -607,7 +607,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 value={formData.notes}
                 onChange={(e) => updateField('notes', e.target.value)}
                 placeholder="Additional notes or special instructions..."
-                className={`min-h-[80px] ${dirtyFields.notes ? 'border-orange-300 bg-orange-50' : ''}`}
+                className={`min-h-[80px] ${dirtyFields.notes ? 'border-warning bg-warning/10' : ''}`}
               />
             </div>
 
@@ -652,7 +652,7 @@ export function EditOrderDrawer({ isOpen, onClose, onSaved, order, store }: Edit
                 )}
                 {formData.photos.length > 0 && (
                   <div className={`flex flex-wrap gap-2 p-3 rounded-lg border ${
-                    dirtyFields.photos ? 'border-orange-300 bg-orange-50' : 'bg-muted/30'
+                    dirtyFields.photos ? 'border-warning bg-warning/10' : 'bg-muted/30'
                   }`}>
                     {formData.photos.map((photo, index) => (
                       <div key={index} className="relative">

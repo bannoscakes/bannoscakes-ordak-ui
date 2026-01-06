@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
 import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
+import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -328,7 +329,8 @@ export function SupervisorWorkspacePage({
                   </Button>
                 </div>
               )}
-              
+
+              <ThemeToggleButton />
               <Button variant="outline" size="sm" onClick={onSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
