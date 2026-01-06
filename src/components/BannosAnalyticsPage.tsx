@@ -174,7 +174,7 @@ export function BannosAnalyticsPage() {
                 {loading ? '...' : <KpiValue value={analytics?.total_revenue} unit="currency" />}
               </p>
             </div>
-            <DollarSign className="h-6 w-6 text-green-600" />
+            <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
           </div>
         </Card>
         <Card>
@@ -185,7 +185,7 @@ export function BannosAnalyticsPage() {
                 {loading ? '...' : <KpiValue value={analytics?.total_orders} unit="count" />}
               </p>
             </div>
-            <Package className="h-6 w-6 text-blue-600" />
+            <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
         </Card>
         <Card>
@@ -196,7 +196,7 @@ export function BannosAnalyticsPage() {
                 {loading ? '...' : <KpiValue value={analytics?.avg_order_value} unit="currency" />}
               </p>
             </div>
-            <Target className="h-6 w-6 text-orange-600" />
+            <Target className="h-6 w-6 text-orange-600 dark:text-orange-400" />
           </div>
         </Card>
         <Card>
@@ -207,7 +207,7 @@ export function BannosAnalyticsPage() {
                 {loading ? '...' : <KpiValue value={analytics?.pending_today} unit="count" />}
               </p>
             </div>
-            <Clock className="h-6 w-6 text-purple-600" />
+            <Clock className="h-6 w-6 text-purple-600 dark:text-purple-400" />
           </div>
         </Card>
       </div>
@@ -227,7 +227,7 @@ export function BannosAnalyticsPage() {
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-blue-600" />
+                  <DollarSign className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Revenue Trend
                 </CardTitle>
               </CardHeader>
@@ -250,7 +250,7 @@ export function BannosAnalyticsPage() {
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-blue-600" />
+                  <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Orders Volume
                 </CardTitle>
               </CardHeader>
@@ -275,7 +275,7 @@ export function BannosAnalyticsPage() {
           <Card className="p-6">
             <CardHeader className="p-0 pb-6">
               <CardTitle className="flex items-center gap-2">
-                <Cake className="h-5 w-5 text-blue-600" />
+                <Cake className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 Top 5 Products by Order Count
               </CardTitle>
             </CardHeader>
@@ -314,7 +314,7 @@ export function BannosAnalyticsPage() {
             <CardHeader className="p-0 pb-6">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Weekly Forecast
                 </CardTitle>
                 <div className="flex items-center gap-2">
@@ -345,8 +345,8 @@ export function BannosAnalyticsPage() {
                           return (
                             <div className="bg-background border rounded-lg shadow-lg p-3">
                               <p className="font-medium">{label} ({data.date})</p>
-                              <p className="text-sm text-green-600">Completed: {data.completed}</p>
-                              <p className="text-sm text-orange-600">Pending: {data.pending}</p>
+                              <p className="text-sm text-green-600 dark:text-green-400">Completed: {data.completed}</p>
+                              <p className="text-sm text-orange-600 dark:text-orange-400">Pending: {data.pending}</p>
                               <p className="text-sm font-medium">Total: {data.total}</p>
                             </div>
                           );
@@ -370,7 +370,7 @@ export function BannosAnalyticsPage() {
               <CardHeader className="p-0 pb-6">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
-                    <Truck className="h-5 w-5 text-blue-600" />
+                    <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     Delivery vs Pickup
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">{weekLabel}</span>
@@ -402,7 +402,7 @@ export function BannosAnalyticsPage() {
             <Card className="p-6">
               <CardHeader className="p-0 pb-6">
                 <CardTitle className="flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5 text-blue-600" />
+                  <ShoppingBag className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Breakdown Details
                 </CardTitle>
               </CardHeader>
