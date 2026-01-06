@@ -70,11 +70,11 @@ const lightColors: ChartColors = {
 const darkColors: ChartColors = {
   bannos: {
     primary: '#60a5fa', // blue-400 - lighter for dark bg
-    gradient: ['#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#eff6ff'],
+    gradient: ['#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af'], // blue-400 to blue-800 (maintains contrast)
   },
   flourlane: {
     primary: '#f472b6', // pink-400 - lighter for dark bg
-    gradient: ['#f472b6', '#f9a8d4', '#fbcfe8', '#fce7f3', '#fdf2f8'],
+    gradient: ['#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d'], // pink-400 to pink-800 (maintains contrast)
   },
   staff: {
     primary: '#a78bfa', // violet-400 - lighter for dark bg
