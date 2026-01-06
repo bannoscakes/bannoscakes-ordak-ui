@@ -114,7 +114,14 @@ const shiftDistribution = [
 
 export function StaffAnalyticsPage() {
   const { resolvedTheme } = useTheme();
-  const chartColors = getChartColorsFromTheme(resolvedTheme);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent SSR hydration mismatch by using fixed colors until mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const chartColors = getChartColorsFromTheme(mounted ? resolvedTheme : 'light');
 
   const [loading, setLoading] = useState(true);
   const [avgProductivity, setAvgProductivity] = useState<number | null>(null);

@@ -40,7 +40,14 @@ type DateRange = '7d' | '30d' | '90d';
 
 export function FlourlaneAnalyticsPage() {
   const { resolvedTheme } = useTheme();
-  const chartColors = getChartColorsFromTheme(resolvedTheme);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent SSR hydration mismatch by using fixed colors until mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const chartColors = getChartColorsFromTheme(mounted ? resolvedTheme : 'light');
 
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>('30d');
