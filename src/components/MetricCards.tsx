@@ -1,4 +1,4 @@
-import { TrendingUp, CheckCircle, Clock, Zap } from "lucide-react";
+import { TrendingUp, CheckCircle, Clock, Zap, type LucideIcon } from "lucide-react";
 import { Card } from "./ui/card";
 import { useMemo } from "react";
 import { useQueueStats } from "../hooks/useDashboardQueries";
@@ -11,7 +11,7 @@ interface Metric {
   title: string;
   value: string;
   subtitle: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
   bg: string;
   iconColor: string;
 }

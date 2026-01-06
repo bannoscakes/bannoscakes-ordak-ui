@@ -18,27 +18,24 @@ const storeProductionData = {
         count: 45,
         status: "Active",
         progress: 92,
-        color: "blue",
         todayTarget: 50,
         weekTarget: 350,
         efficiency: "92%"
       },
       {
-        name: "Covering", 
+        name: "Covering",
         count: 38,
         status: "Active",
         progress: 88,
-        color: "purple",
         todayTarget: 45,
         weekTarget: 315,
         efficiency: "88%"
       },
       {
-        name: "Decoration",
-        count: 32, 
+        name: "Decorating",
+        count: 32,
         status: "Active",
         progress: 94,
-        color: "pink",
         todayTarget: 35,
         weekTarget: 245,
         efficiency: "94%"
@@ -46,9 +43,8 @@ const storeProductionData = {
       {
         name: "Packing",
         count: 28,
-        status: "Active", 
+        status: "Active",
         progress: 85,
-        color: "orange",
         todayTarget: 40,
         weekTarget: 280,
         efficiency: "85%"
@@ -64,27 +60,24 @@ const storeProductionData = {
         count: 22,
         status: "Active",
         progress: 89,
-        color: "blue",
         todayTarget: 25,
         weekTarget: 175,
         efficiency: "89%"
       },
       {
-        name: "Covering", 
+        name: "Covering",
         count: 18,
         status: "Active",
         progress: 75,
-        color: "purple",
         todayTarget: 24,
         weekTarget: 168,
         efficiency: "75%"
       },
       {
-        name: "Decoration",
-        count: 15, 
+        name: "Decorating",
+        count: 15,
         status: "Active",
         progress: 62,
-        color: "pink",
         todayTarget: 22,
         weekTarget: 154,
         efficiency: "62%"
@@ -92,9 +85,8 @@ const storeProductionData = {
       {
         name: "Packing",
         count: 12,
-        status: "Active", 
+        status: "Active",
         progress: 85,
-        color: "orange",
         todayTarget: 20,
         weekTarget: 140,
         efficiency: "85%"
@@ -103,24 +95,8 @@ const storeProductionData = {
   }
 };
 
-// Map color names to stage names (used by storeProductionData)
-const colorToStage: Record<string, string> = {
-  blue: "Filling",
-  purple: "Covering",
-  pink: "Decorating",
-  orange: "Packing"
-};
-
-const getColorClasses = (color: string) => {
-  const stageName = colorToStage[color];
-
-  if (!stageName) {
-    return {
-      text: "text-gray-700 dark:text-gray-300",
-      progress: "bg-gray-500"
-    };
-  }
-
+// Get color classes directly from stage name (uses stage-colors.ts as source of truth)
+const getColorClasses = (stageName: string) => {
   const baseParts = getStageColorParts(stageName);
   return {
     text: baseParts.text,
@@ -207,7 +183,7 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {storeData.stations.map((station, index) => {
-          const colors = getColorClasses(station.color);
+          const colors = getColorClasses(station.name);
           
           return (
             <div key={index} className={`p-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/90 md:backdrop-blur-md border border-white/20`}>
