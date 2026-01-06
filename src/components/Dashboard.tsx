@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import { Toaster } from "./ui/sonner";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
@@ -192,7 +191,6 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           </ErrorBoundary>
         </main>
       </div>
-      <Toaster />
     </div>
   );
 }

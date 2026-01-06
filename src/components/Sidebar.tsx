@@ -6,13 +6,16 @@ import {
   Clock,
   ChevronLeft,
   Cake,
-  ClipboardList
+  ClipboardList,
+  Sun,
+  Moon
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { OrdakLogo } from "./OrdakLogo";
 import { safePushState } from "@/lib/safeNavigate";
 import { useAuth } from "@/hooks/useAuth";
+import { useThemeToggle } from "@/hooks/useThemeToggle";
 
 // Set of clickable navigation item IDs for O(1) lookup
 const CLICKABLE_NAV_IDS = new Set([
@@ -59,9 +62,10 @@ const navigationItems = [
 export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
+  const { mounted, resolvedTheme, toggleTheme } = useThemeToggle();
 
   return (
-    <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
+    <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col h-full ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -167,6 +171,28 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           );
         })}
       </nav>
+
+      {/* Theme toggle at bottom */}
+      {mounted && (
+        <div className="mt-auto p-4 border-t border-sidebar-border">
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "sm"}
+            onClick={toggleTheme}
+            className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
+            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            role="switch"
+            aria-checked={resolvedTheme === "dark"}
+          >
+            {resolvedTheme === "dark" ? (
+              <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+            ) : (
+              <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+            )}
+            {!collapsed && <span>{resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

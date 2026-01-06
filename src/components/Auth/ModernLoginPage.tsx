@@ -142,13 +142,13 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
             <p className="text-gray-400 text-sm">Manufacturing Hub</p>
           </div>
 
-          <Card className="p-6 sm:p-8 shadow-2xl backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb' }}>
+          <Card className="force-light p-6 sm:p-8 shadow-2xl backdrop-blur-sm" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e5e7eb' }}>
             <div className="space-y-6">
               <div className="text-center space-y-2">
-                <h1 className="text-2xl sm:text-3xl text-foreground font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
+                <h1 className="text-2xl sm:text-3xl text-gray-900 font-semibold" style={{ fontFamily: '"IBM Plex Sans", sans-serif' }}>
                   Welcome Back
                 </h1>
-                <p className="text-muted-foreground text-sm sm:text-base">
+                <p className="text-gray-500 text-sm sm:text-base">
                   Sign in to access your workspace
                 </p>
               </div>
@@ -167,7 +167,7 @@ export function ModernLoginPage({ onSuccess }: ModernLoginPageProps) {
               handleSignIn={handleSignIn}
             />
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-gray-500">
               Need help? Contact your manager
             </p>
           </div>
@@ -247,18 +247,18 @@ function LoginFormFields({
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
-                <EyeOff className="h-5 w-5 text-muted-foreground" />
+                <EyeOff className="h-5 w-5 text-gray-500" />
               ) : (
-                <Eye className="h-5 w-5 text-muted-foreground" />
+                <Eye className="h-5 w-5 text-gray-500" />
               )}
             </Button>
           </div>
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-            <p className="text-sm text-destructive">{error}</p>
+          <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
       </div>
@@ -284,7 +284,7 @@ function LoginFormFields({
             <Separator className="w-full" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-muted-foreground">Or</span>
+            <span className="bg-white px-2 text-gray-500">Or</span>
           </div>
         </div>
 
