@@ -5,14 +5,17 @@
  * - Admin: brand orange (#FF6B00 from --sidebar-primary)
  * - Supervisor: pink
  * - Staff (default): green
+ *
+ * Handles null/undefined and case-insensitive matching.
  */
-export function getRoleAvatarColor(role: string): string {
-  switch (role) {
-    case "Admin":
+export function getRoleAvatarColor(role: string | null | undefined): string {
+  const normalizedRole = role?.trim().toLowerCase();
+  switch (normalizedRole) {
+    case "admin":
       return "bg-[var(--sidebar-primary)] text-white";
-    case "Supervisor":
+    case "supervisor":
       return "bg-pink-500 text-white";
-    case "Staff":
+    case "staff":
     default:
       return "bg-green-500 text-white";
   }
