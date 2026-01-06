@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useTheme } from "next-themes";
+import { getChartColors } from "@/lib/chart-colors";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -102,15 +104,18 @@ const attendanceData = [
 // Skills & Training mock data removed - replaced with Staff Performance using real data
 
 const shiftDistribution = [
-  { name: "Morning (6AM-2PM)", value: 40, employees: 12, color: "#3b82f6" },
-  { name: "Afternoon (2PM-10PM)", value: 35, employees: 8, color: "#10b981" },
-  { name: "Night (10PM-6AM)", value: 15, employees: 3, color: "#f59e0b" },
-  { name: "Weekend", value: 10, employees: 6, color: "#8b5cf6" }
+  { name: "Morning (6AM-2PM)", value: 40, employees: 12 },
+  { name: "Afternoon (2PM-10PM)", value: 35, employees: 8 },
+  { name: "Night (10PM-6AM)", value: 15, employees: 3 },
+  { name: "Weekend", value: 10, employees: 6 }
 ];
 
 // Mock metrics removed - now using real data from RPCs
 
 export function StaffAnalyticsPage() {
+  const { resolvedTheme } = useTheme();
+  const chartColors = getChartColors(resolvedTheme as 'light' | 'dark');
+
   const [loading, setLoading] = useState(true);
   const [avgProductivity, setAvgProductivity] = useState<number | null>(null);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
@@ -185,7 +190,14 @@ export function StaffAnalyticsPage() {
   const attendanceDataUse = isEnabled ? attendanceData : [];
   // departmentPerformanceData now comes from RPC (real data)
   // staffStageData now comes from RPC (real data)
-  const shiftDistributionUse = isEnabled ? shiftDistribution : [];
+  // Theme-aware shift distribution colors
+  const shiftDistributionUse = useMemo(() => {
+    if (!isEnabled) return [];
+    return shiftDistribution.map((shift, idx) => ({
+      ...shift,
+      color: chartColors.shifts[idx % chartColors.shifts.length]
+    }));
+  }, [isEnabled, chartColors]);
   const topPerformersData = isEnabled ? topPerformers : [];
   const metrics = kpiMetricsWithRealData;
 
@@ -282,7 +294,7 @@ export function StaffAnalyticsPage() {
                       <XAxis dataKey="month" />
                       <YAxis domain={[85, 100]} />
                       <Tooltip />
-                      <Line type="monotone" dataKey="productivity" stroke="#8b5cf6" strokeWidth={3} dot={{fill: '#8b5cf6', strokeWidth: 2, r: 4}} />
+                      <Line type="monotone" dataKey="productivity" stroke={chartColors.staff.primary} strokeWidth={3} dot={{fill: chartColors.staff.primary, strokeWidth: 2, r: 4}} />
                     </LineChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -305,8 +317,8 @@ export function StaffAnalyticsPage() {
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="hours" fill="#8b5cf6" name="Regular Hours" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="overtime" fill="#f59e0b" name="Overtime" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="hours" fill={chartColors.hours} name="Regular Hours" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="overtime" fill={chartColors.overtime} name="Overtime" radius={[2, 2, 0, 0]} />
                       <Legend />
                     </BarChart>
                   </ResponsiveContainer>
@@ -450,9 +462,9 @@ export function StaffAnalyticsPage() {
                       <XAxis dataKey="week" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="present" fill="#10b981" name="Present" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="present" fill={chartColors.present} name="Present" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="absent" fill={chartColors.absent} name="Absent" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="late" fill={chartColors.late} name="Late" radius={[2, 2, 0, 0]} />
                       <Legend />
                     </BarChart>
                   </ResponsiveContainer>

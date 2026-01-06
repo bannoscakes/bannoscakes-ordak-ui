@@ -31,13 +31,17 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { format, subDays, startOfWeek, addWeeks, subWeeks, parseISO } from "date-fns";
+import { useTheme } from "next-themes";
+import { getChartColors } from "@/lib/chart-colors";
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const COLORS = ['#ec4899', '#f472b6', '#f9a8d4', '#fbb6ce', '#fce7f3'];
 
 type DateRange = '7d' | '30d' | '90d';
 
 export function FlourlaneAnalyticsPage() {
+  const { resolvedTheme } = useTheme();
+  const chartColors = getChartColors(resolvedTheme as 'light' | 'dark');
+
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [analytics, setAnalytics] = useState<StoreAnalytics | null>(null);
@@ -132,9 +136,9 @@ export function FlourlaneAnalyticsPage() {
       name: d.delivery_method,
       value: Number(d.order_count),
       percentage: Number(d.percentage),
-      color: COLORS[idx % COLORS.length]
+      color: chartColors.flourlane.gradient[idx % chartColors.flourlane.gradient.length]
     }));
-  }, [deliveryBreakdown]);
+  }, [deliveryBreakdown, chartColors]);
 
   return (
     <div className="p-6 space-y-6">
@@ -238,7 +242,7 @@ export function FlourlaneAnalyticsPage() {
                       <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
-                      <Area type="monotone" dataKey="revenue" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeWidth={2} />
+                      <Area type="monotone" dataKey="revenue" stroke={chartColors.flourlane.primary} fill={chartColors.flourlane.primary} fillOpacity={0.1} strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -261,7 +265,7 @@ export function FlourlaneAnalyticsPage() {
                       <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="orders" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="orders" fill={chartColors.flourlane.primary} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -296,7 +300,7 @@ export function FlourlaneAnalyticsPage() {
                         <div className="w-full bg-muted rounded-full h-2">
                           <div
                             className="h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${percentage}%`, backgroundColor: COLORS[idx % COLORS.length] }}
+                            style={{ width: `${percentage}%`, backgroundColor: chartColors.flourlane.gradient[idx % chartColors.flourlane.gradient.length] }}
                           />
                         </div>
                       </div>
@@ -353,8 +357,8 @@ export function FlourlaneAnalyticsPage() {
                         return null;
                       }}
                     />
-                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="Completed" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="pending" stackId="a" fill="#f97316" name="Pending" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="completed" stackId="a" fill={chartColors.completed} name="Completed" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="pending" stackId="a" fill={chartColors.pending} name="Pending" radius={[4, 4, 0, 0]} />
                     <Legend />
                   </BarChart>
                 </ResponsiveContainer>
@@ -413,7 +417,7 @@ export function FlourlaneAnalyticsPage() {
                     deliveryBreakdown.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: chartColors.flourlane.gradient[idx % chartColors.flourlane.gradient.length] }} />
                           <span className="font-medium">{item.delivery_method}</span>
                         </div>
                         <div className="flex items-center gap-4">
