@@ -377,7 +377,7 @@ export function StaffWorkspacePage({
                   </Badge>
                   <Button
                     variant="outline"
-                    size="sm"
+                    className="min-h-11 px-4"
                     onClick={handleEndShift}
                     disabled={shiftLoading}
                   >
@@ -386,7 +386,7 @@ export function StaffWorkspacePage({
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
+                    className="min-h-11 px-4"
                     onClick={handleStartBreak}
                     disabled={shiftLoading}
                   >

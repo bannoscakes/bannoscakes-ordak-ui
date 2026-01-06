@@ -206,9 +206,9 @@ export function ProductionStatus({ store }: ProductionStatusProps) {
                       <span className="text-muted-foreground">Progress</span>
                       <span className={`font-medium ${colors.text}`}>{station.efficiency}</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-500 ${colors.progress}`}
+                    <div className="w-full bg-muted rounded-full h-3">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-500 ${colors.progress}`}
                         style={{ width: `${station.progress}%` }}
                       />
                     </div>
