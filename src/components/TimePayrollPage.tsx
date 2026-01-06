@@ -153,8 +153,7 @@ export function TimePayrollPage({ initialStaffFilter, onBack }: TimePayrollPageP
     }
     
     fetchStaffData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange]); // roleMap excluded: only used for mapping, not fetching
+  }, [dateRange, roleMap]);
 
   // Filter by initial staff if provided
   useEffect(() => {
