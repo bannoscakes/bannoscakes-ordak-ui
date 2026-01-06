@@ -18,9 +18,11 @@ interface Station {
 // Get color classes from stage-colors.ts (single source of truth)
 const getColorClasses = (stageName: string) => {
   const parts = getStageColorParts(stageName);
+  // Convert dot bg color (bg-blue-500) to text color (text-blue-500)
+  const iconColor = parts.dot.replace("bg-", "text-");
   return {
     text: parts.text,
-    icon: parts.text.replace("-700", "-500").replace("-300", "-400")
+    icon: `${iconColor} dark:${iconColor.replace("-500", "-400")}`
   };
 };
 
@@ -95,7 +97,7 @@ export function UnassignedStations({ store }: UnassignedStationsProps) {
           const colors = getColorClasses(station.stage);
           
           return (
-            <div key={index} className="p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/90 md:backdrop-blur-md border border-white/20">
+            <div key={index} className="p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 bg-white/70 dark:bg-gray-950/70 md:backdrop-blur-sm border border-gray-200/50 dark:border-white/20">
               <div className="flex items-center justify-between mb-2">
                 <UserX className={`h-4 w-4 ${colors.icon}`} />
                 <span className={`text-sm font-medium ${colors.text}`}>{station.count}</span>
