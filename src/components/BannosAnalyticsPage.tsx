@@ -141,8 +141,8 @@ export function BannosAnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-blue-100">
-            <Cake className="h-8 w-8 text-blue-600" />
+          <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/40">
+            <Cake className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h1 className="text-2xl font-medium text-foreground">Bannos Analytics</h1>
