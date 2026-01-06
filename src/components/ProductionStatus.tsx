@@ -2,6 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useMemo } from "react";
 import { useQueueStats } from "../hooks/useDashboardQueries";
+import { getStageColorParts } from "../lib/stage-colors";
 
 interface ProductionStatusProps {
   store: "bannos" | "flourlane";
@@ -102,38 +103,41 @@ const storeProductionData = {
   }
 };
 
+// Map color names to stage names (used by storeProductionData)
+const colorToStage: Record<string, string> = {
+  blue: "Filling",
+  purple: "Covering",
+  pink: "Decorating",
+  orange: "Packing"
+};
+
+// Additional color properties not in stage-colors.ts
+const progressColors: Record<string, string> = {
+  blue: "bg-blue-500",
+  purple: "bg-purple-500",
+  pink: "bg-pink-500",
+  orange: "bg-orange-500"
+};
+
 const getColorClasses = (color: string) => {
-  const colorMap = {
-    blue: {
-      bg: "bg-blue-100 dark:bg-blue-900/30",
-      border: "border-blue-300 dark:border-blue-700",
-      text: "text-blue-700 dark:text-blue-300",
-      progress: "bg-blue-500",
-      badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-    },
-    purple: {
-      bg: "bg-purple-100 dark:bg-purple-900/30",
-      border: "border-purple-300 dark:border-purple-700",
-      text: "text-purple-700 dark:text-purple-300",
-      progress: "bg-purple-500",
-      badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-    },
-    pink: {
-      bg: "bg-pink-100 dark:bg-pink-900/30",
-      border: "border-pink-300 dark:border-pink-700",
-      text: "text-pink-700 dark:text-pink-300",
-      progress: "bg-pink-500",
-      badge: "bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300"
-    },
-    orange: {
-      bg: "bg-orange-100 dark:bg-orange-900/30",
-      border: "border-orange-300 dark:border-orange-700",
-      text: "text-orange-700 dark:text-orange-300",
-      progress: "bg-orange-500",
-      badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
-    }
+  const stageName = colorToStage[color];
+  const baseParts = stageName ? getStageColorParts(stageName) : null;
+
+  if (!baseParts) {
+    return {
+      bg: "bg-gray-100 dark:bg-gray-800/30",
+      border: "border-gray-300 dark:border-gray-700",
+      text: "text-gray-700 dark:text-gray-300",
+      progress: "bg-gray-500",
+      badge: "bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300"
+    };
+  }
+
+  return {
+    ...baseParts,
+    progress: progressColors[color] || "bg-gray-500",
+    badge: `${baseParts.bg.replace('/30', '/50')} ${baseParts.text}`
   };
-  return colorMap[color as keyof typeof colorMap];
 };
 
 const getStatusColor = (status: string) => {

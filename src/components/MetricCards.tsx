@@ -16,45 +16,61 @@ interface Metric {
   iconColor: string;
 }
 
+// Shared color schemes for metric card icons
+const METRIC_COLORS = {
+  blue: {
+    bg: "bg-blue-100 dark:bg-blue-900/40",
+    iconColor: "text-blue-600 dark:text-blue-400"
+  },
+  green: {
+    bg: "bg-green-100 dark:bg-green-900/40",
+    iconColor: "text-green-600 dark:text-green-400"
+  },
+  orange: {
+    bg: "bg-orange-100 dark:bg-orange-900/40",
+    iconColor: "text-orange-600 dark:text-orange-400"
+  },
+  purple: {
+    bg: "bg-purple-100 dark:bg-purple-900/40",
+    iconColor: "text-purple-600 dark:text-purple-400"
+  }
+} as const;
+
 export function MetricCards({ store }: MetricCardsProps) {
   const { data: stats, isLoading } = useQueueStats(store);
 
   // Transform stats to metrics display format
   const metrics = useMemo<Metric[]>(() => {
     if (!stats) return [];
-    
+
     return [
       {
         title: "Total Orders",
         value: stats.total_orders?.toString() || "0",
         subtitle: `${stats.unassigned_orders || 0} unassigned`,
         icon: TrendingUp,
-        bg: "bg-blue-100 dark:bg-blue-900/40",
-        iconColor: "text-blue-600 dark:text-blue-400"
+        ...METRIC_COLORS.blue
       },
       {
         title: "Completed",
         value: stats.completed_orders?.toString() || "0",
         subtitle: stats.total_orders ? `${Math.round(((stats.completed_orders || 0) / stats.total_orders) * 100)}% of total` : "0 orders",
         icon: CheckCircle,
-        bg: "bg-green-100 dark:bg-green-900/40",
-        iconColor: "text-green-600 dark:text-green-400"
+        ...METRIC_COLORS.green
       },
       {
         title: "In Production",
         value: ((stats.filling_count || 0) + (stats.covering_count || 0) + (stats.decorating_count || 0) + (stats.packing_count || 0)).toString(),
         subtitle: `${stats.unassigned_orders || 0} unassigned`,
         icon: Clock,
-        bg: "bg-orange-100 dark:bg-orange-900/40",
-        iconColor: "text-orange-600 dark:text-orange-400"
+        ...METRIC_COLORS.orange
       },
       {
         title: "By Stage",
         value: `${stats.filling_count || 0}/${stats.decorating_count || 0}`,
         subtitle: "Filling/Decorating",
         icon: Zap,
-        bg: "bg-purple-100 dark:bg-purple-900/40",
-        iconColor: "text-purple-600 dark:text-purple-400"
+        ...METRIC_COLORS.purple
       }
     ];
   }, [stats]);
@@ -66,32 +82,28 @@ export function MetricCards({ store }: MetricCardsProps) {
       value: "0",
       subtitle: "No data available",
       icon: TrendingUp,
-      bg: "bg-blue-100 dark:bg-blue-900/40",
-      iconColor: "text-blue-600 dark:text-blue-400"
+      ...METRIC_COLORS.blue
     },
     {
       title: "Completed Today",
       value: "0",
       subtitle: "No data available",
       icon: CheckCircle,
-      bg: "bg-green-100 dark:bg-green-900/40",
-      iconColor: "text-green-600 dark:text-green-400"
+      ...METRIC_COLORS.green
     },
     {
       title: "In Production",
       value: "0",
       subtitle: "No data available",
       icon: Clock,
-      bg: "bg-orange-100 dark:bg-orange-900/40",
-      iconColor: "text-orange-600 dark:text-orange-400"
+      ...METRIC_COLORS.orange
     },
     {
       title: "Quality Score",
       value: "0%",
       subtitle: "No data available",
       icon: Zap,
-      bg: "bg-purple-100 dark:bg-purple-900/40",
-      iconColor: "text-purple-600 dark:text-purple-400"
+      ...METRIC_COLORS.purple
     }
   ];
 
