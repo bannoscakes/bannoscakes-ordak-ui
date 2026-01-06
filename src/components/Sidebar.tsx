@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -11,12 +10,12 @@ import {
   Sun,
   Moon
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { Button } from "./ui/button";
 import { TallCakeIcon } from "./TallCakeIcon";
 import { OrdakLogo } from "./OrdakLogo";
 import { safePushState } from "@/lib/safeNavigate";
 import { useAuth } from "@/hooks/useAuth";
+import { useThemeToggle } from "@/hooks/useThemeToggle";
 
 // Set of clickable navigation item IDs for O(1) lookup
 const CLICKABLE_NAV_IDS = new Set([
@@ -63,16 +62,7 @@ const navigationItems = [
 export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: SidebarProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
-  const [mounted, setMounted] = useState(false);
-  const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  };
+  const { mounted, resolvedTheme, toggleTheme } = useThemeToggle();
 
   return (
     <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col h-full ${collapsed ? 'w-16' : 'w-64'}`}>

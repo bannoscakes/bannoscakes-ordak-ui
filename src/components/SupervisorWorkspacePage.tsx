@@ -12,8 +12,8 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
+import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
 import { OrderOverflowMenu } from "./OrderOverflowMenu";
@@ -75,18 +75,6 @@ export function SupervisorWorkspacePage({
   const [scannerOpen, setScannerOpen] = useState(false);
   const [showMyTasks, setShowMyTasks] = useState(true);
   const [activeTab, setActiveTab] = useState("orders");
-
-  // Theme toggle
-  const [themeMounted, setThemeMounted] = useState(false);
-  const { resolvedTheme, setTheme } = useTheme();
-
-  useEffect(() => {
-    setThemeMounted(true);
-  }, []);
-
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  };
 
   // Update elapsed time
   useEffect(() => {
@@ -342,21 +330,7 @@ export function SupervisorWorkspacePage({
                 </div>
               )}
 
-              {themeMounted && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleTheme}
-                  aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                  className="h-8 w-8"
-                >
-                  {resolvedTheme === "dark" ? (
-                    <Sun className="h-4 w-4" />
-                  ) : (
-                    <Moon className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
+              <ThemeToggleButton />
               <Button variant="outline" size="sm" onClick={onSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
