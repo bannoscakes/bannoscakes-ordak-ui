@@ -563,7 +563,9 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
       const shopifyOrder = normalizeWebhook(webhook.payload)
 
       // Skip custom orders - these are handled via manual order form
-      const orderTags = (shopifyOrder.tags || '').toLowerCase()
+      // Handle both REST (string) and GraphQL (array) tag formats
+      const rawTags = shopifyOrder.tags || ''
+      const orderTags = (Array.isArray(rawTags) ? rawTags.join(',') : rawTags).toLowerCase()
       if (orderTags.includes('custom order') || orderTags.includes('custom-order')) {
         console.log(`[${storeSource}] Skipping custom order: ${shopifyOrder.name || shopifyOrder.order_number}`)
 
