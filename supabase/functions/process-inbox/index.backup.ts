@@ -561,28 +561,7 @@ async function processInboxOrders(storeSource: string, limit: number = 50) {
     try {
       // Normalize webhook (convert GraphQL to REST if needed)
       const shopifyOrder = normalizeWebhook(webhook.payload)
-
-      // Skip custom orders - these are handled via manual order form
-      const orderTags = (shopifyOrder.tags || '').toLowerCase()
-      if (orderTags.includes('custom order') || orderTags.includes('custom-order')) {
-        console.log(`[${storeSource}] Skipping custom order: ${shopifyOrder.name || shopifyOrder.order_number}`)
-
-        await supabase
-          .from(inboxTable)
-          .update({ processed: true })
-          .eq('id', webhook.id)
-
-        results.push({
-          webhookId: webhook.id,
-          orderNumber: shopifyOrder.order_number,
-          success: true,
-          message: 'Custom order - skipped'
-        })
-
-        successCount++
-        continue
-      }
-
+      
       console.log(`Processing order: ${shopifyOrder.order_number}`)
       
       const orders = await processOrderItems(shopifyOrder, storeSource)
