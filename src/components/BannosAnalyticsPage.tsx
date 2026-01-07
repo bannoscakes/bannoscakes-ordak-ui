@@ -31,13 +31,27 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { format, subDays, startOfWeek, addWeeks, subWeeks, parseISO } from "date-fns";
+import { useTheme } from "next-themes";
+import { getChartColorsFromTheme } from "@/lib/chart-colors";
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
 
 type DateRange = '7d' | '30d' | '90d';
 
 export function BannosAnalyticsPage() {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent SSR hydration mismatch by using fixed colors until mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const chartColors = useMemo(
+    () => getChartColorsFromTheme(mounted ? resolvedTheme : 'light'),
+    [mounted, resolvedTheme]
+  );
+
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>('30d');
   const [analytics, setAnalytics] = useState<StoreAnalytics | null>(null);
@@ -132,9 +146,9 @@ export function BannosAnalyticsPage() {
       name: d.delivery_method,
       value: Number(d.order_count),
       percentage: Number(d.percentage),
-      color: COLORS[idx % COLORS.length]
+      color: chartColors.bannos.gradient[idx % chartColors.bannos.gradient.length]
     }));
-  }, [deliveryBreakdown]);
+  }, [deliveryBreakdown, chartColors]);
 
   return (
     <div className="p-6 space-y-6">
@@ -234,11 +248,15 @@ export function BannosAnalyticsPage() {
                 <ChartContainer hasData={chartRevenueData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={chartRevenueData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
-                      <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={2} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <Tooltip
+                        formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']}
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
+                      <Area type="monotone" dataKey="revenue" stroke={chartColors.bannos.primary} fill={chartColors.bannos.primary} fillOpacity={0.1} strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -257,11 +275,14 @@ export function BannosAnalyticsPage() {
                 <ChartContainer hasData={chartRevenueData.length > 0}>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={chartRevenueData}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="orders" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
+                      <Bar dataKey="orders" fill={chartColors.bannos.primary} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -296,7 +317,7 @@ export function BannosAnalyticsPage() {
                         <div className="w-full bg-muted rounded-full h-2">
                           <div
                             className="h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${percentage}%`, backgroundColor: COLORS[idx % COLORS.length] }}
+                            style={{ width: `${percentage}%`, backgroundColor: chartColors.bannos.gradient[idx % chartColors.bannos.gradient.length] }}
                           />
                         </div>
                       </div>
@@ -334,9 +355,9 @@ export function BannosAnalyticsPage() {
               <ChartContainer hasData={chartForecastData.length > 0}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartForecastData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.3} />
+                    <XAxis dataKey="day" tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
+                    <YAxis tick={{ fill: chartColors.text }} stroke={chartColors.axis} />
                     <Tooltip
                       content={({ active, payload, label }) => {
                         if (active && payload && payload.length) {
@@ -353,9 +374,9 @@ export function BannosAnalyticsPage() {
                         return null;
                       }}
                     />
-                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="Completed" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="pending" stackId="a" fill="#f97316" name="Pending" radius={[4, 4, 0, 0]} />
-                    <Legend />
+                    <Bar dataKey="completed" stackId="a" fill={chartColors.completed} name="Completed" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="pending" stackId="a" fill={chartColors.pending} name="Pending" radius={[4, 4, 0, 0]} />
+                    <Legend wrapperStyle={{ color: chartColors.text }} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -391,7 +412,10 @@ export function BannosAnalyticsPage() {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
+                        labelStyle={{ color: 'var(--foreground)' }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -413,7 +437,7 @@ export function BannosAnalyticsPage() {
                     deliveryBreakdown.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: chartColors.bannos.gradient[idx % chartColors.bannos.gradient.length] }} />
                           <span className="font-medium">{item.delivery_method}</span>
                         </div>
                         <div className="flex items-center gap-4">
