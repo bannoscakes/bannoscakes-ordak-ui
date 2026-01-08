@@ -270,9 +270,14 @@ html {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Keep loading indicators functional - users need feedback during async operations */
+  .animate-spin,
+  .animate-pulse {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 
