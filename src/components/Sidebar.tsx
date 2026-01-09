@@ -179,9 +179,9 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
           size={collapsed ? "icon" : "sm"}
           onClick={toggleTheme}
           className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
-          aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={!mounted ? "Theme toggle" : (resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode")}
           role="switch"
-          aria-checked={resolvedTheme === "dark"}
+          aria-checked={mounted ? resolvedTheme === "dark" : false}
           disabled={!mounted}
         >
           {!mounted ? (
