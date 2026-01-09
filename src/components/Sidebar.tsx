@@ -65,7 +65,7 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
   const { mounted, resolvedTheme, toggleTheme } = useThemeToggle();
 
   return (
-    <div className={`bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col h-full ${collapsed ? 'w-16' : 'w-64'}`}>
+    <div className={`bg-sidebar border-r border-sidebar-border transition-[width] duration-300 flex flex-col h-full ${collapsed ? 'w-16' : 'w-64'}`}>
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -172,27 +172,33 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
         })}
       </nav>
 
-      {/* Theme toggle at bottom */}
-      {mounted && (
-        <div className="mt-auto p-4 border-t border-sidebar-border">
-          <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "sm"}
-            onClick={toggleTheme}
-            className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
-            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            role="switch"
-            aria-checked={resolvedTheme === "dark"}
-          >
-            {resolvedTheme === "dark" ? (
-              <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
-            ) : (
-              <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
-            )}
-            {!collapsed && <span>{resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}</span>}
-          </Button>
-        </div>
-      )}
+      {/* Theme toggle at bottom - always render to prevent hydration delay */}
+      <div className="mt-auto p-4 border-t border-sidebar-border">
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "sm"}
+          onClick={toggleTheme}
+          className={`w-full justify-start hover:bg-sidebar-accent text-sidebar-foreground ${collapsed ? 'px-3' : 'px-4'}`}
+          aria-label={!mounted ? "Theme toggle" : (resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode")}
+          role="switch"
+          aria-checked={mounted ? resolvedTheme === "dark" : false}
+          disabled={!mounted}
+        >
+          {!mounted ? (
+            // Skeleton state during hydration to prevent layout shift
+            <div className={`h-5 w-5 ${collapsed ? '' : 'mr-3'} animate-pulse bg-muted rounded`} />
+          ) : resolvedTheme === "dark" ? (
+            <Sun className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+          ) : (
+            <Moon className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+          )}
+          {!collapsed && (
+            <span>
+              {!mounted ? "Theme" : resolvedTheme === "dark" ? "Light Mode" : "Dark Mode"}
+            </span>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

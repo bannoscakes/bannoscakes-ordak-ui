@@ -6,9 +6,23 @@ import { LoadingSpinner } from "./ui/LoadingSpinner";
 import { useAuth } from "@/hooks/useAuth";
 import { safePushState, NAVIGATION_EVENT } from "@/lib/safeNavigate";
 
-// Page-level spinner for lazy-loaded sub-pages
+// Delayed spinner to prevent flash on fast page loads
 function PageSpinner() {
-  return <LoadingSpinner className="h-64" />;
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    // Only show spinner if loading takes >150ms (prevents flash on fast loads)
+    const timer = setTimeout(() => setShow(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className="flex items-center justify-center py-12">
+      <LoadingSpinner size="md" />
+    </div>
+  );
 }
 
 // Retry wrapper for chunk load failures (network errors, mid-deploy)
