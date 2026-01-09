@@ -137,7 +137,7 @@ export function Sidebar({ collapsed, onCollapse, activeView, onViewChange }: Sid
               )}
               <Button
                 variant={isActive ? "default" : "ghost"}
-                className={`w-full justify-start transition-all duration-200 ${
+                className={`w-full justify-start transition-colors duration-150 ${
                   collapsed ? 'px-3' : 'px-4'
                 } ${(item.isProduction || item.isMonitor || item.isAnalytics || item.isStaff || item.isSettings) && !collapsed ? 'ml-4 w-[calc(100%-1rem)]' : ''} ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90' : 'hover:bg-sidebar-accent text-sidebar-foreground'} ${!isClickable ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => {
