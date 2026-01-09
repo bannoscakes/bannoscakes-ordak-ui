@@ -92,6 +92,30 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [qcComments, setQcComments] = useState("");
   const [selectedStorage, setSelectedStorage] = useState("");
 
+  // Determine scan button label based on stage and start timestamp
+  const getScanButtonLabel = () => {
+    // Use realOrder if available (has fresh data from server), fallback to order prop
+    const currentOrder = realOrder || order;
+    if (!currentOrder) return "Scan Barcode";
+
+    // Filling and Packing only have completion scans (no start scan)
+    if (currentOrder.stage === 'Filling' || currentOrder.stage === 'Packing') {
+      return 'Scan to Complete';
+    }
+
+    // Covering and Decorating have start + complete pattern
+    if (currentOrder.stage === 'Covering') {
+      return currentOrder.covering_start_ts ? 'Scan to Complete' : 'Scan to Start';
+    }
+
+    if (currentOrder.stage === 'Decorating') {
+      return currentOrder.decorating_start_ts ? 'Scan to Complete' : 'Scan to Start';
+    }
+
+    // Fallback for unknown stages
+    return 'Scan Barcode';
+  };
+
   // Use centralized mutation hooks for cache invalidation
   const setStorageMutation = useSetStorage();
   const qcReturnMutation = useQcReturnToDecorating();
@@ -138,7 +162,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         notes: fetchedOrder.notes || '',
         productImage: fetchedOrder.product_image || null,
         accessories: fetchedOrder.accessories || null,
-        shippingAddress: fetchedOrder.shipping_address || null
+        shippingAddress: fetchedOrder.shipping_address || null,
+        covering_start_ts: fetchedOrder.covering_start_ts || null,
+        decorating_start_ts: fetchedOrder.decorating_start_ts || null
       };
     }
     return order || null;
@@ -624,7 +650,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                     disabled={loading}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
-                    Scan Barcode
+                    {getScanButtonLabel()}
                   </Button>
                 </div>
                 <div className="flex gap-2">
@@ -656,7 +682,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   disabled={loading}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
-                  Scan Barcode
+                  {getScanButtonLabel()}
                 </Button>
               </div>
             )}
