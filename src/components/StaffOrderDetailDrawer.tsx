@@ -92,6 +92,28 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
   const [qcComments, setQcComments] = useState("");
   const [selectedStorage, setSelectedStorage] = useState("");
 
+  // Determine scan button label based on stage and start timestamp
+  const getScanButtonLabel = () => {
+    if (!order) return "Scan Barcode";
+
+    // Filling and Packing only have completion scans (no start scan)
+    if (order.stage === 'Filling' || order.stage === 'Packing') {
+      return 'Scan to Complete';
+    }
+
+    // Covering and Decorating have start + complete pattern
+    if (order.stage === 'Covering') {
+      return order.covering_start_ts ? 'Scan to Complete' : 'Scan to Start';
+    }
+
+    if (order.stage === 'Decorating') {
+      return order.decorating_start_ts ? 'Scan to Complete' : 'Scan to Start';
+    }
+
+    // Fallback for unknown stages
+    return 'Scan Barcode';
+  };
+
   // Use centralized mutation hooks for cache invalidation
   const setStorageMutation = useSetStorage();
   const qcReturnMutation = useQcReturnToDecorating();
@@ -624,7 +646,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                     disabled={loading}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
-                    Scan Barcode
+                    {getScanButtonLabel()}
                   </Button>
                 </div>
                 <div className="flex gap-2">
@@ -656,7 +678,7 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   disabled={loading}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
-                  Scan Barcode
+                  {getScanButtonLabel()}
                 </Button>
               </div>
             )}

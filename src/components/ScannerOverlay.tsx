@@ -26,6 +26,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   const [cameraFailed, setCameraFailed] = useState(false);
   const [manualInput, setManualInput] = useState("");
   const [isScanLookupPending, setIsScanLookupPending] = useState(false);
+  const [completedAction, setCompletedAction] = useState<'start' | 'complete' | null>(null);
 
   // Use centralized mutation hooks for cache invalidation
   const stageMutations = useStageMutations();
@@ -46,7 +47,6 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
   };
 
   const actionVerb = isStartAction() ? 'start' : 'complete';
-  const actionVerbPast = isStartAction() ? 'started' : 'completed';
   const actionVerbCapitalized = isStartAction() ? 'Start' : 'Completion';
 
   const handleScan = async (scannedCode: string) => {
@@ -107,6 +107,10 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
 
   const handleConfirm = () => {
     if (!order) return;
+
+    // Store the action type before making the mutation to prevent re-evaluation after state changes
+    const wasStartAction = isStartAction();
+    setCompletedAction(wasStartAction ? 'start' : 'complete');
 
     // Call appropriate stage RPC based on current stage
     // Covering and Decorating use first-scan-starts / second-scan-completes pattern
@@ -238,9 +242,9 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
         <Card className="w-full max-w-md p-6 space-y-6">
           <div className="text-center space-y-2">
             <CheckCircle className="h-16 w-16 text-success mx-auto" />
-            <h3 className="text-lg font-medium">Stage {isStartAction() ? 'Started' : 'Completed'}!</h3>
+            <h3 className="text-lg font-medium">Stage {completedAction === 'start' ? 'Started' : 'Completed'}!</h3>
             <p className="text-sm text-muted-foreground">
-              {displayOrderNumber} - {order.stage} stage has been {actionVerbPast}
+              {displayOrderNumber} - {order.stage} stage has been {completedAction === 'start' ? 'started' : 'completed'}
             </p>
           </div>
         </Card>
@@ -321,11 +325,17 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
       {/* Error Display */}
       {scanState === 'error' && errorMessage && (
         <div className="absolute bottom-0 left-0 right-0 p-6 bg-black/80 backdrop-blur-sm">
-          <Card className="p-4">
+          <Card className="p-4 space-y-4">
             <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
               <AlertCircle className="h-4 w-4 text-destructive" />
               <p className="text-sm text-destructive">{errorMessage}</p>
             </div>
+            <Button
+              onClick={handleContinueScanning}
+              className="w-full"
+            >
+              Try Again
+            </Button>
           </Card>
         </div>
       )}
