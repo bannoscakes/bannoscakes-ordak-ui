@@ -21,6 +21,8 @@ import {
   Clock,
   Briefcase,
   MessageSquare,
+  X,
+  Loader2,
 } from "lucide-react";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
@@ -55,7 +57,7 @@ export function StaffWorkspacePage({
   const displayName = user?.fullName || user?.email || "Signed in";
 
   // Use React Query hook for orders
-  const { data: orders = [], isLoading: loading, isError, refetch } = useStaffQueue(user?.id);
+  const { data: orders = [], isLoading: loading, isError, refetch, isFetching } = useStaffQueue(user?.id);
   const invalidateStaffQueue = useInvalidateStaffQueue();
 
   // Subscribe to realtime updates for both stores (staff can be assigned orders from either)
@@ -295,8 +297,9 @@ export function StaffWorkspacePage({
   // Block UI until auth is ready
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <div className="text-lg font-medium text-foreground">Loading authentication...</div>
       </div>
     );
   }
@@ -337,8 +340,16 @@ export function StaffWorkspacePage({
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
+                disabled={isFetching}
               >
-                Refresh
+                {isFetching ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  "Refresh"
+                )}
               </Button>
               <ThemeToggleButton />
               <Button
@@ -450,8 +461,17 @@ export function StaffWorkspacePage({
                   onChange={(e) =>
                     setSearchValue(e.target.value)
                   }
-                  className="pl-10"
+                  className="pl-10 pr-10"
                 />
+                {searchValue && (
+                  <button
+                    onClick={() => setSearchValue("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full hover:bg-muted"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </div>
             </Card>
 

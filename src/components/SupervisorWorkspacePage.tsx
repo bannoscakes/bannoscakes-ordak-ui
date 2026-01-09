@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase, X, Loader2 } from "lucide-react";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
@@ -272,8 +272,9 @@ export function SupervisorWorkspacePage({
   // Block UI until auth is ready
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading authentication...</div>
+      <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <div className="text-lg font-medium text-foreground">Loading authentication...</div>
       </div>
     );
   }
@@ -418,8 +419,17 @@ export function SupervisorWorkspacePage({
                   placeholder="Search assigned orders..."
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                 />
+                {searchValue && (
+                  <button
+                    onClick={() => setSearchValue("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full hover:bg-muted"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </div>
             </Card>
 
