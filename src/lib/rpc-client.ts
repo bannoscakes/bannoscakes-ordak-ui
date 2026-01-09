@@ -168,6 +168,8 @@ interface OrderBaseResult {
   total_amount: number | null;
   created_at: string | null;
   updated_at: string | null;
+  covering_start_ts: string | null;
+  decorating_start_ts: string | null;
 }
 
 /**

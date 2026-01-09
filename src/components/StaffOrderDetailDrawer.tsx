@@ -94,20 +94,22 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
 
   // Determine scan button label based on stage and start timestamp
   const getScanButtonLabel = () => {
-    if (!order) return "Scan Barcode";
+    // Use realOrder if available (has fresh data from server), fallback to order prop
+    const currentOrder = realOrder || order;
+    if (!currentOrder) return "Scan Barcode";
 
     // Filling and Packing only have completion scans (no start scan)
-    if (order.stage === 'Filling' || order.stage === 'Packing') {
+    if (currentOrder.stage === 'Filling' || currentOrder.stage === 'Packing') {
       return 'Scan to Complete';
     }
 
     // Covering and Decorating have start + complete pattern
-    if (order.stage === 'Covering') {
-      return order.covering_start_ts ? 'Scan to Complete' : 'Scan to Start';
+    if (currentOrder.stage === 'Covering') {
+      return currentOrder.covering_start_ts ? 'Scan to Complete' : 'Scan to Start';
     }
 
-    if (order.stage === 'Decorating') {
-      return order.decorating_start_ts ? 'Scan to Complete' : 'Scan to Start';
+    if (currentOrder.stage === 'Decorating') {
+      return currentOrder.decorating_start_ts ? 'Scan to Complete' : 'Scan to Start';
     }
 
     // Fallback for unknown stages
@@ -160,7 +162,9 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
         notes: fetchedOrder.notes || '',
         productImage: fetchedOrder.product_image || null,
         accessories: fetchedOrder.accessories || null,
-        shippingAddress: fetchedOrder.shipping_address || null
+        shippingAddress: fetchedOrder.shipping_address || null,
+        covering_start_ts: fetchedOrder.covering_start_ts || null,
+        decorating_start_ts: fetchedOrder.decorating_start_ts || null
       };
     }
     return order || null;
