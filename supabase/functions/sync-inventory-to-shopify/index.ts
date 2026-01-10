@@ -17,7 +17,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SHOPIFY_API_VERSION = "2025-10";
+// Shopify API version - configurable via environment variable
+// Default to 2025-10, but can be overridden when Shopify deprecates versions
+const SHOPIFY_API_VERSION = Deno.env.get("SHOPIFY_API_VERSION") || "2025-10";
+
+// Location cache TTL in milliseconds (5 minutes)
+// Location IDs rarely change, but we don't want stale data forever
+const LOCATION_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // Store configurations
 const STORES: Record<string, { domain: string; tokenEnvVar: string }> = {
@@ -108,6 +114,68 @@ interface ShopifyInventoryResponse {
   };
 }
 
+// ============================================================================
+// Validation functions for SKU and Product ID format
+// These catch data quality issues early rather than silently treating as "not found"
+// ============================================================================
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+// Validate SKU format - must be non-empty alphanumeric with allowed separators
+function validateSku(sku: string): ValidationResult {
+  if (!sku || typeof sku !== "string") {
+    return { valid: false, error: "SKU is empty or not a string" };
+  }
+
+  const trimmed = sku.trim();
+  if (trimmed.length === 0) {
+    return { valid: false, error: "SKU is empty after trimming" };
+  }
+
+  if (trimmed.length > 255) {
+    return { valid: false, error: `SKU too long (${trimmed.length} chars, max 255)` };
+  }
+
+  // SKUs should be alphanumeric with common separators (-, _, .)
+  // This catches obvious data issues like "undefined", "null", or garbage data
+  const validSkuPattern = /^[a-zA-Z0-9][a-zA-Z0-9\-_./\s]*$/;
+  if (!validSkuPattern.test(trimmed)) {
+    return { valid: false, error: `SKU has invalid format: "${trimmed.substring(0, 50)}"` };
+  }
+
+  // Check for suspicious values that indicate data issues
+  const suspiciousValues = ["undefined", "null", "none", "n/a", "na", "test", "xxx"];
+  if (suspiciousValues.includes(trimmed.toLowerCase())) {
+    return { valid: false, error: `SKU appears to be placeholder value: "${trimmed}"` };
+  }
+
+  return { valid: true };
+}
+
+// Validate Shopify Product ID format - must be numeric string
+function validateProductId(productId: string): ValidationResult {
+  if (!productId || typeof productId !== "string") {
+    return { valid: false, error: "Product ID is empty or not a string" };
+  }
+
+  const trimmed = productId.trim();
+  if (trimmed.length === 0) {
+    return { valid: false, error: "Product ID is empty after trimming" };
+  }
+
+  // Shopify product IDs are numeric (e.g., "1234567890")
+  // They can be very long (up to 20 digits)
+  if (!/^\d{1,20}$/.test(trimmed)) {
+    return { valid: false, error: `Product ID has invalid format (expected numeric): "${trimmed.substring(0, 30)}"` };
+  }
+
+  return { valid: true };
+}
+
+// ============================================================================
 // Helper to make Shopify GraphQL requests with proper error handling
 async function shopifyGraphQL<T>(
   storeDomain: string,
@@ -362,19 +430,37 @@ async function setInventoryToZero(
   }
 }
 
-// Cache for location IDs (they don't change)
-const locationCache: Record<string, string> = {};
+// Cache for location IDs with TTL
+// Stores both the location ID and when it was cached
+interface LocationCacheEntry {
+  locationId: string;
+  cachedAt: number;
+}
+const locationCache: Record<string, LocationCacheEntry> = {};
 
 async function getCachedLocationId(
   storeDomain: string,
   token: string
 ): Promise<string | null> {
-  if (locationCache[storeDomain]) {
-    return locationCache[storeDomain];
+  const cached = locationCache[storeDomain];
+  const now = Date.now();
+
+  // Check if cache entry exists and is still valid
+  if (cached && (now - cached.cachedAt) < LOCATION_CACHE_TTL_MS) {
+    return cached.locationId;
   }
+
+  // Cache miss or expired - fetch fresh location ID
+  if (cached) {
+    console.log(`[getCachedLocationId] Cache expired for ${storeDomain}, refreshing...`);
+  }
+
   const locationId = await getLocationId(storeDomain, token);
   if (locationId) {
-    locationCache[storeDomain] = locationId;
+    locationCache[storeDomain] = {
+      locationId,
+      cachedAt: now,
+    };
   }
   return locationId;
 }
@@ -386,6 +472,13 @@ async function processAccessoryInStore(
   sku: string
 ): Promise<StoreResult> {
   const storeName = Object.keys(STORES).find(k => STORES[k].domain === storeDomain) || storeDomain;
+
+  // Validate SKU format before making API call
+  const skuValidation = validateSku(sku);
+  if (!skuValidation.valid) {
+    console.error(`[processAccessoryInStore] Invalid SKU for ${storeName}: ${skuValidation.error}`);
+    return { store: storeName, found: false, synced: false, error: `Invalid SKU: ${skuValidation.error}` };
+  }
 
   // Find variant by SKU
   const lookupResult = await findVariantBySku(storeDomain, token, sku);
@@ -446,6 +539,14 @@ async function processCakeTopperInStore(
   }
 
   for (const productId of productIds) {
+    // Validate product ID format before making API call
+    const productIdValidation = validateProductId(productId);
+    if (!productIdValidation.valid) {
+      console.error(`[processCakeTopperInStore] Invalid product ID for ${storeName}: ${productIdValidation.error}`);
+      errors.push(`${productId}: Invalid format - ${productIdValidation.error}`);
+      continue;
+    }
+
     // Get all variants for this product
     const lookupResult = await getProductInventoryItems(storeDomain, token, productId);
 
