@@ -13,18 +13,14 @@
 BEGIN;
 
 -- ============================================================================
--- STEP 1: Remove hardcoded production URL from settings
--- The URL must be configured manually per environment
+-- STEP 1: Ensure supabase_project_url is configured (no hardcoded values)
 -- ============================================================================
-
--- Delete the hardcoded production URL (if it exists from previous migration)
--- Admins must manually set this value per environment:
+-- NOTE: Migration 1 was updated to NOT insert a hardcoded URL.
+-- The URL must be configured manually per environment:
 --   INSERT INTO settings (store, key, value)
 --   VALUES ('global', 'supabase_project_url', '"https://YOUR-PROJECT.supabase.co"');
-DELETE FROM public.settings
-WHERE store = 'global'
-  AND key = 'supabase_project_url'
-  AND value = '"https://iwavciibrspfjezujydc.supabase.co"';
+--
+-- This step is now a no-op but kept for documentation.
 
 -- ============================================================================
 -- STEP 2: Add trigger_attempted_at column for pg_net call tracking

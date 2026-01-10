@@ -25,12 +25,13 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 
 -- ============================================================================
--- STEP 1.5: Add Supabase project URL to settings (configurable per environment)
+-- STEP 1.5: Supabase project URL must be configured manually per environment
 -- ============================================================================
-
-INSERT INTO public.settings (store, key, value, created_at)
-VALUES ('global', 'supabase_project_url', '"https://iwavciibrspfjezujydc.supabase.co"', now())
-ON CONFLICT (store, key) DO NOTHING;
+-- IMPORTANT: After running this migration, configure the project URL:
+--   INSERT INTO settings (store, key, value)
+--   VALUES ('global', 'supabase_project_url', '"https://YOUR-PROJECT.supabase.co"');
+--
+-- This is NOT inserted automatically to avoid hardcoding production URLs in migrations.
 
 -- ============================================================================
 -- STEP 2: Remove the cron job (no longer needed with real-time sync)
