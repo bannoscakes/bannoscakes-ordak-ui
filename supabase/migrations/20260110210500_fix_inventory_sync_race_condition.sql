@@ -34,7 +34,7 @@ CREATE OR REPLACE FUNCTION public.deduct_inventory_on_order()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_accessory jsonb;

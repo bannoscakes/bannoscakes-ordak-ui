@@ -3,8 +3,8 @@
 // Called by: Trigger via pg_net (real-time) when stock crosses from positive to zero
 // ============================================================================
 
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.0";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 declare const Deno: {
   env: {
@@ -17,7 +17,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SHOPIFY_API_VERSION = "2025-01";
+const SHOPIFY_API_VERSION = "2025-10";
 
 // Store configurations
 const STORES: Record<string, { domain: string; tokenEnvVar: string }> = {
@@ -556,7 +556,7 @@ async function processItem(
   };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
