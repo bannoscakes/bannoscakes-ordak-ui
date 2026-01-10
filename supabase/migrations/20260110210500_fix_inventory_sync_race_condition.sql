@@ -1,59 +1,33 @@
 -- ============================================================================
--- Migration: Real-time Inventory Sync to Shopify
--- Purpose: Sync inventory to Shopify immediately when stock hits zero
+-- Migration: Fix Race Condition in Inventory Sync Trigger
+-- Purpose: Ensure atomic stock transition detection and add index for SKU lookups
 -- Changes:
---   1. Update trigger to use SKU for accessories (instead of variant_id)
---   2. Call edge function immediately via pg_net when stock hits zero
---   3. Remove the 5-minute cron job (no longer needed)
---   4. Store edge function URL in settings table (not hardcoded)
+--   1. Fix race condition by capturing before/after stock in single RETURNING
+--   2. Add index on accessories.sku for faster SKU lookups
+--   3. Read edge function URL from settings table (not hardcoded)
 --
--- Dependencies:
---   - pg_net extension must be enabled (for HTTP calls from triggers)
---   - vault.decrypted_secrets must contain 'service_role_key'
---   - settings table with global.supabase_project_url setting
---
--- Fallback: If pg_net call fails, items remain in queue and can be processed
---           manually by calling the edge function with empty body.
+-- Context: Previous migration (20260110205859) had a race condition where
+-- two concurrent orders could both trigger Shopify sync for the same item.
 -- ============================================================================
 
 BEGIN;
 
 -- ============================================================================
--- STEP 1: Ensure pg_net extension is available
+-- STEP 1: Add index on accessories.sku for Shopify sync
 -- ============================================================================
 
-CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
+CREATE INDEX IF NOT EXISTS idx_accessories_sku
+ON public.accessories(sku)
+WHERE sku IS NOT NULL;
 
 -- ============================================================================
--- STEP 1.5: Add Supabase project URL to settings (configurable per environment)
--- ============================================================================
-
-INSERT INTO public.settings (store, key, value, created_at)
-VALUES ('global', 'supabase_project_url', '"https://iwavciibrspfjezujydc.supabase.co"', now())
-ON CONFLICT (store, key) DO NOTHING;
-
--- ============================================================================
--- STEP 2: Remove the cron job (no longer needed with real-time sync)
--- ============================================================================
-
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sync-inventory-to-shopify') THEN
-      PERFORM cron.unschedule('sync-inventory-to-shopify');
-      RAISE NOTICE 'Removed sync-inventory-to-shopify cron job (replaced with real-time sync)';
-    END IF;
-  END IF;
-END;
-$$;
-
--- ============================================================================
--- STEP 3: Update the inventory deduction trigger function
--- Changes:
---   - Use SKU instead of shopify_variant_id for accessories
---   - Call edge function immediately via pg_net when stock hits zero
---   - Same logic for both accessories and cake_toppers
---   - Handles concurrent inserts gracefully (ON CONFLICT)
+-- STEP 2: Fix race condition in deduct_inventory_on_order trigger
+--
+-- Problem: The old code read current_stock BEFORE the UPDATE, then compared.
+-- If two orders arrived concurrently, both might read stock=2 and both
+-- would trigger the Shopify sync.
+--
+-- Fix: Use RETURNING to capture both old and new stock atomically.
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.deduct_inventory_on_order()
@@ -68,6 +42,7 @@ DECLARE
   v_accessory_qty integer;
   v_matched_accessory record;
   v_matched_topper record;
+  v_stock_before integer;
   v_new_stock integer;
   v_queue_id uuid;
   v_service_role_key text;
@@ -105,13 +80,14 @@ BEGIN
       LIMIT 1;
 
       IF v_matched_accessory.id IS NOT NULL THEN
-        -- Deduct stock (allow negative for tracking purposes, trigger won't fail)
+        -- Deduct stock atomically, capturing both before and after values
+        -- This prevents race conditions where two concurrent orders both see stock > 0
         UPDATE public.accessories
         SET
           current_stock = current_stock - v_accessory_qty,
           updated_at = now()
         WHERE id = v_matched_accessory.id
-        RETURNING current_stock INTO v_new_stock;
+        RETURNING current_stock + v_accessory_qty, current_stock INTO v_stock_before, v_new_stock;
 
         -- Log the transaction
         BEGIN
@@ -128,7 +104,7 @@ BEGIN
             'accessories',
             v_matched_accessory.id,
             -v_accessory_qty,
-            v_matched_accessory.current_stock,
+            v_stock_before,
             v_new_stock,
             'order_deduction',
             NEW.id,
@@ -141,7 +117,8 @@ BEGIN
 
         -- Sync to Shopify IMMEDIATELY if stock just crossed from positive to zero/negative
         -- Uses SKU to find product in both Shopify stores
-        IF v_matched_accessory.current_stock > 0 AND v_new_stock <= 0 AND v_matched_accessory.sku IS NOT NULL THEN
+        -- ATOMIC CHECK: v_stock_before and v_new_stock come from the same UPDATE statement
+        IF v_stock_before > 0 AND v_new_stock <= 0 AND v_matched_accessory.sku IS NOT NULL THEN
           BEGIN
             -- Insert into queue for audit trail (or get existing if already pending)
             INSERT INTO public.inventory_sync_queue (
@@ -209,13 +186,13 @@ BEGIN
     LIMIT 1;
 
     IF v_matched_topper.id IS NOT NULL THEN
-      -- Deduct stock by 1 (one topper per cake)
+      -- Deduct stock atomically, capturing both before and after values
       UPDATE public.cake_toppers
       SET
         current_stock = current_stock - 1,
         updated_at = now()
       WHERE id = v_matched_topper.id
-      RETURNING current_stock INTO v_new_stock;
+      RETURNING current_stock + 1, current_stock INTO v_stock_before, v_new_stock;
 
       -- Log the transaction
       BEGIN
@@ -232,7 +209,7 @@ BEGIN
           'cake_toppers',
           v_matched_topper.id,
           -1,
-          v_matched_topper.current_stock,
+          v_stock_before,
           v_new_stock,
           'order_deduction',
           NEW.id,
@@ -244,7 +221,8 @@ BEGIN
 
       -- Sync to Shopify IMMEDIATELY if stock just crossed from positive to zero/negative
       -- Uses product IDs to find products in both Shopify stores
-      IF v_matched_topper.current_stock > 0 AND v_new_stock <= 0 THEN
+      -- ATOMIC CHECK: v_stock_before and v_new_stock come from the same UPDATE statement
+      IF v_stock_before > 0 AND v_new_stock <= 0 THEN
         IF v_matched_topper.shopify_product_id_1 IS NOT NULL
            OR v_matched_topper.shopify_product_id_2 IS NOT NULL THEN
           BEGIN
@@ -316,6 +294,10 @@ COMMENT ON FUNCTION public.deduct_inventory_on_order IS
 Matches accessories by keyword, cake_toppers by exact product_title.
 Immediately syncs to Shopify via pg_net when stock hits zero.
 Never fails the order insert.
+
+Race Condition Prevention:
+- Uses RETURNING to capture before/after stock atomically
+- Ensures only ONE order triggers the zero-crossing sync
 
 Configuration:
 - Edge function URL is read from settings table (global.supabase_project_url)

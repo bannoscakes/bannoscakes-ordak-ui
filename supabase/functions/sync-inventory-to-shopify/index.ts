@@ -57,13 +57,64 @@ interface ProcessResult {
   error?: string;
 }
 
+// Custom error types for better error handling
+class ShopifyNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ShopifyNotFoundError";
+  }
+}
+
+class ShopifyApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ShopifyApiError";
+    this.status = status;
+  }
+}
+
+// Shopify API response types for type safety
+interface ShopifyVariantNode {
+  id: string;
+  sku: string;
+  inventoryItem: { id: string } | null;
+}
+
+interface ShopifyProductVariantsResponse {
+  productVariants?: {
+    edges: Array<{ node: ShopifyVariantNode }>;
+  };
+}
+
+interface ShopifyProductResponse {
+  product?: {
+    variants: {
+      edges: Array<{ node: { id: string; inventoryItem: { id: string } | null } }>;
+    };
+  };
+}
+
+interface ShopifyLocationsResponse {
+  locations?: {
+    edges: Array<{ node: { id: string } }>;
+  };
+}
+
+interface ShopifyInventoryResponse {
+  inventorySetOnHandQuantities?: {
+    inventoryAdjustmentGroup: { reason: string } | null;
+    userErrors: Array<{ field: string; message: string }>;
+  };
+}
+
 // Helper to make Shopify GraphQL requests with proper error handling
-async function shopifyGraphQL(
+async function shopifyGraphQL<T>(
   storeDomain: string,
   token: string,
   query: string,
   variables: Record<string, unknown> = {}
-): Promise<{ data: any; errors?: any[] }> {
+): Promise<{ data: T; errors?: Array<{ message: string }> }> {
   const response = await fetch(
     `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
     {
@@ -78,24 +129,44 @@ async function shopifyGraphQL(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Shopify API error ${response.status}: ${errorText}`);
+    // Distinguish between different error types
+    if (response.status === 404) {
+      throw new ShopifyNotFoundError(`Resource not found: ${errorText}`);
+    }
+    throw new ShopifyApiError(`Shopify API error ${response.status}: ${errorText}`, response.status);
   }
 
   const result = await response.json();
 
   if (result.errors && result.errors.length > 0) {
-    throw new Error(`Shopify GraphQL errors: ${result.errors.map((e: any) => e.message).join(", ")}`);
+    const errorMessages = result.errors.map((e: { message: string }) => e.message).join(", ");
+    // Check if any error indicates "not found"
+    const isNotFound = result.errors.some((e: { message: string }) =>
+      e.message.toLowerCase().includes("not found") ||
+      e.message.toLowerCase().includes("does not exist")
+    );
+    if (isNotFound) {
+      throw new ShopifyNotFoundError(`Resource not found: ${errorMessages}`);
+    }
+    throw new ShopifyApiError(`Shopify GraphQL errors: ${errorMessages}`, 0);
   }
 
   return result;
 }
 
-// Find variant by SKU - returns null if not found (not an error)
+// Result type for variant lookup - distinguishes between "not found" and "error"
+interface VariantLookupResult {
+  found: boolean;
+  variant?: { variantId: string; inventoryItemId: string };
+  error?: string;
+}
+
+// Find variant by SKU - distinguishes between "not found" and actual errors
 async function findVariantBySku(
   storeDomain: string,
   token: string,
   sku: string
-): Promise<{ variantId: string; inventoryItemId: string } | null> {
+): Promise<VariantLookupResult> {
   const query = `
     query findVariantBySku($query: String!) {
       productVariants(first: 1, query: $query) {
@@ -113,32 +184,50 @@ async function findVariantBySku(
   `;
 
   try {
-    const result = await shopifyGraphQL(storeDomain, token, query, {
+    const result = await shopifyGraphQL<ShopifyProductVariantsResponse>(storeDomain, token, query, {
       query: `sku:${sku}`,
     });
 
     const variant = result?.data?.productVariants?.edges?.[0]?.node;
     if (!variant || !variant.inventoryItem?.id) {
-      return null; // Not found - this is normal, not an error
+      // SKU not found - this is normal, not an error
+      return { found: false };
     }
 
     return {
-      variantId: variant.id,
-      inventoryItemId: variant.inventoryItem.id,
+      found: true,
+      variant: {
+        variantId: variant.id,
+        inventoryItemId: variant.inventoryItem.id,
+      },
     };
   } catch (err) {
-    // Log but don't throw - treat as "not found"
-    console.log(`[findVariantBySku] SKU "${sku}" not found in ${storeDomain}: ${err}`);
-    return null;
+    // Distinguish between "not found" and other errors
+    if (err instanceof ShopifyNotFoundError) {
+      console.log(`[findVariantBySku] SKU "${sku}" not found in ${storeDomain}`);
+      return { found: false };
+    }
+    // Real error - should trigger retry
+    console.error(`[findVariantBySku] Error looking up SKU "${sku}" in ${storeDomain}: ${err}`);
+    return { found: false, error: `${err}` };
   }
 }
 
-// Get all variant inventory item IDs for a product - returns empty array if not found
+// Result type for product variant lookup
+interface ProductVariantsResult {
+  found: boolean;
+  variants: Array<{ variantId: string; inventoryItemId: string }>;
+  error?: string;
+}
+
+// Get all variant inventory item IDs for a product
+// NOTE: Limited to first 100 variants. Products with >100 variants are rare for bakery items.
+// If pagination is needed, implement cursor-based pagination here.
 async function getProductInventoryItems(
   storeDomain: string,
   token: string,
   productId: string
-): Promise<Array<{ variantId: string; inventoryItemId: string }>> {
+): Promise<ProductVariantsResult> {
   const query = `
     query getProductVariants($id: ID!) {
       product(id: $id) {
@@ -157,20 +246,36 @@ async function getProductInventoryItems(
   `;
 
   try {
-    const result = await shopifyGraphQL(storeDomain, token, query, {
+    const result = await shopifyGraphQL<ShopifyProductResponse>(storeDomain, token, query, {
       id: `gid://shopify/Product/${productId}`,
     });
 
-    const variants = result?.data?.product?.variants?.edges || [];
+    // Product doesn't exist in this store
+    if (!result?.data?.product) {
+      return { found: false, variants: [] };
+    }
 
-    return variants.map((edge: any) => ({
-      variantId: edge.node.id,
-      inventoryItemId: edge.node.inventoryItem?.id,
-    })).filter((v: any) => v.inventoryItemId);
+    const variants = result.data.product.variants?.edges || [];
+    const mappedVariants = variants
+      .map((edge) => ({
+        variantId: edge.node.id,
+        inventoryItemId: edge.node.inventoryItem?.id || "",
+      }))
+      .filter((v) => v.inventoryItemId);
+
+    return {
+      found: mappedVariants.length > 0,
+      variants: mappedVariants,
+    };
   } catch (err) {
-    // Log but don't throw - treat as "not found"
-    console.log(`[getProductInventoryItems] Product "${productId}" not found in ${storeDomain}: ${err}`);
-    return [];
+    // Distinguish between "not found" and other errors
+    if (err instanceof ShopifyNotFoundError) {
+      console.log(`[getProductInventoryItems] Product "${productId}" not found in ${storeDomain}`);
+      return { found: false, variants: [] };
+    }
+    // Real error - should trigger retry
+    console.error(`[getProductInventoryItems] Error looking up product "${productId}" in ${storeDomain}: ${err}`);
+    return { found: false, variants: [], error: `${err}` };
   }
 }
 
@@ -191,7 +296,7 @@ async function getLocationId(
     }
   `;
 
-  const result = await shopifyGraphQL(storeDomain, token, query);
+  const result = await shopifyGraphQL<ShopifyLocationsResponse>(storeDomain, token, query);
   return result?.data?.locations?.edges?.[0]?.node?.id || null;
 }
 
@@ -217,7 +322,7 @@ async function setInventoryToZero(
   `;
 
   try {
-    const result = await shopifyGraphQL(storeDomain, token, mutation, {
+    const result = await shopifyGraphQL<ShopifyInventoryResponse>(storeDomain, token, mutation, {
       input: {
         reason: "correction",
         setQuantities: [
@@ -235,7 +340,7 @@ async function setInventoryToZero(
     if (userErrors.length > 0) {
       return {
         success: false,
-        error: userErrors.map((e: any) => e.message).join(", "),
+        error: userErrors.map((e) => e.message).join(", "),
       };
     }
 
@@ -274,11 +379,19 @@ async function processAccessoryInStore(
   const storeName = Object.keys(STORES).find(k => STORES[k].domain === storeDomain) || storeDomain;
 
   // Find variant by SKU
-  const variant = await findVariantBySku(storeDomain, token, sku);
+  const lookupResult = await findVariantBySku(storeDomain, token, sku);
 
-  if (!variant) {
+  // If there was an error during lookup (not just "not found"), propagate it
+  if (lookupResult.error) {
+    return { store: storeName, found: false, synced: false, error: lookupResult.error };
+  }
+
+  // SKU not found in this store - this is normal, not an error
+  if (!lookupResult.found || !lookupResult.variant) {
     return { store: storeName, found: false, synced: false };
   }
+
+  const variant = lookupResult.variant;
 
   // Get location ID
   const locationId = await getCachedLocationId(storeDomain, token);
@@ -298,6 +411,12 @@ async function processAccessoryInStore(
   };
 }
 
+// Detailed result type for cake topper processing
+interface CakeTopperSyncDetail {
+  productId: string;
+  variantId: string;
+}
+
 // Process cake topper: Try product IDs in both stores, sync wherever found
 async function processCakeTopperInStore(
   storeDomain: string,
@@ -309,7 +428,7 @@ async function processCakeTopperInStore(
   let foundAny = false;
   let syncedCount = 0;
   const errors: string[] = [];
-  const details: any[] = [];
+  const details: CakeTopperSyncDetail[] = [];
 
   // Get location ID once
   const locationId = await getCachedLocationId(storeDomain, token);
@@ -319,9 +438,15 @@ async function processCakeTopperInStore(
 
   for (const productId of productIds) {
     // Get all variants for this product
-    const variants = await getProductInventoryItems(storeDomain, token, productId);
+    const lookupResult = await getProductInventoryItems(storeDomain, token, productId);
 
-    if (variants.length === 0) {
+    // If there was an error during lookup (not just "not found"), record it
+    if (lookupResult.error) {
+      errors.push(`${productId}: ${lookupResult.error}`);
+      continue;
+    }
+
+    if (!lookupResult.found || lookupResult.variants.length === 0) {
       // Product not found in this store - normal, not an error
       continue;
     }
@@ -329,7 +454,7 @@ async function processCakeTopperInStore(
     foundAny = true;
 
     // Set each variant's inventory to 0
-    for (const variant of variants) {
+    for (const variant of lookupResult.variants) {
       const result = await setInventoryToZero(storeDomain, token, variant.inventoryItemId, locationId);
 
       if (result.success) {
@@ -346,7 +471,7 @@ async function processCakeTopperInStore(
     found: foundAny,
     synced: foundAny && errors.length === 0,
     error: errors.length > 0 ? errors.join("; ") : undefined,
-    details: { productIds, syncedCount, details },
+    details: { productIds, syncedCount, variants: details },
   };
 }
 
