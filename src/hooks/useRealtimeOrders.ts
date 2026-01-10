@@ -7,7 +7,34 @@ import type { Store } from '../types/db';
 import { playNotificationSound } from '@/lib/notificationSound';
 
 // Track notified orders to prevent duplicates from multiple hook instances
-const notifiedOrders = new Set<string>();
+// Use Map to maintain insertion order for FIFO eviction when limit reached
+const notifiedOrders = new Map<string, number>();
+const MAX_NOTIFIED_ORDERS = 100; // Prevent unbounded growth
+
+function trackNotifiedOrder(orderId: string): boolean {
+  const now = Date.now();
+
+  // Check if already notified recently
+  if (notifiedOrders.has(orderId)) {
+    return false; // Already notified
+  }
+
+  // Add new order
+  notifiedOrders.set(orderId, now);
+
+  // Enforce size limit using FIFO eviction
+  if (notifiedOrders.size > MAX_NOTIFIED_ORDERS) {
+    const firstKey = notifiedOrders.keys().next().value;
+    if (firstKey) {
+      notifiedOrders.delete(firstKey);
+    }
+  }
+
+  // Clear after 10 seconds to allow re-notification if needed
+  setTimeout(() => notifiedOrders.delete(orderId), 10000);
+
+  return true; // Should notify
+}
 
 /**
  * Hook for real-time order updates via Supabase Realtime.
@@ -52,7 +79,11 @@ export function useRealtimeOrders(
           schema: 'public',
           table: tableName,
         },
-        (payload: RealtimePostgresChangesPayload<{ id: string | number; shopify_order_number?: string | number | null }>) => {
+        (payload: RealtimePostgresChangesPayload<{
+          id: string | number;
+          shopify_order_number?: string | number | null;
+          human_id?: string | null;
+        }>) => {
           // Invalidate all queue-related queries for this store
           queryClient.invalidateQueries({ queryKey: ['queue', store] });
           queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
@@ -70,18 +101,15 @@ export function useRealtimeOrders(
             // Create store-scoped key to prevent cross-store collisions
             const orderId = `${store}:${String(newOrder.id)}`;
 
-            // Prevent duplicate notifications from multiple hook instances
-            if (notifiedOrders.has(orderId)) return;
-            notifiedOrders.add(orderId);
-
-            // Clear after 10 seconds to allow re-notification if needed
-            setTimeout(() => notifiedOrders.delete(orderId), 10000);
+            // Track notification with bounded memory (prevents duplicates + enforces size limit)
+            if (!trackNotifiedOrder(orderId)) return;
 
             playNotificationSound().catch(err => console.warn('Sound failed:', err));
 
             // Add store prefix for consistency (B for Bannos, F for Flourlane)
             const storePrefix = store === 'bannos' ? 'B' : 'F';
-            const orderNumber = newOrder.shopify_order_number || newOrder.id;
+            // Prefer human_id, fallback to shopify_order_number, then id (avoid showing UUIDs)
+            const orderNumber = newOrder.human_id || newOrder.shopify_order_number || newOrder.id;
             toast.success(`New order: #${storePrefix}${orderNumber}`, {
               duration: 5000,
             });
