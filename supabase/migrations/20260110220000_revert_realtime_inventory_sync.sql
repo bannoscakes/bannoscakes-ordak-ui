@@ -43,7 +43,7 @@ BEGIN
       '*/5 * * * *',
       $$
       SELECT net.http_post(
-        url := 'https://iigcfddqpaqzbzrzwbhs.supabase.co/functions/v1/sync-inventory-to-shopify',
+        url := 'https://iwavciibrspfjezujydc.supabase.co/functions/v1/sync-inventory-to-shopify',
         headers := jsonb_build_object(
           'Authorization', 'Bearer ' || (
             SELECT decrypted_secret
