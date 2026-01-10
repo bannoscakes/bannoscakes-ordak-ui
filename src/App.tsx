@@ -22,6 +22,9 @@ import { LoadingSpinner } from "./components/ui/LoadingSpinner";
 // ✅ Single realtime subscription for unread message count (fixes #594)
 import { UnreadCountSubscriptionProvider } from "./hooks/useUnreadCount";
 
+// ✅ Single realtime subscription for new urgent orders tracking
+import { NewUrgentOrdersProvider } from "./hooks/useNewUrgentOrders";
+
 // Full-screen spinner for page-level loading states
 function Spinner() {
   return <LoadingSpinner size="lg" className="min-h-screen" />;
@@ -181,7 +184,9 @@ function RootApp() {
   return (
     <FadeTransition transitionKey={transitionKey}>
       <UnreadCountSubscriptionProvider>
-        <RoleBasedRouter />
+        <NewUrgentOrdersProvider>
+          <RoleBasedRouter />
+        </NewUrgentOrdersProvider>
       </UnreadCountSubscriptionProvider>
     </FadeTransition>
   );
