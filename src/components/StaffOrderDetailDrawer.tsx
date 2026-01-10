@@ -645,15 +645,16 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                     <QrCode className="mr-2 h-4 w-4" />
                     Print Care Card QR
                   </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={onScanBarcode}
-                    disabled={loading}
-                  >
-                    <QrCode className="mr-2 h-4 w-4" />
-                    {getScanButtonLabel()}
-                  </Button>
                 </div>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  onClick={onScanBarcode}
+                  disabled={loading}
+                >
+                  <QrCode className="mr-2 h-4 w-4" />
+                  {getScanButtonLabel()}
+                </Button>
                 <div className="flex gap-2">
                   <Button
                     variant="destructive"
