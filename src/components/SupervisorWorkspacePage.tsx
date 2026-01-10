@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase, X, Loader2 } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase, X, Loader2, AlertTriangle } from "lucide-react";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
@@ -102,6 +102,8 @@ export function SupervisorWorkspacePage({
     order.customerName?.toLowerCase()?.includes(searchValue.toLowerCase()) ||
     order.product?.toLowerCase()?.includes(searchValue.toLowerCase())
   );
+
+  const urgentOrders = orders.filter(order => order.priority === 'High');
 
   // Load current shift from database
   async function loadCurrentShift() {
@@ -372,7 +374,7 @@ export function SupervisorWorkspacePage({
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
             <TabsTrigger
               value="orders"
               className="flex items-center gap-2"
@@ -389,6 +391,13 @@ export function SupervisorWorkspacePage({
                 <UnreadBadge count={unreadCount} />
               </div>
               Messages
+            </TabsTrigger>
+            <TabsTrigger
+              value="urgent"
+              className="flex items-center gap-2"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Urgent Orders ({urgentOrders.length})
             </TabsTrigger>
           </TabsList>
 
@@ -569,6 +578,117 @@ export function SupervisorWorkspacePage({
             className="space-y-6 mt-6"
           >
             <MainDashboardMessaging />
+          </TabsContent>
+
+          <TabsContent
+            value="urgent"
+            className="space-y-6 mt-6"
+          >
+            <div className="space-y-4">
+              <h2 className="text-lg font-medium text-foreground">High Priority Orders</h2>
+
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading orders...
+                </div>
+              ) : urgentOrders.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No urgent orders at the moment</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    High priority orders will appear here
+                  </p>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {urgentOrders.map((order) => (
+                    <Card key={order.id} className="p-4 border-2 border-destructive/30 shadow-lg hover:shadow-xl hover:bg-destructive/5 transition-all">
+                      <div className="space-y-3">
+                        {/* Header with Store and Overflow Menu */}
+                        <div className="flex items-center justify-between">
+                          <Badge className={`text-xs ${getStoreColor(order.store)}`}>
+                            {order.store === 'bannos' ? 'Bannos' : 'Flourlane'}
+                          </Badge>
+                          <OrderOverflowMenu
+                            item={order}
+                            variant="queue"
+                            onOpenOrder={() => handleOpenOrder(order)}
+                            onViewDetails={() => {
+                              const id = order.shopifyOrderNumber?.trim();
+                              if (!id) {
+                                toast.error("Shopify order number not available");
+                                return;
+                              }
+                              window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+                            }}
+                          />
+                        </div>
+
+                        {/* Order Number */}
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {order.shopifyOrderNumber
+                              ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
+                              : order.orderNumber}
+                          </p>
+                        </div>
+
+                        {/* Product Title */}
+                        <div>
+                          <p className="text-sm text-foreground">{order.product}</p>
+                        </div>
+
+                        {/* Customer Name */}
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {order.customerName || '-'}
+                          </p>
+                        </div>
+
+                        {/* Priority Badge - Prominent */}
+                        <div className="flex items-center justify-between">
+                          <Badge className={`text-xs font-semibold ${getPriorityColor(order.priority)}`}>
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            URGENT
+                          </Badge>
+                          <span className={`text-xs font-medium ${order.dueDate ? 'text-muted-foreground' : 'text-destructive font-bold'}`}>
+                            {order.dueDate ? `Due: ${formatDate(order.dueDate)}` : 'No due date'}
+                          </span>
+                        </div>
+
+                        {/* Method and Storage */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">{order.method}</span>
+                          {order.storage && (
+                            <Badge className={`text-xs ${getStorageColor()}`}>
+                              {order.storage}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2 border-t border-border">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleScanOrder(order)}
+                            disabled={shiftStatus === 'on-break'}
+                            className="flex-1"
+                          >
+                            Scan to Complete
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleOpenOrder(order)}
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
         </Tabs>
