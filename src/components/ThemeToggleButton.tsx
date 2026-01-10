@@ -32,10 +32,10 @@ export function ThemeToggleButton({ showLabel = false, className = "" }: ThemeTo
     return "Light Mode";
   };
 
-  const getNextLabel = () => {
-    if (theme === "light") return "Switch to dark mode";
-    if (theme === "dark") return "Switch to system mode";
-    return "Switch to light mode";
+  const getAriaLabel = () => {
+    if (theme === "light") return "Theme: Light Mode. Click to switch to dark mode";
+    if (theme === "dark") return "Theme: Dark Mode. Click to switch to system mode";
+    return "Theme: System. Click to switch to light mode";
   };
 
   return (
@@ -43,7 +43,9 @@ export function ThemeToggleButton({ showLabel = false, className = "" }: ThemeTo
       variant="ghost"
       size={showLabel ? "sm" : "icon"}
       onClick={toggleTheme}
-      aria-label={getNextLabel()}
+      role="switch"
+      aria-checked={theme === "dark"}
+      aria-label={getAriaLabel()}
       className={className}
     >
       {getIcon()}
