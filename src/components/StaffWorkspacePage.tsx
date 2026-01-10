@@ -34,6 +34,7 @@ import { formatOrderNumber, formatDate } from "../lib/format-utils";
 import { useUnreadCount } from "../hooks/useUnreadCount";
 import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
 import { UnreadBadge } from "./UnreadBadge";
+import { getStageColorClass } from "../lib/stage-colors";
 
 // Import real RPCs
 import {
@@ -540,6 +541,13 @@ export function StaffWorkspacePage({
                         </p>
                       </div>
 
+                      {/* Stage Badge */}
+                      <div>
+                        <Badge className={`text-xs ${getStageColorClass(order.stage)}`}>
+                          {order.stage}
+                        </Badge>
+                      </div>
+
                       {/* Size */}
                       <div>
                         <p className="text-sm text-muted-foreground">
@@ -573,13 +581,11 @@ export function StaffWorkspacePage({
                         )}
                       </div>
 
-                      {/* Stage and Scan Button */}
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <span className="text-xs text-muted-foreground capitalize">
-                          Stage: {order.stage}
-                        </span>
+                      {/* Scan Button */}
+                      <div className="pt-2 border-t border-border">
                         <Button
                           variant="outline"
+                          className="w-full"
                           onClick={() => handleScanOrder(order)}
                           disabled={shiftStatus === "on-break"}
                         >

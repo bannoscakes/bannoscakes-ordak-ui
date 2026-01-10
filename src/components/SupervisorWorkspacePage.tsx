@@ -292,11 +292,11 @@ export function SupervisorWorkspacePage({
       {/* Header */}
       <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <h1 className="text-xl font-medium text-foreground">Supervisor Workspace</h1>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
               <span className="text-sm text-foreground font-medium">{displayName}</span>
-              
+
               {/* Shift Controls */}
               {shiftStatus === 'not-started' ? (
                 <Button size="sm" onClick={handleStartShift} disabled={shiftLoading}>
@@ -304,7 +304,7 @@ export function SupervisorWorkspacePage({
                   {shiftLoading ? "Starting..." : "Start Shift"}
                 </Button>
               ) : shiftStatus === 'on-shift' ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge className="bg-success/15 text-success border-success/30">
                     <Clock className="mr-1 h-3 w-3" />
                     On Shift {elapsedTime}
@@ -319,7 +319,7 @@ export function SupervisorWorkspacePage({
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge className="bg-warning/15 text-warning border-warning/30">
                     <Coffee className="mr-1 h-3 w-3" />
                     On Break {elapsedTime}

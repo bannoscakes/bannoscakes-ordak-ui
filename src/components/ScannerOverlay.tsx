@@ -216,6 +216,7 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
           </div>
           <div className="flex gap-4">
             <Button
+              size="lg"
               onClick={handleConfirm}
               disabled={isProcessing}
               className="flex-1"
@@ -223,7 +224,8 @@ export function ScannerOverlay({ isOpen, onClose, order, onOrderCompleted }: Sca
               {isProcessing ? "Processing..." : "Confirm"}
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
+              size="lg"
               onClick={handleContinueScanning}
               disabled={isProcessing}
               className="flex-1"
