@@ -35,15 +35,15 @@ export function OrderOverflowMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {!isReadOnly && (
-          <>
-            <DropdownMenuItem onClick={() => onAssignToStaff?.(item)}>
-              Assign to Staff
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEditOrder?.(item)}>
-              Edit Order
-            </DropdownMenuItem>
-          </>
+        {!isReadOnly && onAssignToStaff && (
+          <DropdownMenuItem onClick={() => onAssignToStaff(item)}>
+            Assign to Staff
+          </DropdownMenuItem>
+        )}
+        {!isReadOnly && onEditOrder && (
+          <DropdownMenuItem onClick={() => onEditOrder(item)}>
+            Edit Order
+          </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => onOpenOrder(item)}>
           Open Order
