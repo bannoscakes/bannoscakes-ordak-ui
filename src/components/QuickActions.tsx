@@ -33,9 +33,11 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { unreadCount } = useUnreadCount();
   const { newUrgentIds, markAsSeen } = useNewUrgentOrders();
-  const { data: orders = [] } = useQueueByStore(store);
+  // Only fetch orders when dialog is open
+  const { data: orders = [] } = useQueueByStore(store, { enabled: isDialogOpen });
   const [searchResult, setSearchResult] = useState<{
     store: string;
     orderNumber: string;
@@ -49,10 +51,13 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
 
-  // Filter new urgent orders for this store
+  // Filter new urgent orders for this store only
   const newUrgentOrders = orders.filter(order =>
     order.priority === 'High' && newUrgentIds.has(`${store}:${order.id}`)
   );
+
+  // Count new urgent orders for THIS store only (not all stores)
+  const newUrgentCount = Array.from(newUrgentIds).filter(id => id.startsWith(`${store}:`)).length;
 
   const actions = [
     {
@@ -166,9 +171,9 @@ export function QuickActions({ store }: QuickActionsProps) {
                   <action.icon className="h-5 w-5" />
                 </div>
                 {action.id === "messages" && <UnreadBadge count={unreadCount} />}
-                {action.id === "new-urgent" && newUrgentOrders.length > 0 && (
+                {action.id === "new-urgent" && newUrgentCount > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
-                    {newUrgentOrders.length}
+                    {newUrgentCount}
                   </Badge>
                 )}
               </div>
@@ -301,7 +306,13 @@ export function QuickActions({ store }: QuickActionsProps) {
       </Dialog>
 
       {/* New Urgent Orders Dialog */}
-      <Dialog open={activeModal === "new-urgent"} onOpenChange={(open) => !open && closeModal()}>
+      <Dialog
+        open={activeModal === "new-urgent"}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) closeModal();
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>New Urgent Orders</DialogTitle>

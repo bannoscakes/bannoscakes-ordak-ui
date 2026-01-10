@@ -599,8 +599,11 @@ export function SupervisorWorkspacePage({
               ) : (
                 <>
                   {(() => {
+                    // Filter by both: in newUrgentIds AND current priority is High
+                    // This handles priority downgrades after initial INSERT
                     const newUrgentOrders = orders.filter(order =>
-                      newUrgentIds.has(`${order.store}:${order.id}`)
+                      newUrgentIds.has(`${order.store}:${order.id}`) &&
+                      order.priority === 'High'
                     );
 
                     if (newUrgentOrders.length === 0) {
