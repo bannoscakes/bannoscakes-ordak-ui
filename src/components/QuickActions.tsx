@@ -1,14 +1,12 @@
 import { useState } from "react";
-import { LoadingSpinner } from "./ui/LoadingSpinner";
 import {
   Search,
   Scan,
-  CheckCircle2,
-  AlertCircle,
   Plus,
   MessageSquare,
   AlertTriangle,
 } from "lucide-react";
+import { OrderSearchResult, OrderSearchResultData } from "./OrderSearchResult";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -38,15 +36,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const { newUrgentIds, markAsSeen } = useNewUrgentOrders();
   // Only fetch orders when dialog is open
   const { data: orders = [] } = useQueueByStore(store, { enabled: isDialogOpen });
-  const [searchResult, setSearchResult] = useState<{
-    store: string;
-    orderNumber: string;
-    storage: string | null;
-    stage: string;
-    productTitle: string;
-    customerName: string;
-    assigneeName: string | null;
-  } | null>(null);
+  const [searchResult, setSearchResult] = useState<OrderSearchResultData | null>(null);
   const [showMessaging, setShowMessaging] = useState(false);
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
@@ -225,72 +215,22 @@ export function QuickActions({ store }: QuickActionsProps) {
               <p className="text-xs text-muted-foreground">You can paste an order link too.</p>
             </div>
 
-            {searchLoading && (
-              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-                <LoadingSpinner size="sm" />
-                <span className="text-sm">Looking up order…</span>
-              </div>
-            )}
-
-            {searchResult && (
-              <div className="space-y-3">
-                {/* Order Found */}
-                <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">Order {searchResult.orderNumber}</div>
-                    <div className="text-xs text-muted-foreground">{searchResult.productTitle}</div>
-                    <div className="text-xs text-muted-foreground">{searchResult.customerName}</div>
-                  </div>
-                </div>
-
-                {/* Current Stage & Status */}
-                <div className="bg-muted/30 border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs text-muted-foreground font-medium">Current Stage</div>
-                    <Badge variant="outline">{searchResult.stage}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground font-medium">Store</div>
-                    <span className="text-xs font-medium">{searchResult.store}</span>
-                  </div>
-                  {searchResult.assigneeName && (
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="text-xs text-muted-foreground font-medium">Assigned to</div>
-                      <span className="text-xs font-medium">{searchResult.assigneeName}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Storage Location - PROMINENT (if set or Complete) */}
-                {(searchResult.storage || searchResult.stage === 'Complete') && (
-                  <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-4">
-                    <div className="text-xs text-primary font-medium mb-1">Storage Location</div>
-                    <div className="text-lg font-bold text-foreground">
-                      {searchResult.storage || "Not Set"}
-                    </div>
-                    {searchResult.stage === 'Complete' && !searchResult.storage && (
-                      <div className="text-xs text-warning mt-1">⚠️ Complete but storage not set</div>
-                    )}
-                  </div>
-                )}
-
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => toast(`Order is in ${searchResult.stage} stage`)}
-                >
-                  View Order Details
-                </Button>
-              </div>
-            )}
-
-            {searchResult === null && searchValue && !searchLoading && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-destructive" />
-                <span className="text-sm">No order found for "{searchValue}". Check the number and try again.</span>
-              </div>
-            )}
+            <OrderSearchResult
+              result={searchResult}
+              loading={searchLoading}
+              searchQuery={searchValue}
+              actionButton={
+                searchResult && (
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => toast(`Order is in ${searchResult.stage} stage`)}
+                  >
+                    View Order Details
+                  </Button>
+                )
+              }
+            />
 
             <div className="flex gap-2 pt-2">
               <Button onClick={handleSearch} disabled={!searchValue.trim() || searchLoading} className="flex-1">
