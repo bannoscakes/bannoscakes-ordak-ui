@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useSupervisorQueue, useInvalidateSupervisorQueue } from "@/hooks/useSupervisorQueue";
 import type { SupervisorQueueItem } from "@/hooks/useSupervisorQueue";
-import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase, X, Loader2 } from "lucide-react";
+import { Search, LogOut, Play, Square, Coffee, Clock, Users, MessageSquare, Briefcase, X, Loader2, AlertTriangle } from "lucide-react";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { StaffOrderDetailDrawer } from "./StaffOrderDetailDrawer";
 import { ScannerOverlay } from "./ScannerOverlay";
@@ -30,6 +30,7 @@ import {
 } from "../lib/rpc-client";
 import { useUnreadCount } from "../hooks/useUnreadCount";
 import { useRealtimeOrders } from "../hooks/useRealtimeOrders";
+import { useNewUrgentOrders } from "../hooks/useNewUrgentOrders";
 import { UnreadBadge } from "./UnreadBadge";
 
 interface SupervisorWorkspacePageProps {
@@ -56,6 +57,9 @@ export function SupervisorWorkspacePage({
   // Subscribe to realtime updates for both stores (supervisor sees orders from both)
   useRealtimeOrders('bannos');
   useRealtimeOrders('flourlane');
+
+  // Track new urgent orders for highlighting
+  const { newUrgentIds, markAsSeen } = useNewUrgentOrders();
 
   // Show toast on error
   useEffect(() => {
@@ -372,13 +376,25 @@ export function SupervisorWorkspacePage({
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
             <TabsTrigger
               value="orders"
               className="flex items-center gap-2"
             >
               <Briefcase className="h-4 w-4" />
               My Orders ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="new-urgent"
+              className="flex items-center gap-2"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              New Urgent
+              {newUrgentIds.size > 0 && (
+                <Badge variant="destructive" className="ml-1">
+                  {newUrgentIds.size}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger
               value="messages"
@@ -562,6 +578,146 @@ export function SupervisorWorkspacePage({
             </Button>
           </Card>
             )}
+          </TabsContent>
+
+          <TabsContent
+            value="new-urgent"
+            className="space-y-6 mt-6"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-medium text-foreground">New Urgent Orders</h2>
+                <p className="text-sm text-muted-foreground">
+                  {newUrgentIds.size} {newUrgentIds.size === 1 ? 'order' : 'orders'}
+                </p>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading orders...
+                </div>
+              ) : (
+                <>
+                  {(() => {
+                    const newUrgentOrders = orders.filter(order =>
+                      newUrgentIds.has(`${order.store}:${order.id}`)
+                    );
+
+                    if (newUrgentOrders.length === 0) {
+                      return (
+                        <Card className="p-8 text-center">
+                          <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">No new urgent orders</p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            New high-priority orders will appear here
+                          </p>
+                        </Card>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {newUrgentOrders.map((order) => (
+                          <Card key={order.id} className="p-4 border-2 border-destructive/30 shadow hover:shadow-lg hover:bg-muted/30 transition-all">
+                            <div className="space-y-3">
+                              {/* Header with Store and Overflow Menu */}
+                              <div className="flex items-center justify-between">
+                                <Badge className={`text-xs ${getStoreColor(order.store)}`}>
+                                  {order.store === 'bannos' ? 'Bannos' : 'Flourlane'}
+                                </Badge>
+                                <OrderOverflowMenu
+                                  item={order}
+                                  variant="queue"
+                                  onOpenOrder={() => {
+                                    handleOpenOrder(order);
+                                    markAsSeen(`${order.store}:${order.id}`);
+                                  }}
+                                  onViewDetails={() => {
+                                    const id = order.shopifyOrderNumber?.trim();
+                                    if (!id) {
+                                      toast.error("Shopify order number not available");
+                                      return;
+                                    }
+                                    window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+                                    markAsSeen(`${order.store}:${order.id}`);
+                                  }}
+                                />
+                              </div>
+
+                              {/* Order Number */}
+                              <div>
+                                <p className="font-medium text-foreground">
+                                  {order.shopifyOrderNumber
+                                    ? formatOrderNumber(order.shopifyOrderNumber, order.store, order.id)
+                                    : order.orderNumber}
+                                </p>
+                              </div>
+
+                              {/* Product Title */}
+                              <div>
+                                <p className="text-sm text-foreground">{order.product}</p>
+                              </div>
+
+                              {/* Size */}
+                              <div>
+                                <p className="text-sm text-muted-foreground">
+                                  Size: {order.size || '-'}
+                                </p>
+                              </div>
+
+                              {/* Priority and Due Date */}
+                              <div className="flex items-center justify-between">
+                                <Badge className="text-xs bg-destructive text-destructive-foreground">
+                                  {order.priority || 'High'}
+                                </Badge>
+                                <span className={`text-xs ${order.dueDate ? 'text-muted-foreground' : 'text-destructive font-bold'}`}>
+                                  {order.dueDate ? `Due: ${formatDate(order.dueDate)}` : 'No due date'}
+                                </span>
+                              </div>
+
+                              {/* Method and Storage */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">{order.method}</span>
+                                {order.storage && (
+                                  <Badge className={`text-xs ${getStorageColor()}`}>
+                                    {order.storage}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex gap-2 pt-2 border-t border-border">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    handleScanOrder(order);
+                                    markAsSeen(`${order.store}:${order.id}`);
+                                  }}
+                                  disabled={shiftStatus === 'on-break'}
+                                  className="flex-1"
+                                >
+                                  Scan to Complete
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    handlePrintBarcode(order);
+                                    markAsSeen(`${order.store}:${order.id}`);
+                                  }}
+                                  disabled={shiftStatus === 'on-break'}
+                                >
+                                  Print Barcode
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent

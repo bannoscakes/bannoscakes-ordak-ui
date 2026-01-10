@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Plus,
   MessageSquare,
+  AlertTriangle,
 } from "lucide-react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
@@ -20,6 +21,8 @@ import { CreateManualOrderModal } from "./CreateManualOrderModal";
 import { findOrder } from "../lib/rpc-client";
 import { formatOrderNumber } from "../lib/format-utils";
 import { useUnreadCount } from "../hooks/useUnreadCount";
+import { useNewUrgentOrders } from "../hooks/useNewUrgentOrders";
+import { useQueueByStore } from "../hooks/useQueueByStore";
 import { UnreadBadge } from "./UnreadBadge";
 
 interface QuickActionsProps {
@@ -31,6 +34,8 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const { unreadCount } = useUnreadCount();
+  const { newUrgentIds, markAsSeen } = useNewUrgentOrders();
+  const { data: orders = [] } = useQueueByStore(store);
   const [searchResult, setSearchResult] = useState<{
     store: string;
     orderNumber: string;
@@ -43,6 +48,11 @@ export function QuickActions({ store }: QuickActionsProps) {
   const [showMessaging, setShowMessaging] = useState(false);
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+
+  // Filter new urgent orders for this store
+  const newUrgentOrders = orders.filter(order =>
+    order.priority === 'High' && newUrgentIds.has(`${store}:${order.id}`)
+  );
 
   const actions = [
     {
@@ -58,6 +68,13 @@ export function QuickActions({ store }: QuickActionsProps) {
       label: "Find Order's Store",
       description: "Locate an order fast by number or scan",
       color: "bg-blue-50 text-blue-600 hover:bg-blue-100"
+    },
+    {
+      id: "new-urgent",
+      icon: AlertTriangle,
+      label: "New Urgent Orders",
+      description: "High priority orders this session",
+      color: "bg-orange-50 text-orange-600 hover:bg-orange-100"
     },
     {
       id: "messages",
@@ -149,6 +166,11 @@ export function QuickActions({ store }: QuickActionsProps) {
                   <action.icon className="h-5 w-5" />
                 </div>
                 {action.id === "messages" && <UnreadBadge count={unreadCount} />}
+                {action.id === "new-urgent" && newUrgentOrders.length > 0 && (
+                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-1 text-xs">
+                    {newUrgentOrders.length}
+                  </Badge>
+                )}
               </div>
               <div className="text-left">
                 <div className="font-medium text-foreground">{action.label}</div>
@@ -274,6 +296,92 @@ export function QuickActions({ store }: QuickActionsProps) {
                 Open Scanner
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Urgent Orders Dialog */}
+      <Dialog open={activeModal === "new-urgent"} onOpenChange={(open) => !open && closeModal()}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Urgent Orders</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {newUrgentOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No new urgent orders</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  New high-priority orders for {store === 'bannos' ? 'Bannos' : 'Flourlane'} will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {newUrgentOrders.map((order) => (
+                  <Card key={order.id} className="p-4 border-2 border-destructive/30">
+                    <div className="space-y-3">
+                      {/* Order Number */}
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-foreground">
+                          {formatOrderNumber(order.shopify_order_number, store, order.id)}
+                        </p>
+                        <Badge className="text-xs bg-destructive text-destructive-foreground">
+                          High Priority
+                        </Badge>
+                      </div>
+
+                      {/* Product Title */}
+                      <div>
+                        <p className="text-sm text-foreground">{order.product_title}</p>
+                      </div>
+
+                      {/* Customer Name */}
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Customer: {order.customer_name}
+                        </p>
+                      </div>
+
+                      {/* Stage */}
+                      <div>
+                        <Badge variant="outline" className="text-xs">
+                          {order.stage}
+                        </Badge>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2 border-t border-border">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            const id = order.shopify_order_number?.toString().trim();
+                            if (!id) {
+                              toast.error("Shopify order number not available");
+                              return;
+                            }
+                            window.open(`https://admin.shopify.com/orders/${encodeURIComponent(id)}`, '_blank');
+                            markAsSeen(`${store}:${order.id}`);
+                          }}
+                        >
+                          View in Shopify
+                        </Button>
+                        <Button
+                          variant="default"
+                          onClick={() => {
+                            markAsSeen(`${store}:${order.id}`);
+                            closeModal();
+                          }}
+                        >
+                          Mark as Seen
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
