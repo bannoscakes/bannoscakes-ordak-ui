@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 import { getSupabase } from '../lib/supabase';
 import type { Store } from '../types/db';
+import { playNotificationSound } from '@/lib/notificationSound';
 
 /**
  * Hook for real-time order updates via Supabase Realtime.
@@ -47,13 +49,22 @@ export function useRealtimeOrders(
           schema: 'public',
           table: tableName,
         },
-        () => {
+        (payload) => {
           // Invalidate all queue-related queries for this store
           queryClient.invalidateQueries({ queryKey: ['queue', store] });
           queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
           // Also invalidate user-specific queues (supervisor/staff see orders across stores)
           queryClient.invalidateQueries({ queryKey: ['supervisorQueue'] });
           queryClient.invalidateQueries({ queryKey: ['staffQueue'] });
+
+          // Alert on new order
+          if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new;
+            playNotificationSound();
+            toast.success(`New order: #${newOrder.shopify_order_number || newOrder.id}`, {
+              duration: 5000,
+            });
+          }
         }
       )
       .subscribe((status) => {
