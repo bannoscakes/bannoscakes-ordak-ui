@@ -62,8 +62,12 @@ export function useRealtimeOrders(
 
           // Alert on new order
           if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new;
-            const orderId = newOrder.id;
+            const newOrder = payload.new as { id?: string | number; shopify_order_number?: number };
+
+            // Type guard - ensure we have a valid order ID
+            if (!newOrder?.id) return;
+
+            const orderId = String(newOrder.id);
 
             // Prevent duplicate notifications from multiple hook instances
             if (notifiedOrders.has(orderId)) return;
@@ -73,7 +77,11 @@ export function useRealtimeOrders(
             setTimeout(() => notifiedOrders.delete(orderId), 10000);
 
             playNotificationSound().catch(err => console.warn('Sound failed:', err));
-            toast.success(`New order: #${newOrder.shopify_order_number || newOrder.id}`, {
+
+            // Add store prefix for consistency (B for Bannos, F for Flourlane)
+            const storePrefix = store === 'bannos' ? 'B' : 'F';
+            const orderNumber = newOrder.shopify_order_number || newOrder.id;
+            toast.success(`New order: #${storePrefix}${orderNumber}`, {
               duration: 5000,
             });
           }
