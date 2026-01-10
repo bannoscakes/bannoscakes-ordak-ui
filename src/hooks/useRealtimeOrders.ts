@@ -67,7 +67,8 @@ export function useRealtimeOrders(
             // Type guard - ensure we have a valid order ID
             if (!newOrder?.id) return;
 
-            const orderId = String(newOrder.id);
+            // Create store-scoped key to prevent cross-store collisions
+            const orderId = `${store}:${String(newOrder.id)}`;
 
             // Prevent duplicate notifications from multiple hook instances
             if (notifiedOrders.has(orderId)) return;
