@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Search, User, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
-import { LoadingSpinner } from "./ui/LoadingSpinner";
+import { Search, User, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { OrderSearchResult, OrderSearchResultData } from "./OrderSearchResult";
 import { findOrder } from "../lib/rpc-client";
 import { useInvalidateDashboard } from "../hooks/useDashboardQueries";
 import { formatOrderNumber } from "../lib/format-utils";
@@ -19,15 +18,7 @@ export function Header({ onSignOut }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchResult, setSearchResult] = useState<{
-    store: string;
-    orderNumber: string;
-    storage: string | null;
-    stage: string;
-    productTitle: string;
-    customerName: string;
-    assigneeName: string | null;
-  } | null>(null);
+  const [searchResult, setSearchResult] = useState<OrderSearchResultData | null | undefined>(undefined);
 
   const handleSearch = async () => {
     if (!searchValue.trim()) return;
@@ -142,7 +133,7 @@ export function Header({ onSignOut }: HeaderProps) {
       setSearchOpen(open);
       if (!open) {
         setSearchValue("");
-        setSearchResult(null);
+        setSearchResult(undefined);
       }
     }}>
       <DialogContent className="max-w-md">
@@ -151,64 +142,11 @@ export function Header({ onSignOut }: HeaderProps) {
         </DialogHeader>
         
         <div className="space-y-4">
-          {searchLoading && (
-            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
-              <LoadingSpinner size="sm" />
-              <span className="text-sm">Looking up order…</span>
-            </div>
-          )}
-
-          {searchResult && (
-            <div className="space-y-3">
-              {/* Order Found */}
-              <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium">Order {searchResult.orderNumber}</div>
-                  <div className="text-xs text-muted-foreground">{searchResult.productTitle}</div>
-                  <div className="text-xs text-muted-foreground">{searchResult.customerName}</div>
-                </div>
-              </div>
-
-              {/* Current Stage & Status */}
-              <div className="bg-muted/50 border border-border rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs text-muted-foreground font-medium">Current Stage</div>
-                  <Badge variant="outline">{searchResult.stage}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground font-medium">Store</div>
-                  <span className="text-xs font-medium">{searchResult.store}</span>
-                </div>
-                {searchResult.assigneeName && (
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="text-xs text-muted-foreground font-medium">Assigned to</div>
-                    <span className="text-xs font-medium">{searchResult.assigneeName}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Storage Location - PROMINENT (if set or Complete) */}
-              {(searchResult.storage || searchResult.stage === 'Complete') && (
-                <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-4">
-                  <div className="text-xs text-primary font-medium mb-1">Storage Location</div>
-                  <div className="text-lg font-bold text-foreground">
-                    {searchResult.storage || "Not Set"}
-                  </div>
-                  {searchResult.stage === 'Complete' && !searchResult.storage && (
-                    <div className="text-xs text-warning mt-1">⚠️ Complete but storage not set</div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {searchResult === null && searchValue && !searchLoading && (
-            <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <span className="text-sm">No order found for "{searchValue}". Check the number and try again.</span>
-            </div>
-          )}
+          <OrderSearchResult
+            result={searchResult}
+            loading={searchLoading}
+            searchQuery={searchValue}
+          />
         </div>
       </DialogContent>
     </Dialog>
