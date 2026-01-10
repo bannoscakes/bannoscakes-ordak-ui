@@ -119,6 +119,7 @@ export function QuickActions({ store }: QuickActionsProps) {
     setActiveModal(null);
     setSearchValue("");
     setSearchResult(undefined);
+    setSearchLoading(false);
   };
 
   const openMessages = (convId?: string) => {

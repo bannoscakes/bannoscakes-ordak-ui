@@ -19,7 +19,7 @@ interface OrderSearchResultProps {
   /** Whether search is in progress */
   loading: boolean;
   /** The search query (used for "not found" message) */
-  searchQuery: string;
+  searchQuery?: string;
   /** Optional action button to show after result */
   actionButton?: ReactNode;
 }
@@ -34,6 +34,8 @@ export function OrderSearchResult({
   searchQuery,
   actionButton,
 }: OrderSearchResultProps) {
+  const trimmedQuery = (searchQuery ?? "").trim();
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
@@ -93,11 +95,11 @@ export function OrderSearchResult({
   }
 
   // Not found state - only show if there was a search query
-  if (result === null && searchQuery) {
+  if (result === null && !loading && trimmedQuery.length > 0) {
     return (
       <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg">
         <AlertCircle className="h-4 w-4 text-destructive" />
-        <span className="text-sm">No order found for "{searchQuery}". Check the number and try again.</span>
+        <span className="text-sm">No order found for "{trimmedQuery}". Check the number and try again.</span>
       </div>
     );
   }
