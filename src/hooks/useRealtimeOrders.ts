@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { getSupabase } from '../lib/supabase';
 import type { Store } from '../types/db';
@@ -52,7 +52,7 @@ export function useRealtimeOrders(
           schema: 'public',
           table: tableName,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<{ id: string | number; shopify_order_number?: string | number | null }>) => {
           // Invalidate all queue-related queries for this store
           queryClient.invalidateQueries({ queryKey: ['queue', store] });
           queryClient.invalidateQueries({ queryKey: ['queueStats', store] });
@@ -62,7 +62,7 @@ export function useRealtimeOrders(
 
           // Alert on new order
           if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as { id?: string | number; shopify_order_number?: number };
+            const newOrder = payload.new;
 
             // Type guard - ensure we have a valid order ID
             if (!newOrder?.id) return;
