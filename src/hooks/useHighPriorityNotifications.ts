@@ -1,19 +1,24 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { playNotificationSound, resumeAudioContext } from '@/lib/notificationSound';
 import type { QueueItem } from '@/types/queue';
 
 const NOTIFIED_ORDERS_KEY = 'notified-high-priority-orders';
 const CHECK_INTERVAL = 5000; // Check every 5 seconds
+const MAX_STORED_IDS = 500; // Limit localStorage to 500 most recent IDs
 
 /**
  * Hook for monitoring and notifying about high-priority orders.
  *
  * Features:
  * - Monitors React Query cache for orders with priority='High'
- * - Tracks notified order IDs in localStorage to avoid duplicate notifications
- * - Plays notification sound when new high-priority orders detected
+ * - Tracks notified order IDs in localStorage to avoid duplicate notifications (max 500 IDs)
+ * - Multi-layered notifications for bakery environment (belt and suspenders):
+ *   1. Audible alert: 3-beep pattern (400Hz-600Hz-400Hz) at 60% volume
+ *   2. Visual toast: Red error toast at top-center for 15 seconds
+ *   3. Tactile feedback: Vibration pattern on mobile devices
  * - Only runs for Staff, Supervisor, and Admin roles
  *
  * The hook subscribes to query cache changes and performs periodic checks
@@ -62,10 +67,13 @@ export function useHighPriorityNotifications() {
       return new Set();
     };
 
-    // Save notified orders to localStorage
+    // Save notified orders to localStorage (limited to MAX_STORED_IDS most recent)
     const saveNotifiedOrders = (orderIds: Set<string>) => {
       try {
-        localStorage.setItem(NOTIFIED_ORDERS_KEY, JSON.stringify([...orderIds]));
+        const idsArray = [...orderIds];
+        // Keep only the most recent MAX_STORED_IDS to prevent unbounded growth
+        const limitedIds = idsArray.slice(-MAX_STORED_IDS);
+        localStorage.setItem(NOTIFIED_ORDERS_KEY, JSON.stringify(limitedIds));
       } catch (error) {
         console.warn('Failed to save notified orders to localStorage:', error);
       }
@@ -117,10 +125,31 @@ export function useHighPriorityNotifications() {
       // Update last check reference
       lastCheckRef.current = currentHighPriorityOrders;
 
-      // If new high-priority orders found, notify user with sound
+      // If new high-priority orders found, notify user with multiple methods (belt and suspenders)
       if (newHighPriorityOrders.length > 0) {
-        // Play notification sound for new urgent orders
+        // 1. Play notification sound for new urgent orders
         playNotificationSound();
+
+        // 2. Show visual toast notification (more visible than warning)
+        const count = newHighPriorityOrders.length;
+        const message =
+          count === 1
+            ? `🚨 New urgent order: ${newHighPriorityOrders[0].orderNumber}`
+            : `🚨 ${count} new urgent orders require attention`;
+
+        toast.error(message, {
+          duration: 15000, // Show for 15 seconds
+          position: 'top-center',
+        });
+
+        // 3. Vibrate on mobile devices (if supported)
+        if ('vibrate' in navigator) {
+          try {
+            navigator.vibrate([200, 100, 200]); // Short-pause-short pattern
+          } catch (error) {
+            console.warn('Vibration failed:', error);
+          }
+        }
 
         // Update localStorage with all current high-priority orders
         saveNotifiedOrders(currentHighPriorityOrders);

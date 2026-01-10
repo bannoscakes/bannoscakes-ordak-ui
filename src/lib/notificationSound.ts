@@ -23,26 +23,37 @@ export function playNotificationSound(): void {
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    // First beep: 800Hz
-    oscillator.frequency.setValueAtTime(800, now);
-    oscillator.frequency.setValueAtTime(0, now + 0.15);
-    // Second beep: 1000Hz
-    oscillator.frequency.setValueAtTime(1000, now + 0.25);
-    oscillator.frequency.setValueAtTime(0, now + 0.4);
+    // Three-beep pattern with lower frequencies that penetrate bakery noise better
+    // First beep: 400Hz
+    oscillator.frequency.setValueAtTime(400, now);
+    oscillator.frequency.setValueAtTime(0, now + 0.2);
+    // Second beep: 600Hz
+    oscillator.frequency.setValueAtTime(600, now + 0.35);
+    oscillator.frequency.setValueAtTime(0, now + 0.55);
+    // Third beep: 400Hz (repeat pattern for recognition)
+    oscillator.frequency.setValueAtTime(400, now + 0.7);
+    oscillator.frequency.setValueAtTime(0, now + 0.9);
 
-    // Volume envelope (30% volume, smooth fades)
+    // Volume envelope (60% volume for better audibility in noisy environment)
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-    gainNode.gain.setValueAtTime(0.3, now + 0.14);
-    gainNode.gain.linearRampToValueAtTime(0, now + 0.15);
-    gainNode.gain.setValueAtTime(0, now + 0.25);
-    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.26);
-    gainNode.gain.setValueAtTime(0.3, now + 0.39);
-    gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+    // First beep
+    gainNode.gain.linearRampToValueAtTime(0.6, now + 0.02);
+    gainNode.gain.setValueAtTime(0.6, now + 0.18);
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+    // Second beep
+    gainNode.gain.setValueAtTime(0, now + 0.35);
+    gainNode.gain.linearRampToValueAtTime(0.6, now + 0.37);
+    gainNode.gain.setValueAtTime(0.6, now + 0.53);
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.55);
+    // Third beep
+    gainNode.gain.setValueAtTime(0, now + 0.7);
+    gainNode.gain.linearRampToValueAtTime(0.6, now + 0.72);
+    gainNode.gain.setValueAtTime(0.6, now + 0.88);
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.9);
 
     oscillator.type = 'sine';
     oscillator.start(now);
-    oscillator.stop(now + 0.4);
+    oscillator.stop(now + 0.9);
   } catch (error) {
     console.warn('Failed to play notification sound:', error);
   }
