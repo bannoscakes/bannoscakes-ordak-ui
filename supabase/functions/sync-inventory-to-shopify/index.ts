@@ -18,8 +18,20 @@ const corsHeaders = {
 };
 
 // Shopify API version - configurable via environment variable
-// Default to 2025-10, but can be overridden when Shopify deprecates versions
-const SHOPIFY_API_VERSION = Deno.env.get("SHOPIFY_API_VERSION") || "2025-10";
+// Default to 2026-01 (current stable), can be overridden when Shopify releases new versions
+const SHOPIFY_API_VERSION = Deno.env.get("SHOPIFY_API_VERSION") || "2026-01";
+
+// Constant-time string comparison to prevent timing attacks on auth tokens
+function secureCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
 // Location cache TTL in milliseconds (5 minutes)
 // Location IDs rarely change, but we don't want stale data forever
@@ -687,8 +699,10 @@ Deno.serve(async (req) => {
     }
 
     // Require service-role Bearer token (used by the DB trigger via pg_net)
+    // Use constant-time comparison to prevent timing attacks
     const authHeader = req.headers.get("authorization") ?? "";
-    if (authHeader !== `Bearer ${supabaseServiceKey}`) {
+    const expectedToken = `Bearer ${supabaseServiceKey}`;
+    if (!secureCompare(authHeader, expectedToken)) {
       console.error("[sync-inventory-to-shopify] Unauthorized request - invalid or missing Bearer token");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
@@ -714,7 +728,7 @@ Deno.serve(async (req) => {
     let payload: SyncPayload | null = null;
     try {
       const body = await req.json();
-      if (body && body.item_type) {
+      if (body && body.item_type && body.item_id) {
         payload = body as SyncPayload;
       }
     } catch {
@@ -725,7 +739,38 @@ Deno.serve(async (req) => {
     if (payload) {
       console.log(`[sync-inventory-to-shopify] Direct call: ${payload.item_type} ${payload.item_id}`);
 
-      const result = await processItem(payload, tokens);
+      let result: ProcessResult;
+      try {
+        result = await processItem(payload, tokens);
+      } catch (processError) {
+        // Exception during processing - mark as failed if we have a queue_id
+        console.error(`[sync-inventory-to-shopify] Exception processing ${payload.item_type} ${payload.item_id}:`, processError);
+
+        if (payload.queue_id) {
+          const { error: updateError } = await supabase
+            .from("inventory_sync_queue")
+            .update({
+              status: "failed",
+              error_message: `Exception: ${processError}`,
+              processed_at: new Date().toISOString(),
+            })
+            .eq("id", payload.queue_id);
+          if (updateError) {
+            console.error("[sync-inventory-to-shopify] Failed to update queue item after exception:", updateError);
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            item_id: payload.item_id,
+            item_type: payload.item_type,
+            success: false,
+            stores: [],
+            error: `Exception: ${processError}`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       // Update queue status if queue_id was provided
       if (payload.queue_id) {
@@ -778,17 +823,31 @@ Deno.serve(async (req) => {
     const results: ProcessResult[] = [];
 
     for (const item of claimedItems) {
-      // Convert queue item to payload format
+      // Convert queue item to payload format with defensive type guards
       const queuePayload: SyncPayload = {
         queue_id: item.id,
         item_type: item.item_type,
         item_id: item.item_id,
-        sku: item.shopify_ids?.sku,
-        product_id_1: item.shopify_ids?.product_id_1,
-        product_id_2: item.shopify_ids?.product_id_2,
+        sku: typeof item.shopify_ids?.sku === "string" ? item.shopify_ids.sku : undefined,
+        product_id_1: typeof item.shopify_ids?.product_id_1 === "string" ? item.shopify_ids.product_id_1 : undefined,
+        product_id_2: typeof item.shopify_ids?.product_id_2 === "string" ? item.shopify_ids.product_id_2 : undefined,
       };
 
-      const result = await processItem(queuePayload, tokens);
+      let result: ProcessResult;
+      try {
+        result = await processItem(queuePayload, tokens);
+      } catch (processError) {
+        // Exception during processing - mark as failed
+        console.error(`[sync-inventory-to-shopify] Exception processing queued ${item.item_type} ${item.item_id}:`, processError);
+
+        result = {
+          item_id: item.item_id,
+          item_type: item.item_type,
+          success: false,
+          stores: [],
+          error: `Exception: ${processError}`,
+        };
+      }
 
       // Update queue item status
       const { error: queueUpdateError } = await supabase
