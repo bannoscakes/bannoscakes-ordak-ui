@@ -193,6 +193,17 @@ function validateProductId(productId: string): ValidationResult {
 }
 
 // ============================================================================
+// Escape SKU for Shopify's search query syntax
+// Shopify uses Lucene-style search, so we need to escape special characters
+// ============================================================================
+function escapeSkuForSearch(sku: string): string {
+  // Shopify search special characters that need escaping: + - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \ /
+  // We wrap in quotes and escape any quotes inside to handle all special chars safely
+  const escaped = sku.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
+// ============================================================================
 // Helper to make Shopify GraphQL requests with proper error handling
 async function shopifyGraphQL<T>(
   storeDomain: string,
@@ -285,8 +296,10 @@ async function findVariantBySku(
   `;
 
   try {
+    // Use escapeSkuForSearch to safely handle special characters in SKU values
+    // This prevents search injection and handles SKUs with quotes, colons, etc.
     const result = await shopifyGraphQL<ShopifyProductVariantsResponse>(storeDomain, token, query, {
-      query: `sku:${sku}`,
+      query: `sku:${escapeSkuForSearch(sku)}`,
     });
 
     const variant = result?.data?.productVariants?.edges?.[0]?.node;
@@ -749,8 +762,36 @@ Deno.serve(async (req) => {
     let payload: SyncPayload | null = null;
     try {
       const body = await req.json();
-      if (body && body.item_id && (body.item_type === "accessory" || body.item_type === "cake_topper")) {
-        payload = body as SyncPayload;
+      // Validate all required fields with explicit type checking
+      if (
+        body &&
+        typeof body.item_id === "string" &&
+        body.item_id.length > 0 &&
+        (body.item_type === "accessory" || body.item_type === "cake_topper")
+      ) {
+        // Validate optional fields have correct types if present
+        const isValidSku = body.sku === undefined || typeof body.sku === "string";
+        const isValidProductId1 = body.product_id_1 === undefined || typeof body.product_id_1 === "string";
+        const isValidProductId2 = body.product_id_2 === undefined || typeof body.product_id_2 === "string";
+        const isValidQueueId = body.queue_id === undefined || typeof body.queue_id === "string";
+
+        if (isValidSku && isValidProductId1 && isValidProductId2 && isValidQueueId) {
+          payload = {
+            queue_id: body.queue_id,
+            item_type: body.item_type,
+            item_id: body.item_id,
+            sku: body.sku,
+            product_id_1: body.product_id_1,
+            product_id_2: body.product_id_2,
+          };
+        } else {
+          console.error("[sync-inventory-to-shopify] Invalid payload field types:", {
+            sku: typeof body.sku,
+            product_id_1: typeof body.product_id_1,
+            product_id_2: typeof body.product_id_2,
+            queue_id: typeof body.queue_id,
+          });
+        }
       }
     } catch {
       // Empty body or invalid JSON - will process queue instead
@@ -789,7 +830,7 @@ Deno.serve(async (req) => {
             stores: [],
             error: `Exception: ${processError}`,
           }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -813,9 +854,11 @@ Deno.serve(async (req) => {
         JSON.stringify(result.stores)
       );
 
+      // Return 500 for failed syncs, 200 for success
+      // This allows upstream systems to distinguish between success and failure
       return new Response(
         JSON.stringify(result),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: result.success ? 200 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -896,6 +939,15 @@ Deno.serve(async (req) => {
 
     console.log(`[sync-inventory-to-shopify] Complete: ${successCount} succeeded, ${failedCount} failed`);
 
+    // Return appropriate status based on results:
+    // - 200: All items succeeded or queue was empty
+    // - 207: Partial success (some succeeded, some failed) - Multi-Status
+    // - 500: All items failed
+    let httpStatus = 200;
+    if (failedCount > 0) {
+      httpStatus = successCount > 0 ? 207 : 500;
+    }
+
     return new Response(
       JSON.stringify({
         processed: results.length,
@@ -903,7 +955,7 @@ Deno.serve(async (req) => {
         failed: failedCount,
         results,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: httpStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("[sync-inventory-to-shopify] Unexpected error:", error);
