@@ -1,11 +1,17 @@
 let audioContext: AudioContext | null = null;
 
-export function playNotificationSound(): void {
+export async function playNotificationSound(): Promise<void> {
   try {
     if (!audioContext) {
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const ctx = audioContext;
+
+    // Resume if suspended due to browser autoplay policy
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+
     const now = ctx.currentTime;
 
     const oscillator = ctx.createOscillator();
@@ -30,6 +36,12 @@ export function playNotificationSound(): void {
     oscillator.type = 'sine';
     oscillator.start(now);
     oscillator.stop(now + 0.3);
+
+    // Clean up after sound completes
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      gainNode.disconnect();
+    };
   } catch (error) {
     console.warn('Failed to play notification sound:', error);
   }

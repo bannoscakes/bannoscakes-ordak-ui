@@ -6,6 +6,9 @@ import { getSupabase } from '../lib/supabase';
 import type { Store } from '../types/db';
 import { playNotificationSound } from '@/lib/notificationSound';
 
+// Track notified orders to prevent duplicates from multiple hook instances
+const notifiedOrders = new Set<string>();
+
 /**
  * Hook for real-time order updates via Supabase Realtime.
  *
@@ -60,7 +63,16 @@ export function useRealtimeOrders(
           // Alert on new order
           if (payload.eventType === 'INSERT') {
             const newOrder = payload.new;
-            playNotificationSound();
+            const orderId = newOrder.id;
+
+            // Prevent duplicate notifications from multiple hook instances
+            if (notifiedOrders.has(orderId)) return;
+            notifiedOrders.add(orderId);
+
+            // Clear after 10 seconds to allow re-notification if needed
+            setTimeout(() => notifiedOrders.delete(orderId), 10000);
+
+            playNotificationSound().catch(err => console.warn('Sound failed:', err));
             toast.success(`New order: #${newOrder.shopify_order_number || newOrder.id}`, {
               duration: 5000,
             });
