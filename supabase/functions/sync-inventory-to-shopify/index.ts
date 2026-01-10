@@ -256,6 +256,15 @@ async function getProductInventoryItems(
     }
 
     const variants = result.data.product.variants?.edges || [];
+
+    // Warn if we hit the 100 variant limit - pagination may be needed
+    if (variants.length >= 100) {
+      console.warn(
+        `[getProductInventoryItems] Product "${productId}" has 100+ variants in ${storeDomain}. ` +
+        `Only first 100 will be synced. Consider implementing pagination if this product has more variants.`
+      );
+    }
+
     const mappedVariants = variants
       .map((edge) => ({
         variantId: edge.node.id,
