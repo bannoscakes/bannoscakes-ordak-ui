@@ -78,17 +78,18 @@ export function useHighPriorityNotifications() {
       const newHighPriorityOrders: QueueItem[] = [];
 
       // Determine which query keys to check based on role
+      // Check Admin first (highest privilege), then Supervisor, then Staff
       let queryKeys: unknown[][] = [];
-      if (hasRole('Staff')) {
-        queryKeys = [['staffQueue', user?.id]];
-      } else if (hasRole('Supervisor')) {
-        queryKeys = [['supervisorQueue', user?.id]];
-      } else if (hasRole('Admin')) {
+      if (hasRole('Admin')) {
         // Admin sees both stores - use partial key to match any storage filter
         queryKeys = [
           ['queue', 'bannos'],
           ['queue', 'flourlane'],
         ];
+      } else if (hasRole('Supervisor')) {
+        queryKeys = [['supervisorQueue', user?.id]];
+      } else if (hasRole('Staff')) {
+        queryKeys = [['staffQueue', user?.id]];
       }
 
       // Check each relevant query cache
