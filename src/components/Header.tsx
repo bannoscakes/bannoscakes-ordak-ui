@@ -18,7 +18,7 @@ export function Header({ onSignOut }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchResult, setSearchResult] = useState<OrderSearchResultData | null>(null);
+  const [searchResult, setSearchResult] = useState<OrderSearchResultData | null | undefined>(undefined);
 
   const handleSearch = async () => {
     if (!searchValue.trim()) return;
@@ -133,7 +133,7 @@ export function Header({ onSignOut }: HeaderProps) {
       setSearchOpen(open);
       if (!open) {
         setSearchValue("");
-        setSearchResult(null);
+        setSearchResult(undefined);
       }
     }}>
       <DialogContent className="max-w-md">

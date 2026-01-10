@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -20,7 +21,7 @@ interface OrderSearchResultProps {
   /** The search query (used for "not found" message) */
   searchQuery: string;
   /** Optional action button to show after result */
-  actionButton?: React.ReactNode;
+  actionButton?: ReactNode;
 }
 
 /**
@@ -37,7 +38,7 @@ export function OrderSearchResult({
     return (
       <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
         <LoadingSpinner size="sm" />
-        <span className="text-sm">Looking up order...</span>
+        <span className="text-sm">Looking up order…</span>
       </div>
     );
   }
@@ -56,7 +57,7 @@ export function OrderSearchResult({
         </div>
 
         {/* Current Stage & Status */}
-        <div className="bg-muted/30 border border-border rounded-lg p-3">
+        <div className="bg-muted/50 border border-border rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs text-muted-foreground font-medium">Current Stage</div>
             <Badge variant="outline">{result.stage}</Badge>

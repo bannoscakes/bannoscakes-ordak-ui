@@ -36,7 +36,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const { newUrgentIds, markAsSeen } = useNewUrgentOrders();
   // Only fetch orders when dialog is open
   const { data: orders = [] } = useQueueByStore(store, { enabled: isDialogOpen });
-  const [searchResult, setSearchResult] = useState<OrderSearchResultData | null>(null);
+  const [searchResult, setSearchResult] = useState<OrderSearchResultData | null | undefined>(undefined);
   const [showMessaging, setShowMessaging] = useState(false);
   const [initialConversationId, setInitialConversationId] = useState<string | null>(null);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
@@ -118,7 +118,7 @@ export function QuickActions({ store }: QuickActionsProps) {
   const closeModal = () => {
     setActiveModal(null);
     setSearchValue("");
-    setSearchResult(null);
+    setSearchResult(undefined);
   };
 
   const openMessages = (convId?: string) => {
