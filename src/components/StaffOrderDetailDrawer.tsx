@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Bot, Printer, QrCode, ExternalLink, Package, RotateCcw } from "lucide-react";
+import { Bot, Printer, QrCode, ExternalLink, Package, RotateCcw, Loader2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
@@ -349,7 +349,8 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
 
           {/* Loading State */}
           {loading && (
-            <div className="px-6 py-8 text-center">
+            <div className="px-6 py-8 flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
               <div className="text-sm text-muted-foreground">Loading order details...</div>
             </div>
           )}
@@ -530,10 +531,10 @@ export function StaffOrderDetailDrawer({ isOpen, onClose, order, onScanBarcode, 
                   </label>
                   <Select value={qcIssue} onValueChange={setQcIssue}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select issue (if any)..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="None">No Issues - Passed QC</SelectItem>
                       <SelectItem value="Damaged Cake">Damaged Cake</SelectItem>
                       <SelectItem value="Wrong spelling">Wrong spelling</SelectItem>
                     </SelectContent>
