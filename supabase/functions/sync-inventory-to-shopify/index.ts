@@ -22,16 +22,21 @@ const corsHeaders = {
 const SHOPIFY_API_VERSION = Deno.env.get("SHOPIFY_API_VERSION") || "2026-01";
 
 // Constant-time string comparison to prevent timing attacks on auth tokens
+// Pads shorter string to avoid leaking length information
 function secureCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  const maxLen = Math.max(a.length, b.length);
+  const paddedA = a.padEnd(maxLen, "\0");
+  const paddedB = b.padEnd(maxLen, "\0");
+
+  let result = a.length ^ b.length; // Include length difference in result
+  for (let i = 0; i < maxLen; i++) {
+    result |= paddedA.charCodeAt(i) ^ paddedB.charCodeAt(i);
   }
   return result === 0;
 }
+
+// Timeout for Shopify API requests (30 seconds)
+const SHOPIFY_REQUEST_TIMEOUT_MS = 30000;
 
 // Location cache TTL in milliseconds (5 minutes)
 // Location IDs rarely change, but we don't want stale data forever
@@ -195,17 +200,33 @@ async function shopifyGraphQL<T>(
   query: string,
   variables: Record<string, unknown> = {}
 ): Promise<{ data: T; errors?: Array<{ message: string }> }> {
-  const response = await fetch(
-    `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify({ query, variables }),
+  // Add timeout to prevent hanging on slow/unresponsive Shopify API
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SHOPIFY_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://${storeDomain}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": token,
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      }
+    );
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ShopifyApiError(`Shopify API timeout after ${SHOPIFY_REQUEST_TIMEOUT_MS}ms`, 408);
     }
-  );
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -728,7 +749,7 @@ Deno.serve(async (req) => {
     let payload: SyncPayload | null = null;
     try {
       const body = await req.json();
-      if (body && body.item_type && body.item_id) {
+      if (body && body.item_id && (body.item_type === "accessory" || body.item_type === "cake_topper")) {
         payload = body as SyncPayload;
       }
     } catch {
