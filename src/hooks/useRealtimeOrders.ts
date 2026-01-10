@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { getSupabase } from '../lib/supabase';
 import type { Store } from '../types/db';
 import { playNotificationSound } from '@/lib/notificationSound';
+import { formatOrderNumber } from '../lib/format-utils';
 
 // Track notified orders to prevent duplicates from multiple hook instances
 // Use Map to maintain insertion order for FIFO eviction when limit reached
@@ -106,11 +107,13 @@ export function useRealtimeOrders(
 
             playNotificationSound().catch(err => console.warn('Sound failed:', err));
 
-            // Add store prefix for consistency (B for Bannos, F for Flourlane)
-            const storePrefix = store === 'bannos' ? 'B' : 'F';
-            // Prefer human_id, fallback to shopify_order_number, then id (avoid showing UUIDs)
-            const orderNumber = newOrder.human_id || newOrder.shopify_order_number || newOrder.id;
-            toast.success(`New order: #${storePrefix}${orderNumber}`, {
+            // Use formatOrderNumber for consistent formatting across codebase
+            const formattedOrderNumber = formatOrderNumber(
+              newOrder.human_id || newOrder.shopify_order_number || newOrder.id,
+              store,
+              String(newOrder.id) // For split order suffix handling (-A, -B)
+            );
+            toast.success(`New order: ${formattedOrderNumber}`, {
               duration: 5000,
             });
           }
