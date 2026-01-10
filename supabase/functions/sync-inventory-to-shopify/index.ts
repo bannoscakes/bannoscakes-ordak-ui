@@ -619,7 +619,7 @@ Deno.serve(async (req) => {
 
       // Update queue status if queue_id was provided
       if (payload.queue_id) {
-        await supabase
+        const { error: updateError } = await supabase
           .from("inventory_sync_queue")
           .update({
             status: result.success ? "completed" : "failed",
@@ -627,6 +627,9 @@ Deno.serve(async (req) => {
             processed_at: new Date().toISOString(),
           })
           .eq("id", payload.queue_id);
+        if (updateError) {
+          console.error("[sync-inventory-to-shopify] Failed to update queue item:", updateError);
+        }
       }
 
       console.log(
@@ -678,7 +681,7 @@ Deno.serve(async (req) => {
       const result = await processItem(queuePayload, tokens);
 
       // Update queue item status
-      await supabase
+      const { error: queueUpdateError } = await supabase
         .from("inventory_sync_queue")
         .update({
           status: result.success ? "completed" : "failed",
@@ -686,6 +689,9 @@ Deno.serve(async (req) => {
           processed_at: new Date().toISOString(),
         })
         .eq("id", item.id);
+      if (queueUpdateError) {
+        console.error("[sync-inventory-to-shopify] Failed to update queue item:", queueUpdateError);
+      }
 
       results.push(result);
 
