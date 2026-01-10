@@ -576,6 +576,16 @@ serve(async (req) => {
       );
     }
 
+    // Require service-role Bearer token (used by the DB trigger via pg_net)
+    const authHeader = req.headers.get("authorization") ?? "";
+    if (authHeader !== `Bearer ${supabaseServiceKey}`) {
+      console.error("[sync-inventory-to-shopify] Unauthorized request - invalid or missing Bearer token");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const tokens: Record<string, string> = {};
     if (bannosToken) tokens.bannos = bannosToken;
     if (flourlaneToken) tokens.flourlane = flourlaneToken;
