@@ -630,21 +630,23 @@ async function syncCakeToppersToStore(
     // Products typically have few variants; parallelism would add complexity for minimal gain.
     const errors: string[] = [];
     let successCount = 0;
+    let totalLocationsUpdated = 0;
 
     for (const variant of variants) {
       const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds);
       if (result.success) {
         successCount++;
+        totalLocationsUpdated += result.locationsUpdated || 0;
       } else {
         errors.push(`${variant.inventoryItemId}: ${result.error}`);
       }
     }
 
     if (errors.length > 0) {
-      return { store: store.name, success: false, error: errors.join("; "), variantCount: variants.length };
+      return { store: store.name, success: false, error: errors.join("; "), variantCount: variants.length, locationsUpdated: totalLocationsUpdated };
     }
 
-    return { store: store.name, success: true, variantCount: successCount };
+    return { store: store.name, success: true, variantCount: successCount, locationsUpdated: totalLocationsUpdated };
   } catch (err) {
     return { store: store.name, success: false, error: `Exception: ${err}` };
   }
