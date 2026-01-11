@@ -46,14 +46,15 @@ interface StoreResult {
   error?: string;
   inventoryItemId?: string;
   variantCount?: number;
+  locationsUpdated?: number;
 }
 
-// Pre-fetched store configuration with cached location ID
+// Pre-fetched store configuration with cached location IDs (ALL active locations)
 interface StoreConfig {
   name: string;
   domain: string;
   token: string;
-  locationId: string;
+  locationIds: string[]; // All active locations - inventory must be set to 0 at ALL
 }
 
 interface ProcessResult {
@@ -203,17 +204,22 @@ async function getVariantBySku(
     }
   `;
 
+  const searchQuery = `sku:${escapeSkuForSearch(sku)}`;
+  console.log(`[sync-inventory] SKU lookup for "${sku}" in ${storeDomain}, query: ${searchQuery}`);
+
   // Let API errors (rate limiting, 5xx, network) propagate - caller will handle
   // Only return null for actual "not found" (successful query with empty results)
   const result = await shopifyGraphQL(storeDomain, token, query, {
-    query: `sku:${escapeSkuForSearch(sku)}`,
+    query: searchQuery,
   });
 
   const variant = result?.data?.productVariants?.edges?.[0]?.node;
   if (!variant || !variant.inventoryItem?.id) {
+    console.log(`[sync-inventory] SKU "${sku}" NOT FOUND in ${storeDomain}. Response: ${JSON.stringify(result?.data?.productVariants)}`);
     return null; // SKU genuinely not found in this store
   }
 
+  console.info(`[sync-inventory] SKU "${sku}" FOUND in ${storeDomain}: variantId=${variant.id}, inventoryItemId=${variant.inventoryItem.id}`);
   return {
     variantId: variant.id,
     inventoryItemId: variant.inventoryItem.id,
@@ -255,17 +261,22 @@ async function getProductInventoryItems(
   })).filter((v: any) => v.inventoryItemId);
 }
 
-// Get location ID (we need this for inventory updates)
-async function getLocationId(
+// Get ALL active location IDs (we need to set inventory to 0 at all locations)
+// LIMITATION: Fetches up to 50 locations. Pagination not implemented as typical Shopify
+// stores have far fewer locations. If a store exceeds 50 active locations, inventory
+// won't be zeroed at all of them - would need cursor-based pagination to fix.
+async function getLocationIds(
   storeDomain: string,
   token: string
-): Promise<string | null> {
+): Promise<string[]> {
   const query = `
     query getLocations {
-      locations(first: 1) {
+      locations(first: 50) {
         edges {
           node {
             id
+            name
+            isActive
           }
         }
       }
@@ -273,19 +284,38 @@ async function getLocationId(
   `;
 
   const result = await shopifyGraphQL(storeDomain, token, query);
-  return result?.data?.locations?.edges?.[0]?.node?.id || null;
+  const locations = result?.data?.locations?.edges || [];
+
+  // Log full location details at debug level (verbose)
+  console.debug(`[sync-inventory] All locations in ${storeDomain}: ${JSON.stringify(locations.map((e: any) => ({ id: e.node.id, name: e.node.name, isActive: e.node.isActive })))}`);
+
+  // Return ALL active location IDs (not just the first one!)
+  const activeLocationIds = locations
+    .filter((e: any) => e.node.isActive !== false) // Include if isActive is true or undefined
+    .map((e: any) => e.node.id);
+
+  // Log count at info level for quick visibility
+  console.info(`[sync-inventory] ${storeDomain}: ${activeLocationIds.length} active locations`);
+
+  return activeLocationIds;
 }
 
-// Set inventory to 0 for a single inventory item
-async function setInventoryToZero(
+// Set inventory to 0 for a single inventory item at ALL locations
+// Uses inventorySetQuantities (the new API, replacing deprecated inventorySetOnHandQuantities)
+async function setInventoryToZeroAtAllLocations(
   storeDomain: string,
   token: string,
   inventoryItemId: string,
-  locationId: string
-): Promise<{ success: boolean; error?: string }> {
+  locationIds: string[]
+): Promise<{ success: boolean; error?: string; locationsUpdated?: number }> {
+  if (locationIds.length === 0) {
+    return { success: false, error: "No location IDs provided", locationsUpdated: 0 };
+  }
+
+  // Use inventorySetQuantities (new API) instead of inventorySetOnHandQuantities (deprecated)
   const mutation = `
-    mutation inventorySetOnHandQuantities($input: InventorySetOnHandQuantitiesInput!) {
-      inventorySetOnHandQuantities(input: $input) {
+    mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
+      inventorySetQuantities(input: $input) {
         inventoryAdjustmentGroup {
           reason
         }
@@ -297,34 +327,44 @@ async function setInventoryToZero(
     }
   `;
 
+  console.log(`[sync-inventory] Setting inventory to 0 at ALL ${locationIds.length} locations: store=${storeDomain}, inventoryItemId=${inventoryItemId}, locationIds=${locationIds.join(", ")}`);
+
+  // Build quantities array - one entry per location
+  const quantities = locationIds.map(locationId => ({
+    inventoryItemId,
+    locationId,
+    quantity: 0,
+  }));
+
   try {
     const result = await shopifyGraphQL(storeDomain, token, mutation, {
       input: {
+        name: "available",           // Which quantity to set (available = sellable stock)
         reason: "correction",
-        setQuantities: [
-          {
-            inventoryItemId,
-            locationId,
-            quantity: 0,
-          },
-        ],
+        ignoreCompareQuantity: true, // Skip compare-and-set since we always want to set to 0
+        quantities,
       },
     });
 
-    const userErrors = result?.data?.inventorySetOnHandQuantities?.userErrors || [];
+    const userErrors = result?.data?.inventorySetQuantities?.userErrors || [];
 
     if (userErrors.length > 0) {
+      console.error(`[sync-inventory] Inventory update failed with userErrors: ${JSON.stringify(userErrors)}`);
       return {
         success: false,
         error: userErrors.map((e: any) => e.message).join(", "),
+        locationsUpdated: 0,
       };
     }
 
-    return { success: true };
+    console.info(`[sync-inventory] Inventory update SUCCESS for ${inventoryItemId} at ${locationIds.length} locations`);
+    return { success: true, locationsUpdated: locationIds.length };
   } catch (err) {
+    console.error(`[sync-inventory] Inventory update EXCEPTION: ${err}`);
     return {
       success: false,
       error: `${err}`,
+      locationsUpdated: 0,
     };
   }
 }
@@ -366,12 +406,29 @@ async function processAccessoryBySku(
     results.push(storeResult);
   }
 
-  // Determine overall success - require ALL non-skipped stores to succeed
-  // This prevents cross-store inventory inconsistency (e.g., out of stock in Bannos but available in Flourlane)
-  // If any store fails, the entire item fails and will be retried (setInventoryToZero is idempotent)
+  // Count results by type
   const failedCount = results.filter(r => !r.success).length;
+  const skippedCount = results.filter(r => r.skipped).length;
+  const successCount = results.filter(r => r.success && !r.skipped).length;
 
-  // Success only if no stores failed (all succeeded or were skipped)
+  console.log(`[sync-inventory] SKU ${sku} results: ${successCount} synced, ${skippedCount} skipped (not found), ${failedCount} failed`);
+
+  // Determine overall success:
+  // - If ANY store failed → fail (retry needed)
+  // - If ALL stores skipped → fail (SKU not found anywhere - likely a data issue)
+  // - If at least one store succeeded → success
+  const allSkipped = skippedCount === results.length && results.length > 0;
+
+  if (allSkipped) {
+    console.warn(`[sync-inventory] SKU ${sku} NOT FOUND in any store - marking as failed`);
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `SKU "${sku}" not found in any Shopify store (checked: ${stores.map(s => s.name).join(", ")})`,
+      shopify_response: { sku, results },
+    };
+  }
+
   const overallSuccess = failedCount === 0;
 
   return {
@@ -382,7 +439,7 @@ async function processAccessoryBySku(
   };
 }
 
-// Sync accessory to a single store by SKU (location ID pre-cached in StoreConfig)
+// Sync accessory to a single store by SKU (location IDs pre-cached in StoreConfig)
 async function syncAccessoryToStore(
   sku: string,
   store: StoreConfig
@@ -396,25 +453,29 @@ async function syncAccessoryToStore(
       return { store: store.name, success: true, skipped: true };
     }
 
-    // Set inventory to 0 (locationId already cached)
-    const result = await setInventoryToZero(store.domain, store.token, variant.inventoryItemId, store.locationId);
+    // Set inventory to 0 at ALL locations (not just one!)
+    const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds);
 
     return {
       store: store.name,
       success: result.success,
       error: result.error,
       inventoryItemId: variant.inventoryItemId,
+      locationsUpdated: result.locationsUpdated,
     };
   } catch (err) {
     return {
       store: store.name,
       success: false,
       error: `Exception: ${err}`,
+      locationsUpdated: 0,
     };
   }
 }
 
 // Process accessory by variant_id (legacy - backward compatibility, tries all stores)
+// NOTE: variant_id is store-specific, so "all skipped" is treated the same as SKU path
+// (fail if not found anywhere) to maintain consistent behavior across both code paths.
 async function processAccessoryByVariantId(
   item: QueueItem,
   variantId: string,
@@ -427,12 +488,26 @@ async function processAccessoryByVariantId(
     results.push(storeResult);
   }
 
-  // Determine overall success - require ALL non-skipped stores to succeed
-  // This prevents cross-store inventory inconsistency
-  // If any store fails, the entire item fails and will be retried (setInventoryToZero is idempotent)
+  // Count results by type (aligned with SKU path for consistency)
   const failedCount = results.filter(r => !r.success).length;
+  const skippedCount = results.filter(r => r.skipped).length;
 
-  // Success only if no stores failed (all succeeded or were skipped)
+  // Determine overall success (same logic as SKU path):
+  // - If ANY store failed → fail (retry needed)
+  // - If ALL stores skipped → fail (variant not found anywhere - likely stale data)
+  // - If at least one store succeeded → success
+  const allSkipped = skippedCount === results.length && results.length > 0;
+
+  if (allSkipped) {
+    console.warn(`[sync-inventory] Variant ${variantId} NOT FOUND in any store - marking as failed`);
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `Variant "${variantId}" not found in any Shopify store (checked: ${stores.map(s => s.name).join(", ")})`,
+      shopify_response: { variantId, results },
+    };
+  }
+
   const overallSuccess = failedCount === 0;
 
   return {
@@ -443,7 +518,7 @@ async function processAccessoryByVariantId(
   };
 }
 
-// Sync accessory by variant_id to a single store (legacy, location ID pre-cached)
+// Sync accessory by variant_id to a single store (legacy, location IDs pre-cached)
 async function syncAccessoryByVariantIdToStore(
   variantId: string,
   store: StoreConfig
@@ -457,20 +532,22 @@ async function syncAccessoryByVariantIdToStore(
       return { store: store.name, success: true, skipped: true };
     }
 
-    // Set inventory to 0 (locationId already cached)
-    const result = await setInventoryToZero(store.domain, store.token, inventoryItemId, store.locationId);
+    // Set inventory to 0 at ALL locations (not just one!)
+    const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, inventoryItemId, store.locationIds);
 
     return {
       store: store.name,
       success: result.success,
       error: result.error,
       inventoryItemId,
+      locationsUpdated: result.locationsUpdated,
     };
   } catch (err) {
     return {
       store: store.name,
       success: false,
       error: `Exception: ${err}`,
+      locationsUpdated: 0,
     };
   }
 }
@@ -502,12 +579,26 @@ async function processCakeTopper(
     }
   }
 
-  // Determine overall success - require ALL non-skipped stores to succeed
-  // This prevents cross-store inventory inconsistency
-  // If any store fails, the entire item fails and will be retried (setInventoryToZero is idempotent)
+  // Count results by type (aligned with accessory paths for consistency)
   const failedCount = allResults.filter(r => !r.success).length;
+  const skippedCount = allResults.filter(r => r.skipped).length;
 
-  // Success only if no stores failed (all succeeded or were skipped)
+  // Determine overall success (same logic as accessory paths):
+  // - If ANY store failed → fail (retry needed)
+  // - If ALL stores skipped → fail (products not found anywhere - likely stale data)
+  // - If at least one store succeeded → success
+  const allSkipped = skippedCount === allResults.length && allResults.length > 0;
+
+  if (allSkipped) {
+    console.warn(`[sync-inventory] Product IDs ${productIds.join(", ")} NOT FOUND in any store - marking as failed`);
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `Product IDs "${productIds.join(", ")}" not found in any Shopify store (checked: ${stores.map(s => s.name).join(", ")})`,
+      shopify_response: { productIds, results: allResults },
+    };
+  }
+
   const overallSuccess = failedCount === 0;
 
   return {
@@ -518,7 +609,7 @@ async function processCakeTopper(
   };
 }
 
-// Sync cake topper product to a single store (location ID pre-cached)
+// Sync cake topper product to a single store (location IDs pre-cached)
 async function syncCakeToppersToStore(
   productId: string,
   store: StoreConfig
@@ -532,30 +623,32 @@ async function syncCakeToppersToStore(
       return { store: store.name, success: true, skipped: true };
     }
 
-    // Set each variant's inventory to 0 (locationId already cached)
+    // Set each variant's inventory to 0 at ALL locations
     // All-or-nothing: if ANY variant fails, mark entire sync as failed so queue retries
     // This ensures atomic "out of stock" state (all variants = 0, not partial)
     // NOTE: Sequential processing is intentional to avoid Shopify rate limiting.
     // Products typically have few variants; parallelism would add complexity for minimal gain.
     const errors: string[] = [];
     let successCount = 0;
+    let totalLocationsUpdated = 0;
 
     for (const variant of variants) {
-      const result = await setInventoryToZero(store.domain, store.token, variant.inventoryItemId, store.locationId);
+      const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds);
       if (result.success) {
         successCount++;
+        totalLocationsUpdated += result.locationsUpdated || 0;
       } else {
         errors.push(`${variant.inventoryItemId}: ${result.error}`);
       }
     }
 
     if (errors.length > 0) {
-      return { store: store.name, success: false, error: errors.join("; "), variantCount: variants.length };
+      return { store: store.name, success: false, error: errors.join("; "), variantCount: variants.length, locationsUpdated: totalLocationsUpdated };
     }
 
-    return { store: store.name, success: true, variantCount: successCount };
+    return { store: store.name, success: true, variantCount: successCount, locationsUpdated: totalLocationsUpdated };
   } catch (err) {
-    return { store: store.name, success: false, error: `Exception: ${err}` };
+    return { store: store.name, success: false, error: `Exception: ${err}`, locationsUpdated: 0 };
   }
 }
 
@@ -611,7 +704,7 @@ serve(async (req) => {
 
     console.log(`[sync-inventory-to-shopify] Claimed ${claimedItems.length} items for processing`);
 
-    // Pre-fetch location IDs for each store (cached for all items)
+    // Pre-fetch ALL location IDs for each store (cached for all items)
     // This reduces API calls from O(items * stores) to O(stores)
     // Uses retry with exponential backoff to handle transient Shopify issues
     const stores: StoreConfig[] = [];
@@ -620,38 +713,40 @@ serve(async (req) => {
     if (bannosToken) {
       const retryResult = await withRetry(
         async () => {
-          const locationId = await getLocationId(STORES.bannos.domain, bannosToken);
-          if (!locationId) throw new Error("No locations returned from Shopify");
-          return locationId;
+          const locationIds = await getLocationIds(STORES.bannos.domain, bannosToken);
+          if (locationIds.length === 0) throw new Error("No locations returned from Shopify");
+          return locationIds;
         },
-        "Bannos location ID fetch"
+        "Bannos location IDs fetch"
       );
 
       if (retryResult.success) {
-        stores.push({ name: "bannos", domain: STORES.bannos.domain, token: bannosToken, locationId: retryResult.result });
+        stores.push({ name: "bannos", domain: STORES.bannos.domain, token: bannosToken, locationIds: retryResult.result });
+        console.log(`[sync-inventory-to-shopify] Bannos configured with ${retryResult.result.length} locations`);
       } else {
         const errorMsg = `Bannos: ${retryResult.lastError.message}`;
         locationErrors.push(errorMsg);
-        console.error(`[sync-inventory-to-shopify] CRITICAL: Failed to get Bannos location ID after ${RETRY_CONFIG.maxAttempts} attempts - store will not sync`);
+        console.error(`[sync-inventory-to-shopify] CRITICAL: Failed to get Bannos location IDs after ${RETRY_CONFIG.maxAttempts} attempts - store will not sync`);
       }
     }
 
     if (flourlaneToken) {
       const retryResult = await withRetry(
         async () => {
-          const locationId = await getLocationId(STORES.flourlane.domain, flourlaneToken);
-          if (!locationId) throw new Error("No locations returned from Shopify");
-          return locationId;
+          const locationIds = await getLocationIds(STORES.flourlane.domain, flourlaneToken);
+          if (locationIds.length === 0) throw new Error("No locations returned from Shopify");
+          return locationIds;
         },
-        "Flourlane location ID fetch"
+        "Flourlane location IDs fetch"
       );
 
       if (retryResult.success) {
-        stores.push({ name: "flourlane", domain: STORES.flourlane.domain, token: flourlaneToken, locationId: retryResult.result });
+        stores.push({ name: "flourlane", domain: STORES.flourlane.domain, token: flourlaneToken, locationIds: retryResult.result });
+        console.log(`[sync-inventory-to-shopify] Flourlane configured with ${retryResult.result.length} locations`);
       } else {
         const errorMsg = `Flourlane: ${retryResult.lastError.message}`;
         locationErrors.push(errorMsg);
-        console.error(`[sync-inventory-to-shopify] CRITICAL: Failed to get Flourlane location ID after ${RETRY_CONFIG.maxAttempts} attempts - store will not sync`);
+        console.error(`[sync-inventory-to-shopify] CRITICAL: Failed to get Flourlane location IDs after ${RETRY_CONFIG.maxAttempts} attempts - store will not sync`);
       }
     }
 
