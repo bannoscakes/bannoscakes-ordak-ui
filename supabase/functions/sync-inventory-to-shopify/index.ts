@@ -301,6 +301,7 @@ async function getLocationIds(
 }
 
 // Set inventory to 0 for a single inventory item at ALL locations
+// Uses inventorySetQuantities (the new API, replacing deprecated inventorySetOnHandQuantities)
 async function setInventoryToZeroAtAllLocations(
   storeDomain: string,
   token: string,
@@ -311,9 +312,10 @@ async function setInventoryToZeroAtAllLocations(
     return { success: false, error: "No location IDs provided", locationsUpdated: 0 };
   }
 
+  // Use inventorySetQuantities (new API) instead of inventorySetOnHandQuantities (deprecated)
   const mutation = `
-    mutation inventorySetOnHandQuantities($input: InventorySetOnHandQuantitiesInput!) {
-      inventorySetOnHandQuantities(input: $input) {
+    mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
+      inventorySetQuantities(input: $input) {
         inventoryAdjustmentGroup {
           reason
         }
@@ -327,8 +329,8 @@ async function setInventoryToZeroAtAllLocations(
 
   console.log(`[sync-inventory] Setting inventory to 0 at ALL ${locationIds.length} locations: store=${storeDomain}, inventoryItemId=${inventoryItemId}, locationIds=${locationIds.join(", ")}`);
 
-  // Build setQuantities array - one entry per location
-  const setQuantities = locationIds.map(locationId => ({
+  // Build quantities array - one entry per location
+  const quantities = locationIds.map(locationId => ({
     inventoryItemId,
     locationId,
     quantity: 0,
@@ -337,12 +339,14 @@ async function setInventoryToZeroAtAllLocations(
   try {
     const result = await shopifyGraphQL(storeDomain, token, mutation, {
       input: {
+        name: "available",           // Which quantity to set (available = sellable stock)
         reason: "correction",
-        setQuantities,
+        ignoreCompareQuantity: true, // Skip compare-and-set since we always want to set to 0
+        quantities,
       },
     });
 
-    const userErrors = result?.data?.inventorySetOnHandQuantities?.userErrors || [];
+    const userErrors = result?.data?.inventorySetQuantities?.userErrors || [];
 
     if (userErrors.length > 0) {
       console.error(`[sync-inventory] Inventory update failed with userErrors: ${JSON.stringify(userErrors)}`);
