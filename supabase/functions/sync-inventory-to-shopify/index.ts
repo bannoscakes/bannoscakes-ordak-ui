@@ -569,12 +569,26 @@ async function processCakeTopper(
     }
   }
 
-  // Determine overall success - require ALL non-skipped stores to succeed
-  // This prevents cross-store inventory inconsistency
-  // If any store fails, the entire item fails and will be retried (setInventoryToZero is idempotent)
+  // Count results by type (aligned with accessory paths for consistency)
   const failedCount = allResults.filter(r => !r.success).length;
+  const skippedCount = allResults.filter(r => r.skipped).length;
 
-  // Success only if no stores failed (all succeeded or were skipped)
+  // Determine overall success (same logic as accessory paths):
+  // - If ANY store failed → fail (retry needed)
+  // - If ALL stores skipped → fail (products not found anywhere - likely stale data)
+  // - If at least one store succeeded → success
+  const allSkipped = skippedCount === allResults.length && allResults.length > 0;
+
+  if (allSkipped) {
+    console.warn(`[sync-inventory] Product IDs ${productIds.join(", ")} NOT FOUND in any store - marking as failed`);
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `Product IDs "${productIds.join(", ")}" not found in any Shopify store (checked: ${stores.map(s => s.name).join(", ")})`,
+      shopify_response: { productIds, results: allResults },
+    };
+  }
+
   const overallSuccess = failedCount === 0;
 
   return {
