@@ -194,7 +194,6 @@ async function getVariantBySku(
         edges {
           node {
             id
-            sku
             inventoryItem {
               id
             }
@@ -219,7 +218,7 @@ async function getVariantBySku(
     return null; // SKU genuinely not found in this store
   }
 
-  console.log(`[sync-inventory] SKU "${sku}" FOUND in ${storeDomain}: variantId=${variant.id}, inventoryItemId=${variant.inventoryItem.id}`);
+  console.info(`[sync-inventory] SKU "${sku}" FOUND in ${storeDomain}: variantId=${variant.id}, inventoryItemId=${variant.inventoryItem.id}`);
   return {
     variantId: variant.id,
     inventoryItemId: variant.inventoryItem.id,
@@ -262,6 +261,9 @@ async function getProductInventoryItems(
 }
 
 // Get ALL active location IDs (we need to set inventory to 0 at all locations)
+// LIMITATION: Fetches up to 50 locations. Pagination not implemented as typical Shopify
+// stores have far fewer locations. If a store exceeds 50 active locations, inventory
+// won't be zeroed at all of them - would need cursor-based pagination to fix.
 async function getLocationIds(
   storeDomain: string,
   token: string
@@ -283,7 +285,7 @@ async function getLocationIds(
   const result = await shopifyGraphQL(storeDomain, token, query);
   const locations = result?.data?.locations?.edges || [];
 
-  // Log all locations for debugging
+  // Log all locations for debugging (verbose)
   console.log(`[sync-inventory] All locations in ${storeDomain}: ${JSON.stringify(locations.map((e: any) => ({ id: e.node.id, name: e.node.name, isActive: e.node.isActive })))}`);
 
   // Return ALL active location IDs (not just the first one!)
@@ -291,7 +293,7 @@ async function getLocationIds(
     .filter((e: any) => e.node.isActive !== false) // Include if isActive is true or undefined
     .map((e: any) => e.node.id);
 
-  console.log(`[sync-inventory] Active locations for ${storeDomain}: ${activeLocationIds.length} (${activeLocationIds.join(", ")})`);
+  console.info(`[sync-inventory] Active locations for ${storeDomain}: ${activeLocationIds.length}`);
 
   return activeLocationIds;
 }
@@ -304,7 +306,7 @@ async function setInventoryToZeroAtAllLocations(
   locationIds: string[]
 ): Promise<{ success: boolean; error?: string; locationsUpdated?: number }> {
   if (locationIds.length === 0) {
-    return { success: false, error: "No location IDs provided" };
+    return { success: false, error: "No location IDs provided", locationsUpdated: 0 };
   }
 
   const mutation = `
@@ -345,16 +347,18 @@ async function setInventoryToZeroAtAllLocations(
       return {
         success: false,
         error: userErrors.map((e: any) => e.message).join(", "),
+        locationsUpdated: 0,
       };
     }
 
-    console.log(`[sync-inventory] Inventory update SUCCESS for ${inventoryItemId} at ALL ${locationIds.length} locations`);
+    console.info(`[sync-inventory] Inventory update SUCCESS for ${inventoryItemId} at ${locationIds.length} locations`);
     return { success: true, locationsUpdated: locationIds.length };
   } catch (err) {
     console.error(`[sync-inventory] Inventory update EXCEPTION: ${err}`);
     return {
       success: false,
       error: `${err}`,
+      locationsUpdated: 0,
     };
   }
 }
@@ -462,6 +466,8 @@ async function syncAccessoryToStore(
 }
 
 // Process accessory by variant_id (legacy - backward compatibility, tries all stores)
+// NOTE: variant_id is store-specific, so "all skipped" is treated the same as SKU path
+// (fail if not found anywhere) to maintain consistent behavior across both code paths.
 async function processAccessoryByVariantId(
   item: QueueItem,
   variantId: string,
@@ -474,12 +480,26 @@ async function processAccessoryByVariantId(
     results.push(storeResult);
   }
 
-  // Determine overall success - require ALL non-skipped stores to succeed
-  // This prevents cross-store inventory inconsistency
-  // If any store fails, the entire item fails and will be retried (setInventoryToZero is idempotent)
+  // Count results by type (aligned with SKU path for consistency)
   const failedCount = results.filter(r => !r.success).length;
+  const skippedCount = results.filter(r => r.skipped).length;
 
-  // Success only if no stores failed (all succeeded or were skipped)
+  // Determine overall success (same logic as SKU path):
+  // - If ANY store failed → fail (retry needed)
+  // - If ALL stores skipped → fail (variant not found anywhere - likely stale data)
+  // - If at least one store succeeded → success
+  const allSkipped = skippedCount === results.length && results.length > 0;
+
+  if (allSkipped) {
+    console.warn(`[sync-inventory] Variant ${variantId} NOT FOUND in any store - marking as failed`);
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `Variant "${variantId}" not found in any Shopify store (checked: ${stores.map(s => s.name).join(", ")})`,
+      shopify_response: { variantId, results },
+    };
+  }
+
   const overallSuccess = failedCount === 0;
 
   return {
