@@ -46,6 +46,7 @@ interface StoreResult {
   error?: string;
   inventoryItemId?: string;
   variantCount?: number;
+  locationsUpdated?: number;
 }
 
 // Pre-fetched store configuration with cached location IDs (ALL active locations)
@@ -285,15 +286,16 @@ async function getLocationIds(
   const result = await shopifyGraphQL(storeDomain, token, query);
   const locations = result?.data?.locations?.edges || [];
 
-  // Log all locations for debugging (verbose)
-  console.log(`[sync-inventory] All locations in ${storeDomain}: ${JSON.stringify(locations.map((e: any) => ({ id: e.node.id, name: e.node.name, isActive: e.node.isActive })))}`);
+  // Log full location details at debug level (verbose)
+  console.debug(`[sync-inventory] All locations in ${storeDomain}: ${JSON.stringify(locations.map((e: any) => ({ id: e.node.id, name: e.node.name, isActive: e.node.isActive })))}`);
 
   // Return ALL active location IDs (not just the first one!)
   const activeLocationIds = locations
     .filter((e: any) => e.node.isActive !== false) // Include if isActive is true or undefined
     .map((e: any) => e.node.id);
 
-  console.info(`[sync-inventory] Active locations for ${storeDomain}: ${activeLocationIds.length}`);
+  // Log count at info level for quick visibility
+  console.info(`[sync-inventory] ${storeDomain}: ${activeLocationIds.length} active locations`);
 
   return activeLocationIds;
 }
@@ -455,12 +457,14 @@ async function syncAccessoryToStore(
       success: result.success,
       error: result.error,
       inventoryItemId: variant.inventoryItemId,
+      locationsUpdated: result.locationsUpdated,
     };
   } catch (err) {
     return {
       store: store.name,
       success: false,
       error: `Exception: ${err}`,
+      locationsUpdated: 0,
     };
   }
 }
@@ -532,12 +536,14 @@ async function syncAccessoryByVariantIdToStore(
       success: result.success,
       error: result.error,
       inventoryItemId,
+      locationsUpdated: result.locationsUpdated,
     };
   } catch (err) {
     return {
       store: store.name,
       success: false,
       error: `Exception: ${err}`,
+      locationsUpdated: 0,
     };
   }
 }
