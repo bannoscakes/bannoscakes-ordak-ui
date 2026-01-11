@@ -1,0 +1,25 @@
+-- ============================================================================
+-- Migration: Keep Inventory Sync Cron Job (Changed from original plan to remove)
+-- Purpose: Cron job is KEPT as a recovery/fallback mechanism
+-- ============================================================================
+--
+-- ORIGINAL PLAN: Remove the 5-minute cron and rely solely on database webhook
+--
+-- WHY WE'RE KEEPING THE CRON:
+-- 1. The webhook only fires on INSERT to inventory_sync_queue
+-- 2. If items get stuck in 'processing' status (e.g., edge function crash),
+--    there's no INSERT to trigger recovery
+-- 3. The claim_inventory_sync_items RPC has recovery logic that resets items
+--    stuck >10 minutes, but this only runs when the edge function is called
+-- 4. The cron job ensures the edge function is called periodically to run recovery
+--
+-- CURRENT BEHAVIOR:
+-- - Webhook: Instant sync when items are queued (primary)
+-- - Cron: Every 5 minutes as fallback/recovery (secondary)
+-- - Both can run safely - claim_inventory_sync_items uses FOR UPDATE SKIP LOCKED
+--
+-- FUTURE: Remove cron only after webhook + recovery is verified in production
+-- ============================================================================
+
+-- No-op: Cron job is intentionally kept
+DO $$ BEGIN RAISE NOTICE 'Cron job sync-inventory-to-shopify intentionally kept as recovery mechanism'; END $$;
