@@ -648,7 +648,7 @@ async function syncCakeToppersToStore(
 
     return { store: store.name, success: true, variantCount: successCount, locationsUpdated: totalLocationsUpdated };
   } catch (err) {
-    return { store: store.name, success: false, error: `Exception: ${err}` };
+    return { store: store.name, success: false, error: `Exception: ${err}`, locationsUpdated: 0 };
   }
 }
 
