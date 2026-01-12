@@ -26,6 +26,7 @@ CREATE OR REPLACE FUNCTION public.adjust_accessory_stock(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_current_user_id uuid;
@@ -155,6 +156,7 @@ CREATE OR REPLACE FUNCTION public.adjust_cake_topper_stock(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_current_user_id uuid;
