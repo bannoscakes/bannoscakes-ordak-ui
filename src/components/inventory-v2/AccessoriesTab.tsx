@@ -186,9 +186,7 @@ export function AccessoriesTab() {
         await invalidate.accessoriesAll();
 
         // Show appropriate toast based on sync action queued
-        if (result.queued_sync === 'set_out_of_stock') {
-          toast.warning(`${result.accessory} is now out of stock - Shopify sync queued`);
-        } else if (result.queued_sync === 'set_in_stock') {
+        if (result.queued_sync === 'set_in_stock') {
           toast.success(`${result.accessory} restocked (${result.before} → ${result.after}) - Shopify sync queued`);
         } else {
           toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${result.before} → ${result.after}`);

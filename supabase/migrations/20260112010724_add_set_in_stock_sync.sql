@@ -127,6 +127,8 @@ BEGIN
     END;
   END IF;
 
+  -- Return queued_sync only when sync was actually queued
+  -- Note: set_out_of_stock is queued by deduct_inventory_on_order trigger, not this RPC
   RETURN jsonb_build_object(
     'success', true,
     'accessory', v_accessory_name,
@@ -134,8 +136,7 @@ BEGIN
     'after', v_after,
     'change', v_effective_change,
     'queued_sync', CASE
-      WHEN v_after = 0 THEN 'set_out_of_stock'
-      WHEN v_before <= 0 AND v_after > 0 THEN 'set_in_stock'
+      WHEN v_before <= 0 AND v_after > 0 AND v_sku IS NOT NULL THEN 'set_in_stock'
       ELSE NULL
     END
   );
@@ -285,6 +286,8 @@ BEGIN
     END IF;
   END IF;
 
+  -- Return queued_sync only when sync was actually queued
+  -- Note: set_out_of_stock is queued by deduct_inventory_on_order trigger, not this RPC
   RETURN jsonb_build_object(
     'success', true,
     'old_stock', v_old_stock,
@@ -293,8 +296,7 @@ BEGIN
     'name_1', v_name_1,
     'name_2', v_name_2,
     'queued_sync', CASE
-      WHEN v_new_stock = 0 THEN 'set_out_of_stock'
-      WHEN v_old_stock <= 0 AND v_new_stock > 0 THEN 'set_in_stock'
+      WHEN v_old_stock <= 0 AND v_new_stock > 0 AND (v_product_id_1 IS NOT NULL OR v_product_id_2 IS NOT NULL) THEN 'set_in_stock'
       ELSE NULL
     END
   );
