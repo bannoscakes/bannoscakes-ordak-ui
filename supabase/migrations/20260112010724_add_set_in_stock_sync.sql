@@ -5,6 +5,14 @@
 -- ============================================================================
 
 -- ============================================================================
+-- Update CHECK constraint to allow 'set_in_stock' sync action
+-- The existing constraint only allows 'set_out_of_stock'
+-- ============================================================================
+
+ALTER TABLE public.inventory_sync_queue DROP CONSTRAINT IF EXISTS inventory_sync_queue_sync_action_check;
+ALTER TABLE public.inventory_sync_queue ADD CONSTRAINT inventory_sync_queue_sync_action_check CHECK (sync_action IN ('set_out_of_stock', 'set_in_stock'));
+
+-- ============================================================================
 -- Update adjust_accessory_stock() to queue set_in_stock when stock ≤0 → >0
 -- ============================================================================
 
