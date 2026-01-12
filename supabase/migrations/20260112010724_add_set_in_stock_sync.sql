@@ -140,6 +140,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
+  v_current_user_id uuid;
+  v_user_role text;
   v_old_stock integer;
   v_new_stock integer;
   v_name_1 text;
@@ -149,6 +151,32 @@ DECLARE
   v_product_id_2 text;
   v_effective_change integer;
 BEGIN
+  -- Authorization check: verify caller has permission to adjust stock
+  v_current_user_id := auth.uid();
+
+  IF v_current_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  -- Get the caller's role from staff_shared
+  SELECT role INTO v_user_role
+  FROM public.staff_shared
+  WHERE user_id = v_current_user_id AND is_active = true;
+
+  IF v_user_role IS NULL THEN
+    RAISE EXCEPTION 'User not found in staff or inactive';
+  END IF;
+
+  -- Only Admin and Supervisor can adjust stock
+  IF v_user_role NOT IN ('Admin', 'Supervisor') THEN
+    RAISE EXCEPTION 'Unauthorized: only Admin or Supervisor can adjust stock';
+  END IF;
+
+  -- If p_created_by is provided, it must match the current user
+  IF p_created_by IS NOT NULL AND p_created_by::uuid <> v_current_user_id THEN
+    RAISE EXCEPTION 'Unauthorized: p_created_by must match authenticated user';
+  END IF;
+
   -- Determine transaction type based on change direction
   v_transaction_type := CASE
     WHEN p_change > 0 THEN 'restock'
