@@ -148,7 +148,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.adjust_cake_topper_stock(
   p_topper_id uuid,
   p_change integer,
-  p_reason text,
+  p_reason text DEFAULT NULL,
   p_reference text DEFAULT NULL,
   p_created_by text DEFAULT NULL
 )
@@ -232,7 +232,7 @@ BEGIN
   INTO v_old_stock, v_new_stock, v_name_1, v_name_2, v_product_id_1, v_product_id_2;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Cake topper % not found', p_topper_id;
+    RETURN jsonb_build_object('success', false, 'error', 'Cake topper not found');
   END IF;
 
   -- Compute effective change (accounts for clamping to 0)

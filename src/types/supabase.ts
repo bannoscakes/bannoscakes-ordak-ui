@@ -1479,7 +1479,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      admin_delete_order: { Args: { p_order_id: string }; Returns: undefined }
       alpha_suffix: { Args: { p_idx: number }; Returns: string }
       app_can_access_store: { Args: { s: string }; Returns: boolean }
       app_is_service_role: { Args: never; Returns: boolean }
@@ -1491,51 +1490,6 @@ export type Database = {
       assign_staff_bulk: {
         Args: { p_order_ids: string[]; p_staff_id: string; p_store: string }
         Returns: number
-      }
-      assign_staff_to_order: {
-        Args: { p_order_id: string; p_staff_id: string }
-        Returns: {
-          assignee_id: string | null
-          barcode: string | null
-          covering_complete_ts: string | null
-          created_at: string
-          currency: string | null
-          customer_name: string | null
-          decorating_complete_ts: string | null
-          delivery_date: string | null
-          delivery_method: string | null
-          due_date: string | null
-          filling_complete_ts: string | null
-          filling_start_ts: string | null
-          flavour: string | null
-          human_id: string | null
-          id: string
-          inventory_blocked: boolean
-          item_qty: number | null
-          notes: string | null
-          order_json: Json | null
-          order_number: string | null
-          packing_complete_ts: string | null
-          packing_start_ts: string | null
-          priority: Database["public"]["Enums"]["priority_lvl"]
-          product_title: string | null
-          shopify_order_gid: string | null
-          shopify_order_id: string | null
-          shopify_order_number: number | null
-          stage: Database["public"]["Enums"]["stage"]
-          status_stage: string | null
-          storage_location: string | null
-          store: string
-          title: string | null
-          total_amount: number | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "orders"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
       auth_email: { Args: never; Returns: string }
       cancel_order: {
@@ -1620,6 +1574,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      escalate_order_priorities: { Args: never; Returns: undefined }
       feature_rls_enabled: { Args: never; Returns: boolean }
       find_component_by_keyword: {
         Args: { p_keyword: string }
@@ -1859,32 +1814,12 @@ export type Database = {
         Args: { p_conversation_id: string; p_limit?: number }
         Returns: Json
       }
-      get_messages_debug: {
-        Args: { p_conversation_id: string }
-        Returns: {
-          debug_info: string
-          is_participant: boolean
-          message_count: number
-          user_id: string
-        }[]
-      }
       get_messages_temp: {
         Args: { p_conversation_id: string; p_limit?: number; p_offset?: number }
         Returns: {
           body: string
           created_at: string
           id: number
-          is_own_message: boolean
-          sender_id: string
-          sender_name: string
-        }[]
-      }
-      get_messages_temp_test: {
-        Args: { p_conversation_id: string; p_limit?: number; p_offset?: number }
-        Returns: {
-          body: string
-          created_at: string
-          id: string
           is_own_message: boolean
           sender_id: string
           sender_name: string
@@ -2036,14 +1971,6 @@ export type Database = {
           value: Json
         }[]
       }
-      get_staff: {
-        Args: never
-        Returns: {
-          full_name: string
-          role: string
-          user_id: string
-        }[]
-      }
       get_staff_attendance_rate: {
         Args: { p_days?: number }
         Returns: {
@@ -2100,6 +2027,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_staff_order_counts: {
+        Args: never
+        Returns: {
+          order_count: number
+          user_id: string
+        }[]
+      }
       get_staff_stage_performance: {
         Args: { p_days?: number }
         Returns: {
@@ -2117,6 +2051,23 @@ export type Database = {
         Returns: {
           assigned_orders: number
           user_id: string
+        }[]
+      }
+      get_staff_time_analytics: {
+        Args: { p_days?: number }
+        Returns: {
+          covering_avg_minutes: number
+          covering_count: number
+          decorating_avg_minutes: number
+          decorating_count: number
+          filling_avg_minutes: number
+          filling_count: number
+          packing_avg_minutes: number
+          packing_count: number
+          staff_id: string
+          staff_name: string
+          total_count: number
+          total_time_minutes: number
         }[]
       }
       get_staff_times: {
@@ -2288,12 +2239,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      ingest_order:
-        | {
-            Args: { normalized?: Json; p_shop_domain: string; payload?: Json }
-            Returns: undefined
-          }
-        | { Args: { normalized?: Json; payload?: Json }; Returns: undefined }
       is_cake_item: { Args: { p_item: Json }; Returns: boolean }
       is_conversation_participant: {
         Args: { p_conversation_id: string }
@@ -2306,51 +2251,6 @@ export type Database = {
       mark_order_complete: {
         Args: { p_order_id: string; p_store: string }
         Returns: boolean
-      }
-      move_to_filling_with_assignment: {
-        Args: { p_order_id: string; p_staff_id: string }
-        Returns: {
-          assignee_id: string | null
-          barcode: string | null
-          covering_complete_ts: string | null
-          created_at: string
-          currency: string | null
-          customer_name: string | null
-          decorating_complete_ts: string | null
-          delivery_date: string | null
-          delivery_method: string | null
-          due_date: string | null
-          filling_complete_ts: string | null
-          filling_start_ts: string | null
-          flavour: string | null
-          human_id: string | null
-          id: string
-          inventory_blocked: boolean
-          item_qty: number | null
-          notes: string | null
-          order_json: Json | null
-          order_number: string | null
-          packing_complete_ts: string | null
-          packing_start_ts: string | null
-          priority: Database["public"]["Enums"]["priority_lvl"]
-          product_title: string | null
-          shopify_order_gid: string | null
-          shopify_order_id: string | null
-          shopify_order_number: number | null
-          stage: Database["public"]["Enums"]["stage"]
-          status_stage: string | null
-          storage_location: string | null
-          store: string
-          title: string | null
-          total_amount: number | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "orders"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
       print_barcode: {
         Args: { p_order_id: string; p_store: string }
@@ -2486,14 +2386,6 @@ export type Database = {
         Args: { p_store: string; p_token: string }
         Returns: Json
       }
-      test_auth: {
-        Args: never
-        Returns: {
-          user_email: string
-          user_id: string
-        }[]
-      }
-      test_rpc_call: { Args: never; Returns: string }
       update_order_core: {
         Args: {
           p_cake_writing?: string

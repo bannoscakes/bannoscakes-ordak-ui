@@ -202,7 +202,7 @@ export function CakeToppersTab() {
           toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${result.old_stock} → ${result.new_stock}`);
         }
       } else {
-        toast.error('Failed to adjust stock');
+        toast.error(result.error || 'Failed to adjust stock');
       }
     } catch (error) {
       console.error('Error adjusting stock:', error);

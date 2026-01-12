@@ -1276,7 +1276,7 @@ export async function adjustCakeTopperStock(params: {
         p_created_by: params.created_by || null,
       });
       if (error) throw error;
-      return data as { success: boolean; old_stock: number; new_stock: number; change: number; name_1: string; name_2: string | null; queued_sync?: 'set_in_stock' | null };
+      return data as { success: boolean; error?: string; old_stock?: number; new_stock?: number; change?: number; name_1?: string; name_2?: string | null; queued_sync?: 'set_in_stock' | null };
     },
     {
       operation: 'adjustCakeTopperStock',

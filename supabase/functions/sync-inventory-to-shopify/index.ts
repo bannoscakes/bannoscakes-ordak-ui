@@ -56,7 +56,7 @@ interface StoreConfig {
   name: string;
   domain: string;
   token: string;
-  locationIds: string[]; // All active locations - inventory must be set to 0 at ALL
+  locationIds: string[]; // All active locations - inventory updates applied to ALL
 }
 
 interface ProcessResult {
@@ -302,7 +302,9 @@ async function getLocationIds(
   return activeLocationIds;
 }
 
-// High inventory value used to mark items as "in stock" in Shopify
+// Sentinel value to mark items as "in stock" in Shopify.
+// Uses 999 (not actual stock count) because we track real inventory in our system,
+// and Shopify only needs to know "available" vs "unavailable" for purchase eligibility.
 const IN_STOCK_QUANTITY = 999;
 
 // Valid sync actions and their target quantities
