@@ -185,9 +185,11 @@ export function AccessoriesTab() {
       if (result.success) {
         await invalidate.accessoriesAll();
 
-        // Check if needs sync
-        if (result.needs_sync) {
-          toast.warning(`${result.accessory} is now out of stock - Shopify sync needed`);
+        // Show appropriate toast based on sync action queued
+        if (result.queued_sync === 'set_out_of_stock') {
+          toast.warning(`${result.accessory} is now out of stock - Shopify sync queued`);
+        } else if (result.queued_sync === 'set_in_stock') {
+          toast.success(`${result.accessory} restocked (${result.before} → ${result.after}) - Shopify sync queued`);
         } else {
           toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${result.before} → ${result.after}`);
         }

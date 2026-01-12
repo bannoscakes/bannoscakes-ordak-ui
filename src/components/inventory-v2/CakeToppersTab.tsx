@@ -195,7 +195,14 @@ export function CakeToppersTab() {
           ? `${result.name_1} / ${result.name_2}`
           : result.name_1;
 
-        toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${displayName} ${result.old_stock} → ${result.new_stock}`);
+        // Show appropriate toast based on sync action queued
+        if (result.queued_sync === 'set_out_of_stock') {
+          toast.warning(`${displayName} is now out of stock - Shopify sync queued`);
+        } else if (result.queued_sync === 'set_in_stock') {
+          toast.success(`${displayName} restocked (${result.old_stock} → ${result.new_stock}) - Shopify sync queued`);
+        } else {
+          toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${displayName} ${result.old_stock} → ${result.new_stock}`);
+        }
       } else {
         toast.error('Failed to adjust stock');
       }

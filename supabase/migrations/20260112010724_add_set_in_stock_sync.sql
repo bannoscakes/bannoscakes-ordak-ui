@@ -127,7 +127,11 @@ BEGIN
     'before', v_before,
     'after', v_after,
     'change', v_effective_change,
-    'needs_sync', (v_after = 0)
+    'queued_sync', CASE
+      WHEN v_after = 0 THEN 'set_out_of_stock'
+      WHEN v_before <= 0 AND v_after > 0 THEN 'set_in_stock'
+      ELSE NULL
+    END
   );
 END;
 $$;
@@ -276,7 +280,11 @@ BEGIN
     'change', v_effective_change,
     'name_1', v_name_1,
     'name_2', v_name_2,
-    'needs_sync', (v_new_stock = 0)
+    'queued_sync', CASE
+      WHEN v_new_stock = 0 THEN 'set_out_of_stock'
+      WHEN v_old_stock <= 0 AND v_new_stock > 0 THEN 'set_in_stock'
+      ELSE NULL
+    END
   );
 END;
 $$;
