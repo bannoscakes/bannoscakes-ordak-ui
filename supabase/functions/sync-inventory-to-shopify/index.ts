@@ -300,15 +300,29 @@ async function getLocationIds(
   return activeLocationIds;
 }
 
+// Valid sync actions and their target quantities
+const SYNC_ACTION_QUANTITIES: Record<string, number> = {
+  set_out_of_stock: 0,
+  set_in_stock: 999,
+};
+
+// Get target quantity for a sync_action, throws if unknown action
+function getQuantityForSyncAction(syncAction: string): number {
+  const quantity = SYNC_ACTION_QUANTITIES[syncAction];
+  if (quantity === undefined) {
+    throw new Error(`Unknown sync_action: "${syncAction}". Valid actions: ${Object.keys(SYNC_ACTION_QUANTITIES).join(", ")}`);
+  }
+  return quantity;
+}
+
 // Set inventory for a single inventory item at ALL locations
 // Uses inventorySetQuantities (the new API, replacing deprecated inventorySetOnHandQuantities)
-// quantity: 0 for out of stock, 999 for in stock
 async function setInventoryAtAllLocations(
   storeDomain: string,
   token: string,
   inventoryItemId: string,
   locationIds: string[],
-  quantity: number = 0
+  quantity: number
 ): Promise<{ success: boolean; error?: string; locationsUpdated?: number }> {
   if (locationIds.length === 0) {
     return { success: false, error: "No location IDs provided", locationsUpdated: 0 };
@@ -376,8 +390,17 @@ async function processAccessory(
   item: QueueItem,
   stores: StoreConfig[]
 ): Promise<ProcessResult> {
-  // Determine target quantity based on sync_action
-  const quantity = item.sync_action === "set_in_stock" ? 999 : 0;
+  // Validate sync_action and get target quantity
+  let quantity: number;
+  try {
+    quantity = getQuantityForSyncAction(item.sync_action);
+  } catch (err) {
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `${err}`,
+    };
+  }
 
   // NEW format: SKU-based (multi-store)
   if (item.shopify_ids.sku) {
@@ -566,8 +589,17 @@ async function processCakeTopper(
   item: QueueItem,
   stores: StoreConfig[]
 ): Promise<ProcessResult> {
-  // Determine target quantity based on sync_action
-  const quantity = item.sync_action === "set_in_stock" ? 999 : 0;
+  // Validate sync_action and get target quantity
+  let quantity: number;
+  try {
+    quantity = getQuantityForSyncAction(item.sync_action);
+  } catch (err) {
+    return {
+      queue_id: item.id,
+      success: false,
+      error: `${err}`,
+    };
+  }
 
   const productIds = [
     item.shopify_ids.product_id_1,
