@@ -300,10 +300,13 @@ async function getLocationIds(
   return activeLocationIds;
 }
 
+// High inventory value used to mark items as "in stock" in Shopify
+const IN_STOCK_QUANTITY = 999;
+
 // Valid sync actions and their target quantities
 const SYNC_ACTION_QUANTITIES: Record<string, number> = {
   set_out_of_stock: 0,
-  set_in_stock: 999,
+  set_in_stock: IN_STOCK_QUANTITY,
 };
 
 // Get target quantity for a sync_action, throws if unknown action

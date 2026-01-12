@@ -59,8 +59,14 @@ BEGIN
   END IF;
 
   -- If p_created_by is provided, it must match the current user
-  IF p_created_by IS NOT NULL AND p_created_by::uuid <> v_current_user_id THEN
-    RAISE EXCEPTION 'Unauthorized: p_created_by must match authenticated user';
+  IF p_created_by IS NOT NULL THEN
+    BEGIN
+      IF p_created_by::uuid <> v_current_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: p_created_by must match authenticated user';
+      END IF;
+    EXCEPTION WHEN invalid_text_representation THEN
+      RAISE EXCEPTION 'Invalid p_created_by format: must be a valid UUID';
+    END;
   END IF;
 
   -- Determine transaction type based on change direction
@@ -185,8 +191,14 @@ BEGIN
   END IF;
 
   -- If p_created_by is provided, it must match the current user
-  IF p_created_by IS NOT NULL AND p_created_by::uuid <> v_current_user_id THEN
-    RAISE EXCEPTION 'Unauthorized: p_created_by must match authenticated user';
+  IF p_created_by IS NOT NULL THEN
+    BEGIN
+      IF p_created_by::uuid <> v_current_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: p_created_by must match authenticated user';
+      END IF;
+    EXCEPTION WHEN invalid_text_representation THEN
+      RAISE EXCEPTION 'Invalid p_created_by format: must be a valid UUID';
+    END;
   END IF;
 
   -- Determine transaction type based on change direction
