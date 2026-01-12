@@ -147,6 +147,7 @@ DECLARE
   v_transaction_type text;
   v_product_id_1 text;
   v_product_id_2 text;
+  v_effective_change integer;
 BEGIN
   -- Determine transaction type based on change direction
   v_transaction_type := CASE
@@ -154,24 +155,36 @@ BEGIN
     ELSE 'adjustment'
   END;
 
-  -- Atomic stock update
-  UPDATE cake_toppers
+  -- Atomic update with CTE to correctly capture pre-update stock value
+  -- (RETURNING only sees post-update values, so we need CTE for stock_before)
+  -- FOR UPDATE locks the row to prevent concurrent modifications
+  WITH old_values AS (
+    SELECT current_stock, name_1, name_2, shopify_product_id_1, shopify_product_id_2
+    FROM public.cake_toppers
+    WHERE id = p_topper_id
+    FOR UPDATE
+  )
+  UPDATE public.cake_toppers
   SET
-    current_stock = current_stock + p_change,
+    current_stock = GREATEST(0, cake_toppers.current_stock + p_change),
     updated_at = now()
-  WHERE id = p_topper_id
+  FROM old_values
+  WHERE cake_toppers.id = p_topper_id
   RETURNING
-    current_stock - p_change,
-    current_stock,
-    name_1,
-    name_2,
-    shopify_product_id_1,
-    shopify_product_id_2
+    old_values.current_stock AS stock_before,
+    cake_toppers.current_stock AS stock_after,
+    old_values.name_1,
+    old_values.name_2,
+    old_values.shopify_product_id_1,
+    old_values.shopify_product_id_2
   INTO v_old_stock, v_new_stock, v_name_1, v_name_2, v_product_id_1, v_product_id_2;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Cake topper % not found', p_topper_id;
   END IF;
+
+  -- Compute effective change (accounts for clamping to 0)
+  v_effective_change := v_new_stock - v_old_stock;
 
   -- Log transaction with column names from migration 077
   INSERT INTO public.stock_transactions (
@@ -188,7 +201,7 @@ BEGIN
     'cake_toppers',
     p_topper_id,
     v_transaction_type,
-    p_change,
+    v_effective_change,
     v_old_stock,
     v_new_stock,
     p_reason,
@@ -224,11 +237,13 @@ BEGIN
     'success', true,
     'old_stock', v_old_stock,
     'new_stock', v_new_stock,
+    'change', v_effective_change,
     'name_1', v_name_1,
-    'name_2', v_name_2
+    'name_2', v_name_2,
+    'needs_sync', (v_new_stock = 0)
   );
 END;
 $$;
 
-COMMENT ON FUNCTION public.adjust_accessory_stock IS 'Adjust accessory stock atomically. Logs all changes to stock_transactions. Queues Shopify sync for restocks (≤0 → >0).';
-COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock atomically. Logs all changes to stock_transactions. Queues Shopify sync for restocks (≤0 → >0).';
+COMMENT ON FUNCTION public.adjust_accessory_stock IS 'Adjust accessory stock atomically. Clamps at 0. Logs all changes to stock_transactions. Queues Shopify sync for restocks (≤0 → >0).';
+COMMENT ON FUNCTION public.adjust_cake_topper_stock IS 'Adjust cake topper stock atomically. Clamps at 0. Logs all changes to stock_transactions. Queues Shopify sync for restocks (≤0 → >0).';
