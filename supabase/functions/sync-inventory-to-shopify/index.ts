@@ -1,5 +1,7 @@
 // Edge Function: sync-inventory-to-shopify
-// Purpose: Process inventory_sync_queue and set items out of stock in Shopify
+// Purpose: Process inventory_sync_queue and sync inventory to Shopify
+//          - set_out_of_stock: sets inventory to 0
+//          - set_in_stock: sets inventory to 999
 // Called by: Database webhook on INSERT (instant) or pg_cron (legacy fallback)
 // Multi-store: Tries BOTH Bannos and Flourlane for every item
 // ============================================================================
@@ -360,7 +362,7 @@ async function setInventoryAtAllLocations(
       input: {
         name: "available",           // Which quantity to set (available = sellable stock)
         reason: "correction",
-        ignoreCompareQuantity: true, // Skip compare-and-set since we always want to set to 0
+        ignoreCompareQuantity: true, // Skip compare-and-set since we want to force the quantity
         quantities,
       },
     });

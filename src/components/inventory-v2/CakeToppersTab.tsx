@@ -197,9 +197,9 @@ export function CakeToppersTab() {
 
         // Show appropriate toast based on sync action queued
         if (result.queued_sync === 'set_in_stock') {
-          toast.success(`${displayName} restocked (${result.old_stock} → ${result.new_stock}) - Shopify sync queued`);
+          toast.success(`${displayName} restocked: ${result.old_stock} → ${result.new_stock} (Shopify sync queued)`);
         } else {
-          toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${displayName} ${result.old_stock} → ${result.new_stock}`);
+          toast.success(`Stock ${stockAdjust.direction === 'add' ? 'added' : 'removed'}: ${result.old_stock} → ${result.new_stock}`);
         }
       } else {
         toast.error('Failed to adjust stock');
