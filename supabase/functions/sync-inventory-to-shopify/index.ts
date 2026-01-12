@@ -300,13 +300,15 @@ async function getLocationIds(
   return activeLocationIds;
 }
 
-// Set inventory to 0 for a single inventory item at ALL locations
+// Set inventory for a single inventory item at ALL locations
 // Uses inventorySetQuantities (the new API, replacing deprecated inventorySetOnHandQuantities)
-async function setInventoryToZeroAtAllLocations(
+// quantity: 0 for out of stock, 999 for in stock
+async function setInventoryAtAllLocations(
   storeDomain: string,
   token: string,
   inventoryItemId: string,
-  locationIds: string[]
+  locationIds: string[],
+  quantity: number = 0
 ): Promise<{ success: boolean; error?: string; locationsUpdated?: number }> {
   if (locationIds.length === 0) {
     return { success: false, error: "No location IDs provided", locationsUpdated: 0 };
@@ -327,13 +329,13 @@ async function setInventoryToZeroAtAllLocations(
     }
   `;
 
-  console.log(`[sync-inventory] Setting inventory to 0 at ALL ${locationIds.length} locations: store=${storeDomain}, inventoryItemId=${inventoryItemId}, locationIds=${locationIds.join(", ")}`);
+  console.log(`[sync-inventory] Setting inventory to ${quantity} at ALL ${locationIds.length} locations: store=${storeDomain}, inventoryItemId=${inventoryItemId}, locationIds=${locationIds.join(", ")}`);
 
   // Build quantities array - one entry per location
   const quantities = locationIds.map(locationId => ({
     inventoryItemId,
     locationId,
-    quantity: 0,
+    quantity,
   }));
 
   try {
@@ -374,14 +376,17 @@ async function processAccessory(
   item: QueueItem,
   stores: StoreConfig[]
 ): Promise<ProcessResult> {
+  // Determine target quantity based on sync_action
+  const quantity = item.sync_action === "set_in_stock" ? 999 : 0;
+
   // NEW format: SKU-based (multi-store)
   if (item.shopify_ids.sku) {
-    return processAccessoryBySku(item, item.shopify_ids.sku, stores);
+    return processAccessoryBySku(item, item.shopify_ids.sku, stores, quantity);
   }
 
   // OLD format: variant_id (legacy - backward compatibility)
   if (item.shopify_ids.variant_id) {
-    return processAccessoryByVariantId(item, item.shopify_ids.variant_id, stores);
+    return processAccessoryByVariantId(item, item.shopify_ids.variant_id, stores, quantity);
   }
 
   return {
@@ -397,12 +402,13 @@ async function processAccessory(
 async function processAccessoryBySku(
   item: QueueItem,
   sku: string,
-  stores: StoreConfig[]
+  stores: StoreConfig[],
+  quantity: number
 ): Promise<ProcessResult> {
   const results: StoreResult[] = [];
 
   for (const store of stores) {
-    const storeResult = await syncAccessoryToStore(sku, store);
+    const storeResult = await syncAccessoryToStore(sku, store, quantity);
     results.push(storeResult);
   }
 
@@ -442,7 +448,8 @@ async function processAccessoryBySku(
 // Sync accessory to a single store by SKU (location IDs pre-cached in StoreConfig)
 async function syncAccessoryToStore(
   sku: string,
-  store: StoreConfig
+  store: StoreConfig,
+  quantity: number
 ): Promise<StoreResult> {
   try {
     // Look up variant by SKU
@@ -453,8 +460,8 @@ async function syncAccessoryToStore(
       return { store: store.name, success: true, skipped: true };
     }
 
-    // Set inventory to 0 at ALL locations (not just one!)
-    const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds);
+    // Set inventory at ALL locations (not just one!)
+    const result = await setInventoryAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds, quantity);
 
     return {
       store: store.name,
@@ -479,12 +486,13 @@ async function syncAccessoryToStore(
 async function processAccessoryByVariantId(
   item: QueueItem,
   variantId: string,
-  stores: StoreConfig[]
+  stores: StoreConfig[],
+  quantity: number
 ): Promise<ProcessResult> {
   const results: StoreResult[] = [];
 
   for (const store of stores) {
-    const storeResult = await syncAccessoryByVariantIdToStore(variantId, store);
+    const storeResult = await syncAccessoryByVariantIdToStore(variantId, store, quantity);
     results.push(storeResult);
   }
 
@@ -521,7 +529,8 @@ async function processAccessoryByVariantId(
 // Sync accessory by variant_id to a single store (legacy, location IDs pre-cached)
 async function syncAccessoryByVariantIdToStore(
   variantId: string,
-  store: StoreConfig
+  store: StoreConfig,
+  quantity: number
 ): Promise<StoreResult> {
   try {
     // Get inventory item ID from variant
@@ -532,8 +541,8 @@ async function syncAccessoryByVariantIdToStore(
       return { store: store.name, success: true, skipped: true };
     }
 
-    // Set inventory to 0 at ALL locations (not just one!)
-    const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, inventoryItemId, store.locationIds);
+    // Set inventory at ALL locations (not just one!)
+    const result = await setInventoryAtAllLocations(store.domain, store.token, inventoryItemId, store.locationIds, quantity);
 
     return {
       store: store.name,
@@ -557,6 +566,9 @@ async function processCakeTopper(
   item: QueueItem,
   stores: StoreConfig[]
 ): Promise<ProcessResult> {
+  // Determine target quantity based on sync_action
+  const quantity = item.sync_action === "set_in_stock" ? 999 : 0;
+
   const productIds = [
     item.shopify_ids.product_id_1,
     item.shopify_ids.product_id_2,
@@ -574,7 +586,7 @@ async function processCakeTopper(
 
   for (const productId of productIds) {
     for (const store of stores) {
-      const storeResult = await syncCakeToppersToStore(productId, store);
+      const storeResult = await syncCakeToppersToStore(productId, store, quantity);
       allResults.push({ productId, ...storeResult });
     }
   }
@@ -612,7 +624,8 @@ async function processCakeTopper(
 // Sync cake topper product to a single store (location IDs pre-cached)
 async function syncCakeToppersToStore(
   productId: string,
-  store: StoreConfig
+  store: StoreConfig,
+  quantity: number
 ): Promise<StoreResult> {
   try {
     // Get all variants for this product
@@ -623,9 +636,9 @@ async function syncCakeToppersToStore(
       return { store: store.name, success: true, skipped: true };
     }
 
-    // Set each variant's inventory to 0 at ALL locations
+    // Set each variant's inventory at ALL locations
     // All-or-nothing: if ANY variant fails, mark entire sync as failed so queue retries
-    // This ensures atomic "out of stock" state (all variants = 0, not partial)
+    // This ensures atomic stock state (all variants = same quantity, not partial)
     // NOTE: Sequential processing is intentional to avoid Shopify rate limiting.
     // Products typically have few variants; parallelism would add complexity for minimal gain.
     const errors: string[] = [];
@@ -633,7 +646,7 @@ async function syncCakeToppersToStore(
     let totalLocationsUpdated = 0;
 
     for (const variant of variants) {
-      const result = await setInventoryToZeroAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds);
+      const result = await setInventoryAtAllLocations(store.domain, store.token, variant.inventoryItemId, store.locationIds, quantity);
       if (result.success) {
         successCount++;
         totalLocationsUpdated += result.locationsUpdated || 0;
